@@ -42,8 +42,8 @@
         },
         "contentType": "application/json",
         "body": {
+          "client_id": "1tfp8ZknlERfGlGd8RyLPmmgzBU",
           "client_name": "My test service",
-          "client_id": "1234567890",
           "redirect_uris": [
             "http://localhost/"
           ],
@@ -66,9 +66,16 @@
           "client_type": "web"
         },
         "matchingRules": {
-          "$.body.location": {
-            "match": "regex",
-            "regex": "(\\d{1,3}\\.)+\\d{1,3}"
+          "body": {
+            "$.client_id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "[A-Za-z0-9\\-_]{27}"
+                }
+              ]
+            }
           }
         }
       }
@@ -78,7 +85,7 @@
       "providerState": "Client exists",
       "request": {
         "method": "put",
-        "path": "/connect/register/1234567890",
+        "path": "/connect/register/1tfp8ZknlERfGlGd8RyLPmmgzBU",
         "headers": {
           "Content-Type": "application/json"
         },
@@ -98,8 +105,8 @@
         },
         "contentType": "application/json",
         "body": {
+          "client_id": "1tfp8ZknlERfGlGd8RyLPmmgzBU",
           "client_name": "My test service",
-          "client_id": "1234567890",
           "redirect_uris": [
             "http://localhost/"
           ],
@@ -120,19 +127,13 @@
           "claims": [],
           "sector_identifier_uri": "http://gov.uk",
           "client_type": "web"
-        },
-        "matchingRules": {
-          "$.body.location": {
-            "match": "regex",
-            "regex": "(\\d{1,3}\\.)+\\d{1,3}"
-          }
         }
       }
     }
   ],
   "metadata": {
     "pactSpecification": {
-      "version": "2.0.0"
+      "version": "3.0.0"
     }
   }
 }

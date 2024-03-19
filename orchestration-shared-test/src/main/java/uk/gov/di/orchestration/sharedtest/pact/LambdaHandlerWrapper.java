@@ -1,4 +1,4 @@
-package uk.gov.di.orchestration.shared.pact;
+package uk.gov.di.orchestration.sharedtest.pact;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -25,10 +25,10 @@ import java.util.stream.Collectors;
 import static java.text.MessageFormat.format;
 import static java.util.Objects.isNull;
 
-public class LambdaHandlerWrapper implements HttpHandler {
-    private final List<LambdaHandlerWrapperConfig> config;
+class LambdaHandlerWrapper implements HttpHandler {
+    private final List<LambdaHandlerConfig> config;
 
-    public LambdaHandlerWrapper(List<LambdaHandlerWrapperConfig> config) {
+    public LambdaHandlerWrapper(List<LambdaHandlerConfig> config) {
         this.config = config;
     }
 
@@ -47,7 +47,7 @@ public class LambdaHandlerWrapper implements HttpHandler {
         }
     }
 
-    private LambdaHandlerWrapperConfig findHandler(HttpExchange request) {
+    private LambdaHandlerConfig findHandler(HttpExchange request) {
         var path = request.getRequestURI().getPath();
         var httpMethod = request.getRequestMethod();
 
@@ -63,7 +63,7 @@ public class LambdaHandlerWrapper implements HttpHandler {
     }
 
     private APIGatewayProxyResponseEvent translateRequest(
-            HttpExchange exchange, LambdaHandlerWrapperConfig handlerConfig) throws IOException {
+            HttpExchange exchange, LambdaHandlerConfig handlerConfig) throws IOException {
         var requestId = UUID.randomUUID().toString();
 
         var requestContext =

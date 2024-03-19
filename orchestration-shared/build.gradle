@@ -24,8 +24,7 @@ dependencies {
             configurations.ssm,
             configurations.xray,
             configurations.cloudwatch,
-            configurations.gson,
-            configurations.mockito
+            configurations.gson
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

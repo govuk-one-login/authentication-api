@@ -1,7 +1,5 @@
 package uk.gov.di.orchestration.sharedtest.basetest;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
@@ -23,9 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.Mockito.mock;
-
-public abstract class HandlerIntegrationTest<Q, S> {
+public class IntegrationTest {
     private static final String REDIS_HOST = "localhost";
     private static final int REDIS_PORT = 6379;
     private static final String REDIS_PASSWORD = null;
@@ -182,9 +178,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
-    protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
-    protected final Context context = mock(Context.class);
 
     @RegisterExtension
     protected static final RedisExtension redis =

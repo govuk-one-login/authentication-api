@@ -1,4 +1,4 @@
-package uk.gov.di.orchestration.shared.pact;
+package uk.gov.di.orchestration.sharedtest.pact;
 
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 import static java.text.MessageFormat.format;
 
-class LambdaHandlerWrapperConfig {
+public class LambdaHandlerConfig {
 
     private static final String PARAM_NAME_KEY = "ParamName";
     private static final String PATH_PARAM_PATTERN =
@@ -28,7 +28,11 @@ class LambdaHandlerWrapperConfig {
     private final LinkedList<String> pathRegexGroupNames;
     private final RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
 
-    public LambdaHandlerWrapperConfig(
+    /**
+     * @param path use curley braces to specify path parameters e.g.
+     *     /root/path/{someParameter}/{anotherParameter}
+     */
+    public LambdaHandlerConfig(
             String httpMethod,
             String path,
             RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler) {

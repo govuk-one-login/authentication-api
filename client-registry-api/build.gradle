@@ -26,8 +26,7 @@ dependencies {
             project(":orchestration-shared-test"),
             configurations.lambda,
             configurations.sqs,
-            configurations.dynamodb,
-            configurations.pact_provider
+            configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime
 }
