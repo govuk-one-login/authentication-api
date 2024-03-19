@@ -1,5 +1,10 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -20,6 +25,7 @@ import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
@@ -156,6 +162,39 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
+    }
+
+    @Test
+    void shouldReturn302AndRedirectToDefaultLogoutUriWhenInvalidIdTokenSpecified()
+            throws JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        SignedJWT signedJWT =
+                TokenGeneratorHelper.generateIDToken(
+                        "invalid-client-id", new Subject(), "http://localhost-rp", ecSigningKey);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        Map.of(
+                                "id_token_hint",
+                                signedJWT.serialize(),
+                                "post_logout_redirect_uri",
+                                REDIRECT_URL,
+                                "state",
+                                STATE));
+
+        assertThat(response, isRedirect());
+        assertThat(
+                response,
+                isRedirectTo(
+                        allOf(
+                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
+                                redirectQueryParameters(
+                                        hasEntry("error_code", "invalid_request")))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
