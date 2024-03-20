@@ -642,6 +642,7 @@ public class AuthorisationHandler
                             .claim("rp_client_id", client.getClientID())
                             .claim("rp_sector_host", rpSectorIdentifierHost)
                             .claim("rp_redirect_uri", authenticationRequest.getRedirectionURI())
+                            .claim("rp_state", authenticationRequest.getState())
                             .claim("client_name", client.getClientName())
                             .claim("cookie_consent_shared", client.isCookieConsentShared())
                             .claim("consent_required", client.isConsentRequired())
