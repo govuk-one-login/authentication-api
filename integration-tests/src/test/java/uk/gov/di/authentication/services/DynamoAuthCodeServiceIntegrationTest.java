@@ -29,7 +29,7 @@ class DynamoAuthCodeServiceIntegrationTest {
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
 
     DynamoAuthCodeService dynamoAuthCodeService =
-            new DynamoAuthCodeService(ConfigurationService.getInstance(), true);
+            new DynamoAuthCodeService(ConfigurationService.getInstance());
 
     private void setUpDynamo() {
         authCodeExtension.saveAuthCode(
