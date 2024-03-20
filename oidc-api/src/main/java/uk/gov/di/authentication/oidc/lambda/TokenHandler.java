@@ -355,7 +355,7 @@ public class TokenHandler
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(authRequest);
 
         var isConsentRequired =
-                clientRegistry.isConsentRequired() && !vtrList.requiresIdentityValidation();
+                clientRegistry.isConsentRequired() && !vtrList.identityRequired();
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =

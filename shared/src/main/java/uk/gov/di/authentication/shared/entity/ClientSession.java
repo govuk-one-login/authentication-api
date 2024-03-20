@@ -12,7 +12,12 @@ public class ClientSession {
     @Expose private Map<String, List<String>> authRequestParams;
 
     @Expose private LocalDateTime creationDate;
+
     @Expose private VectorOfTrust effectiveVectorOfTrust;
+
+    @Expose private boolean mfaRequired;
+
+    @Expose private boolean identityRequired;
 
     @Expose private Subject docAppSubjectId;
 
@@ -52,5 +57,13 @@ public class ClientSession {
 
     public String getClientName() {
         return clientName;
+    }
+
+    public boolean getMfaRequired() {
+        return mfaRequired;
+    }
+
+    public boolean getIdentityRequired() {
+        return identityRequired;
     }
 }

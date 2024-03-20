@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 public class ClientSession {
 
+    @Deprecated(forRemoval = true)
     @Expose private Map<String, List<String>> authRequestParams;
 
     @Expose private String idTokenHint;
@@ -29,6 +30,10 @@ public class ClientSession {
 
     @Expose private VtrList vtrList;
 
+    @Expose private boolean mfaRequired;
+
+    @Expose private boolean identityRequired;
+
     @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
@@ -41,6 +46,8 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
+        this.mfaRequired = vtrList.mfaRequired();
+        this.identityRequired = vtrList.identityRequired();
         this.effectiveVectorOfTrust = vtrList.getEffectiveVectorOfTrust();
         this.clientName = clientName;
     }

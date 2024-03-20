@@ -201,7 +201,7 @@ class VectorOfTrustTest {
     @ParameterizedTest
     @MethodSource("requiresIdentityTestCases")
     void requiresIdentityReturnsCorrectValues(VectorOfTrust vot, boolean expectedRequiresIdentity) {
-        assertThat(vot.requiresIdentity(), is(equalTo(expectedRequiresIdentity)));
+        assertThat(vot.identityRequired(), is(equalTo(expectedRequiresIdentity)));
     }
 
     static Stream<Arguments> requiresIdentityTestCases() {
@@ -215,7 +215,7 @@ class VectorOfTrustTest {
     @ParameterizedTest
     @MethodSource("requiresMfaTestCases")
     void requiresMfaReturnsCorrectValues(VectorOfTrust vot, boolean expectedRequiresMfa) {
-        assertThat(vot.requiresMfa(), is(equalTo(expectedRequiresMfa)));
+        assertThat(vot.mfaRequired(), is(equalTo(expectedRequiresMfa)));
     }
 
     static Stream<Arguments> requiresMfaTestCases() {
