@@ -26,6 +26,6 @@ public class IdentityHelper {
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
         var vtrList = VtrList.parseFromAuthRequestAttribute(vtr);
-        return vtrList.requiresIdentityValidation();
+        return vtrList.identityRequired();
     }
 }

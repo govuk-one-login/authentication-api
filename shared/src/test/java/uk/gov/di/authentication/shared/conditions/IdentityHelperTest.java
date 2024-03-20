@@ -17,69 +17,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class IdentityHelperTest {
-
-    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final ClientID CLIENT_ID = new ClientID("client-id");
-    private static final Scope SCOPES =
-            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
-
     @Test
-    void shouldReturnFalseWhenVtrNotPresentInAuthRequest() {
-        var authRequest = createAuthRequest();
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+    void shouldReturnFalseIfIdentityNotRequired() {
+        assertFalse(IdentityHelper.identityRequired(false, true, true));
     }
 
     @Test
-    void shouldReturnFalseWhenNoLevelOfConfidenceIsPresentInAuthRequest() {
-        var authRequest = createAuthRequest("Cl.Cm");
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
-    }
-
-    @Test
-    void shouldReturnFalseWhenP0LevelOfConfidenceIsPresentInAuthRequest() {
-        var authRequest = createAuthRequest("P0.Cl.Cm");
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
-    }
-
-    @Test
-    void shouldReturnTrueIfLevelOfConfidenceGreaterThanP0IsPresentInAuthRequest() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
-
-        assertTrue(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+    void shouldReturnTrueIfIdentityRequired() {
+        assertTrue(IdentityHelper.identityRequired(true, true, true));
     }
 
     @Test
     void shouldReturnFalseIfIdentityIsNotEnabled() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, false));
+        assertFalse(IdentityHelper.identityRequired(true, true, false));
     }
 
     @Test
     void shouldReturnFalseWhenRPDoesNotSupportIdentityVerification() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), false, true));
-    }
-
-    private AuthenticationRequest createAuthRequest() {
-        return createAuthRequest(null);
-    }
-
-    private AuthenticationRequest createAuthRequest(String vtrValue) {
-        var builder =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                SCOPES,
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce());
-
-        if (nonNull(vtrValue)) builder.customParameter("vtr", jsonArrayOf(vtrValue));
-        return builder.build();
+        assertFalse(IdentityHelper.identityRequired(true, false, true));
     }
 }

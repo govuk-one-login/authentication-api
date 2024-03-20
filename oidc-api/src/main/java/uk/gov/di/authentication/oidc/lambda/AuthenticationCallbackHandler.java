@@ -509,7 +509,7 @@ public class AuthenticationCallbackHandler
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
         var vtrList = clientSession.getVtrList();
-        var mfaRequired = vtrList.requiresMfa();
+        var mfaRequired = vtrList.mfaRequired();
 
         var levelOfConfidence =
                 vtrList.getSelectedLevelOfConfidences().stream()

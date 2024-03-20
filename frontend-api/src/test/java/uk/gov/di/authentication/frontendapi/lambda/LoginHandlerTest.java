@@ -23,7 +23,6 @@ import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -75,7 +74,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -174,7 +172,11 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+                .thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired())
+                .thenReturn(false);
+        when(clientSession.getMfaRequired())
+                .thenReturn(false);
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
@@ -243,7 +245,9 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+                .thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired())
+                .thenReturn(false);
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
@@ -313,6 +317,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -371,6 +376,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -430,6 +436,9 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
+        when(clientSession.getMfaRequired()).thenReturn(true);
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -497,6 +506,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
 
         usingDefaultVectorOfTrust();
@@ -554,6 +564,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -595,6 +606,7 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
         usingDefaultVectorOfTrust();
 
@@ -630,6 +642,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
@@ -786,6 +799,8 @@ class LoginHandlerTest {
 
         when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
+
 
         APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
 
@@ -979,6 +994,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
@@ -1026,10 +1042,6 @@ class LoginHandlerTest {
     }
 
     private AuthenticationRequest generateAuthRequest() {
-        return generateAuthRequest(null);
-    }
-
-    private AuthenticationRequest generateAuthRequest(CredentialTrustLevel credentialTrustLevel) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest.Builder builder =
@@ -1040,9 +1052,6 @@ class LoginHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .state(new State())
                         .nonce(new Nonce());
-        if (nonNull(credentialTrustLevel)) {
-            builder.customParameter("vtr", jsonArrayOf(credentialTrustLevel.getValue()));
-        }
         return builder.build();
     }
 

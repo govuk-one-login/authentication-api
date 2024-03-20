@@ -219,7 +219,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         try {
             authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
             var vtrList = VtrList.parseFromAuthRequestAttribute(authRequestVtr);
-            if (vtrList.requiresIdentityValidation()
+            if (vtrList.identityRequired()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return errorResponse(redirectURI, OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }

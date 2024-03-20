@@ -19,31 +19,12 @@ public class MfaHelper {
 
     private MfaHelper() {}
 
-    public static boolean mfaRequired(Map<String, List<String>> authRequestParams) {
-        AuthenticationRequest authRequest;
-        try {
-            authRequest = AuthenticationRequest.parse(authRequestParams);
-        } catch (ParseException e) {
-            throw new RuntimeException();
-        }
-        List<String> vtr = authRequest.getCustomParameter("vtr");
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-
-        return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
-    }
-
-    public static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
-        return Optional.ofNullable(userCredentials.getMfaMethods())
-                .flatMap(
-                        mfaMethods -> mfaMethods.stream().filter(MFAMethod::isEnabled).findFirst());
-    }
-
     public static UserMfaDetail getUserMFADetail(
             UserContext userContext,
             UserCredentials userCredentials,
             String phoneNumber,
             boolean isPhoneNumberVerified) {
-        var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
+        var isMfaRequired = userContext.getClientSession().getMfaRequired();
         var mfaMethodVerified = isPhoneNumberVerified;
 
         var mfaMethod = getPrimaryMFAMethod(userCredentials);
@@ -55,5 +36,11 @@ public class MfaHelper {
             mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
         }
         return new UserMfaDetail(isMfaRequired, mfaMethodVerified, mfaMethodType, phoneNumber);
+    }
+
+    private static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
+        return Optional.ofNullable(userCredentials.getMfaMethods())
+                .flatMap(
+                        mfaMethods -> mfaMethods.stream().filter(MFAMethod::isEnabled).findFirst());
     }
 }

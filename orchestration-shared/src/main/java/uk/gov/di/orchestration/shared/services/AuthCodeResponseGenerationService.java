@@ -70,7 +70,7 @@ public class AuthCodeResponseGenerationService {
 
     public void processVectorOfTrust(ClientSession clientSession, Map<String, String> dimensions) {
         var vtrList = clientSession.getVtrList();
-        var mfaNotRequired = !vtrList.requiresMfa();
+        var mfaNotRequired = !vtrList.mfaRequired();
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
         dimensions.put(
                 "RequestedLevelOfConfidence", clientSession.getVtrLocsAsCommaSeparatedString());
