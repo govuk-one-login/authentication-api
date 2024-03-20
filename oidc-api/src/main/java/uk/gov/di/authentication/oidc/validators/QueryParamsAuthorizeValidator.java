@@ -97,7 +97,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             var vtrList = VtrList.parseFromAuthRequestAttribute(authRequestVtr);
-            if (vtrList.requiresIdentityValidation()
+            if (vtrList.identityRequired()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
                 return Optional.of(

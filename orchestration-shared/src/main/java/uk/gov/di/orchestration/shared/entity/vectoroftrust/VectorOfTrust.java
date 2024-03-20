@@ -96,11 +96,11 @@ public class VectorOfTrust implements Comparable<VectorOfTrust> {
         return levelOfConfidence;
     }
 
-    public boolean requiresIdentity() {
+    public boolean identityRequired() {
         return !levelOfConfidence.equals(LevelOfConfidence.NONE);
     }
 
-    public boolean requiresMfa() {
+    public boolean mfaRequired() {
         return credentialTrustLevel.equals(CredentialTrustLevel.MEDIUM_LEVEL);
     }
 

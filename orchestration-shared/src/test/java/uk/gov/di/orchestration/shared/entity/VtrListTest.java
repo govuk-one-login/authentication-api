@@ -192,7 +192,7 @@ class VtrListTest {
     @MethodSource("requiresIdentityTestCases")
     void requiresIdentityReturnsCorrectValue(VtrList vtrList, boolean expectedRequiresIdentity) {
 
-        assertThat(vtrList.requiresIdentityValidation(), is(equalTo(expectedRequiresIdentity)));
+        assertThat(vtrList.identityRequired(), is(equalTo(expectedRequiresIdentity)));
     }
 
     static Stream<Arguments> requiresIdentityTestCases() {
@@ -214,7 +214,7 @@ class VtrListTest {
     @MethodSource("requiresMfaTestCases")
     void requiresMfaCorrectValue(VtrList vtrList, boolean expectedRequiresIdentity) {
 
-        assertThat(vtrList.requiresMfa(), is(equalTo(expectedRequiresIdentity)));
+        assertThat(vtrList.mfaRequired(), is(equalTo(expectedRequiresIdentity)));
     }
 
     static Stream<Arguments> requiresMfaTestCases() {

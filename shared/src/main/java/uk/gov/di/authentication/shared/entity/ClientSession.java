@@ -22,6 +22,10 @@ public class ClientSession {
 
     @Expose private List<VectorOfTrust> vtrList = new ArrayList<>();
 
+    @Expose private boolean mfaRequired;
+
+    @Expose private boolean identityRequired;
+
     @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
@@ -93,6 +97,14 @@ public class ClientSession {
 
     public String getClientName() {
         return clientName;
+    }
+
+    public boolean getMfaRequired() {
+        return mfaRequired;
+    }
+
+    public boolean getIdentityRequired() {
+        return identityRequired;
     }
 
     private List<VectorOfTrust> orderVtrList() {
