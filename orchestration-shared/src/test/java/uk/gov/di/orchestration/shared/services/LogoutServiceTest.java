@@ -272,8 +272,7 @@ public class LogoutServiceTest {
                 logoutService.handleAccountInterventionLogout(
                         session, event, CLIENT_ID, intervention);
 
-        verify(clientSessionService)
-                .deleteClientSessionFromRedis(session.getClientSessions().get(0));
+        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
@@ -304,8 +303,7 @@ public class LogoutServiceTest {
                 logoutService.handleAccountInterventionLogout(
                         session, event, CLIENT_ID, intervention);
 
-        verify(clientSessionService)
-                .deleteClientSessionFromRedis(session.getClientSessions().get(0));
+        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
@@ -367,9 +365,9 @@ public class LogoutServiceTest {
                 .sendLogoutMessage(
                         argThat(withClientId("client-id-3")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
 
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-1");
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
+        verify(clientSessionService).deleteStoredClientSession("client-session-id-1");
+        verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
+        verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
     }
 

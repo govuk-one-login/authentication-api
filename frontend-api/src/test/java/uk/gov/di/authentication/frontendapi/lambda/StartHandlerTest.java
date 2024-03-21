@@ -258,7 +258,7 @@ class StartHandlerTest {
         assertFalse(response.getUser().isConsentRequired());
         assertThat(response.getUser().getCookieConsent(), equalTo(null));
         assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(null));
-        verify(clientSessionService).saveClientSession(anyString(), any());
+        verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
                 .submitAuditEvent(
