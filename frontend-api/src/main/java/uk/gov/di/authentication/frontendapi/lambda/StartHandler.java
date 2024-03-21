@@ -155,7 +155,7 @@ public class StartHandler
                                 userContext.getClientSession().getAuthRequestParams(),
                                 configurationService.isCustomDocAppClaimEnabled(),
                                 configurationService.getDocAppDomain());
-                clientSessionService.saveClientSession(
+                clientSessionService.updateStoredClientSession(
                         clientSessionId, clientSession.get().setDocAppSubjectId(docAppSubjectId));
                 LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
             }
