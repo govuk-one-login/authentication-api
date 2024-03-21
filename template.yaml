@@ -172,7 +172,7 @@ Resources:
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
-      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} openid-configuration lambda.ACCOUNT: ${AWS::AccountId}"
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}"
       AlarmName: !Sub ${Environment}-openid-configuration-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
@@ -187,7 +187,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub ${Environment}-openid-configuration-error-rate-alarm
-      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} openid-configuration lambda.ACCOUNT: ${AWS::AccountId}"
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} openid-configuration lambda.ACCOUNT: di-orchestration-${Environment}"
       ActionsEnabled: true
       AlarmActions:
         - !Ref SlackEvents
