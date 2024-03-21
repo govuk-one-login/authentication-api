@@ -180,12 +180,17 @@ public class AccountInterventionService {
 
     private HttpResponse<String> sendRequestToAis(HttpRequest request) {
         HttpResponse<String> httpResponse = null;
+        var start = System.nanoTime();
         try {
             httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         } catch (IOException | InterruptedException e) {
             logAndThrowAccountInterventionException(
                     "Failed to send request to Account Intervention Service.");
+        }
+        var durationMs = (System.nanoTime() - start) / 1_000_000L;
+        if (httpResponse != null) {
+            instrumentResponse(durationMs, Integer.toString(httpResponse.statusCode()));
         }
         validateResponse(httpResponse);
         return httpResponse;
@@ -216,6 +221,11 @@ public class AccountInterventionService {
             logAndThrowAccountInterventionException("Account Intervention Status is null.");
         }
         return accountInterventionResponse;
+    }
+
+    private void instrumentResponse(double duration, String status) {
+        cloudwatchMetricsService.putEmbeddedValue(
+                "AISResponseTimeMs", duration, Map.of("statusCode", status));
     }
 
     private void incrementCloudwatchMetrics(AccountIntervention intervention) {
