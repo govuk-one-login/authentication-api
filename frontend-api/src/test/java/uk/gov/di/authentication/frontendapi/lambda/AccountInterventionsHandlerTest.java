@@ -75,8 +75,8 @@ public class AccountInterventionsHandlerTest {
             String.valueOf(fixedDate.toEpochMilli());
     private final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
             String.format(
-                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"appliedAt\":\"%s\"}",
-                    false, false, false, fixedDateUnixTimestampString);
+                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
+                    false, false, false, false, fixedDateUnixTimestampString);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
     private final Context context = mock(Context.class);
@@ -296,8 +296,8 @@ public class AccountInterventionsHandlerTest {
 
         assertEquals(
                 String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"appliedAt\":\"%s\"}",
-                        resetPassword, blocked, suspended, APPLIED_AT_TIMESTAMP),
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
+                        resetPassword, blocked, suspended, reproveIdentity, APPLIED_AT_TIMESTAMP),
                 result.getBody());
         verify(auditService)
                 .submitAuditEvent(
