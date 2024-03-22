@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MFAMethodV2;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -470,6 +471,35 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .setMfaMethod(mfaMethod));
+    }
+
+    public void updateMFAMethodV2(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue,
+            String priorityIdentifier,
+            int mfaIdentifier,
+            String endpoint) {
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        MFAMethodV2 mfaMethodV2 =
+                new MFAMethodV2(
+                        MFAMethodType.AUTH_APP.getValue(),
+                        credentialValue,
+                        methodVerified,
+                        enabled,
+                        dateTime,
+                        mfaIdentifier,
+                        priorityIdentifier,
+                        endpoint);
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .setMfaMethodV2(mfaMethodV2));
     }
 
     @Override
