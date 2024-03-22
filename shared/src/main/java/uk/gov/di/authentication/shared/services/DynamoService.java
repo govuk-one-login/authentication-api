@@ -473,7 +473,7 @@ public class DynamoService implements AuthenticationService {
                         .setMfaMethod(mfaMethod));
     }
 
-    public void updateMFAMethodV2(
+    public void addMFAMethodV2(
             String email,
             MFAMethodType mfaMethodType,
             boolean methodVerified,
