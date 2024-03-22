@@ -1,0 +1,30 @@
+name: Contract test
+
+env:
+  PACT_USER: ${{ secrets.PACT_USER }}
+  PACT_PASSWORD: ${{ secrets.PACT_PASSWORD }}
+  PACT_URL: ${{ secrets.PACT_URL }}
+  GIT_BRANCH: ${{ github.head_ref }}
+  CONSUMER_APP_VERSION: ${{ github.event.pull_request.head.sha }}
+  PACT_BROKER_SOURCE_HEADER: ${{ secrets.PACT_BROKER_SOURCE_HEADER }}
+
+on:
+  workflow_dispatch:
+
+jobs:
+  contract-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Run contract tests
+        run: ./gradlew --parallel ipv-api:contractTest
+      - name: Upload pacts to broker
+        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
+        run: ./gradlew :ipv-api:pactPublish
