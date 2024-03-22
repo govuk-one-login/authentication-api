@@ -9,6 +9,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MFAMethodV2;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -172,6 +173,32 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldAddAuthAppMFAMethodV2() {
+        setUpDynamo();
+        dynamoService.updateMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                TEST_MFA_APP_CREDENTIAL,
+                "PRIMARY",
+                1,
+                "test");
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethodV2().size(), equalTo(1));
+        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodV2().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertThat(mfaMethod.getPriorityIdentifier(), equalTo("PRIMARY"));
+        assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
+        assertThat(mfaMethod.getEndPoint(), equalTo("test"));
+    }
+
+    @Test
     void
             shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
         setUpDynamo();
@@ -194,6 +221,35 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void
+            shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExistsV2() {
+        setUpDynamo();
+        dynamoService.updateMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                TEST_MFA_APP_CREDENTIAL,
+                "PRIMARY",
+                1,
+                "test");
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                TEST_EMAIL, "+4407316763843", true, true);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
+        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodV2().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(false));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
+        assertThat(updatedUserProfile.getPhoneNumber(), equalTo("+447316763843"));
+        assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(true));
+    }
+
+    @Test
     void shouldSetSetPhoneNumberAndAccountVerifiedWhenMfaMethodDoesNotExists() {
         setUpDynamo();
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
@@ -205,6 +261,30 @@ class DynamoServiceIntegrationTest {
         assertThat(updatedUserUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserUserProfile.getPhoneNumber(), equalTo("+447316763843"));
         assertThat(updatedUserUserProfile.isPhoneNumberVerified(), equalTo(true));
+    }
+
+    @Test
+    void shouldSetVerifiedPhoneNumberAndRemoveAuthAppWhenPresentV2() {
+        setUpDynamo();
+        dynamoService.setAccountVerified(TEST_EMAIL);
+        dynamoService.updateMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                TEST_MFA_APP_CREDENTIAL,
+                "PRIMARY",
+                1,
+                "test");
+
+        dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(TEST_EMAIL, "+447316763843");
+
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        assertThat(updatedUserCredentials.getMfaMethodV2(), equalTo(emptyList()));
+        assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
+        assertThat(updatedUserProfile.getPhoneNumber(), equalTo("+447316763843"));
+        assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(true));
     }
 
     @Test
