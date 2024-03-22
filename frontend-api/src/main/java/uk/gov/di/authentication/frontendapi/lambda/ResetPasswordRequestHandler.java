@@ -110,6 +110,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         LOG.info("Processing request");
         try {
+            LOG.info(
+                    "Session: {} {}",
+                    userContext.getSession().getSessionId(),
+                    userContext.getSession().resetPasswordResetCount());
+            LOG.info(
+                    "resetpassswordrequest emails {} - {}",
+                    userContext.getSession().getEmailAddress(),
+                    request.getEmail());
             if (Objects.isNull(userContext.getSession().getEmailAddress())
                     || !userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
