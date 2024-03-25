@@ -115,10 +115,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
+            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+            var userExists = userProfile.isPresent();
+            userContext.getSession().setEmailAddress(emailAddress);
+
             var incorrectPasswordCount = codeStorageService.getIncorrectPasswordCount(emailAddress);
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User account is locked");
+                sessionService.save(userContext.getSession());
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -134,9 +139,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
             }
 
-            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
-            var userExists = userProfile.isPresent();
-            userContext.getSession().setEmailAddress(emailAddress);
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var internalPairwiseId = AuditService.UNKNOWN;

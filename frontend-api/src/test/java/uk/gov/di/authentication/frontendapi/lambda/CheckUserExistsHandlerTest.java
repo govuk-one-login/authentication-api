@@ -63,6 +63,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -363,8 +364,9 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfUserAccountIsLocked() {
+    void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
         usingValidSession();
+
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
@@ -383,6 +385,7 @@ class CheckUserExistsHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
+        verify(sessionService, times(1)).save(any());
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_TEMPORARILY_LOCKED,
