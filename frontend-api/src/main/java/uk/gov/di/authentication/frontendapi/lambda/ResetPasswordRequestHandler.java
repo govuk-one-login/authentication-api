@@ -183,30 +183,37 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             sqsClient.send(serialiseNotifyRequest(notifyRequest));
         }
         LOG.info("Successfully processed request");
-        var resetPasswordRequestHandlerResponse = getResetPasswordHandlerResponseWithMfaDetail(resetPasswordRequest, userContext);
-        try {
-            return generateApiGatewayProxyResponse(200, resetPasswordRequestHandlerResponse);
-        } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        var maybeResponse = generateResponseWithMfaDetail(resetPasswordRequest, userContext);
+        if (maybeResponse.isPresent()) {
+            try {
+                return generateApiGatewayProxyResponse(200, maybeResponse.get());
+            } catch (JsonException e) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            }
+        } else {
+            LOG.error("Could not find user profile for reset password request");
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
         }
     }
 
-    ResetPasswordRequestHandlerResponse getResetPasswordHandlerResponseWithMfaDetail(ResetPasswordRequest resetPasswordRequest, UserContext userContext) {
-        var userProfile =
-                authenticationService
-                        .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
-                        .get();
-        var userMfaDetail =
-                getUserMFADetail(
-                        userContext,
-                        authenticationService.getUserCredentialsFromEmail(
-                                resetPasswordRequest.getEmail()),
-                        userProfile.getPhoneNumber(),
-                        userProfile.isPhoneNumberVerified());
+    Optional<ResetPasswordRequestHandlerResponse> generateResponseWithMfaDetail(
+            ResetPasswordRequest resetPasswordRequest, UserContext userContext) {
+        return authenticationService
+                .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
+                .map(
+                        userProfile -> {
+                            var userMfaDetail =
+                                    getUserMFADetail(
+                                            userContext,
+                                            authenticationService.getUserCredentialsFromEmail(
+                                                    resetPasswordRequest.getEmail()),
+                                            userProfile.getPhoneNumber(),
+                                            userProfile.isPhoneNumberVerified());
 
-        return new ResetPasswordRequestHandlerResponse(
-                userMfaDetail.getMfaMethodType(),
-                getLastDigitsOfPhoneNumber(userMfaDetail));
+                            return new ResetPasswordRequestHandlerResponse(
+                                    userMfaDetail.getMfaMethodType(),
+                                    getLastDigitsOfPhoneNumber(userMfaDetail));
+                        });
     }
 
     private Optional<ErrorResponse> validatePasswordResetCount(

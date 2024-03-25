@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -225,8 +224,7 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
-        void shouldPutMessageOnQueueForAValidCodeFlowRequest()
-                throws Json.JsonException {
+        void shouldPutMessageOnQueueForAValidCodeFlowRequest() throws Json.JsonException {
             usingValidSession();
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
@@ -309,6 +307,18 @@ class ResetPasswordRequestHandlerTest {
                             PHONE_NUMBER,
                             PERSISTENT_ID,
                             PASSWORD_RESET_COUNTER);
+        }
+
+        @Test
+        void shouldReturn404IfUserProfileIsNotFound() {
+            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.empty());
+
+            usingValidSession();
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(404, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
         }
 
         @Test
