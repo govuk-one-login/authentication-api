@@ -401,24 +401,6 @@ class CheckUserExistsHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
-    private static Stream<Arguments> userMfaDetail() {
-        return Stream.of(
-                Arguments.of(new UserMfaDetail(), null),
-                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, ""), null),
-                Arguments.of(
-                        new UserMfaDetail(false, false, MFAMethodType.AUTH_APP, "123456789"), null),
-                Arguments.of(
-                        new UserMfaDetail(false, false, MFAMethodType.SMS, "123456789"), "789"),
-                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, "12"), null));
-    }
-
-    @ParameterizedTest
-    @MethodSource("userMfaDetail")
-    void shouldReturnLastThreeDigitsOfPhoneNumber(UserMfaDetail userMfaDetail, String lastDigits) {
-        var result = handler.getLastDigitsOfPhoneNumber(userMfaDetail);
-        assertThat(result, equalTo(lastDigits));
-    }
-
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));

@@ -13,7 +13,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -31,6 +30,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -196,19 +196,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
-    }
-
-    String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
-        if (userMfaDetail.getPhoneNumber() != null
-                && !userMfaDetail.getPhoneNumber().isEmpty()
-                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
-                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
-            return userMfaDetail
-                    .getPhoneNumber()
-                    .substring(userMfaDetail.getPhoneNumber().length() - NUMBER_OF_LAST_DIGITS);
-        } else {
-            return null;
         }
     }
 }
