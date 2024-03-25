@@ -12,6 +12,12 @@ sequenceDiagram
     auth_internal_api ->> auth_internal_api : Start helps calculate current state
     auth_internal_api ->> auth_frontend : StartResponse.java object returned
     auth_frontend ->> auth_frontend : State machine works out where to send user based on start response
+    auth_frontend ->> auth_internal_api : Request to /account-interventions (AccountInterventionsHandler.java)
+    auth_internal_api ->> account_interventions : Request to account interventions api (AccountInterventionsRequest.java)
+    account_interventions ->> auth_internal_api : Response from Account Interventions containing suspension=false & passwordReset=false & blocked=false
+    auth_internal_api ->> auth_internal_api : Checks response to see if any intervention is required
+    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned
+    auth_frontend ->> auth_frontend : Validates that no intervention is required
     auth_frontend ->> auth_internal_api : Request to /account-recovery (AccountRecoveryHandler.java)
     auth_internal_api ->> auth_internal_api : Calculates whether account recovery is permitted
     auth_internal_api ->> auth_frontend: AccountRecovery.java object returned
@@ -23,12 +29,6 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /verify-code (VerifyCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether SMS MFA code is valid
     auth_internal_api ->> auth_frontend: 204 response
-    auth_frontend ->> auth_internal_api : Request to /account-interventions (AccountInterventionsHandler.java)
-    auth_internal_api ->> account_interventions : Request to account interventions api (AccountInterventionsRequest.java)
-    account_interventions ->> auth_internal_api : Response from Account Interventions containing suspension=false & passwordReset=false & blocked=false
-    auth_internal_api ->> auth_internal_api : Checks response to see if any intervention is required
-    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned
-    auth_frontend ->> auth_frontend : Validates that no intervention is required
     auth_frontend ->> auth_internal_api : Request to /orch-auth-code (AuthenticationAuthCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Generates and store Authorization Code with 5 min TTL
     auth_internal_api ->> auth_frontend: AuthCodeResponse.java object returned
