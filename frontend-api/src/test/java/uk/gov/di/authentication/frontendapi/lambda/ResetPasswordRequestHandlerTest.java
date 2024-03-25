@@ -262,12 +262,7 @@ class ResetPasswordRequestHandlerTest {
 
         @Test
         public void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
-            String sessionId = "1233455677";
-            Session session = mock(Session.class);
-            when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-            when(session.getSessionId()).thenReturn(sessionId);
-            when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-            when(session.getPasswordResetCount()).thenReturn(0);
+            usingSessionWithPasswordResetCount(0);
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
@@ -275,8 +270,6 @@ class ResetPasswordRequestHandlerTest {
             when(codeStorageService.isBlockedForEmail(
                             TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
                     .thenReturn(true);
-            when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                    .thenReturn(Optional.of(session));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -287,12 +280,7 @@ class ResetPasswordRequestHandlerTest {
 
         @Test
         public void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
-            String sessionId = "1233455677";
-            Session session = mock(Session.class);
-            when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-            when(session.getSessionId()).thenReturn(sessionId);
-            when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-            when(session.getPasswordResetCount()).thenReturn(0);
+            usingSessionWithPasswordResetCount(0);
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
@@ -300,8 +288,6 @@ class ResetPasswordRequestHandlerTest {
             when(codeStorageService.isBlockedForEmail(
                             TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
                     .thenReturn(true);
-            when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                    .thenReturn(Optional.of(session));
 
             var result = handler.handleRequest(validEvent, context);
 
@@ -325,18 +311,8 @@ class ResetPasswordRequestHandlerTest {
 
         @Test
         public void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
-            Subject subject = new Subject("subject_1");
-            String sessionId = "1233455677";
-            when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
             when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-            Session session = mock(Session.class);
-            when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-            when(session.getSessionId()).thenReturn(sessionId);
-            when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-            when(session.getPasswordResetCount()).thenReturn(5);
-
-            when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                    .thenReturn(Optional.of(session));
+            var session = usingSessionWithPasswordResetCount(5);
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
             var codeRequestType =
@@ -417,6 +393,17 @@ class ResetPasswordRequestHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
+    }
+
+    private Session usingSessionWithPasswordResetCount(int passwordResetCount) {
+        Session session = mock(Session.class);
+        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.getPasswordResetCount()).thenReturn(passwordResetCount);
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        return session;
     }
 
     private Map<String, String> validHeaders() {
