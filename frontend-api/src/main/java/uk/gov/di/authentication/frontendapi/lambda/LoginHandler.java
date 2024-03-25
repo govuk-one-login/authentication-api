@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
-import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
@@ -247,7 +247,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             String redactedPhoneNumber = null;
             if (isPhoneNumberVerified) {
                 redactedPhoneNumber =
-                        RedactPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
+                        FrontendApiPhoneNumberHelper.redactPhoneNumber(
+                                userProfile.getPhoneNumber());
             }
             boolean termsAndConditionsAccepted = false;
             if (Objects.nonNull(userProfile.getTermsAndConditions())) {
