@@ -18,17 +18,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -44,6 +51,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -101,6 +109,8 @@ class ResetPasswordRequestHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
+    private static final String CLIENT_ID = "test-client-id";
+    private static final String CLIENT_NAME = "test-client-name";
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -170,6 +180,30 @@ class ResetPasswordRequestHandlerTest {
             when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
             when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                     .thenReturn(Optional.of(PHONE_NUMBER));
+            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.of(PHONE_NUMBER));
+            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.of(userProfileWithPhoneNumber(PHONE_NUMBER)));
+            when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                    .thenReturn(Optional.of(getClientSession()));
+            var disabledMfaMethod =
+                    new MFAMethod(
+                            MFAMethodType.AUTH_APP.getValue(),
+                            "first-value",
+                            true,
+                            false,
+                            NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+            var enabledMfaMethod =
+                    new MFAMethod(
+                            MFAMethodType.SMS.getValue(),
+                            "second-value",
+                            true,
+                            true,
+                            NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+            when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+                    .thenReturn(
+                            new UserCredentials()
+                                    .withMfaMethods(List.of(disabledMfaMethod, enabledMfaMethod)));
         }
 
         @Test
@@ -198,7 +232,7 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            AuditService.UNKNOWN,
+                            TEST_CLIENT_ID,
                             AuditService.UNKNOWN,
                             TEST_EMAIL_ADDRESS,
                             "123.123.123.123",
@@ -257,6 +291,19 @@ class ResetPasswordRequestHandlerTest {
                             PHONE_NUMBER,
                             PERSISTENT_ID,
                             PASSWORD_RESET_COUNTER);
+        }
+
+        @Test
+        void shouldReturn200WithTheUsersMfaMethodForAValidRequest() {
+            Subject subject = new Subject("subject_1");
+            when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+
+            usingValidSession();
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(204, result.getStatusCode());
+            var expectedBody = "{\"mfaMethodType\":\"SMS\",\"phoneNumberLastThree\":\"890\"}";
+            assertEquals(expectedBody, result.getBody());
         }
 
         @Test
@@ -444,5 +491,25 @@ class ResetPasswordRequestHandlerTest {
         event.setHeaders(headers);
         event.setBody(body);
         return event;
+    }
+
+    private UserProfile userProfileWithPhoneNumber(String phoneNumber) {
+        return new UserProfile().withEmail(TEST_EMAIL_ADDRESS).withPhoneNumber(phoneNumber);
+    }
+
+    private ClientSession getClientSession() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .build();
+
+        return new ClientSession(
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 }
