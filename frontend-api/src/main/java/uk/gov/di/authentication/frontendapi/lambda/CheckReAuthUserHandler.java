@@ -73,9 +73,17 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .getUserProfileByEmailMaybe(request.email())
                     .flatMap(
                             userProfile -> {
-                                if (isAccountLocked(userProfile.getEmail())) {
+                                if (hasEnteredIncorrectEmailTooManyTimes(userProfile.getEmail())) {
                                     throw new AccountLockedException(
-                                            "Account is locked due to too many failed attempts.");
+                                            "Account is locked due to too many failed attempts.",
+                                            ErrorResponse.ERROR_1057);
+                                }
+
+                                if (hasEnteredIncorrectPasswordTooManyTimes(
+                                        userProfile.getEmail())) {
+                                    throw new AccountLockedException(
+                                            "Account is locked due to too many failed incorrect password attempts.",
+                                            ErrorResponse.ERROR_1045);
                                 }
 
                                 return verifyReAuthentication(
@@ -85,7 +93,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .orElseGet(() -> generateErrorResponse(request.email()));
         } catch (AccountLockedException e) {
             LOG.error("Account is locked due to too many failed attempts.");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+            return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
     }
 
@@ -118,17 +126,24 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(String email) {
-        if (isAccountLocked(email)) {
-            throw new AccountLockedException("Account is locked due to too many failed attempts.");
+        if (hasEnteredIncorrectEmailTooManyTimes(email)) {
+            throw new AccountLockedException(
+                    "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
         LOG.info("User not found or no match");
         codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
 
-    private boolean isAccountLocked(String email) {
+    private boolean hasEnteredIncorrectEmailTooManyTimes(String email) {
         var incorrectEmailCount = codeStorageService.getIncorrectEmailCount(email);
         return incorrectEmailCount >= configurationService.getMaxEmailReAuthRetries();
+    }
+
+    private boolean hasEnteredIncorrectPasswordTooManyTimes(String email) {
+        var incorrectPasswordCount =
+                codeStorageService.getIncorrectPasswordCountReauthJourney(email);
+        return incorrectPasswordCount >= configurationService.getMaxPasswordRetries();
     }
 
     private void removeEmailCountLock(String email) {

@@ -135,6 +135,10 @@ public class RedisExtension
         codeStorageService.increaseIncorrectPasswordCount(email);
     }
 
+    public void incrementPasswordCountReauthJourney(String email) {
+        codeStorageService.increaseIncorrectPasswordCountReauthJourney(email);
+    }
+
     public void incrementEmailCount(String email) {
         codeStorageService.increaseIncorrectEmailCount(email);
     }

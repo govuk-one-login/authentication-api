@@ -70,6 +70,7 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
         handler =
                 new CheckReAuthUserHandler(
                         configurationService,
@@ -148,6 +149,27 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
+        var context = mock(Context.class);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        userContext);
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
     }
 
     @Test
