@@ -31,13 +31,21 @@ dependencies {
             configurations.lambda,
             configurations.sqs,
             configurations.kms,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.pact_consumer
     testRuntimeOnly configurations.test_runtime
 }
 
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
+    exclude 'uk/gov/di/authentication/oidc/contract/**'
+}
+
+task contractTest (type: Test) {
+    useJUnitPlatform()
+    include '/uk/gov/di/authentication/oidc/contract/**'
+    systemProperties['pact.rootDir'] = "$rootDir/oidc/src/test/pact"
 }
 
 task buildZip(type: Zip) {
