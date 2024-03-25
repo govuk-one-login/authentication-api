@@ -13,7 +13,6 @@ import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
-import uk.gov.di.orchestration.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
@@ -344,17 +343,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
 
         return notifyCallbackBearerToken;
-    }
-
-    public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
-            String templateId) {
-        for (DeliveryReceiptsNotificationType type : DeliveryReceiptsNotificationType.values()) {
-            if (commaSeparatedListContains(
-                    templateId, systemService.getenv(type.getTemplateName()))) {
-                return Optional.of(type);
-            }
-        }
-        return Optional.empty();
     }
 
     boolean commaSeparatedListContains(String searchTerm, String stringToSearch) {
