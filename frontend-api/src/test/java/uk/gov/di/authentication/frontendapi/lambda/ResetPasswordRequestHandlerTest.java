@@ -43,7 +43,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -148,10 +147,6 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     void shouldReturn200AndPutMessageOnQueueForAValidCodeFlowRequest() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
@@ -165,10 +160,8 @@ class ResetPasswordRequestHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        var requestBody = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), requestBody);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
@@ -198,10 +191,6 @@ class ResetPasswordRequestHandlerTest {
     @Test
     void shouldReturn200ButNotPutMessageOnQueueIfTestClient() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
@@ -209,10 +198,8 @@ class ResetPasswordRequestHandlerTest {
 
         usingValidSession();
         usingValidClientSession();
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        var event = eventWithHeadersAndBody(validHeaders(), body);
         var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
@@ -242,20 +229,14 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         NotifyRequest notifyRequest =
@@ -279,8 +260,8 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     void shouldReturn400IfInvalidSessionProvided() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(Map.of(), body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -295,9 +276,8 @@ class ResetPasswordRequestHandlerTest {
     @Test
     public void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ }");
+        var body = "{ }";
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -319,12 +299,8 @@ class ResetPasswordRequestHandlerTest {
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(500, result.getStatusCode());
@@ -346,9 +322,8 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", sessionId));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
@@ -383,9 +358,8 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", sessionId));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
+        var event = eventWithHeadersAndBody(validHeaders(), body);
         var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -412,9 +386,8 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", sessionId));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
+        var event = eventWithHeadersAndBody(validHeaders(), body);
         var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -424,20 +397,15 @@ class ResetPasswordRequestHandlerTest {
 
     @Test
     void shouldReturn400WhenNoEmailIsPresentInSession() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(new Session(IdGenerator.generate())));
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+
+        var body = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -468,5 +436,24 @@ class ResetPasswordRequestHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
+    }
+
+    private Map<String, String> validHeaders() {
+        return Map.of(
+                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                PERSISTENT_ID,
+                "Session-Id",
+                session.getSessionId(),
+                CLIENT_SESSION_ID_HEADER,
+                CLIENT_SESSION_ID);
+    }
+
+    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
+            Map<String, String> headers, String body) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(body);
+        return event;
     }
 }
