@@ -233,34 +233,6 @@ class LogoutHandlerTest {
                             Optional.empty());
             verifyNoInteractions(cloudwatchMetricsService);
         }
-
-        @Test
-        void
-                shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession() {
-            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "id_token_hint",
-                            idTokenHint,
-                            "post_logout_redirect_uri",
-                            CLIENT_LOGOUT_URI.toString(),
-                            "state",
-                            STATE.toString()));
-            event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-            event.setHeaders(Map.of(COOKIE, buildCookieString("invalid-client-session-id")));
-            generateSessionFromCookie(session);
-
-            handler.handleRequest(event, context);
-
-            verify(logoutService)
-                    .generateErrorLogoutResponse(
-                            Optional.empty(),
-                            new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
-                            event,
-                            Optional.empty(),
-                            Optional.of(session.getSessionId()));
-            verifyNoInteractions(cloudwatchMetricsService);
-        }
     }
 
     @Nested

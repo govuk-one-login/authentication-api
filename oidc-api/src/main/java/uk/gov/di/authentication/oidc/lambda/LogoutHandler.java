@@ -258,16 +258,6 @@ public class LogoutHandler
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
 
-        if (!session.getClientSessions().contains(sessionCookieIds.getClientSessionId())) {
-            LOG.warn("Client Session ID does not exist");
-            return logoutService.generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
-                    input,
-                    Optional.empty(),
-                    Optional.of(session.getSessionId()));
-        }
-
         segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
         cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
         return logoutService.generateLogoutResponse(
