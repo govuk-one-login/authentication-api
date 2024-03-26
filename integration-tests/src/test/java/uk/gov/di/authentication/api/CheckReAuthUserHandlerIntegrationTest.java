@@ -52,7 +52,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var sessionId = redis.createSession();
         headers = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
-        handler = new CheckReAuthUserHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new CheckReAuthUserHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
