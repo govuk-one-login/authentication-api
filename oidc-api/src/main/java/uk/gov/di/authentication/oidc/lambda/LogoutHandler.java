@@ -13,7 +13,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -42,7 +41,6 @@ public class LogoutHandler
 
     private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
-    private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CookieHelper cookieHelper;
@@ -56,7 +54,6 @@ public class LogoutHandler
     public LogoutHandler(ConfigurationService configurationService) {
         this.sessionService = new SessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
-        this.clientSessionService = new ClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
                         new JwksService(
@@ -71,13 +68,11 @@ public class LogoutHandler
     public LogoutHandler(
             SessionService sessionService,
             DynamoClientService dynamoClientService,
-            ClientSessionService clientSessionService,
             TokenValidationService tokenValidationService,
             CloudwatchMetricsService cloudwatchMetricsService,
             LogoutService logoutService) {
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
-        this.clientSessionService = clientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.cookieHelper = new CookieHelper();
@@ -199,7 +194,6 @@ public class LogoutHandler
                     "logout",
                     () ->
                             logout(
-                                    idTokenHint.get(),
                                     sessionFromSessionCookie.get(),
                                     clientID,
                                     postLogoutRedirectUri.get(),
@@ -252,7 +246,6 @@ public class LogoutHandler
     }
 
     private APIGatewayProxyResponseEvent logout(
-            String idTokenHint,
             Session session,
             String clientID,
             String uri,
@@ -275,17 +268,6 @@ public class LogoutHandler
                     Optional.of(session.getSessionId()));
         }
 
-        if (!doesIDTokenExistInSession(idTokenHint, session)) {
-            LOG.warn("ID token does not exist");
-            return logoutService.generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
-                    input,
-                    Optional.empty(),
-                    Optional.of(session.getSessionId()));
-        }
-
         segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
         cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
         return logoutService.generateLogoutResponse(
@@ -295,12 +277,5 @@ public class LogoutHandler
                 input,
                 Optional.of(clientID),
                 Optional.of(session.getSessionId()));
-    }
-
-    private boolean doesIDTokenExistInSession(String idTokenHint, Session session) {
-        return session.getClientSessions().stream()
-                .map(clientSessionService::getClientSession)
-                .flatMap(Optional::stream)
-                .anyMatch(cs -> idTokenHint.equals(cs.getIdTokenHint()));
     }
 }
