@@ -93,6 +93,8 @@ public class LogoutHandler
                 segmentedFunctionCall(
                         "getSessionFromSessionCookie",
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
+        attachSessionToLogsIfExists(sessionFromSessionCookie, input.getHeaders());
+
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
@@ -191,7 +193,7 @@ public class LogoutHandler
 
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
-                    "logout",
+                    "logoutWhenSessionExists",
                     () ->
                             logout(
                                     sessionFromSessionCookie.get(),
@@ -202,7 +204,7 @@ public class LogoutHandler
 
         } else {
             return segmentedFunctionCall(
-                    "generateDefaultLogoutResponse",
+                    "logoutWhenSessionDoesNotExist",
                     () ->
                             logoutService.generateLogoutResponse(
                                     URI.create(postLogoutRedirectUri.get()),
@@ -211,6 +213,19 @@ public class LogoutHandler
                                     input,
                                     Optional.of(clientID),
                                     Optional.empty()));
+        }
+    }
+
+    private void attachSessionToLogsIfExists(
+            Optional<Session> sessionFromSessionCookie, Map<String, String> headers) {
+        if (sessionFromSessionCookie.isPresent()) {
+            Session session = sessionFromSessionCookie.get();
+            CookieHelper.SessionCookieIds sessionCookieIds =
+                    cookieHelper.parseSessionCookie(headers).orElseThrow();
+
+            attachSessionIdToLogs(session);
+            attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
         }
     }
 
@@ -251,12 +266,6 @@ public class LogoutHandler
             String uri,
             Optional<String> state,
             APIGatewayProxyRequestEvent input) {
-        CookieHelper.SessionCookieIds sessionCookieIds =
-                cookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
-
-        attachSessionIdToLogs(session);
-        attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
-        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
 
         segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
         cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
