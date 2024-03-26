@@ -9,14 +9,9 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -118,7 +113,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
+            var userCredentials = userContext.getUserCredentials().orElseThrow();
+            Optional<MFAMethod> mfaMethod = MfaHelper.getPrimaryMFAMethod(userCredentials);
+            submitAuditEventForChangeMfaMethod(
+                    input,
+                    codeRequest,
+                    userContext,
+                    notificationType,
+                    mfaMethod,
+                    journeyType,
+                    session);
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
@@ -391,5 +395,50 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         }
         return journeyType;
+    }
+
+    private void submitAuditEventForChangeMfaMethod(
+            APIGatewayProxyRequestEvent input,
+            VerifyCodeRequest codeRequest,
+            UserContext userContext,
+            NotificationType notificationType,
+            Optional<MFAMethod> mfaMethod,
+            JourneyType journeyType,
+            Session session) {
+        System.out.println("inside submit audit method");
+        if (notificationType != VERIFY_CHANGE_HOW_GET_SECURITY_CODES || mfaMethod.isEmpty()) {
+            System.out.println("returning nothing");
+            return;
+        }
+        System.out.println(mfaMethod);
+        var accountRecoveryJourney =
+                codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+        var mfaMethodType = mfaMethod.get().getMfaMethodType();
+        AuditService.MetadataPair[] metadataPairs = {
+            pair("notification-type", notificationType.name()),
+            pair("mfa-type", mfaMethodType),
+            pair(
+                    "new-mfa-type",
+                    mfaMethodType == MFAMethodType.SMS.getValue()
+                            ? MFAMethodType.AUTH_APP.getValue()
+                            : MFAMethodType.SMS.getValue()),
+            pair("MFACodeEntered", codeRequest.getCode()),
+            pair("journey-type", String.valueOf(journeyType)),
+            pair("account-recovery", accountRecoveryJourney)
+        };
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.MFA_CHANGE_METHOD_REQUESTED,
+                userContext.getClientSessionId(),
+                session.getSessionId(),
+                userContext
+                        .getClient()
+                        .map(ClientRegistry::getClientID)
+                        .orElse(AuditService.UNKNOWN),
+                session.getInternalCommonSubjectIdentifier(),
+                session.getEmailAddress(),
+                IpAddressHelper.extractIpAddress(input),
+                AuditService.UNKNOWN,
+                extractPersistentIdFromHeaders(input.getHeaders()),
+                metadataPairs);
     }
 }
