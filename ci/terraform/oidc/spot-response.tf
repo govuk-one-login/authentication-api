@@ -97,6 +97,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
       TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
       FRONTEND_BASE_URL    = "https://${local.frontend_fqdn}/"
       INTERNAl_SECTOR_URI  = var.internal_sector_uri
+      OIDC_API_BASE_URL    = local.api_base_url
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
