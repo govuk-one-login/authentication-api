@@ -7,20 +7,15 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
-import uk.gov.di.accountmanagement.entity.NotificationType;
-import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
+import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -36,8 +31,6 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class RemoveAccountHandler
@@ -50,6 +43,7 @@ public class RemoveAccountHandler
     private final AuditService auditService;
     private final ConfigurationService configurationService;
     private final DynamoDeleteService dynamoDeleteService;
+    private final AccountDeletionService accountDeletionService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public RemoveAccountHandler(
@@ -57,12 +51,14 @@ public class RemoveAccountHandler
             AwsSqsClient sqsClient,
             AuditService auditService,
             ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService) {
+            DynamoDeleteService dynamoDeleteService,
+            AccountDeletionService accountDeletionService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
         this.configurationService = configurationService;
         this.dynamoDeleteService = dynamoDeleteService;
+        this.accountDeletionService = accountDeletionService;
     }
 
     public RemoveAccountHandler(ConfigurationService configurationService) {
@@ -75,6 +71,13 @@ public class RemoveAccountHandler
         this.auditService = new AuditService(configurationService);
         this.configurationService = configurationService;
         this.dynamoDeleteService = new DynamoDeleteService(configurationService);
+        this.accountDeletionService =
+                new AccountDeletionService(
+                        authenticationService,
+                        sqsClient,
+                        auditService,
+                        configurationService,
+                        dynamoDeleteService);
     }
 
     public RemoveAccountHandler() {
@@ -87,21 +90,17 @@ public class RemoveAccountHandler
         ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
-                () -> removeAccountRequestHandler(input, context));
+                () -> removeAccountRequestHandler(input));
     }
 
     public APIGatewayProxyResponseEvent removeAccountRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+            APIGatewayProxyRequestEvent input) {
         try {
             String sessionId =
                     RequestHeaderHelper.getHeaderValueOrElse(
                             input.getHeaders(), SESSION_ID_HEADER, "");
             attachSessionIdToLogs(sessionId);
             LOG.info("RemoveAccountHandler received request");
-            SupportedLanguage userLanguage =
-                    matchSupportedLanguage(
-                            getUserLanguageFromRequestHeaders(
-                                    input.getHeaders(), configurationService));
             RemoveAccountRequest removeAccountRequest =
                     objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
 
@@ -114,48 +113,27 @@ public class RemoveAccountHandler
                                             new UserNotFoundException(
                                                     "User not found with given email"));
 
-            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+            authoriseRequest(input, userProfile);
 
-            if (PrincipalValidationHelper.principleIsInvalid(
-                    userProfile,
-                    configurationService.getInternalSectorUri(),
-                    authenticationService,
-                    authorizerParams)) {
-                throw new InvalidPrincipalException("Invalid Principal in request");
-            }
-            LOG.info("Calculating internal common subject identifier");
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorUri(),
-                            authenticationService);
-
-            LOG.info("Deleting user account");
-            dynamoDeleteService.deleteAccount(email, internalCommonSubjectIdentifier.getValue());
-            LOG.info("User account removed. Adding message to SQS queue");
-
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(email, NotificationType.DELETE_ACCOUNT, userLanguage);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-
-            LOG.info(
-                    "Remove account message successfully added to queue. Generating successful gateway response");
-            auditService.submitAuditEvent(
-                    AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                    AuditService.UNKNOWN,
-                    sessionId,
-                    AuditService.UNKNOWN,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    userProfile.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            accountDeletionService.removeAccount(userProfile);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+    }
+
+    private void authoriseRequest(APIGatewayProxyRequestEvent input, UserProfile userProfile) {
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+
+        if (PrincipalValidationHelper.principleIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                authenticationService,
+                authorizerParams)) {
+            throw new InvalidPrincipalException("Invalid Principal in request");
         }
     }
 }
