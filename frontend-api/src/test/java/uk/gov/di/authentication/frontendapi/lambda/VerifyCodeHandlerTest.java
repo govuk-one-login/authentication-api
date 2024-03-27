@@ -19,16 +19,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -95,6 +87,7 @@ class VerifyCodeHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
+    private final UserCredentials userCredentials = mock(UserCredentials.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
@@ -176,6 +169,10 @@ class VerifyCodeHandlerTest {
 
     private static Stream<NotificationType> emailNotificationTypes() {
         return Stream.of(VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+    }
+
+    private static Stream<MFAMethodType> mfaMethodTypes() {
+        return Stream.of(MFAMethodType.SMS, MFAMethodType.AUTH_APP);
     }
 
     @Test
@@ -550,6 +547,43 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
                         pair("journey-type", "ACCOUNT_RECOVERY"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaMethodTypes")
+    void shouldSubmitAuditEventForChangingMfaMethod(MFAMethodType mfaMethodType) {
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(codeStorageService.getOtpCode(
+                        TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES))
+                .thenReturn(Optional.of(CODE));
+        when(MfaHelper.getPrimaryMFAMethod(userCredentials)).thenReturn(Optional.of(new MFAMethod(mfaMethodType.getValue(), null, true, true, null)));
+        makeCallWithCode(
+                CODE,
+                VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name(),
+                JourneyType.ACCOUNT_RECOVERY);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CHANGE_METHOD_REQUESTED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
+                        pair("mfa-type", mfaMethodType),
+                        pair(
+                                "new-mfa-type",
+                                mfaMethodType == MFAMethodType.SMS
+                                        ? MFAMethodType.AUTH_APP.getValue()
+                                        : MFAMethodType.SMS.getValue()),
+                        pair("MFACodeEntered", "123456"),
+                        pair("account-recovery", true),
+                        pair("journey-type", JourneyType.ACCOUNT_RECOVERY)
+                        );
     }
 
     @ParameterizedTest
