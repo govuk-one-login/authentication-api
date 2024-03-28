@@ -27,7 +27,7 @@ public class UserCredentials {
     private String updated;
     private String migratedPassword;
     private List<MFAMethod> mfaMethods;
-    private List<MFAMethodV2> mfaMethodV2;
+    private List<MFAMethodV2> mfaMethodsV2;
     private int testUser;
 
     public UserCredentials() {}
@@ -144,33 +144,26 @@ public class UserCredentials {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHODS_V2)
-    public List<MFAMethodV2> getMfaMethodV2() {
-        return mfaMethodV2;
+    public List<MFAMethodV2> getMfaMethodsV2() {
+        return mfaMethodsV2;
     }
 
-    public UserCredentials withMfaMethodV2(List<MFAMethodV2> mfaMethodV2) {
-        this.mfaMethodV2 = mfaMethodV2;
+    public UserCredentials withMfaMethodsV2(List<MFAMethodV2> mfaMethodsV2) {
+        this.mfaMethodsV2 = mfaMethodsV2;
         return this;
     }
 
-    public UserCredentials setMfaMethodV2(MFAMethodV2 mfaMethodV2) {
-        if (this.mfaMethodV2 == null) {
-            this.mfaMethodV2 = List.of(mfaMethodV2);
-        } else {
-            this.mfaMethodV2.removeIf(
-                    t -> t.getMfaMethodType().equals(mfaMethodV2.getMfaMethodType()));
-            this.mfaMethodV2.add(mfaMethodV2);
-        }
-        return this;
+    public void setMfaMethodsV2(List<MFAMethodV2> mfaMethodsV2) {
+        this.mfaMethodsV2 = mfaMethodsV2;
     }
 
     public UserCredentials moveMfaMethodV2(MFAMethodV2 mfaMethodV2) {
-        if (this.mfaMethodV2 == null) {
-            this.mfaMethodV2 = List.of(mfaMethodV2);
+        if (this.mfaMethodsV2 == null) {
+            this.mfaMethodsV2 = List.of(mfaMethodV2);
         } else {
             boolean primaryFound = false;
 
-            for (MFAMethodV2 existingMethod : this.mfaMethodV2) {
+            for (MFAMethodV2 existingMethod : this.mfaMethodsV2) {
                 if ("PRIMARY".equals(existingMethod.getPriorityIdentifier())) {
                     // Replace the existing "PRIMARY" with the provided mfaMethodV2
                     existingMethod.setPriorityIdentifier("SECONDARY");
@@ -183,7 +176,7 @@ public class UserCredentials {
             // If there is no existing "PRIMARY," add the provided mfaMethodV2 as "PRIMARY"
             if (!primaryFound) {
                 mfaMethodV2.setPriorityIdentifier("PRIMARY");
-                this.mfaMethodV2.add(mfaMethodV2);
+                this.mfaMethodsV2.add(mfaMethodV2);
             }
         }
 
