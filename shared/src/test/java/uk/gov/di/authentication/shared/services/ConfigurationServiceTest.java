@@ -75,6 +75,8 @@ class ConfigurationServiceTest {
         when(systemService.getenv("EMAIL_UPDATED_TEMPLATE_ID")).thenReturn("1234-efgh,4567-ijkl");
         when(systemService.getenv("TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID"))
                 .thenReturn("1234-bulk");
+        when(systemService.getenv("REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID"))
+                .thenReturn("report-template-id");
 
         ConfigurationService configurationService = new ConfigurationService();
         configurationService.setSystemService(systemService);
@@ -94,6 +96,9 @@ class ConfigurationServiceTest {
         assertEquals(
                 Optional.of(DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL),
                 configurationService.getNotificationTypeFromTemplateId("1234-bulk"));
+        assertEquals(
+                Optional.of(DeliveryReceiptsNotificationType.REPORT_SUSPICIOUS_ACTIVITY),
+                configurationService.getNotificationTypeFromTemplateId("report-template-id"));
     }
 
     @Test
