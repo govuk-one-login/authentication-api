@@ -13,10 +13,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -51,7 +47,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -68,6 +63,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -368,8 +364,9 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfUserAccountIsLocked() {
+    void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
         usingValidSession();
+
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
@@ -388,6 +385,7 @@ class CheckUserExistsHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
+        verify(sessionService, times(1)).save(any());
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_TEMPORARILY_LOCKED,
@@ -399,24 +397,6 @@ class CheckUserExistsHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
-    }
-
-    private static Stream<Arguments> userMfaDetail() {
-        return Stream.of(
-                Arguments.of(new UserMfaDetail(), null),
-                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, ""), null),
-                Arguments.of(
-                        new UserMfaDetail(false, false, MFAMethodType.AUTH_APP, "123456789"), null),
-                Arguments.of(
-                        new UserMfaDetail(false, false, MFAMethodType.SMS, "123456789"), "789"),
-                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, "12"), null));
-    }
-
-    @ParameterizedTest
-    @MethodSource("userMfaDetail")
-    void shouldReturnLastThreeDigitsOfPhoneNumber(UserMfaDetail userMfaDetail, String lastDigits) {
-        var result = handler.getLastDigitsOfPhoneNumber(userMfaDetail);
-        assertThat(result, equalTo(lastDigits));
     }
 
     private void usingValidSession() {
