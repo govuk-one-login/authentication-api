@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 @TestInstance(PER_CLASS)
 // @Provider("${CRI_UNDER_TEST}")
 @PactBroker(
-        url = "${PACT_BROKER_URL}",
+        url = "${PACT_BROKER_URL}?testSource=${PACT_BROKER_SOURCE_HEADER}",
         authentication =
                 @PactBrokerAuth(
                         username = "${PACT_BROKER_USERNAME}",
