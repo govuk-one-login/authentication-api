@@ -25,6 +25,7 @@ jobs:
         - utils
         - auth-external-api
         - interventions-api-stub
+        - ticf-cri-stub
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
