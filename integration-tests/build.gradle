@@ -89,6 +89,18 @@ test {
     finalizedBy ":composeDown"
 }
 
+pact {
+    publish {
+        pactBrokerUrl = "$System.env.PACT_URL".toString() + "?testSource=" +"$System.env.PACT_BROKER_SOURCE_HEADER".toString()
+        pactBrokerUsername = "$System.env.PACT_USER".toString()
+        pactBrokerPassword = "$System.env.PACT_PASSWORD".toString()
+        consumerVersion = "$System.env.CONSUMER_APP_VERSION".toString()
+        tags = [
+            "$System.env.GIT_BRANCH".toString()
+        ]
+    }
+}
+
 task pactProviderTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include "uk/gov/di/authentication/pact/**"
