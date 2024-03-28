@@ -38,14 +38,14 @@ dependencies {
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
-    exclude 'uk/gov/di/authentication/ipv/contract/**'
+    exclude "uk/gov/di/authentication/ipv/contract/**"
 }
 
 var pactDir = "$rootDir/ipv-api/src/test/pact"
 
-task contractTest (type: Test) {
+task contractTest (type: Test, group: "verification") {
     useJUnitPlatform()
-    include '/uk/gov/di/authentication/ipv/contract/**'
+    include "uk/gov/di/authentication/ipv/contract/**"
     systemProperties['pact.rootDir'] = pactDir
 }
 
