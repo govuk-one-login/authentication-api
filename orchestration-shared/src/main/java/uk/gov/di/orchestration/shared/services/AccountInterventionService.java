@@ -71,13 +71,13 @@ public class AccountInterventionService {
 
     public AccountIntervention getAccountIntervention(String internalPairwiseSubjectId)
             throws AccountInterventionException {
-        return getAccountIntervention(internalPairwiseSubjectId, Long.MIN_VALUE, null);
+        return getAccountIntervention(internalPairwiseSubjectId, 0L, null);
     }
 
     public AccountIntervention getAccountIntervention(
             String internalPairwiseSubjectId, AuditContext auditContext)
             throws AccountInterventionException {
-        return getAccountIntervention(internalPairwiseSubjectId, Long.MIN_VALUE, auditContext);
+        return getAccountIntervention(internalPairwiseSubjectId, 0L, auditContext);
     }
 
     public AccountIntervention getAccountIntervention(
