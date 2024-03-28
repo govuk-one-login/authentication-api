@@ -9,6 +9,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MFAMethodV2;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -169,6 +170,32 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
         assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+    }
+
+    @Test
+    void shouldAddAuthAppMFAMethodV2() {
+        setUpDynamo();
+        dynamoService.addMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                TEST_MFA_APP_CREDENTIAL,
+                "PRIMARY",
+                1,
+                "test");
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethodsV2().size(), equalTo(1));
+        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodsV2().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertThat(mfaMethod.getPriorityIdentifier(), equalTo("PRIMARY"));
+        assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
+        assertThat(mfaMethod.getEndPoint(), equalTo("test"));
     }
 
     @Test
