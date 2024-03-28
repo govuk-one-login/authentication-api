@@ -36,9 +36,9 @@ jobs:
       - name: Run contract tests
         run: ./gradlew --parallel contractTest
 
-      - name: Upload pacts to broker
-        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
-        run: ./gradlew pactPublish
+#      - name: Upload pacts to broker
+#        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
+#        run: ./gradlew pactPublish
 
       - name: Verify pacts (provider side)
         run: ./gradlew --parallel pactProviderTests
