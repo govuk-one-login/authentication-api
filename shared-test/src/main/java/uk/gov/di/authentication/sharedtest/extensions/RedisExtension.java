@@ -173,19 +173,6 @@ public class RedisExtension
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
-    public void addIDTokenToSession(String clientSessionId, String idTokenHint)
-            throws Json.JsonException {
-        ClientSession clientSession =
-                objectMapper.readValue(
-                        redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId)),
-                        ClientSession.class);
-        clientSession.setIdTokenHint(idTokenHint);
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(clientSession),
-                3600);
-    }
-
     public void addEmailToSession(String sessionId, String emailAddress) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.setEmailAddress(emailAddress);
