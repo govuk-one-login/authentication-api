@@ -499,7 +499,7 @@ public class DynamoService implements AuthenticationService {
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
-                        .setMfaMethodV2(mfaMethodV2));
+                        .withMfaMethodsV2(List.of(mfaMethodV2)));
     }
 
     @Override

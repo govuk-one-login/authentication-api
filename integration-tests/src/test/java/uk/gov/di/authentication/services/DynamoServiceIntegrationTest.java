@@ -187,8 +187,8 @@ class DynamoServiceIntegrationTest {
         UserCredentials updatedUserCredentials =
                 dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        assertThat(updatedUserCredentials.getMfaMethodV2().size(), equalTo(1));
-        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodV2().get(0);
+        assertThat(updatedUserCredentials.getMfaMethodsV2().size(), equalTo(1));
+        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodsV2().get(0);
         assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
