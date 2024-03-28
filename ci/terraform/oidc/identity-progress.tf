@@ -29,6 +29,7 @@ module "identity_progress" {
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                = local.redis_key
+    OIDC_API_BASE_URL        = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IdentityProgressFrontendHandler::handleRequest"
 

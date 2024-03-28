@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import org.apache.commons.lang3.StringUtils;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
@@ -78,7 +79,11 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
+                        .withComponentId(
+                                configurationService
+                                        .getOidcApiBaseURL()
+                                        .map(url -> StringUtils.removeEnd(url, "/"))
+                                        .orElse("UNKNOWN"))
                         .withUser(user);
 
         Arrays.stream(metadataPairs)
