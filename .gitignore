@@ -24,3 +24,5 @@ logs/
 
 # Contract Tests
 pact/
+/.swo
+/.swp
