@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.sharedtest.basetest;
 import au.com.dius.pact.provider.junit5.HttpTestTarget;
 import au.com.dius.pact.provider.junit5.PactVerificationContext;
 import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvider;
+import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactBroker;
 import au.com.dius.pact.provider.junitsupport.loader.PactBrokerAuth;
 import org.junit.jupiter.api.AfterAll;
@@ -20,7 +21,7 @@ import java.util.List;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
-// @Provider("${CRI_UNDER_TEST}")
+@Provider("${CRI_UNDER_TEST}")
 @PactBroker(
         url = "${PACT_BROKER_URL}?testSource=${PACT_BROKER_SOURCE_HEADER}",
         authentication =
