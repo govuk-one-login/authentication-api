@@ -38,7 +38,6 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -49,8 +48,6 @@ import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
@@ -149,12 +146,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -208,12 +199,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
@@ -281,12 +266,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -316,12 +295,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,

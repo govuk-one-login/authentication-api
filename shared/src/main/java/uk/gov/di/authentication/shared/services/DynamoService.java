@@ -16,7 +16,6 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -158,17 +157,6 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber));
-    }
-
-    @Override
-    public void updateConsent(String email, ClientConsent clientConsent) {
-        dynamoUserProfileTable.updateItem(
-                dynamoUserProfileTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .withClientConsent(clientConsent));
     }
 
     @Override
@@ -327,17 +315,6 @@ public class DynamoService implements AuthenticationService {
                             .withSalt(userProfile.getSalt()));
         }
         return SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
-    }
-
-    @Override
-    public Optional<List<ClientConsent>> getUserConsents(String email) {
-        return Optional.ofNullable(
-                dynamoUserProfileTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .getClientConsent());
     }
 
     @Override

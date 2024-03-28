@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
@@ -9,7 +8,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 public interface AuthenticationService {
@@ -26,8 +24,6 @@ public interface AuthenticationService {
 
     void updatePhoneNumber(String email, String profileInformation);
 
-    void updateConsent(String email, ClientConsent clientConsent);
-
     /**
      * Deprecated - use getUserProfileByEmailMaybe instead. Can't literally deprecate it, because
      * -Werror will complain.
@@ -35,8 +31,6 @@ public interface AuthenticationService {
     UserProfile getUserProfileByEmail(String email);
 
     Optional<UserProfile> getUserProfileByEmailMaybe(String email);
-
-    Optional<List<ClientConsent>> getUserConsents(String email);
 
     void updatePhoneNumberAndAccountVerifiedStatus(
             String email, String phoneNumber, boolean phoneNumberVerified, boolean accountVerified);

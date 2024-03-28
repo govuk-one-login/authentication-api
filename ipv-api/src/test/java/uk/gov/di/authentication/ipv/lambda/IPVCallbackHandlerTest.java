@@ -913,7 +913,6 @@ class IPVCallbackHandlerTest {
     private static ClientRegistry generateClientRegistryNoClaims() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
                 .withSectorIdentifierUri("https://test.com")
@@ -923,7 +922,6 @@ class IPVCallbackHandlerTest {
     private static ClientRegistry generateClientWithReturnCodes() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
                 .withSectorIdentifierUri("https://test.com")

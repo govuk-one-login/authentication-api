@@ -9,7 +9,6 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-integration.london.cloudapps.digital/signed-out",
     ]
     test_client                     = "0"
-    consent_required                = "0"
     client_type                     = "web"
     identity_verification_supported = "1"
     scopes = [
@@ -31,7 +30,6 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-integration-app.london.cloudapps.digital/signed-out",
     ]
     test_client                     = "1"
-    consent_required                = "0"
     identity_verification_supported = "1"
     client_type                     = "app"
     scopes = [
@@ -51,7 +49,6 @@ stub_rp_clients = [
       "https://rp-integration.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "0"
-    consent_required                = "0"
     identity_verification_supported = "1"
     client_type                     = "web"
     scopes = [
@@ -73,7 +70,6 @@ stub_rp_clients = [
       "https://doc-app-rp-integration.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
-    consent_required                = "0"
     identity_verification_supported = "1"
     client_type                     = "app"
     scopes = [

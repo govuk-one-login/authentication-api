@@ -14,14 +14,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -29,7 +27,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -340,16 +337,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
-        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
-        var clientConsent =
-                new ClientConsent(
-                        CLIENT_ID,
-                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
-                        LocalDateTime.now().toString());
-        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
@@ -376,16 +366,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
-        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
-        var clientConsent =
-                new ClientConsent(
-                        CLIENT_ID,
-                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
-                        LocalDateTime.now().toString());
-        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
@@ -406,16 +389,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturn204WhenUserEntersValidMfaSmsCodeAndSessionCommonSubjectIdNotPresent()
             throws Exception {
         var sessionId = redis.createSession();
-        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutSignUp(sessionId, withScope());
         userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
-        var clientConsent =
-                new ClientConsent(
-                        CLIENT_ID,
-                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
-                        LocalDateTime.now().toString());
-        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         var codeRequest =
@@ -444,15 +420,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
-        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-        setUpTestWithoutClientConsent(sessionId, withScope());
+        setUpTestWithSignUp(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
-        var clientConsent =
-                new ClientConsent(
-                        CLIENT_ID,
-                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
-                        LocalDateTime.now().toString());
-        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, "123456", journeyType);
@@ -491,12 +460,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
     }
 
-    private void setUpTestWithoutClientConsent(String sessionId, Scope scope)
-            throws Json.JsonException {
+    private void setUpTestWithSignUp(String sessionId, Scope scope) throws Json.JsonException {
         setUpTestWithoutSignUp(sessionId, scope);
         userStore.signUp(EMAIL_ADDRESS, "password");
     }

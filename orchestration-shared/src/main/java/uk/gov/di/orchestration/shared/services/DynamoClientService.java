@@ -58,7 +58,6 @@ public class DynamoClientService implements ClientService {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean consentRequired,
             boolean jarValidationRequired,
             List<String> claims,
             String clientType,
@@ -79,7 +78,6 @@ public class DynamoClientService implements ClientService {
                         .withServiceType(serviceType)
                         .withSectorIdentifierUri(sectorIdentifierUri)
                         .withSubjectType(subjectType)
-                        .withConsentRequired(consentRequired)
                         .withJarValidationRequired(jarValidationRequired)
                         .withClaims(claims)
                         .withClientType(clientType)
