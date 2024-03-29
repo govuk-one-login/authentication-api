@@ -24,6 +24,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -112,7 +113,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     request.email(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    pair(
+                            "numberOfAttemptsUserAllowedToLogin",
+                            configurationService.getMaxPasswordRetries()));
             LOG.error("Account is locked due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }

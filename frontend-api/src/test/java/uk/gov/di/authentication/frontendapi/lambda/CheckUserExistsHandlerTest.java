@@ -74,6 +74,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -398,7 +399,10 @@ class CheckUserExistsHandlerTest {
                         EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair(
+                                "numberOfAttemptsUserAllowedToLogin",
+                                configurationService.getMaxPasswordRetries()));
     }
 
     private static Stream<Arguments> userMfaDetail() {

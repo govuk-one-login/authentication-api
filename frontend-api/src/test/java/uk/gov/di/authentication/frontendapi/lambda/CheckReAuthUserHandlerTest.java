@@ -38,6 +38,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {
@@ -197,7 +198,10 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair(
+                                "numberOfAttemptsUserAllowedToLogin",
+                                configurationService.getMaxPasswordRetries()));
     }
 
     @Test

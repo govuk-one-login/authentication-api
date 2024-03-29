@@ -757,7 +757,10 @@ class LoginHandlerTest {
                         userProfile.getPhoneNumber(),
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
+                        pair(
+                                "numberOfAttemptsUserAllowedToLogin",
+                                configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never())
                 .save(
