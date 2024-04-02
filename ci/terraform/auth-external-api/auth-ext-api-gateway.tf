@@ -147,6 +147,24 @@ resource "aws_cloudwatch_log_subscription_filter" "auth_ext_api_access_log_subsc
   }
 }
 
+resource "aws_cloudwatch_log_group" "auth_ext_stage_execution_logs" {
+  name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_auth_ext_api.id}/${var.environment}"
+  retention_in_days = var.cloudwatch_log_retention
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "auth_ext_api_execution_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "${var.environment}-auth_ext-execution-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.auth_ext_stage_execution_logs[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
+
 module "dashboard_auth_ext_api" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_auth_ext_api.name
