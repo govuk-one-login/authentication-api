@@ -148,7 +148,7 @@ resource "aws_cloudwatch_log_subscription_filter" "auth_ext_api_access_log_subsc
 }
 
 resource "aws_cloudwatch_log_group" "auth_ext_stage_execution_logs" {
-  name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_auth_ext_api.id}/${var.environment}"
+  name              = "API-Gateway-Execution-Logs_New_${aws_api_gateway_rest_api.di_auth_ext_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
 }
