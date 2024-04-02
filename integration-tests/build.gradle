@@ -89,6 +89,8 @@ test {
     finalizedBy ":composeDown"
 }
 
+pactPublish.enabled = false
+
 task pactProviderTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include "uk/gov/di/authentication/pact/**"
