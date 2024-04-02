@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.sharedtest.basetest;
 import au.com.dius.pact.provider.junit5.HttpTestTarget;
 import au.com.dius.pact.provider.junit5.PactVerificationContext;
 import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvider;
+import au.com.dius.pact.provider.junitsupport.IgnoreNoPactsToVerify;
 import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.loader.PactBroker;
 import au.com.dius.pact.provider.junitsupport.loader.PactBrokerAuth;
@@ -17,10 +18,12 @@ import uk.gov.di.orchestration.sharedtest.pact.LambdaHttpServer;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
+@IgnoreNoPactsToVerify
 @Provider("${PROVIDER_UNDER_TEST}")
 @PactBroker(
         url = "${PACT_URL}?testSource=${PACT_BROKER_SOURCE_HEADER}",
@@ -43,7 +46,9 @@ public abstract class PactProviderTest extends IntegrationTest {
     // be fixed in future IntelliJ release: https://youtrack.jetbrains.com/issue/IDEA-312816
     @BeforeEach
     void setUpTarget(PactVerificationContext context) {
-        context.setTarget(new HttpTestTarget(HOST, PORT));
+        if (Objects.nonNull(context)) {
+            context.setTarget(new HttpTestTarget(HOST, PORT));
+        }
     }
 
     @AfterAll
@@ -53,6 +58,8 @@ public abstract class PactProviderTest extends IntegrationTest {
 
     @TestTemplate
     void verifyInteraction(PactVerificationContext context) {
-        context.verifyInteraction();
+        if (Objects.nonNull(context)) {
+            context.verifyInteraction();
+        }
     }
 }
