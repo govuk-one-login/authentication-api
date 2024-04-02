@@ -49,9 +49,6 @@ extended_feature_flags_enabled = true
 
 orch_client_id = "orchestrationAuth"
 
-support_auth_orch_split           = true
-support_auth_orch_split_user_info = true
-
 orch_redirect_uri                  = "https://oidc.authdev2.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
