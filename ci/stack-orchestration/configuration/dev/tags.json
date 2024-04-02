@@ -1,0 +1,18 @@
+[
+  {
+    "Key": "Product",
+    "Value": "GOV.UK Sign In"
+  },
+  {
+    "Key": "System",
+    "Value": "Orchestration"
+  },
+  {
+    "Key": "Environment",
+    "Value": "dev"
+  },
+  {
+    "Key": "Owner",
+    "Value": "di-orchestration@digital.cabinet-office.gov.uk"
+  }
+]
