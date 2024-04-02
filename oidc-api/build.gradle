@@ -45,7 +45,7 @@ test {
 task contractTest (type: Test) {
     useJUnitPlatform()
     include '/uk/gov/di/authentication/oidc/contract/**'
-    systemProperties['pact.rootDir'] = "$rootDir/oidc/src/test/pact"
+    systemProperties['pact.rootDir'] = "$rootDir/oidc-api/src/test/pact"
 }
 
 task buildZip(type: Zip) {
