@@ -208,6 +208,29 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         FrontendAuditableEvent auditEvent =
                 ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT.get(requiredInterventionsState);
 
+        if (auditEvent == FrontendAuditableEvent.NO_INTERVENTION
+                && accountInterventionsInboundResponse.intervention().reprovedIdentityAt() != null
+                && Long.parseLong(
+                                accountInterventionsInboundResponse
+                                        .intervention()
+                                        .reprovedIdentityAt())
+                        > Long.parseLong(
+                                accountInterventionsInboundResponse.intervention().appliedAt())) {
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.IDENTITY_REPROVED,
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
+                    userContext.getClientId(),
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
+                    userContext.getSession().getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    userContext
+                            .getUserProfile()
+                            .map(UserProfile::getPhoneNumber)
+                            .orElse(AuditService.UNKNOWN),
+                    persistentSessionID);
+        }
+
         if (auditEvent != null) {
             auditService.submitAuditEvent(
                     auditEvent,

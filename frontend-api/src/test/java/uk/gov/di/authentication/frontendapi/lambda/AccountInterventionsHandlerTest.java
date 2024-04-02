@@ -269,6 +269,32 @@ public class AccountInterventionsHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION));
     }
 
+    @Test
+    void shouldReturn200AndSubmitReproveIdentityAuditEvent()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        var event = apiRequestEventWithEmail(TEST_EMAIL_ADDRESS);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(
+                        generateAccountInterventionResponse(
+                                false, false, false, false, APPLIED_AT_TIMESTAMP));
+        var result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AccountInterventionsRequest("test"), userContext);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.IDENTITY_REPROVED,
+                        TEST_CLIENT_SESSION_ID,
+                        TEST_SESSION_ID,
+                        TEST_CLIENT_ID,
+                        TEST_INTERNAL_SUBJECT_ID,
+                        TEST_EMAIL_ADDRESS,
+                        TEST_IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        TEST_PERSISTENT_SESSION_ID);
+    }
+
     @ParameterizedTest
     @MethodSource("accountInterventionResponseParameters")
     void shouldReturn200ForSuccessfulRequestAndSubmitAppropriateAuditEvents(
