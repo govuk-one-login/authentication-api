@@ -303,6 +303,12 @@ public class AuthorisationHandler
                     clientSessionId);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        cloudwatchMetricsService.putEmbeddedValue(
+                "rpStateLength",
+                authRequest.getState().getValue().length(),
+                Map.of("clientId", authRequest.getClientID().getValue()));
+
         boolean reauthRequested =
                 authRequest.getCustomParameter("id_token_hint") != null
                         && !authRequest.getCustomParameter("id_token_hint").isEmpty()
