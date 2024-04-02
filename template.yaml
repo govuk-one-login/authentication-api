@@ -196,10 +196,11 @@ Resources:
       Threshold: 10
       Metrics:
         - Id: e1
+          ReturnData: true
           Expression: m2/m1*100
           Label: Error Rate
-          ReturnData: true
         - Id: m1
+          ReturnData: false
           MetricStat:
             Metric:
               Namespace: AWS/Lambda
@@ -211,6 +212,7 @@ Resources:
             Stat: Sum
             Unit: Count
         - Id: m2
+          ReturnData: false
           MetricStat:
             Metric:
               Namespace: AWS/Lambda
