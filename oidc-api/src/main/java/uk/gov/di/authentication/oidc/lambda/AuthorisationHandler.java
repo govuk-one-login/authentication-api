@@ -79,6 +79,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -373,7 +375,7 @@ public class AuthorisationHandler
     private List<VectorOfTrust> getVtrList(
             boolean reauthRequested, AuthenticationRequest authRequest)
             throws java.text.ParseException {
-        if (reauthRequested && orchestrationAuthorizationService.getVtrList(authRequest) == null) {
+        if (reauthRequested && isNull(authRequest.getCustomParameter(VTR_PARAM))) {
             var idTokenHint =
                     SignedJWT.parse(authRequest.getCustomParameter("id_token_hint").get(0));
             var grantedVectorOfTrust = extractVoTFromIdTokenHint(idTokenHint);
@@ -559,34 +561,11 @@ public class AuthorisationHandler
         try {
             var redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
 
-            if (configurationService.isAuthOrchSplitEnabled()) {
-                redirectUriBuilder.setPath("authorize");
-            }
+            redirectUriBuilder.setPath("authorize");
 
             if (Objects.nonNull(authenticationRequest.getPrompt())
                     && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
                 redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
-            }
-
-            if (!configurationService.isAuthOrchSplitEnabled()) {
-                String reauthenticateClaim;
-                try {
-                    reauthenticateClaim =
-                            reauthRequested ? getReauthenticateClaim(authenticationRequest) : null;
-                } catch (RuntimeException e) {
-                    return generateErrorResponse(
-                            authenticationRequest.getRedirectionURI(),
-                            authenticationRequest.getState(),
-                            authenticationRequest.getResponseMode(),
-                            new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
-                            ipAddress,
-                            persistentSessionId,
-                            authenticationRequest.getClientID().getValue(),
-                            clientSessionId);
-                }
-                if (reauthenticateClaim != null) {
-                    redirectUriBuilder.addParameter("reauthenticate", reauthenticateClaim);
-                }
             }
 
             List<String> optionalGaTrackingParameter =
@@ -605,75 +584,70 @@ public class AuthorisationHandler
         List<String> cookies =
                 handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
 
-        if (configurationService.isAuthOrchSplitEnabled()) {
-            var jwtID = IdGenerator.generate();
-            var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
-            var rpSectorIdentifierHost =
-                    ClientSubjectHelper.getSectorIdentifierForClient(
-                            client, configurationService.getInternalSectorUri());
-            var state = new State();
-            orchestrationAuthorizationService.storeState(session.getSessionId(), state);
-            String reauthenticateClaim;
+        var jwtID = IdGenerator.generate();
+        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+        var rpSectorIdentifierHost =
+                ClientSubjectHelper.getSectorIdentifierForClient(
+                        client, configurationService.getInternalSectorUri());
+        var state = new State();
+        orchestrationAuthorizationService.storeState(session.getSessionId(), state);
+        String reauthenticateClaim;
 
-            try {
-                reauthenticateClaim =
-                        reauthRequested ? getReauthenticateClaim(authenticationRequest) : null;
-            } catch (RuntimeException e) {
-                return generateErrorResponse(
-                        authenticationRequest.getRedirectionURI(),
-                        authenticationRequest.getState(),
-                        authenticationRequest.getResponseMode(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
-                        ipAddress,
-                        persistentSessionId,
-                        authenticationRequest.getClientID().getValue(),
-                        clientSessionId);
-            }
-
-            var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
-            var claimsBuilder =
-                    new JWTClaimsSet.Builder()
-                            .issuer(configurationService.getOrchestrationClientId())
-                            .audience(configurationService.getLoginURI().toString())
-                            .expirationTime(expiryDate)
-                            .issueTime(NowHelper.now())
-                            .notBeforeTime(NowHelper.now())
-                            .jwtID(jwtID)
-                            .claim("rp_client_id", client.getClientID())
-                            .claim("rp_sector_host", rpSectorIdentifierHost)
-                            .claim("rp_redirect_uri", authenticationRequest.getRedirectionURI())
-                            .claim("rp_state", authenticationRequest.getState())
-                            .claim("client_name", client.getClientName())
-                            .claim("cookie_consent_shared", client.isCookieConsentShared())
-                            .claim("consent_required", client.isConsentRequired())
-                            .claim("is_one_login_service", client.isOneLoginService())
-                            .claim("service_type", client.getServiceType())
-                            .claim("govuk_signin_journey_id", clientSessionId)
-                            .claim("confidence", confidence)
-                            .claim("state", state.getValue())
-                            .claim("client_id", configurationService.getOrchestrationClientId())
-                            .claim(
-                                    "redirect_uri",
-                                    configurationService.getOrchestrationRedirectUri())
-                            .claim("reauthenticate", reauthenticateClaim);
-
-            var claimsSetRequest =
-                    constructAdditionalAuthenticationClaims(client, authenticationRequest);
-            claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
-            var encryptedJWT =
-                    orchestrationAuthorizationService.getSignedAndEncryptedJWT(
-                            claimsBuilder.build());
-
-            var authorizationRequest =
-                    new AuthorizationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE),
-                                    new ClientID(configurationService.getOrchestrationClientId()))
-                            .endpointURI(URI.create(redirectURI))
-                            .requestObject(encryptedJWT)
-                            .build();
-
-            redirectURI = authorizationRequest.toURI().toString();
+        try {
+            reauthenticateClaim =
+                    reauthRequested ? getReauthenticateClaim(authenticationRequest) : null;
+        } catch (RuntimeException e) {
+            return generateErrorResponse(
+                    authenticationRequest.getRedirectionURI(),
+                    authenticationRequest.getState(),
+                    authenticationRequest.getResponseMode(),
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
+                    ipAddress,
+                    persistentSessionId,
+                    authenticationRequest.getClientID().getValue(),
+                    clientSessionId);
         }
+
+        var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
+        var claimsBuilder =
+                new JWTClaimsSet.Builder()
+                        .issuer(configurationService.getOrchestrationClientId())
+                        .audience(configurationService.getLoginURI().toString())
+                        .expirationTime(expiryDate)
+                        .issueTime(NowHelper.now())
+                        .notBeforeTime(NowHelper.now())
+                        .jwtID(jwtID)
+                        .claim("rp_client_id", client.getClientID())
+                        .claim("rp_sector_host", rpSectorIdentifierHost)
+                        .claim("rp_redirect_uri", authenticationRequest.getRedirectionURI())
+                        .claim("rp_state", authenticationRequest.getState())
+                        .claim("client_name", client.getClientName())
+                        .claim("cookie_consent_shared", client.isCookieConsentShared())
+                        .claim("consent_required", client.isConsentRequired())
+                        .claim("is_one_login_service", client.isOneLoginService())
+                        .claim("service_type", client.getServiceType())
+                        .claim("govuk_signin_journey_id", clientSessionId)
+                        .claim("confidence", confidence)
+                        .claim("state", state.getValue())
+                        .claim("client_id", configurationService.getOrchestrationClientId())
+                        .claim("redirect_uri", configurationService.getOrchestrationRedirectUri())
+                        .claim("reauthenticate", reauthenticateClaim);
+
+        var claimsSetRequest =
+                constructAdditionalAuthenticationClaims(client, authenticationRequest);
+        claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
+        var encryptedJWT =
+                orchestrationAuthorizationService.getSignedAndEncryptedJWT(claimsBuilder.build());
+
+        var authorizationRequest =
+                new AuthorizationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                new ClientID(configurationService.getOrchestrationClientId()))
+                        .endpointURI(URI.create(redirectURI))
+                        .requestObject(encryptedJWT)
+                        .build();
+
+        redirectURI = authorizationRequest.toURI().toString();
 
         return generateApiGatewayProxyResponse(
                 302,
