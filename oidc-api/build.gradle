@@ -8,10 +8,7 @@ group "uk.gov.di.authentication.oidc"
 version "unspecified"
 
 dependencies {
-
-    implementation project(path: ':ipv-api')
-    testImplementation project(path: ':ipv-api')
-    compileOnly             configurations.kms,
+    compileOnly configurations.kms,
             configurations.lambda,
             configurations.sqs,
             configurations.sns,
@@ -26,14 +23,18 @@ dependencies {
             project(":client-registry-api"),
             project(":doc-checking-app-api")
 
+    implementation project(path: ':ipv-api')
+
     testImplementation configurations.tests,
             configurations.lambda_tests,
+            project(path: ':ipv-api'),
             project(":orchestration-shared-test"),
             configurations.lambda,
             configurations.sqs,
             configurations.kms,
             configurations.dynamodb,
             configurations.pact_consumer
+
     testRuntimeOnly configurations.test_runtime
 }
 
@@ -45,7 +46,7 @@ test {
 
 var pactDir = "$rootDir/oidc-api/src/test/pact"
 
-task contractTest (type: Test, group: "verification") {
+task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include '/uk/gov/di/authentication/oidc/contract/**'
     systemProperties['pact.rootDir'] = pactDir

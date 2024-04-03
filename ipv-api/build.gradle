@@ -43,7 +43,7 @@ test {
 
 var pactDir = "$rootDir/ipv-api/src/test/pact"
 
-task contractTest (type: Test, group: "verification") {
+task pactConsumerTests (type: Test, group: "verification") {
     useJUnitPlatform()
     include "uk/gov/di/authentication/ipv/contract/**"
     systemProperties['pact.rootDir'] = pactDir

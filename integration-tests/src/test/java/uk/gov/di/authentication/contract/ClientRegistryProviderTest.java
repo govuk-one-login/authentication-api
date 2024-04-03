@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.pact;
+package uk.gov.di.authentication.contract;
 
 import au.com.dius.pact.provider.junitsupport.State;
 import org.junit.jupiter.api.BeforeAll;
