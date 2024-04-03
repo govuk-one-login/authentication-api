@@ -49,7 +49,6 @@ module "authentication_callback" {
     ORCH_CLIENT_ID                              = var.orch_client_id
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS        = local.orch_to_auth_signing_key_alias_name
     REDIS_KEY                                   = local.redis_key
-    SUPPORT_AUTH_ORCH_SPLIT                     = var.support_auth_orch_split
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                           = local.api_base_url
     FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
