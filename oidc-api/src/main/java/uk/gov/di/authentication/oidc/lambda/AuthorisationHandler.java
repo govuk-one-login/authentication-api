@@ -304,10 +304,14 @@ public class AuthorisationHandler
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
-        cloudwatchMetricsService.putEmbeddedValue(
-                "rpStateLength",
-                authRequest.getState().getValue().length(),
-                Map.of("clientId", authRequest.getClientID().getValue()));
+        try {
+            cloudwatchMetricsService.putEmbeddedValue(
+                    "rpStateLength",
+                    authRequest.getState().getValue().length(),
+                    Map.of("clientId", authRequest.getClientID().getValue()));
+        } catch (Exception e) {
+            LOG.warn("Error recording state length, continuing: ", e);
+        }
 
         boolean reauthRequested =
                 authRequest.getCustomParameter("id_token_hint") != null
