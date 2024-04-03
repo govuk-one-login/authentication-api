@@ -156,7 +156,7 @@ resource "aws_cloudwatch_log_group" "auth_ext_stage_execution_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "auth_ext_api_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-auth_ext-execution-log-subscription"
-  log_group_name  = aws_cloudwatch_log_group.auth_ext_stage_execution_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.auth_ext_stage_execution_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
