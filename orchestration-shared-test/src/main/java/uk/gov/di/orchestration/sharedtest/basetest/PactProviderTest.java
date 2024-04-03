@@ -3,7 +3,9 @@ package uk.gov.di.orchestration.sharedtest.basetest;
 import au.com.dius.pact.provider.junit5.HttpTestTarget;
 import au.com.dius.pact.provider.junit5.PactVerificationContext;
 import au.com.dius.pact.provider.junit5.PactVerificationInvocationContextProvider;
-import au.com.dius.pact.provider.junitsupport.loader.PactFolder;
+import au.com.dius.pact.provider.junitsupport.Provider;
+import au.com.dius.pact.provider.junitsupport.loader.PactBroker;
+import au.com.dius.pact.provider.junitsupport.loader.PactBrokerAuth;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +21,10 @@ import java.util.List;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
-@PactFolder("pacts")
+@Provider("${PROVIDER_UNDER_TEST}")
+@PactBroker(
+        url = "${PACT_URL}?testSource=${PACT_BROKER_SOURCE_HEADER}",
+        authentication = @PactBrokerAuth(username = "${PACT_USER}", password = "${PACT_PASSWORD}"))
 @ExtendWith(PactVerificationInvocationContextProvider.class)
 public abstract class PactProviderTest extends IntegrationTest {
     private static final String HOST = "localhost";

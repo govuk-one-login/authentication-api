@@ -9,7 +9,15 @@ env:
   PACT_BROKER_SOURCE_HEADER: ${{ secrets.PACT_BROKER_SOURCE_HEADER }}
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+  merge_group:
+    # merge main
+    branches: [ main ]
 
 jobs:
   contract-testing:
@@ -17,14 +25,20 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
+
       - name: Run contract tests
-        run: ./gradlew --parallel ipv-api:contractTest
+        run: ./gradlew contractTest
+
       - name: Upload pacts to broker
         if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
-        run: ./gradlew :ipv-api:pactPublish
+        run: ./gradlew pactPublish
+
+      - name: Verify pacts
+        run: ./gradlew pactProviderTests

@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.pact;
 
-import au.com.dius.pact.provider.junitsupport.Provider;
 import au.com.dius.pact.provider.junitsupport.State;
+import org.junit.jupiter.api.BeforeAll;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
@@ -12,7 +12,6 @@ import uk.gov.di.orchestration.sharedtest.pact.LambdaHandlerConfig;
 
 import java.util.List;
 
-@Provider("ClientRegistryProvider")
 public class ClientRegistryProviderTest extends PactProviderTest {
 
     private static final String CLIENT_ID = "1tfp8ZknlERfGlGd8RyLPmmgzBU";
@@ -38,6 +37,11 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final List<String> CLIENT_LOCS = List.of();
 
     private DynamoClientService clientService;
+
+    @BeforeAll
+    static void setupServer() {
+        System.setProperty("pact.verifier.publishResults", "true");
+    }
 
     @Override
     protected List<LambdaHandlerConfig> getHandlerConfig() {

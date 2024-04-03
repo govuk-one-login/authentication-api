@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id "au.com.dius.pact" version "4.6.5"
 }
 
 group "uk.gov.di"
@@ -39,6 +40,59 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    exclude 'uk/gov/di/authentication/pact/**'
+
+    jacoco {
+    }
+    environment "AUDIT_SIGNING_KEY_ALIAS", "alias/local-audit-payload-signing-key-alias"
+    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "ACCOUNT_RECOVERY_BLOCK_ENABLED", "true"
+    environment "AWS_REGION", "eu-west-2"
+    environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
+    environment "OIDC_API_BASE_URL", "http://localhost"
+    environment "DEFAULT_LOGOUT_URI", "http://localhost:3000/signed-out"
+    environment "DOMAIN_NAME", "localhost"
+    environment "DOC_APP_DOMAIN", "https://doc-app"
+    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
+    environment "ENVIRONMENT", "local"
+    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
+    environment "LOGIN_URI", "http://localhost:3000"
+    environment "ROOT_RESOURCE_URL", "http://localhost"
+    environment "REDIS_KEY", "session"
+    environment "RESET_PASSWORD_URL", "http://localhost:3000/reset-password?code="
+    environment "SQS_ENDPOINT", "http://localhost:45678"
+    environment "STUB_RELYING_PARTY_REDIRECT_URI", "https://rp-build.build.stubs.account.gov.uk/"
+    environment "TERMS_CONDITIONS_VERSION", "1.0"
+    environment "HEADERS_CASE_INSENSITIVE", "true"
+    environment "IDENTITY_ENABLED", "false"
+    environment "TRACING_ENABLED", "false"
+    environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
+    environment "BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "1.0,1.1,1.2,1.3,1.4"
+    environment "SEND_STORAGE_TOKEN_TO_IPV_ENABLED", "true"
+
+    doLast {
+        tasks.getByName("jacocoTestReport").sourceDirectories.from(
+                project(":frontend-api").sourceSets.main.java,
+                project(":oidc-api").sourceSets.main.java,
+                project(":client-registry-api").sourceSets.main.java,
+                project(":shared").sourceSets.main.java,
+                project(":utils").sourceSets.main.java)
+
+        tasks.getByName("jacocoTestReport").classDirectories.from(
+                project(":client-registry-api").sourceSets.main.output,
+                project(":frontend-api").sourceSets.main.output,
+                project(":oidc-api").sourceSets.main.output,
+                project(":shared").sourceSets.main.output,
+                project(":utils").sourceSets.main.output)
+    }
+    dependsOn ":composeUp"
+    finalizedBy ":composeDown"
+}
+
+task pactProviderTests (type: Test, group: "verification") {
+    useJUnitPlatform()
+    include "uk/gov/di/authentication/pact/**"
+    environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
 
     jacoco {
     }
