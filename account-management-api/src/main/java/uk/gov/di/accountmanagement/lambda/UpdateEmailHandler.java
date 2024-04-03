@@ -167,7 +167,7 @@ public class UpdateEmailHandler
                     AccountManagementAuditableEvent.UPDATE_EMAIL,
                     AuditService.UNKNOWN,
                     sessionId,
-                    AuditService.UNKNOWN,
+                    internalCommonSubjectIdentifier.getValue(),
                     internalCommonSubjectIdentifier.getValue(),
                     updateInfoRequest.getReplacementEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),

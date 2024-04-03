@@ -104,7 +104,7 @@ class UpdateEmailHandlerTest {
                         AccountManagementAuditableEvent.UPDATE_EMAIL,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         expectedCommonSubject,
                         NEW_EMAIL_ADDRESS,
                         "123.123.123.123",

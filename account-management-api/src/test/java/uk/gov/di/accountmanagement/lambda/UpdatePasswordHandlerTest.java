@@ -109,7 +109,7 @@ class UpdatePasswordHandlerTest {
                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",

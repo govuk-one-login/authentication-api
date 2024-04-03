@@ -170,7 +170,7 @@ public class UpdatePasswordHandler
                     AccountManagementAuditableEvent.UPDATE_PASSWORD,
                     AuditService.UNKNOWN,
                     sessionId,
-                    AuditService.UNKNOWN,
+                    internalCommonSubjectIdentifier.getValue(),
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
