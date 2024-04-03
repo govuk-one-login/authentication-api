@@ -42,7 +42,7 @@ class AuditServiceTest {
 
     @BeforeEach
     void beforeEach() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url"));
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url/"));
     }
 
     @Test
@@ -67,6 +67,7 @@ class AuditServiceTest {
         assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
         assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
         assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
+        // component_id shouldn't include trailing slash
         assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("oidc-base-url")));
 
         var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
