@@ -8,16 +8,9 @@ env:
   CONSUMER_APP_VERSION: ${{ github.event.pull_request.head.sha }}
   PACT_BROKER_SOURCE_HEADER: ${{ secrets.PACT_BROKER_SOURCE_HEADER }}
 
+# Set to workflow_dispatch as we do not want to run these as part of the pre-merge checks at this current point in time
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - ready_for_review
-      - synchronize
-  merge_group:
-    # merge main
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   contract-testing:
