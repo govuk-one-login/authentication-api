@@ -485,11 +485,6 @@ variable "txma_account_id" {
   type    = string
 }
 
-variable "extended_feature_flags_enabled" {
-  default = false
-  type    = bool
-}
-
 variable "orch_client_id" {
   type    = string
   default = ""

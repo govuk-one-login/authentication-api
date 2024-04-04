@@ -9,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.Features;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -160,14 +159,7 @@ public class StartHandler
                 LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
             }
 
-            StartResponse startResponse;
-            if (configurationService.isExtendedFeatureFlagsEnabled()) {
-                Features features = startService.getSessionFeatures();
-                LOG.info("Extended feature flags enabled: {}", features);
-                startResponse = new StartResponse(userStartInfo, clientStartInfo, features);
-            } else {
-                startResponse = new StartResponse(userStartInfo, clientStartInfo);
-            }
+            StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
             String internalSubjectId = AuditService.UNKNOWN;
             String internalCommonSubjectIdentifier = AuditService.UNKNOWN;
