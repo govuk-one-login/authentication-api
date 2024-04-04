@@ -494,11 +494,6 @@ variable "language_cy_enabled" {
   type    = bool
 }
 
-variable "notify_template_per_language" {
-  default = false
-  type    = bool
-}
-
 variable "extended_feature_flags_enabled" {
   default = false
   type    = bool

@@ -27,39 +27,14 @@ class NotificationTypeTest {
     }
 
     @Test
-    void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYAndSingleTemplatePerLanguage() {
-        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))
-                .thenReturn("67890");
-        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID"))
-                .thenReturn("12345");
-        when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(true);
-        assertThat(
-                VERIFY_EMAIL.getTemplateId(SupportedLanguage.CY, configurationService),
-                equalTo("67890"));
-    }
-
-    @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYAndNotSingleTemplatePerLanguage() {
         when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
         when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
-        when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(false);
         assertThat(
                 VERIFY_EMAIL.getTemplateId(SupportedLanguage.CY, configurationService),
                 equalTo("12345"));
-    }
-
-    @Test
-    void shouldReturnCYTemplateForDeleteAccountWhenLanguageCYAndSingleTemplatePerLanguage() {
-        when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID_CY"))
-                .thenReturn("67890");
-        when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID"))
-                .thenReturn("12345");
-        when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(true);
-        assertThat(
-                DELETE_ACCOUNT.getTemplateId(SupportedLanguage.CY, configurationService),
-                equalTo("67890"));
     }
 
     @Test
@@ -69,7 +44,6 @@ class NotificationTypeTest {
                 .thenReturn("67890");
         when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID"))
                 .thenReturn("12345");
-        when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(false);
         assertThat(
                 DELETE_ACCOUNT.getTemplateId(SupportedLanguage.CY, configurationService),
                 equalTo("12345"));
