@@ -252,7 +252,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     IpAddressHelper.extractIpAddress(input),
                     phoneNumber,
                     persistentSessionId,
-                    pair("journey-type", journeyType));
+                    pair("journey-type", journeyType),
+                    pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();

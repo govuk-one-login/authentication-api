@@ -182,7 +182,8 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         PHONE_NUMBER,
                         persistentId,
-                        pair("journey-type", JourneyType.SIGN_IN));
+                        pair("journey-type", JourneyType.SIGN_IN),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
     @Test
@@ -230,7 +231,8 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         PHONE_NUMBER,
                         persistentId,
-                        pair("journey-type", JourneyType.SIGN_IN));
+                        pair("journey-type", JourneyType.SIGN_IN),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
     @Test
@@ -269,7 +271,8 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", JourneyType.SIGN_IN));
+                        pair("journey-type", JourneyType.SIGN_IN),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
     @Test
@@ -615,7 +618,8 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", JourneyType.SIGN_IN));
+                        pair("journey-type", JourneyType.SIGN_IN),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
     @Test
