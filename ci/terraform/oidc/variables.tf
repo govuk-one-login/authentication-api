@@ -115,10 +115,6 @@ variable "service_domain" {
   default = null
 }
 
-variable "account_recovery_block_enabled" {
-  default = false
-}
-
 variable "support_auth_orch_split" {
   default = false
 }

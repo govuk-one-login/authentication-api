@@ -153,12 +153,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                             authenticationService);
 
             updateAccountRecoveryBlockTable(
-                    configurationService.isAccountRecoveryBlockEnabled(),
-                    userProfile,
-                    userCredentials,
-                    internalCommonSubjectId,
-                    userContext,
-                    input);
+                    userProfile, userCredentials, internalCommonSubjectId, userContext, input);
 
             var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
@@ -244,13 +239,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     }
 
     private void updateAccountRecoveryBlockTable(
-            boolean accountRecoveryBlockEnabled,
             UserProfile userProfile,
             UserCredentials userCredentials,
             Subject internalCommonSubjectId,
             UserContext userContext,
             APIGatewayProxyRequestEvent input) {
-        LOG.info("AccountRecoveryBlock enabled: {}", accountRecoveryBlockEnabled);
         var authAppVerified =
                 Optional.ofNullable(userCredentials.getMfaMethods())
                         .orElseGet(Collections::emptyList)
@@ -265,7 +258,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 "AuthAppVerified: {}. PhoneNumberVerified: {}",
                 authAppVerified,
                 phoneNumberVerified);
-        if (accountRecoveryBlockEnabled && (phoneNumberVerified || authAppVerified)) {
+        if (phoneNumberVerified || authAppVerified) {
             LOG.info("Adding block to account modifiers table");
             dynamoAccountModifiersService.setAccountRecoveryBlock(
                     internalCommonSubjectId.getValue(), true);
