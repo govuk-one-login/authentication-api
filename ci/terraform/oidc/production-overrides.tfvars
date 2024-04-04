@@ -28,7 +28,6 @@ support_auth_orch_split                     = true
 support_auth_orch_split_user_info           = true
 cloudwatch_log_retention                    = 5
 client_registry_api_enabled                 = false
-language_cy_enabled                         = true
 spot_enabled                                = true
 ipv_api_enabled                             = true
 ipv_capacity_allowed                        = true

@@ -35,8 +35,7 @@ class LocaleHelperTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
-    private static Stream<Arguments> uiLocalesAndPrimaryLanguageCYEnabled()
-            throws LangTagException {
+    private static Stream<Arguments> uiLocalesAndPrimaryLanguage() throws LangTagException {
         return Stream.of(
                 Arguments.of(List.of(LangTag.parse("en")), PRIMARY_LANGUAGE_EN),
                 Arguments.of(
@@ -67,56 +66,11 @@ class LocaleHelperTest {
                         PRIMARY_LANGUAGE_EN));
     }
 
-    private static Stream<Arguments> uiLocalesAndPrimaryLanguageCYNotEnabled()
-            throws LangTagException {
-        return Stream.of(
-                Arguments.of(List.of(LangTag.parse("en")), PRIMARY_LANGUAGE_EN),
-                Arguments.of(
-                        List.of(LangTag.parse("en"), LangTag.parse("cy")), PRIMARY_LANGUAGE_EN),
-                Arguments.of(
-                        List.of(LangTag.parse("es"), LangTag.parse("en"), LangTag.parse("cy")),
-                        PRIMARY_LANGUAGE_EN),
-                Arguments.of(
-                        List.of(LangTag.parse("es"), LangTag.parse("cy"), LangTag.parse("en")),
-                        PRIMARY_LANGUAGE_EN),
-                Arguments.of(List.of(LangTag.parse("cy")), Optional.empty()),
-                Arguments.of(
-                        List.of(LangTag.parse("cy"), LangTag.parse("en")), PRIMARY_LANGUAGE_EN),
-                Arguments.of(List.of(), Optional.empty()),
-                Arguments.of(
-                        List.of(LangTag.parse("es"), LangTag.parse("fr"), LangTag.parse("ja")),
-                        Optional.empty()),
-                Arguments.of(
-                        List.of(LangTag.parse("cy-AR"), LangTag.parse("en")), PRIMARY_LANGUAGE_EN),
-                Arguments.of(
-                        List.of(LangTag.parse("de-DE"), LangTag.parse("cy"), LangTag.parse("en")),
-                        PRIMARY_LANGUAGE_EN),
-                Arguments.of(
-                        List.of(
-                                LangTag.parse("zh-cmn-Hans-CN"),
-                                LangTag.parse("en-US"),
-                                LangTag.parse("cy")),
-                        PRIMARY_LANGUAGE_EN));
-    }
-
     @ParameterizedTest
-    @MethodSource("uiLocalesAndPrimaryLanguageCYEnabled")
-    void shouldReturnLanguageBasedOnUILocalesCYEnabled(
+    @MethodSource("uiLocalesAndPrimaryLanguage")
+    void shouldReturnLanguageBasedOnUILocales(
             List<LangTag> uiLocales, Optional<SupportedLanguage> primaryLanguage)
             throws LangTagException {
-        when(configurationService.isLanguageEnabled(SupportedLanguage.CY)).thenReturn(true);
-        assertThat(
-                LocaleHelper.getPrimaryLanguageFromUILocales(
-                        generateAuthRequest(uiLocales), configurationService),
-                equalTo(primaryLanguage));
-    }
-
-    @ParameterizedTest
-    @MethodSource("uiLocalesAndPrimaryLanguageCYNotEnabled")
-    void shouldReturnLanguageBasedOnUILocalesCYNotEnabled(
-            List<LangTag> uiLocales, Optional<SupportedLanguage> primaryLanguage)
-            throws LangTagException {
-        when(configurationService.isLanguageEnabled(SupportedLanguage.CY)).thenReturn(false);
         assertThat(
                 LocaleHelper.getPrimaryLanguageFromUILocales(
                         generateAuthRequest(uiLocales), configurationService),

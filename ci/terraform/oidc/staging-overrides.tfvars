@@ -18,7 +18,6 @@ ipv_audience                                = "https://identity.staging.account.
 ipv_backend_uri                             = "https://api.identity.staging.account.gov.uk"
 internal_sector_uri                         = "https://identity.staging.account.gov.uk"
 spot_enabled                                = true
-language_cy_enabled                         = true
 extended_feature_flags_enabled              = true
 test_clients_enabled                        = "true"
 ipv_no_session_response_enabled             = true

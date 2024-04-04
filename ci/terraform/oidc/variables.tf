@@ -489,11 +489,6 @@ variable "txma_account_id" {
   type    = string
 }
 
-variable "language_cy_enabled" {
-  default = false
-  type    = bool
-}
-
 variable "extended_feature_flags_enabled" {
   default = false
   type    = bool

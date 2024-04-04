@@ -105,20 +105,7 @@ class LocaleHelperTest {
     void shouldReturnLanguageBasedOnUILocalesCYEnabled(
             List<LangTag> uiLocales, Optional<SupportedLanguage> primaryLanguage)
             throws LangTagException {
-        when(configurationService.isLanguageEnabled(SupportedLanguage.CY)).thenReturn(true);
         MatcherAssert.assertThat(
-                LocaleHelper.getPrimaryLanguageFromUILocales(
-                        generateAuthRequest(uiLocales), configurationService),
-                equalTo(primaryLanguage));
-    }
-
-    @ParameterizedTest
-    @MethodSource("uiLocalesAndPrimaryLanguageCYNotEnabled")
-    void shouldReturnLanguageBasedOnUILocalesCYNotEnabled(
-            List<LangTag> uiLocales, Optional<SupportedLanguage> primaryLanguage)
-            throws LangTagException {
-        when(configurationService.isLanguageEnabled(SupportedLanguage.CY)).thenReturn(false);
-        assertThat(
                 LocaleHelper.getPrimaryLanguageFromUILocales(
                         generateAuthRequest(uiLocales), configurationService),
                 equalTo(primaryLanguage));

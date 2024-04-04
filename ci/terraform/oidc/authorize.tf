@@ -42,7 +42,6 @@ module "authorize" {
     ORCH_CLIENT_ID                       = var.orch_client_id
     REDIS_KEY                            = local.redis_key
     TERMS_CONDITIONS_VERSION             = var.terms_and_conditions
-    SUPPORT_LANGUAGE_CY                  = tostring(var.language_cy_enabled)
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS = local.orch_to_auth_signing_key_alias_name
     DOC_APP_AUTHORISATION_URI            = var.doc_app_authorisation_uri

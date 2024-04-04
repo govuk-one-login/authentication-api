@@ -19,7 +19,6 @@ ipv_backend_uri                             = "https://api.identity.integration.
 ipv_audience                                = "https://identity.integration.account.gov.uk"
 internal_sector_uri                         = "https://identity.integration.account.gov.uk"
 spot_enabled                                = true
-language_cy_enabled                         = true
 extended_feature_flags_enabled              = true
 support_auth_orch_split                     = true
 support_auth_orch_split_user_info           = true

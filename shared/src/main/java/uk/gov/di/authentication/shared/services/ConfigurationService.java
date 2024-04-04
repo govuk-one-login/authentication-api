@@ -341,13 +341,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
-        if (supportedLanguage.equals(SupportedLanguage.EN)) {
-            return true;
-        } else if (supportedLanguage.equals(SupportedLanguage.CY)) {
-            return System.getenv().getOrDefault("SUPPORT_LANGUAGE_CY", "false").equals("true");
-        } else {
-            return false;
-        }
+        return supportedLanguage.equals(SupportedLanguage.EN)
+                || supportedLanguage.equals(SupportedLanguage.CY);
     }
 
     public long getIDTokenExpiry() {
