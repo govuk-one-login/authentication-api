@@ -55,12 +55,13 @@ task pactConsumerTests (type: Test, group: "verification") {
 pact {
     publish {
         pactDirectory = pactDir
-        pactBrokerUrl = "$System.env.PACT_URL".toString() + "?testSource=" +"$System.env.PACT_BROKER_SOURCE_HEADER".toString()
-        pactBrokerUsername = "$System.env.PACT_USER".toString()
-        pactBrokerPassword = "$System.env.PACT_PASSWORD".toString()
-        consumerVersion = "$System.env.CONSUMER_APP_VERSION".toString()
+        pactBrokerUrl = "${System.env.PACT_URL}?testSource=${System.env.PACT_BROKER_SOURCE_HEADER}"
+        pactBrokerUsername = "${System.env.PACT_USER}"
+        pactBrokerPassword = "${System.env.PACT_PASSWORD}"
+        consumerVersion = "${System.env.CONSUMER_APP_VERSION}"
+        consumerBranch = "${System.env.GIT_BRANCH}"
         tags = [
-            "$System.env.GIT_BRANCH".toString()
+            "${System.env.GIT_BRANCH}"
         ]
     }
 }
