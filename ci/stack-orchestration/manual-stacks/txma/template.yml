@@ -23,6 +23,13 @@ Mappings:
       integration: 'arn:aws:iam::729485541398:root'
       production: 'arn:aws:iam::451773080033:root'
 
+Conditions:
+  TxMAIntegrationEnabled:
+    Fn::Or:
+      - Fn::Equals: [!Ref Environment, "staging"]
+      - Fn::Equals: [!Ref Environment, "integration"]
+      - Fn::Equals: [!Ref Environment, "production"]
+
 Resources:
   TxMASQSProducerAuditEventQueue:
     Type: AWS::SQS::Queue
@@ -42,6 +49,7 @@ Resources:
           Value: 'SQS'
 
   TxMASQSProducerAuditEventQueuePolicy:
+    Condition: TxMAIntegrationEnabled
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
@@ -97,13 +105,16 @@ Resources:
               - kms:ReEncrypt
               - kms:GenerateDataKey
             Resource: '*'
-          - Sid: 'Allow decryption of events by TxMA'
-            Effect: Allow
-            Principal:
-              AWS: !FindInMap [TxMAAccountARN, Environment, !Ref 'Environment']
-            Action:
-              - 'kms:decrypt'
-            Resource: '*'
+          - !If
+            - TxMAIntegrationEnabled
+            - Sid: 'Allow decryption of events by TxMA'
+              Effect: Allow
+              Principal:
+                AWS: !FindInMap [TxMAAccountARN, Environment, !Ref 'Environment']
+              Action:
+                - 'kms:decrypt'
+              Resource: '*'
+            - !Ref AWS::NoValue
       Tags:
         - Key: 'AuthoredBy'
           Value: 'TxMA'
@@ -117,6 +128,7 @@ Resources:
       TargetKeyId: !Ref TxMASQSProducerAuditEventQueueEncryptionKey
 
   KMSARNParameter:
+    Condition: TxMAIntegrationEnabled
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub '/${AWS::StackName}/KMSARN'
