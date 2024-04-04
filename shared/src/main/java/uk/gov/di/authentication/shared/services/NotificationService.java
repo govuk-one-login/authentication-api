@@ -3,7 +3,6 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.TemplateAware;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -22,28 +21,16 @@ public class NotificationService {
         this.configurationService = configurationService;
     }
 
-    public void sendEmail(
-            String email,
-            Map<String, Object> personalisation,
-            TemplateAware type,
-            SupportedLanguage userLanguage)
+    public void sendEmail(String email, Map<String, Object> personalisation, TemplateAware type)
             throws NotificationClientException {
-        LOG.trace("sendEmail language {}", userLanguage);
         notifyClient.sendEmail(
-                type.getTemplateId(userLanguage, configurationService), email, personalisation, "");
+                type.getTemplateId(configurationService), email, personalisation, "");
     }
 
     public void sendText(
-            String phoneNumber,
-            Map<String, Object> personalisation,
-            TemplateAware type,
-            SupportedLanguage userLanguage)
+            String phoneNumber, Map<String, Object> personalisation, TemplateAware type)
             throws NotificationClientException {
-        LOG.trace("sendText language {}", userLanguage);
         notifyClient.sendSms(
-                type.getTemplateId(userLanguage, configurationService),
-                phoneNumber,
-                personalisation,
-                "");
+                type.getTemplateId(configurationService), phoneNumber, personalisation, "");
     }
 }

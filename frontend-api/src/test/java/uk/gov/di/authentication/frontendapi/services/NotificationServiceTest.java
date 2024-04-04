@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.services;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.TemplateAware;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
@@ -29,12 +28,7 @@ class NotificationServiceTest {
         FAKE_EMAIL,
         FAKE_SMS;
 
-        public String getTemplateId() {
-            return name();
-        }
-
-        public String getTemplateId(
-                SupportedLanguage language, ConfigurationService configurationService) {
+        public String getTemplateId(ConfigurationService configurationService) {
             return name();
         }
     }
@@ -45,8 +39,7 @@ class NotificationServiceTest {
         emailPersonalisation.put("validation-code", "some-code");
         emailPersonalisation.put("email-address", TEST_EMAIL);
 
-        notificationService.sendEmail(
-                TEST_EMAIL, emailPersonalisation, FAKE_EMAIL, SupportedLanguage.EN);
+        notificationService.sendEmail(TEST_EMAIL, emailPersonalisation, FAKE_EMAIL);
 
         verify(notificationClient).sendEmail("FAKE_EMAIL", TEST_EMAIL, emailPersonalisation, "");
     }
@@ -55,8 +48,7 @@ class NotificationServiceTest {
     public void shouldCallNotifyClientToSendText() throws NotificationClientException {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", "some-code");
-        notificationService.sendText(
-                TEST_PHONE_NUMBER, phonePersonalisation, FAKE_SMS, SupportedLanguage.EN);
+        notificationService.sendText(TEST_PHONE_NUMBER, phonePersonalisation, FAKE_SMS);
 
         verify(notificationClient).sendSms("FAKE_SMS", TEST_PHONE_NUMBER, phonePersonalisation, "");
     }

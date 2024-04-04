@@ -1,7 +1,6 @@
 package uk.gov.di.accountmanagement.services;
 
 import uk.gov.di.accountmanagement.entity.NotificationType;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
@@ -20,26 +19,19 @@ public class NotificationService {
     }
 
     public void sendEmail(
-            String email,
-            Map<String, Object> personalisation,
-            NotificationType notificationType,
-            SupportedLanguage userLanguage)
+            String email, Map<String, Object> personalisation, NotificationType notificationType)
             throws NotificationClientException {
         notifyClient.sendEmail(
-                notificationType.getTemplateId(userLanguage, configurationService),
-                email,
-                personalisation,
-                "");
+                notificationType.getTemplateId(configurationService), email, personalisation, "");
     }
 
     public void sendText(
             String phoneNumber,
             Map<String, Object> personalisation,
-            NotificationType notificationType,
-            SupportedLanguage userLanguage)
+            NotificationType notificationType)
             throws NotificationClientException {
         notifyClient.sendSms(
-                notificationType.getTemplateId(userLanguage, configurationService),
+                notificationType.getTemplateId(configurationService),
                 phoneNumber,
                 personalisation,
                 "");

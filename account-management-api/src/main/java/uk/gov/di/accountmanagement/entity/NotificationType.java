@@ -43,8 +43,7 @@ public enum NotificationType implements TemplateAware {
     }
 
     @Override
-    public String getTemplateId(
-            SupportedLanguage language, ConfigurationService configurationService) {
+    public String getTemplateId(ConfigurationService configurationService) {
         return configurationService.getNotifyTemplateId(templateName);
     }
 

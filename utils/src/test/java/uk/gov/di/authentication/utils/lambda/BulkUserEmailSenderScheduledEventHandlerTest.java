@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -138,11 +137,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(notificationService, times(1))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
         verify(auditService)
@@ -185,11 +180,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(notificationService, times(0))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
         verify(auditService, never())
@@ -237,11 +228,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(notificationService, times(0))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
         verify(auditService, never())
@@ -291,11 +278,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             TEST_SUBJECT_IDS[j], "test.account.gov.uk", SALT);
             verify(notificationService, times(1))
-                    .sendEmail(
-                            TEST_EMAILS[j],
-                            Map.of(),
-                            TERMS_AND_CONDITIONS_BULK_EMAIL,
-                            LocaleHelper.SupportedLanguage.EN);
+                    .sendEmail(TEST_EMAILS[j], Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
             verify(bulkEmailUsersService, times(1))
                     .updateUserStatus(TEST_SUBJECT_IDS[j], BulkEmailStatus.EMAIL_SENT);
             verify(auditService)
@@ -332,11 +315,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(notificationService, times(0))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ACCOUNT_NOT_FOUND);
         verifyNoInteractions(auditService);
@@ -352,11 +331,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
         doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         when(bulkEmailUsersService.updateUserStatus(
                         SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL))
                 .thenReturn(
@@ -368,11 +343,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
         verify(notificationService, times(1))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL);
         verifyNoInteractions(auditService);
@@ -409,11 +380,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         verify(bulkEmailUsersService, never())
                 .getNSubjectIdsByStatus(anyInt(), eq(BulkEmailStatus.PENDING));
         verify(notificationService, times(1))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
     }
@@ -451,11 +418,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
 
         verify(bulkEmailUsersService, never()).getNSubjectIdsByStatus(anyInt(), any());
         verify(notificationService, times(1))
-                .sendEmail(
-                        EMAIL,
-                        Map.of(),
-                        TERMS_AND_CONDITIONS_BULK_EMAIL,
-                        LocaleHelper.SupportedLanguage.EN);
+                .sendEmail(EMAIL, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.RETRY_EMAIL_SENT);
     }

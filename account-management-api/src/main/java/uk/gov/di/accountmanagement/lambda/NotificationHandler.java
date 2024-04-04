@@ -80,8 +80,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     emailPersonalisation,
-                                    NotificationType.VERIFY_EMAIL,
-                                    notifyRequest.getLanguage());
+                                    NotificationType.VERIFY_EMAIL);
                             LOG.info("VERIFY_EMAIL email has been sent using Notify");
                             break;
                         case VERIFY_PHONE_NUMBER:
@@ -91,8 +90,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     phonePersonalisation,
-                                    NotificationType.VERIFY_PHONE_NUMBER,
-                                    notifyRequest.getLanguage());
+                                    NotificationType.VERIFY_PHONE_NUMBER);
                             LOG.info("VERIFY_PHONE_NUMBER text has been sent using Notify");
                             break;
                         case EMAIL_UPDATED:
@@ -104,8 +102,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     emailUpdatePersonalisation,
-                                    NotificationType.EMAIL_UPDATED,
-                                    notifyRequest.getLanguage());
+                                    NotificationType.EMAIL_UPDATED);
                             LOG.info("EMAIL_UPDATED email has been sent using Notify");
                             break;
                         case DELETE_ACCOUNT:
@@ -116,8 +113,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     accountDeletedPersonalisation,
-                                    NotificationType.DELETE_ACCOUNT,
-                                    notifyRequest.getLanguage());
+                                    NotificationType.DELETE_ACCOUNT);
                             LOG.info("DELETE_ACCOUNT email has been sent using Notify");
                             break;
                         case PHONE_NUMBER_UPDATED:
@@ -128,8 +124,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     phoneNumberUpdatedPersonalisation,
-                                    NotificationType.PHONE_NUMBER_UPDATED,
-                                    notifyRequest.getLanguage());
+                                    NotificationType.PHONE_NUMBER_UPDATED);
                             LOG.info("PHONE_NUMBER_UPDATED email has been sent using Notify");
                             break;
                         case PASSWORD_UPDATED:
@@ -140,8 +135,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     passwordUpdatedPersonalisation,
-                                    NotificationType.PASSWORD_UPDATED,
-                                    notifyRequest.getLanguage());
+                                    NotificationType.PASSWORD_UPDATED);
                             LOG.info("PASSWORD_UPDATED email has been sent using Notify");
                             break;
                     }

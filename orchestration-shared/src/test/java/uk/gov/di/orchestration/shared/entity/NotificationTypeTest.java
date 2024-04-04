@@ -49,9 +49,7 @@ class NotificationTypeTest {
                 .thenReturn("67890");
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
-        assertThat(
-                VERIFY_EMAIL.getTemplateId(SupportedLanguage.EN, configurationService),
-                equalTo("12345"));
+        assertThat(VERIFY_EMAIL.getTemplateId(configurationService), equalTo("12345"));
     }
 
     @Test
@@ -60,9 +58,7 @@ class NotificationTypeTest {
                 .thenReturn("67890");
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
-        assertThat(
-                VERIFY_EMAIL.getTemplateId(SupportedLanguage.CY, configurationService),
-                equalTo("12345"));
+        assertThat(VERIFY_EMAIL.getTemplateId(configurationService), equalTo("12345"));
     }
 
     @Test
@@ -71,8 +67,6 @@ class NotificationTypeTest {
                 .thenReturn("");
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
-        assertThat(
-                VERIFY_EMAIL.getTemplateId(SupportedLanguage.CY, configurationService),
-                equalTo("12345"));
+        assertThat(VERIFY_EMAIL.getTemplateId(configurationService), equalTo("12345"));
     }
 }
