@@ -124,7 +124,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFULL,
+                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
