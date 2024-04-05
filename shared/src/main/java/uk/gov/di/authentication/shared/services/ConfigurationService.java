@@ -209,10 +209,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("EMAIL_MAX_RE_AUTH_RETRIES", "5"));
     }
 
-    public boolean isCustomDocAppClaimEnabled() {
-        return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
-    }
-
     public URI getDefaultLogoutURI() {
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
@@ -320,12 +316,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isIdentityEnabled() {
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
-    }
-
-    public boolean isIPVNoSessionResponseEnabled() {
-        return System.getenv()
-                .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
-                .equals("true");
     }
 
     public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {

@@ -133,10 +133,6 @@ variable "aws_dynamodb_endpoint" {
   default = null
 }
 
-variable "custom_doc_app_claim_enabled" {
-  default = false
-}
-
 variable "lambda_dynamo_endpoint" {
   type        = string
   default     = "http://dynamodb:8000"
@@ -318,11 +314,6 @@ variable "ipv_audience" {
 variable "ipv_backend_uri" {
   type    = string
   default = "undefined"
-}
-
-variable "ipv_no_session_response_enabled" {
-  type    = bool
-  default = false
 }
 
 variable "internal_sector_uri" {

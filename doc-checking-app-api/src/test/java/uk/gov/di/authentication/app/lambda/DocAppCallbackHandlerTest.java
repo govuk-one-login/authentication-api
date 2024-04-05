@@ -398,14 +398,12 @@ class DocAppCallbackHandlerTest {
                     throws NoSessionException {
         usingValidSession();
         usingValidClientSession();
-        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
 
         Map<String, String> queryParameters = new HashMap<>();
         queryParameters.put("state", STATE.getValue());
         queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
         queryParameters.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
-        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                        queryParameters, true))
+        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParameters))
                 .thenReturn(
                         new NoSessionEntity(
                                 CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, clientSession));
@@ -467,7 +465,7 @@ class DocAppCallbackHandlerTest {
                         new NoSessionException(
                                 "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
                 .when(noSessionOrchestrationService)
-                .generateNoSessionOrchestrationEntity(queryParameters, false);
+                .generateNoSessionOrchestrationEntity(queryParameters);
 
         var response =
                 handler.handleRequest(

@@ -9,6 +9,7 @@ doc_app_authorisation_uri          = "https://www.review-b.integration.account.g
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.integration.account.gov.uk/.well-known/jwks.json"
 doc_app_encryption_key_id          = "0948190d-384c-498d-81e2-a20dd30f147c"
 doc_app_cri_data_v2_endpoint       = "userinfo/v2"
+doc_app_use_cri_data_v2_endpoint   = true
 
 ipv_api_enabled                             = true
 ipv_capacity_allowed                        = true
@@ -21,8 +22,6 @@ internal_sector_uri                         = "https://identity.integration.acco
 spot_enabled                                = true
 support_auth_orch_split                     = true
 support_auth_orch_split_user_info           = true
-custom_doc_app_claim_enabled                = true
-ipv_no_session_response_enabled             = true
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true

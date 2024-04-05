@@ -46,7 +46,6 @@ module "ipv-callback" {
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_URI                       = var.ipv_authorisation_uri
     IPV_BACKEND_URI                             = var.ipv_backend_uri
-    IPV_NO_SESSION_RESPONSE_ENABLED             = var.ipv_no_session_response_enabled
     IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
     LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
     LOGIN_URI                                   = "https://${local.frontend_fqdn}/"

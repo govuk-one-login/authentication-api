@@ -107,7 +107,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
@@ -1408,7 +1407,7 @@ class AuthorisationHandlerTest {
 
             var uri = URI.create("someUri");
             when(configService.getDocAppDomain()).thenReturn(uri);
-            when(DocAppSubjectIdHelper.calculateDocAppSubjectId(any(), anyBoolean(), any()))
+            when(DocAppSubjectIdHelper.calculateDocAppSubjectId(any(), any()))
                     .thenReturn(new Subject("calculatedSubjectId"));
             when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
             when(configService.getDocAppAuthorisationURI())
