@@ -104,9 +104,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private void sendNotifyMessage(NotifyRequest notifyRequest) {
         try {
-            Map<String, Object> notifyPersonalisation = new HashMap<>();
+
             switch (notifyRequest.getNotificationType()) {
                 case ACCOUNT_CREATED_CONFIRMATION -> {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                     notifyPersonalisation.put(
                             "gov-uk-accounts-url",
@@ -118,6 +119,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyRequest.getLanguage());
                 }
                 case VERIFY_EMAIL -> {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                     notifyPersonalisation.put("email-address", notifyRequest.getDestination());
                     notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
@@ -128,6 +130,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyRequest.getLanguage());
                 }
                 case VERIFY_PHONE_NUMBER -> {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                     notificationService.sendText(
                             notifyRequest.getDestination(),
@@ -136,6 +139,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyRequest.getLanguage());
                 }
                 case MFA_SMS -> {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                     notificationService.sendText(
                             notifyRequest.getDestination(),
@@ -144,25 +148,25 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyRequest.getLanguage());
                 }
                 case PASSWORD_RESET_CONFIRMATION -> {
-                    Map<String, Object> passwordResetConfirmationPersonalisation = new HashMap<>();
-                    passwordResetConfirmationPersonalisation.put(
-                            "contact-us-link", buildContactUsUrl());
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
+                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                     notificationService.sendEmail(
                             notifyRequest.getDestination(),
-                            passwordResetConfirmationPersonalisation,
+                            notifyPersonalisation,
                             PASSWORD_RESET_CONFIRMATION,
                             notifyRequest.getLanguage());
                 }
                 case PASSWORD_RESET_CONFIRMATION_SMS -> {
-                    Map<String, Object> passwordResetConfirmationSmsPersonalisation =
+                    Map<String, Object> notifyPersonalisation =
                             Map.of("contact-us-link", buildContactUsUrl());
                     notificationService.sendText(
                             notifyRequest.getDestination(),
-                            passwordResetConfirmationSmsPersonalisation,
+                            notifyPersonalisation,
                             PASSWORD_RESET_CONFIRMATION_SMS,
                             notifyRequest.getLanguage());
                 }
                 case RESET_PASSWORD_WITH_CODE -> {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                     notifyPersonalisation.put("email-address", notifyRequest.getDestination());
                     notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
@@ -173,6 +177,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyRequest.getLanguage());
                 }
                 case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                     notifyPersonalisation.put("email-address", notifyRequest.getDestination());
                     notificationService.sendEmail(
@@ -182,13 +187,11 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyRequest.getLanguage());
                 }
                 case CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION -> {
-                    Map<String, Object> changeHowGetSecurityCodesConfirmationPersonalisation =
-                            new HashMap<>();
-                    changeHowGetSecurityCodesConfirmationPersonalisation.put(
-                            "contact-us-link", buildContactUsUrl());
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
+                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                     notificationService.sendEmail(
                             notifyRequest.getDestination(),
-                            changeHowGetSecurityCodesConfirmationPersonalisation,
+                            notifyPersonalisation,
                             CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
                             notifyRequest.getLanguage());
                 }
