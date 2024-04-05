@@ -22,7 +22,6 @@ import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -104,42 +103,57 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         }
     }
 
-    private Map<String, Object> getNotifyPersonalisation(NotificationType notificationType, NotifyRequest notifyRequest) {
+    private Map<String, Object> getNotifyPersonalisation(
+            NotificationType notificationType, NotifyRequest notifyRequest) {
         return switch (notificationType) {
-            case ACCOUNT_CREATED_CONFIRMATION -> Map.of("contact-us-link", buildContactUsUrl(),
+            case ACCOUNT_CREATED_CONFIRMATION -> Map.of(
+                    "contact-us-link",
+                    buildContactUsUrl(),
                     "gov-uk-accounts-url",
                     configurationService.getGovUKAccountsURL().toString());
-            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE ->
-                Map.of("validation-code", notifyRequest.getCode(),
-                "email-address", notifyRequest.getDestination(),
-                "contact-us-link", buildContactUsUrl());
-            case VERIFY_PHONE_NUMBER, MFA_SMS ->
-                Map.of("validation-code", notifyRequest.getCode());
-            case PASSWORD_RESET_CONFIRMATION, PASSWORD_RESET_CONFIRMATION_SMS, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION ->
-                Map.of("contact-us-link", buildContactUsUrl());
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
-                Map.of("validation-code", notifyRequest.getCode(),
-                "email-address", notifyRequest.getDestination());
+            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE -> Map.of(
+                    "validation-code",
+                    notifyRequest.getCode(),
+                    "email-address",
+                    notifyRequest.getDestination(),
+                    "contact-us-link",
+                    buildContactUsUrl());
+            case VERIFY_PHONE_NUMBER, MFA_SMS -> Map.of("validation-code", notifyRequest.getCode());
+            case PASSWORD_RESET_CONFIRMATION,
+                    PASSWORD_RESET_CONFIRMATION_SMS,
+                    CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION -> Map.of(
+                    "contact-us-link", buildContactUsUrl());
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> Map.of(
+                    "validation-code",
+                    notifyRequest.getCode(),
+                    "email-address",
+                    notifyRequest.getDestination());
             case TERMS_AND_CONDITIONS_BULK_EMAIL -> null;
         };
     }
 
     private void sendNotifyMessage(NotifyRequest notifyRequest) {
-        var notifyPersonalisation = getNotifyPersonalisation(notifyRequest.getNotificationType(), notifyRequest);
+        var notifyPersonalisation =
+                getNotifyPersonalisation(notifyRequest.getNotificationType(), notifyRequest);
         try {
             switch (notifyRequest.getNotificationType()) {
-                case ACCOUNT_CREATED_CONFIRMATION, VERIFY_EMAIL, PASSWORD_RESET_CONFIRMATION, RESET_PASSWORD_WITH_CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION ->
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            notifyRequest.getNotificationType(),
-                            notifyRequest.getLanguage());
-                case VERIFY_PHONE_NUMBER, MFA_SMS, PASSWORD_RESET_CONFIRMATION_SMS ->
-                    notificationService.sendText(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            notifyRequest.getNotificationType(),
-                            notifyRequest.getLanguage());
+                case ACCOUNT_CREATED_CONFIRMATION,
+                        VERIFY_EMAIL,
+                        PASSWORD_RESET_CONFIRMATION,
+                        RESET_PASSWORD_WITH_CODE,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                        CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION -> notificationService.sendEmail(
+                        notifyRequest.getDestination(),
+                        notifyPersonalisation,
+                        notifyRequest.getNotificationType(),
+                        notifyRequest.getLanguage());
+                case VERIFY_PHONE_NUMBER,
+                        MFA_SMS,
+                        PASSWORD_RESET_CONFIRMATION_SMS -> notificationService.sendText(
+                        notifyRequest.getDestination(),
+                        notifyPersonalisation,
+                        notifyRequest.getNotificationType(),
+                        notifyRequest.getLanguage());
             }
             writeTestClientOtpToS3(
                     notifyRequest.getNotificationType(),
