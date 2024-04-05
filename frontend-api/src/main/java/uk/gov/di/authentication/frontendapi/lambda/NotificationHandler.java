@@ -79,10 +79,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     public Void handleRequest(SQSEvent event, Context context) {
         return segmentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
-                () -> notifcationRequestHandler(event, context));
+                () -> notificationRequestHandler(event, context));
     }
 
-    public Void notifcationRequestHandler(SQSEvent event, Context context) {
+    public Void notificationRequestHandler(SQSEvent event, Context context) {
 
         if (event != null && event.getRecords() != null) {
             LOG.info("Processing Notification batch size: {}", event.getRecords().size());
