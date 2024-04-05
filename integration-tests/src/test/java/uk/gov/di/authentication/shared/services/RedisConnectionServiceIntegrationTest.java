@@ -81,6 +81,23 @@ class RedisConnectionServiceIntegrationTest {
     }
 
     @Test
+    void getTimeToLiveReturnsCorrectCodeIfKeyDoesNotExist() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            assertThat(redis.getTimeToLive(testKey), is(-2L));
+        }
+    }
+
+    @Test
+    void getTimeToLiveReturnsCorrectValueIfKeyExistsAndHasExpiry() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
+            assertThat(redis.getTimeToLive(testKey) > 0, is(true));
+        }
+    }
+
+    @Test
     void deleteValueRemovesValueFromRedisIfExists() {
         try (RedisConnectionService redis =
                 new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {

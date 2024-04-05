@@ -2,6 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
@@ -116,6 +118,17 @@ public class CodeStorageService {
 
     public int getIncorrectPasswordCountReauthJourney(String email) {
         return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+    }
+
+    public long getMfaCodeBlockTimeToLive(
+            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
+        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        return getTTL(email, codeBlockedKeyPrefix);
+    }
+
+    private long getTTL(String email, String prefix) {
+        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
     }
 
     private int getCount(String email, String prefix) {
