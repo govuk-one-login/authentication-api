@@ -104,99 +104,42 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         }
     }
 
-    private void sendNotifyMessage(NotifyRequest notifyRequest) {
-        try {
+    private Map<String, Object> getNotifyPersonalisation(NotificationType notificationType, NotifyRequest notifyRequest) {
+        return switch (notificationType) {
+            case ACCOUNT_CREATED_CONFIRMATION -> Map.of("contact-us-link", buildContactUsUrl(),
+                    "gov-uk-accounts-url",
+                    configurationService.getGovUKAccountsURL().toString());
+            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE ->
+                Map.of("validation-code", notifyRequest.getCode(),
+                "email-address", notifyRequest.getDestination(),
+                "contact-us-link", buildContactUsUrl());
+            case VERIFY_PHONE_NUMBER, MFA_SMS ->
+                Map.of("validation-code", notifyRequest.getCode());
+            case PASSWORD_RESET_CONFIRMATION, PASSWORD_RESET_CONFIRMATION_SMS, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION ->
+                Map.of("contact-us-link", buildContactUsUrl());
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES ->
+                Map.of("validation-code", notifyRequest.getCode(),
+                "email-address", notifyRequest.getDestination());
+            case TERMS_AND_CONDITIONS_BULK_EMAIL -> null;
+        };
+    }
 
+    private void sendNotifyMessage(NotifyRequest notifyRequest) {
+        var notifyPersonalisation = getNotifyPersonalisation(notifyRequest.getNotificationType(), notifyRequest);
+        try {
             switch (notifyRequest.getNotificationType()) {
-                case ACCOUNT_CREATED_CONFIRMATION -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                    notifyPersonalisation.put(
-                            "gov-uk-accounts-url",
-                            configurationService.getGovUKAccountsURL().toString());
+                case ACCOUNT_CREATED_CONFIRMATION, VERIFY_EMAIL, PASSWORD_RESET_CONFIRMATION, RESET_PASSWORD_WITH_CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION ->
                     notificationService.sendEmail(
                             notifyRequest.getDestination(),
                             notifyPersonalisation,
-                            ACCOUNT_CREATED_CONFIRMATION,
+                            notifyRequest.getNotificationType(),
                             notifyRequest.getLanguage());
-                }
-                case VERIFY_EMAIL -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                    notifyPersonalisation.put("email-address", notifyRequest.getDestination());
-                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            VERIFY_EMAIL,
-                            notifyRequest.getLanguage());
-                }
-                case VERIFY_PHONE_NUMBER -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("validation-code", notifyRequest.getCode());
+                case VERIFY_PHONE_NUMBER, MFA_SMS, PASSWORD_RESET_CONFIRMATION_SMS ->
                     notificationService.sendText(
                             notifyRequest.getDestination(),
                             notifyPersonalisation,
-                            VERIFY_PHONE_NUMBER,
+                            notifyRequest.getNotificationType(),
                             notifyRequest.getLanguage());
-                }
-                case MFA_SMS -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                    notificationService.sendText(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            MFA_SMS,
-                            notifyRequest.getLanguage());
-                }
-                case PASSWORD_RESET_CONFIRMATION -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            PASSWORD_RESET_CONFIRMATION,
-                            notifyRequest.getLanguage());
-                }
-                case PASSWORD_RESET_CONFIRMATION_SMS -> {
-                    Map<String, Object> notifyPersonalisation =
-                            Map.of("contact-us-link", buildContactUsUrl());
-                    notificationService.sendText(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            PASSWORD_RESET_CONFIRMATION_SMS,
-                            notifyRequest.getLanguage());
-                }
-                case RESET_PASSWORD_WITH_CODE -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                    notifyPersonalisation.put("email-address", notifyRequest.getDestination());
-                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            RESET_PASSWORD_WITH_CODE,
-                            notifyRequest.getLanguage());
-                }
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                    notifyPersonalisation.put("email-address", notifyRequest.getDestination());
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                            notifyRequest.getLanguage());
-                }
-                case CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION -> {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
-                            notifyRequest.getLanguage());
-                }
             }
             writeTestClientOtpToS3(
                     notifyRequest.getNotificationType(),
