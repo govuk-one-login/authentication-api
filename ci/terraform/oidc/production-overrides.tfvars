@@ -31,7 +31,6 @@ cloudwatch_log_retention                  = 5
 client_registry_api_enabled               = false
 language_cy_enabled                       = true
 spot_enabled                              = true
-ipv_api_enabled                           = true
 ipv_capacity_allowed                      = true
 ipv_no_session_response_enabled           = true
 ipv_authorisation_uri                     = "https://identity.account.gov.uk/oauth2/authorize"

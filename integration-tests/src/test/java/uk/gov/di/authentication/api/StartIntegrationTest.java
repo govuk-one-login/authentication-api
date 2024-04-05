@@ -351,11 +351,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         @Override
-        public boolean isIdentityEnabled() {
-            return true;
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

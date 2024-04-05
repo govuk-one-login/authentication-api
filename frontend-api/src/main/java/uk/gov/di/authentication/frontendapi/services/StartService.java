@@ -148,7 +148,6 @@ public class StartService {
             UserContext userContext,
             String cookieConsent,
             String gaTrackingId,
-            boolean identityEnabled,
             boolean reauthenticate) {
         var uplift = false;
         var identityRequired = false;
@@ -162,8 +161,7 @@ public class StartService {
             identityRequired =
                     IdentityHelper.identityRequired(
                             userContext.getClientSession().getAuthRequestParams(),
-                            clientRegistry.isIdentityVerificationSupported(),
-                            identityEnabled);
+                            clientRegistry.isIdentityVerificationSupported());
         }
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             mfaMethodType = MFAMethodType.SMS;

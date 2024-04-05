@@ -57,11 +57,9 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -134,7 +132,6 @@ public class InitiateIPVAuthorisationServiceTest {
 
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configService.sendStorageTokenToIpvEnabled()).thenReturn(true);
@@ -142,31 +139,6 @@ public class InitiateIPVAuthorisationServiceTest {
                 .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
         AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
         when(tokenService.generateStorageToken(any())).thenReturn(storageToken);
-    }
-
-    @Test
-    void shouldThrowWhenIdentityIsNotEnabled() {
-        when(configService.isIdentityEnabled()).thenReturn(false);
-
-        var exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () ->
-                                initiateAuthorisationService.sendRequestToIPV(
-                                        event,
-                                        authenticationRequest,
-                                        userInfo,
-                                        session,
-                                        client,
-                                        CLIENT_ID,
-                                        CLIENT_SESSION_ID,
-                                        PERSISTENT_SESSION_ID,
-                                        REPROVE_IDENTITY,
-                                        LEVELS_OF_CONFIDENCE),
-                        "Expected to throw exception");
-
-        assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
-        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test

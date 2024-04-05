@@ -305,8 +305,7 @@ public class AuthenticationCallbackHandler
                 boolean identityRequired =
                         identityRequired(
                                 clientSession.getAuthRequestParams(),
-                                client.isIdentityVerificationSupported(),
-                                configurationService.isIdentityEnabled());
+                                client.isIdentityVerificationSupported());
 
                 boolean isTestJourney = false;
                 if (nonNull(userInfo.getEmailAddress())) {

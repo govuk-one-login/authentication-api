@@ -381,10 +381,5 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         public String getOrchestrationRedirectUri() {
             return ORCHESTRATION_REDIRECT_URI;
         }
-
-        @Override
-        public boolean isIdentityEnabled() {
-            return true;
-        }
     }
 }

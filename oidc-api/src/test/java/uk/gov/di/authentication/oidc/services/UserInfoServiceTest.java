@@ -131,65 +131,6 @@ class UserInfoServiceTest {
     }
 
     @Test
-    void shouldJustPopulateUserInfoWhenIdentityNotEnabled()
-            throws JOSEException, AccessTokenException, ClientNotFoundException {
-        when(configurationService.isIdentityEnabled()).thenReturn(false);
-        accessToken = createSignedAccessToken(null);
-        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
-                .thenReturn(generateUserprofile());
-
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
-        var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
-
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
-
-        assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
-        assertThat(userInfo.getEmailVerified(), equalTo(true));
-        assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
-        assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
-        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
-    }
-
-    @Test
-    void shouldJustPopulateUserInfoWhenIdentityNotEnabledOrchSplitEnabled()
-            throws JOSEException, AccessTokenException, ClientNotFoundException {
-        when(configurationService.isIdentityEnabled()).thenReturn(false);
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
-        accessToken = createSignedAccessToken(null);
-        var accessTokenStore =
-                new AccessTokenStore(
-                        accessToken.getValue(),
-                        INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
-        var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
-        givenThereIsUserInfo();
-
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
-
-        assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
-        assertThat(userInfo.getEmailVerified(), equalTo(true));
-        assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
-        assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
-        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
-    }
-
-    @Test
     void
             shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresentAndOrchSplitNotEnabled()
                     throws JOSEException, AccessTokenException, ClientNotFoundException {
@@ -284,7 +225,6 @@ class UserInfoServiceTest {
         @Test
         void shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresent()
                 throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
             when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                     .thenReturn(generateUserprofile());
@@ -316,7 +256,6 @@ class UserInfoServiceTest {
         void
                 shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresentOrchSplitEnabled()
                         throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
             var accessTokenStore =
@@ -346,7 +285,6 @@ class UserInfoServiceTest {
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
                 throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
                             .withSubjectID(SUBJECT.getValue())
@@ -417,7 +355,6 @@ class UserInfoServiceTest {
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabledOrchSplitEnabled()
                 throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
@@ -487,74 +424,8 @@ class UserInfoServiceTest {
         }
 
         @Test
-        void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabled()
-                throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(false);
-            accessToken = createSignedAccessToken(null);
-            var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
-            when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
-                    .thenReturn(generateUserprofile());
-
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
-            var accessTokenInfo =
-                    new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
-
-            var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
-
-            assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
-            assertThat(userInfo.getEmailVerified(), equalTo(true));
-            assertNull(userInfo.getPhoneNumber());
-            assertNull(userInfo.getPhoneNumberVerified());
-            assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
-        }
-
-        @Test
-        void
-                shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabledOrchSplitEnabled()
-                        throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(false);
-            when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
-            accessToken = createSignedAccessToken(null);
-            var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
-
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
-            var accessTokenInfo =
-                    new AccessTokenInfo(
-                            accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
-            givenThereIsUserInfo();
-
-            var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
-
-            assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
-            assertThat(userInfo.getEmailVerified(), equalTo(true));
-            assertNull(userInfo.getPhoneNumber());
-            assertNull(userInfo.getPhoneNumberVerified());
-            assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
-        }
-
-        @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresent()
                 throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
                             .withSubjectID(SUBJECT.getValue())
@@ -601,7 +472,6 @@ class UserInfoServiceTest {
         void
                 shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresentOrchSplitEnabled()
                         throws JOSEException, AccessTokenException, ClientNotFoundException {
-            when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()

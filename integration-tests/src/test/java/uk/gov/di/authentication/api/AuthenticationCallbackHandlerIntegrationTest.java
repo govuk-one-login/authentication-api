@@ -929,11 +929,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
-        public boolean isIdentityEnabled() {
-            return true;
-        }
-
-        @Override
         public URI getIPVAuthorisationURI() {
             return URI.create("https://ipv.gov.uk/authorize");
         }

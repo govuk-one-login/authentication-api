@@ -347,8 +347,7 @@ class AuthenticationCallbackHandlerTest {
         class AuthOnlyJourney {
             @BeforeEach
             void setup() {
-                when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
-                        .thenReturn(false);
+                when(IdentityHelper.identityRequired(anyMap(), anyBoolean())).thenReturn(false);
             }
 
             @Test
@@ -455,8 +454,7 @@ class AuthenticationCallbackHandlerTest {
 
             @BeforeEach
             void setup() {
-                when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
-                        .thenReturn(true);
+                when(IdentityHelper.identityRequired(anyMap(), anyBoolean())).thenReturn(true);
             }
 
             @Test

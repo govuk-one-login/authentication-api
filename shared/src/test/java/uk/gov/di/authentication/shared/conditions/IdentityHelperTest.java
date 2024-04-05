@@ -27,42 +27,35 @@ class IdentityHelperTest {
     void shouldReturnFalseWhenVtrNotPresentInAuthRequest() {
         var authRequest = createAuthRequest();
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true));
     }
 
     @Test
     void shouldReturnFalseWhenNoLevelOfConfidenceIsPresentInAuthRequest() {
         var authRequest = createAuthRequest("Cl.Cm");
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true));
     }
 
     @Test
     void shouldReturnFalseWhenP0LevelOfConfidenceIsPresentInAuthRequest() {
         var authRequest = createAuthRequest("P0.Cl.Cm");
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
+        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true));
     }
 
     @Test
     void shouldReturnTrueIfLevelOfConfidenceGreaterThanP0IsPresentInAuthRequest() {
         var authRequest = createAuthRequest("P2.Cl.Cm");
 
-        assertTrue(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
-    }
-
-    @Test
-    void shouldReturnFalseIfIdentityIsNotEnabled() {
-        var authRequest = createAuthRequest("P2.Cl.Cm");
-
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, false));
+        assertTrue(IdentityHelper.identityRequired(authRequest.toParameters(), true));
     }
 
     @Test
     void shouldReturnFalseWhenRPDoesNotSupportIdentityVerification() {
         var authRequest = createAuthRequest("P2.Cl.Cm");
 
-        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), false, true));
+        assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), false));
     }
 
     private AuthenticationRequest createAuthRequest() {

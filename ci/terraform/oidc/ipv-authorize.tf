@@ -31,7 +31,6 @@ module "ipv-authorize" {
   handler_environment_variables = {
     DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
     ENVIRONMENT                    = var.environment
-    IDENTITY_ENABLED               = var.ipv_api_enabled
     INTERNAl_SECTOR_URI            = var.internal_sector_uri
     IPV_AUDIENCE                   = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri

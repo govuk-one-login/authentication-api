@@ -34,7 +34,6 @@ module "ipv-callback" {
   handler_environment_variables = {
     DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
     ENVIRONMENT                                 = var.environment
-    IDENTITY_ENABLED                            = var.ipv_api_enabled
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled

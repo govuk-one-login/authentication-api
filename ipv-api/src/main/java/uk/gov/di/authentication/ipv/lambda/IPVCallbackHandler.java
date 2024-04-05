@@ -154,9 +154,6 @@ public class IPVCallbackHandler
         ThreadContext.clearMap();
         LOG.info("Request received to IPVCallbackHandler");
         try {
-            if (!configurationService.isIdentityEnabled()) {
-                throw new IpvCallbackException("Identity is not enabled");
-            }
             var sessionCookiesIds =
                     cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
             if (Objects.isNull(sessionCookiesIds)) {
