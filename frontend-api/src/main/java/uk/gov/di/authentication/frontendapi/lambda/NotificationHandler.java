@@ -89,17 +89,19 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         }
         for (SQSMessage msg : event.getRecords()) {
             LOG.info("Processing Notification message with id: {}", msg.getMessageId());
-            try {
-                NotifyRequest notifyRequest =
-                        objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                sendNotifyMessage(notifyRequest);
-            } catch (JsonException e) {
-                LOG.error("Error when mapping message from queue to a NotifyRequest");
-                throw new RuntimeException(
-                        "Error when mapping message from queue to a NotifyRequest");
-            }
+            var request = parseNotifyRequest(msg);
+            sendNotifyMessage(request);
         }
         return null;
+    }
+
+    private NotifyRequest parseNotifyRequest(SQSMessage msg) {
+        try {
+            return objectMapper.readValue(msg.getBody(), NotifyRequest.class);
+        } catch (JsonException e) {
+            LOG.error("Error when mapping message from queue to a NotifyRequest");
+            throw new RuntimeException("Error when mapping message from queue to a NotifyRequest");
+        }
     }
 
     private void sendNotifyMessage(NotifyRequest notifyRequest) {
