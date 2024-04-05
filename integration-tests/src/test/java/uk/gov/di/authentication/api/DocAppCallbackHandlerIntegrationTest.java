@@ -97,8 +97,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    false);
+                    docAppPrivateKeyJwtSigner);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -162,17 +161,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     @Test
     void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponseUsingUserinfoV2Endpoint()
             throws Json.JsonException {
-        var configurationService =
-                new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
-                        criStub,
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
-                        externalTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner,
-                        true);
         handler = new DocAppCallbackHandler(configurationService);
         setupSession();
 
@@ -205,7 +193,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         setupSession();
 
         criStub.register(
-                "/protected-resource",
+                "/userinfo/v2",
                 200,
                 "application/json",
                 "{\"sub\":\"'mockSubThatIsDifferentFromClientSessionDocAppUserId'\", \"https://vocab.account.gov.uk/v1/credentialJWT\": [\"'mockSignedJwtOne'\", \"'mockSignedJwtTwo'\"]}");
@@ -235,7 +223,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     void shouldThrowIfInvalidResponseReceivedFromCriProtectedEndpoint() throws Json.JsonException {
         setupSession();
 
-        criStub.register("/protected-resource", 200, "application/jwt", "invalid-response");
+        criStub.register("/userinfo/v2", 200, "application/jwt", "invalid-response");
 
         var response =
                 makeRequest(
@@ -262,17 +250,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     void shouldSendAuthenticationErrorResponseToRPWhenCRIRequestReturns404()
             throws Json.JsonException {
         setupSession();
-        var configurationService =
-                new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
-                        criStub,
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
-                        externalTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner,
-                        true);
         handler = new DocAppCallbackHandler(configurationService);
 
         criStub.register("/userinfo/v2", 404, "application/jwt", "error");
@@ -305,7 +282,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     void shouldThrowIfErrorReceivedFromCriProtectedEndpoint() throws Json.JsonException {
         setupSession();
 
-        criStub.register("/protected-resource", 400, "application/jwt", "error");
+        criStub.register("/userinfo/v2", 400, "application/jwt", "error");
 
         var response =
                 makeRequest(
@@ -394,7 +371,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         private final CriStubExtension criStubExtension;
-        private final boolean userInfoV2Enabled;
 
         public TestConfigurationService(
                 CriStubExtension criStubExtension,
@@ -404,8 +380,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
-                boolean userInfoV2Enabled) {
+                TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
                     tokenSigningKey,
                     storageTokenSigner,
@@ -414,7 +389,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.criStubExtension = criStubExtension;
-            this.userInfoV2Enabled = userInfoV2Enabled;
         }
 
         @Override
@@ -442,7 +416,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         @Override
         public String getDocAppCriDataEndpoint() {
-            return "/protected-resource";
+            return "/userinfo/v2";
         }
 
         @Override
@@ -453,11 +427,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public boolean isCustomDocAppClaimEnabled() {
             return true;
-        }
-
-        @Override
-        public boolean isDocAppCriV2DataEndpointEnabled() {
-            return userInfoV2Enabled;
         }
 
         @Override

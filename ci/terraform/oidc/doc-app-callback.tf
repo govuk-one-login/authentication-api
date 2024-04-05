@@ -34,7 +34,6 @@ module "doc-app-callback" {
     DOC_APP_CRI_DATA_ENDPOINT          = var.doc_app_cri_data_endpoint
     DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
     DOC_APP_CRI_DATA_V2_ENDPOINT       = var.doc_app_cri_data_v2_endpoint
-    DOC_APP_V2_DATA_ENDPOINT_ENABLED   = var.doc_app_use_cri_data_v2_endpoint
     DOC_APP_AUD                        = var.doc_app_aud
     DOC_APP_NEW_AUD_CLAIM_ENABLED      = var.doc_app_new_aud_claim_enabled
     DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null

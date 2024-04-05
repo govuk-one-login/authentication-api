@@ -9,7 +9,6 @@ doc_app_authorisation_uri          = "https://www.review-b.integration.account.g
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.integration.account.gov.uk/.well-known/jwks.json"
 doc_app_encryption_key_id          = "0948190d-384c-498d-81e2-a20dd30f147c"
 doc_app_cri_data_v2_endpoint       = "userinfo/v2"
-doc_app_use_cri_data_v2_endpoint   = true
 
 ipv_api_enabled                           = true
 ipv_capacity_allowed                      = true

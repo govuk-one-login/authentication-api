@@ -193,12 +193,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("DOC_APP_CRI_DATA_V2_ENDPOINT");
     }
 
-    public boolean isDocAppCriV2DataEndpointEnabled() {
-        return System.getenv()
-                .getOrDefault("DOC_APP_V2_DATA_ENDPOINT_ENABLED", "false")
-                .equals("true");
-    }
-
     public boolean isDocAppNewAudClaimEnabled() {
         return System.getenv()
                 .getOrDefault("DOC_APP_NEW_AUD_CLAIM_ENABLED", "false")
