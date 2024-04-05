@@ -27,12 +27,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -137,99 +134,51 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         };
     }
 
-    private void sendNotifyMessage(NotifyRequest notifyRequest) {
-        try {
+    private void sendNotifyMessage(NotifyRequest request) {
 
-            var notifyPersonalisation = getPersonalisation(notifyRequest);
-            switch (notifyRequest.getNotificationType()) {
-                case ACCOUNT_CREATED_CONFIRMATION -> {
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            ACCOUNT_CREATED_CONFIRMATION,
-                            notifyRequest.getLanguage());
-                }
-                case VERIFY_EMAIL -> {
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            VERIFY_EMAIL,
-                            notifyRequest.getLanguage());
-                }
-                case VERIFY_PHONE_NUMBER -> {
-                    notificationService.sendText(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            VERIFY_PHONE_NUMBER,
-                            notifyRequest.getLanguage());
-                }
-                case MFA_SMS -> {
-                    notificationService.sendText(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            MFA_SMS,
-                            notifyRequest.getLanguage());
-                }
-                case PASSWORD_RESET_CONFIRMATION -> {
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            PASSWORD_RESET_CONFIRMATION,
-                            notifyRequest.getLanguage());
-                }
-                case PASSWORD_RESET_CONFIRMATION_SMS -> {
-                    notificationService.sendText(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            PASSWORD_RESET_CONFIRMATION_SMS,
-                            notifyRequest.getLanguage());
-                }
-                case RESET_PASSWORD_WITH_CODE -> {
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            RESET_PASSWORD_WITH_CODE,
-                            notifyRequest.getLanguage());
-                }
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> {
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                            notifyRequest.getLanguage());
-                }
-                case CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION -> {
-                    notificationService.sendEmail(
-                            notifyRequest.getDestination(),
-                            notifyPersonalisation,
-                            CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
-                            notifyRequest.getLanguage());
-                }
+        if (request.getNotificationType() == TERMS_AND_CONDITIONS_BULK_EMAIL) {
+            LOG.info("Not dispatching terms and conditions bulk email.");
+            return;
+        }
+
+        try {
+            var personalisation = getPersonalisation(request);
+
+            if (request.getNotificationType().isEmail()) {
+                notificationService.sendEmail(
+                        request.getDestination(),
+                        personalisation,
+                        request.getNotificationType(),
+                        request.getLanguage());
+            } else {
+                notificationService.sendText(
+                        request.getDestination(),
+                        personalisation,
+                        request.getNotificationType(),
+                        request.getLanguage());
             }
             writeTestClientOtpToS3(
-                    notifyRequest.getNotificationType(),
-                    notifyRequest.getCode(),
-                    notifyRequest.getDestination());
+                    request.getNotificationType(), request.getCode(), request.getDestination());
         } catch (NotificationClientException e) {
             LOG.error(
                     "Error sending with Notify using NotificationType: {}",
-                    notifyRequest.getNotificationType());
+                    request.getNotificationType());
 
-            if (isPhoneNotification(notifyRequest.getNotificationType())) {
+            if (isPhoneNotification(request.getNotificationType())) {
                 String countryCode =
-                        PhoneNumberHelper.maybeGetCountry(notifyRequest.getDestination())
+                        PhoneNumberHelper.maybeGetCountry(request.getDestination())
                                 .orElse("unable to parse country");
                 throw new RuntimeException(
                         String.format(
                                 "Error sending Notify SMS with NotificationType: %s and country code: %s",
-                                notifyRequest.getNotificationType(), countryCode),
+                                request.getNotificationType(), countryCode),
                         e);
             }
 
             throw new RuntimeException(
                     String.format(
                             "Error sending Notify email with NotificationType: %s",
-                            notifyRequest.getNotificationType()),
+                            request.getNotificationType()),
                     e);
         }
     }
