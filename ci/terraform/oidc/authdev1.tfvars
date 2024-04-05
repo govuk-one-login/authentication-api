@@ -13,6 +13,7 @@ logging_endpoint_arns                       = []
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
+send_storage_token_to_ipv_enabled           = true
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
@@ -33,7 +34,7 @@ PirNO+f1KP1HGi7oYdoiFgVXejoUmpxKXeQRtOF6PgTBkrRMzmI51YFLDQ==
 -----END PUBLIC KEY-----
 EOT
 
-enable_api_gateway_execution_request_tracing = false
+enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
 lambda_max_concurrency = 0
@@ -45,12 +46,11 @@ lockout_duration                          = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
-extended_feature_flags_enabled = false
+extended_feature_flags_enabled = true
 
 orch_client_id = "orchestrationAuth"
 
-support_auth_orch_split = true
-
+support_auth_orch_split           = true
 support_auth_orch_split_user_info = true
 
 orch_frontend_api_gateway_integration_enabled = false

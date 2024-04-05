@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id "au.com.dius.pact" version "4.6.5"
 }
 
 group "uk.gov.di"
@@ -18,7 +19,8 @@ dependencies {
             configurations.cloudwatch,
             configurations.dynamodb,
             configurations.lettuce,
-            configurations.lambda
+            configurations.lambda,
+            configurations.pact_provider
 
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
@@ -38,6 +40,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    exclude 'uk/gov/di/authentication/contract/**'
 
     jacoco {
     }
@@ -82,6 +85,23 @@ test {
                 project(":shared").sourceSets.main.output,
                 project(":utils").sourceSets.main.output)
     }
+    dependsOn ":composeUp"
+    finalizedBy ":composeDown"
+}
+
+pactPublish.enabled = false
+
+task pactProviderTests (type: Test, group: "verification") {
+    useJUnitPlatform()
+    include 'uk/gov/di/authentication/contract/**'
+    environment "PROVIDER_UNDER_TEST", "ClientRegistryProvider"
+
+    environment "AWS_ACCESS_KEY_ID", "mock-access-key"
+    environment "AWS_REGION", "eu-west-2"
+    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
+    environment "REDIS_KEY", "session"
+    environment "TRACING_ENABLED", "false"
+
     dependsOn ":composeUp"
     finalizedBy ":composeDown"
 }

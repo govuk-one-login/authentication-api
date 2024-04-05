@@ -89,7 +89,8 @@ variable "endpoint_memory_size" {
 }
 
 variable "synthetics_users" {
-  type = string
+  default = ""
+  type    = string
 }
 
 variable "txma_account_id" {

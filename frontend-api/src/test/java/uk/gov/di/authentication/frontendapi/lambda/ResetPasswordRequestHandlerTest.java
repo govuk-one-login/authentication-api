@@ -13,6 +13,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
@@ -23,12 +24,20 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -43,7 +52,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.HashMap;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,19 +63,9 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.*;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -101,6 +100,12 @@ class ResetPasswordRequestHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
+    private static final String CLIENT_ID = "test-client-id";
+    private static final String CLIENT_NAME = "test-client-name";
+
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -113,7 +118,9 @@ class ResetPasswordRequestHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session(IdGenerator.generate())
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
                     configurationService,
@@ -146,313 +153,289 @@ class ResetPasswordRequestHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
     }
 
-    @Test
-    void shouldReturn200AndPutMessageOnQueueForAValidCodeFlowRequest() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        Subject subject = new Subject("subject_1");
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
-        NotifyRequest notifyRequest =
+    @Nested
+    class WhenTheRequestIsValid {
+
+        static final String validRequestBody = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        static NotifyRequest notifyRequest =
                 new NotifyRequest(
                         TEST_EMAIL_ADDRESS,
                         RESET_PASSWORD_WITH_CODE,
                         TEST_SIX_DIGIT_CODE,
                         SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        public static APIGatewayProxyRequestEvent validEvent;
 
-        assertEquals(204, result.getStatusCode());
+        private boolean isSessionWithEmailSent(Session session) {
+            return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
+        }
 
-        verify(awsSqsClient).send(argThat(containsJsonString(serialisedRequest)));
-        verify(codeStorageService)
-                .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        RESET_PASSWORD_WITH_CODE);
-        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PERSISTENT_ID,
-                        PASSWORD_RESET_COUNTER);
+        @BeforeEach
+        void setup() {
+            validEvent = eventWithHeadersAndBody(validHeaders(), validRequestBody);
+            Subject subject = new Subject("subject_1");
+            when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.of(PHONE_NUMBER));
+            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.of(PHONE_NUMBER));
+            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.of(userProfileWithPhoneNumber(PHONE_NUMBER)));
+            when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                    .thenReturn(Optional.of(getClientSession()));
+            var disabledMfaMethod =
+                    new MFAMethod(
+                            MFAMethodType.AUTH_APP.getValue(),
+                            "first-value",
+                            true,
+                            false,
+                            NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+            var enabledMfaMethod =
+                    new MFAMethod(
+                            MFAMethodType.SMS.getValue(),
+                            "second-value",
+                            true,
+                            true,
+                            NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+            when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+                    .thenReturn(
+                            new UserCredentials()
+                                    .withMfaMethods(List.of(disabledMfaMethod, enabledMfaMethod)));
+        }
+
+        @Test
+        void shouldReturn200WithTheUsersMfaMethodAndSaveOtpCodeForAValidRequest() {
+            usingValidSession();
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+            var expectedBody = "{\"mfaMethodType\":\"SMS\",\"phoneNumberLastThree\":\"890\"}";
+            assertEquals(expectedBody, result.getBody());
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            TEST_EMAIL_ADDRESS,
+                            TEST_SIX_DIGIT_CODE,
+                            CODE_EXPIRY_TIME,
+                            RESET_PASSWORD_WITH_CODE);
+            verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+        }
+
+        @Test
+        void shouldPutMessageOnQueueForAValidCodeFlowRequest() throws Json.JsonException {
+            usingValidSession();
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+            verify(awsSqsClient)
+                    .send(
+                            argThat(
+                                    containsJsonString(
+                                            objectMapper.writeValueAsString(notifyRequest))));
+        }
+
+        @Test
+        void shouldSubmitCorrectAuditEventForAValidRequest() {
+            usingValidSession();
+
+            handler.handleRequest(validEvent, context);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            TEST_CLIENT_ID,
+                            expectedCommonSubject,
+                            TEST_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            PHONE_NUMBER,
+                            PERSISTENT_ID,
+                            PASSWORD_RESET_COUNTER);
+        }
+
+        @Test
+        void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
+            when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
+                    .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
+
+            usingValidSession();
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            verify(codeGeneratorService, never()).sixDigitCode();
+            verify(codeStorageService, never())
+                    .saveOtpCode(
+                            any(String.class),
+                            any(String.class),
+                            anyLong(),
+                            any(NotificationType.class));
+            verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+            assertThat(result, hasStatus(200));
+        }
+
+        @Test
+        void shouldReturn200ButNotPutMessageOnQueueIfTestClient() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+
+            usingValidSession();
+            usingValidClientSession();
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+
+            verifyNoInteractions(awsSqsClient);
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            TEST_EMAIL_ADDRESS,
+                            TEST_SIX_DIGIT_CODE,
+                            CODE_EXPIRY_TIME,
+                            RESET_PASSWORD_WITH_CODE);
+            verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            TEST_CLIENT_ID,
+                            expectedCommonSubject,
+                            TEST_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            PHONE_NUMBER,
+                            PERSISTENT_ID,
+                            PASSWORD_RESET_COUNTER);
+        }
+
+        @Test
+        void shouldReturn404IfUserProfileIsNotFound() {
+            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.empty());
+
+            usingValidSession();
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(404, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+        }
+
+        @Test
+        public void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
+            usingSessionWithPasswordResetCount(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+            when(codeStorageService.isBlockedForEmail(
+                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                    .thenReturn(true);
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        public void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
+            usingSessionWithPasswordResetCount(0);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            when(codeStorageService.isBlockedForEmail(
+                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                    .thenReturn(true);
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        public void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
+            Mockito.doThrow(SdkClientException.class)
+                    .when(awsSqsClient)
+                    .send(eq(objectMapper.writeValueAsString(notifyRequest)));
+
+            usingValidSession();
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(500, result.getStatusCode());
+            assertTrue(result.getBody().contains("Error sending message to queue"));
+        }
+
+        @Test
+        public void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
+            when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+            var session = usingSessionWithPasswordResetCount(5);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, LOCKOUT_DURATION);
+            verify(session).resetPasswordResetCount();
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        void shouldReturn400WhenNoEmailIsPresentInSession() {
+            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                    .thenReturn(Optional.of(PHONE_NUMBER));
+            when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                    .thenReturn(Optional.of(new Session(IdGenerator.generate())));
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
+
+            assertEquals(400, result.getStatusCode());
+            verifyNoInteractions(awsSqsClient);
+            verifyNoInteractions(codeStorageService);
+            verifyNoInteractions(auditService);
+        }
     }
 
-    @Test
-    void shouldReturn200ButNotPutMessageOnQueueIfTestClient() {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        Subject subject = new Subject("subject_1");
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+    @Nested
+    class WhenRequestIsInvalid {
+        @Test
+        void shouldReturn400IfInvalidSessionProvided() {
+            var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
+            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(Map.of(), body);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        usingValidSession();
-        usingValidClientSession();
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        var result = handler.handleRequest(event, context);
+            assertEquals(400, result.getStatusCode());
 
-        assertEquals(204, result.getStatusCode());
+            verify(awsSqsClient, never()).send(anyString());
+            verify(codeStorageService, never())
+                    .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
+            verify(sessionService, never()).save(any());
+            verifyNoInteractions(awsSqsClient);
+        }
 
-        verifyNoInteractions(awsSqsClient);
-        verify(codeStorageService)
-                .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        RESET_PASSWORD_WITH_CODE);
-        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+        @Test
+        public void shouldReturn400IfRequestIsMissingEmail() {
+            usingValidSession();
+            var body = "{ }";
+            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PERSISTENT_ID,
-                        PASSWORD_RESET_COUNTER);
-    }
-
-    @Test
-    void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        Subject subject = new Subject("subject_1");
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
-                .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
-
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        RESET_PASSWORD_WITH_CODE,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
-        verify(codeGeneratorService, never()).sixDigitCode();
-        verify(codeStorageService, never())
-                .saveOtpCode(
-                        any(String.class),
-                        any(String.class),
-                        anyLong(),
-                        any(NotificationType.class));
-        verify(awsSqsClient).send(serialisedRequest);
-        assertThat(result, hasStatus(204));
-    }
-
-    @Test
-    void shouldReturn400IfInvalidSessionProvided() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-
-        verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never())
-                .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
-        verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
-        verifyNoInteractions(awsSqsClient);
-    }
-
-    @Test
-    public void shouldReturn400IfRequestIsMissingEmail() {
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-        verifyNoInteractions(awsSqsClient);
-    }
-
-    @Test
-    public void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
-        Subject subject = new Subject("subject_1");
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        RESET_PASSWORD_WITH_CODE,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        var serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-        Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
-
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(500, result.getStatusCode());
-        assertTrue(result.getBody().contains("Error sending message to queue"));
-    }
-
-    @Test
-    public void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
-        Subject subject = new Subject("subject_1");
-        String sessionId = "1233455677";
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        Session session = mock(Session.class);
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-        when(session.getSessionId()).thenReturn(sessionId);
-        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-        when(session.getPasswordResetCount()).thenReturn(5);
-
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", sessionId));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, LOCKOUT_DURATION);
-        verify(session).resetPasswordResetCount();
-        verifyNoInteractions(awsSqsClient);
-    }
-
-    @Test
-    public void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
-        Subject subject = new Subject("subject_1");
-        String sessionId = "1233455677";
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        Session session = mock(Session.class);
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-        when(session.getSessionId()).thenReturn(sessionId);
-        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-        when(session.getPasswordResetCount()).thenReturn(0);
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
-                .thenReturn(true);
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", sessionId));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
-        var result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
-        verifyNoInteractions(awsSqsClient);
-    }
-
-    @Test
-    public void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
-        Subject subject = new Subject("subject_1");
-        String sessionId = "1233455677";
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        Session session = mock(Session.class);
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
-        when(session.getSessionId()).thenReturn(sessionId);
-        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
-        when(session.getPasswordResetCount()).thenReturn(0);
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
-                .thenReturn(true);
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", sessionId));
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
-        var result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
-        verifyNoInteractions(awsSqsClient);
-    }
-
-    @Test
-    void shouldReturn400WhenNoEmailIsPresentInSession() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        Subject subject = new Subject("subject_1");
-        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
-        when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(new Session(IdGenerator.generate())));
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertEquals(400, result.getStatusCode());
-        verifyNoInteractions(awsSqsClient);
-        verifyNoInteractions(codeStorageService);
-        verifyNoInteractions(auditService);
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            verifyNoInteractions(awsSqsClient);
+        }
     }
 
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-    }
-
-    private boolean isSessionWithEmailSent(Session session) {
-        return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
     }
 
     private void usingValidClientSession() {
@@ -468,5 +451,55 @@ class ResetPasswordRequestHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
+    }
+
+    private Session usingSessionWithPasswordResetCount(int passwordResetCount) {
+        Session session = mock(Session.class);
+        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getSessionId()).thenReturn(SESSION_ID);
+        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.getPasswordResetCount()).thenReturn(passwordResetCount);
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        return session;
+    }
+
+    private Map<String, String> validHeaders() {
+        return Map.of(
+                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                PERSISTENT_ID,
+                "Session-Id",
+                session.getSessionId(),
+                CLIENT_SESSION_ID_HEADER,
+                CLIENT_SESSION_ID);
+    }
+
+    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
+            Map<String, String> headers, String body) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(body);
+        return event;
+    }
+
+    private UserProfile userProfileWithPhoneNumber(String phoneNumber) {
+        return new UserProfile().withEmail(TEST_EMAIL_ADDRESS).withPhoneNumber(phoneNumber);
+    }
+
+    private ClientSession getClientSession() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .build();
+
+        return new ClientSession(
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 }

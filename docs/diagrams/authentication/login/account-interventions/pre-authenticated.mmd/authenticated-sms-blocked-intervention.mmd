@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant orch_api as Orchestration
+    participant auth_frontend as Authentication Frontend
+    participant auth_external_api as Authentication External API
+    participant auth_internal_api as Authentication Internal API
+    participant account_interventions as Account Interventions API
+    participant notification_queue as NotificationHandler.java Lambda   
+    participant notify as Notify   
+    orch_api ->> auth_frontend : OAuth 2.0 Authorization request 302 redirect to /authorize
+    auth_frontend ->> auth_frontend : Decrypt and validate request and create session    
+    auth_frontend ->> auth_internal_api : Request to /start (StartHandler.java)
+    auth_internal_api ->> auth_internal_api : Start helps calculate current state
+    auth_internal_api ->> auth_frontend : StartResponse.java object returned
+    auth_frontend ->> auth_frontend : State machine works out where to send user based on start response
+    auth_frontend ->> auth_internal_api : Request to /account-interventions (AccountInterventionsHandler.java)
+    auth_internal_api ->> account_interventions : Request to account interventions api (AccountInterventionsRequest.java)
+    account_interventions ->> auth_internal_api : Response from Account Interventions containing blocked=true
+    auth_internal_api ->> auth_internal_api : Generates audit event for "blocked" Account Intervention
+    auth_internal_api ->> auth_internal_api : Sets authenticated to false in session
+    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned containing blocked intervention
+    auth_frontend ->> auth_frontend : Displays Blocked intervention screen

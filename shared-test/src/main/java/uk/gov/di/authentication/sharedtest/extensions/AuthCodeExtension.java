@@ -33,14 +33,14 @@ public class AuthCodeExtension extends DynamoExtension implements AfterEachCallb
                         return ttl;
                     }
                 };
-        dynamoAuthCodeService = new DynamoAuthCodeService(configuration, true);
+        dynamoAuthCodeService = new DynamoAuthCodeService(configuration);
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
 
-        dynamoAuthCodeService = new DynamoAuthCodeService(configuration, true);
+        dynamoAuthCodeService = new DynamoAuthCodeService(configuration);
     }
 
     @Override

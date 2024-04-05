@@ -510,9 +510,22 @@ variable "orch_client_id" {
 }
 
 variable "orch_frontend_api_gateway_integration_enabled" {
+  # When this flag is enabled in a particular environment, the corresponding orchestration-frontend flag
+  # (OidcApiGatewayIntegrationEnabled) should also be enabled for that environment.
   description = "Flag to enable API Gateway integration with the Orchestration frontend"
   type        = bool
   default     = false
+}
+
+variable "orch_backend_api_gateway_integration_enabled" {
+  description = "Flag to enable API Gateway integration with the Orchestration backend"
+  type        = bool
+  default     = false
+}
+
+variable "orch_openid_configuration_uri" {
+  type    = string
+  default = ""
 }
 
 variable "account_intervention_service_action_enabled" {
