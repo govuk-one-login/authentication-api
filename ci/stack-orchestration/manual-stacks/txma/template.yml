@@ -1,4 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Metadata:
+  Repo: "https://github.com/govuk-one-login/authentication-api/tree/main/ci/stack-orchestration/manual-stacks/txma"
 
 Description: SQS queues for audit events
 
