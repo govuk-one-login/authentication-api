@@ -577,6 +577,11 @@ variable "send_storage_token_to_ipv_enabled" {
   description = "Feature flag which toggles whether signed VC storage token is included as claim in JAR sent to IPV"
 }
 
+variable "orch_account_id" {
+  type    = string
+  default = ""
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

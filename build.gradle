@@ -23,7 +23,7 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.25.24",
+        aws_sdk_v2_version: "2.25.26",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.11.4",
         gson: "2.10.1",
@@ -175,7 +175,7 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        spotbugs "com.github.spotbugs:spotbugs:4.8.3"
+        spotbugs "com.github.spotbugs:spotbugs:4.8.4"
 
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
 
