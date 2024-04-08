@@ -15,6 +15,6 @@ lockout_duration                           = 60
 reduced_lockout_duration                   = 30
 
 orch_backend_api_gateway_integration_enabled = false
-orch_openid_configuration_uri                = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:590183975515:function:staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl:latest/invocations"
+orch_openid_configuration_name               = "staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl"
 
 orch_account_id = "590183975515"

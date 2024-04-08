@@ -523,7 +523,7 @@ variable "orch_backend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "orch_openid_configuration_uri" {
+variable "orch_openid_configuration_name" {
   type    = string
   default = ""
 }
