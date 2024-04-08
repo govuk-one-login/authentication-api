@@ -23,7 +23,6 @@ import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -104,32 +103,25 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private Map<String, Object> getPersonalisation(NotifyRequest notifyRequest) {
         return switch (notifyRequest.getNotificationType()) {
-            case ACCOUNT_CREATED_CONFIRMATION -> {
-                Map<String, Object> notifyPersonalisation = new HashMap<>();
-                notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                notifyPersonalisation.put(
-                        "gov-uk-accounts-url",
-                        configurationService.getGovUKAccountsURL().toString());
-                yield notifyPersonalisation;
-            }
-            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE -> {
-                Map<String, Object> notifyPersonalisation = new HashMap<>();
-                notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                notifyPersonalisation.put("email-address", notifyRequest.getDestination());
-                notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                yield notifyPersonalisation;
-            }
+            case ACCOUNT_CREATED_CONFIRMATION -> Map.of(
+                    "contact-us-link",
+                    buildContactUsUrl(),
+                    "gov-uk-accounts-url",
+                    configurationService.getGovUKAccountsURL().toString());
+            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE -> Map.of(
+                    "validation-code", notifyRequest.getCode(),
+                    "email-address", notifyRequest.getDestination(),
+                    "contact-us-link", buildContactUsUrl());
             case VERIFY_PHONE_NUMBER, MFA_SMS -> Map.of("validation-code", notifyRequest.getCode());
             case PASSWORD_RESET_CONFIRMATION,
                     CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
                     PASSWORD_RESET_CONFIRMATION_SMS -> Map.of(
                     "contact-us-link", buildContactUsUrl());
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> {
-                Map<String, Object> notifyPersonalisation = new HashMap<>();
-                notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                notifyPersonalisation.put("email-address", notifyRequest.getDestination());
-                yield notifyPersonalisation;
-            }
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> Map.of(
+                    "validation-code",
+                    notifyRequest.getCode(),
+                    "email-address",
+                    notifyRequest.getDestination());
             case TERMS_AND_CONDITIONS_BULK_EMAIL -> Collections.emptyMap();
         };
     }
