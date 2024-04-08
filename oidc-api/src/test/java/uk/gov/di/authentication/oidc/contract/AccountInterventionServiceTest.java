@@ -374,6 +374,7 @@ class AccountInterventionServiceTest {
                                         obj.booleanValue("reproveIdentity", reproveIdentity);
                                         obj.booleanValue("resetPassword", resetPassword);
                                     });
+                            body.stringValue("auditLevel", "standard");
                         })
                 .build();
     }
