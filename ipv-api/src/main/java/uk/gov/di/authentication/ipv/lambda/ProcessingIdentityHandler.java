@@ -173,6 +173,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                         && (intervention.getSuspended() || intervention.getBlocked())) {
                     return performIntervention(input, userContext, client, intervention);
                 }
+            } else if (processingStatus == ProcessingIdentityStatus.ERROR) {
+                LOG.error("Error response received from SPOT");
             }
             return generateApiGatewayProxyResponse(
                     200, new ProcessingIdentityResponse(processingStatus));
