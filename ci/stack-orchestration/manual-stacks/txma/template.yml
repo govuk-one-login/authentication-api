@@ -129,51 +129,6 @@ Resources:
       AliasName: !Sub alias/${AWS::StackName}/AuditEventEncryptionKey
       TargetKeyId: !Ref TxMASQSProducerAuditEventQueueEncryptionKey
 
-  KMSARNParameter:
-    Condition: TxMAIntegrationEnabled
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/${AWS::StackName}/KMSARN'
-      Type: String
-      Value: !Sub '${TxMASQSProducerAuditEventQueueEncryptionKey.Arn}'
-      Description: ARN of the KMS key used for encryption.
-      Tags:
-        AuthoredBy: TxMA
-        ProducerType: SQS
-
-  SQSQueueARNParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/${AWS::StackName}/QueueARN'
-      Type: String
-      Value: !Sub '${TxMASQSProducerAuditEventQueue.Arn}'
-      Description: ARN of the queue to submit events to.
-      Tags:
-        AuthoredBy: TxMA
-        ProducerType: SQS
-
-  SQSQueueNameParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/${AWS::StackName}/QueueName'
-      Type: String
-      Value: !Sub '${TxMASQSProducerAuditEventQueue.QueueName}'
-      Description: Name of the queue to submit events to.
-      Tags:
-        AuthoredBy: TxMA
-        ProducerType: SQS
-
-  SQSQueueURLParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/${AWS::StackName}/QueueURL'
-      Type: String
-      Value: !Sub '${TxMASQSProducerAuditEventQueue.QueueUrl}'
-      Description: URL of the queue to submit events to.
-      Tags:
-        AuthoredBy: TxMA
-        ProducerType: SQS
-
 Outputs:
   KMSARN:
     Description: 'ARN of the KMS key used for encryption.'
