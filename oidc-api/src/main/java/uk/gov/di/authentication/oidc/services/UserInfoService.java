@@ -83,11 +83,7 @@ public class UserInfoService {
             return populateDocAppUserInfo(accessTokenInfo, userInfo);
         }
 
-        if (configurationService.isAuthOrchSplitEnabled()) {
-            populateInfoOrchSplitEnabled(userInfo, accessTokenInfo);
-        } else {
-            populateInfo(userInfo, accessTokenInfo);
-        }
+        populateInfo(userInfo, accessTokenInfo);
 
         if (configurationService.isIdentityEnabled()
                 && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
@@ -98,7 +94,7 @@ public class UserInfoService {
         }
     }
 
-    private void populateInfoOrchSplitEnabled(UserInfo userInfo, AccessTokenInfo accessTokenInfo)
+    private void populateInfo(UserInfo userInfo, AccessTokenInfo accessTokenInfo)
             throws AccessTokenException, ClientNotFoundException {
         UserInfo tmpUserInfo;
         try {
@@ -134,32 +130,6 @@ public class UserInfoService {
             userInfo.setClaim(
                     AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue(),
                     tmpUserInfo.getClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
-        }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
-            var walletSubjectID = calculateWalletSubjectID(accessTokenInfo);
-            userInfo.setClaim("wallet_subject_id", walletSubjectID);
-        }
-    }
-
-    private void populateInfo(UserInfo userInfo, AccessTokenInfo accessTokenInfo)
-            throws ClientNotFoundException {
-        var userProfile =
-                authenticationService.getUserProfileFromSubject(
-                        accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
-
-        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
-            userInfo.setEmailAddress(userProfile.getEmail());
-            userInfo.setEmailVerified(userProfile.isEmailVerified());
-        }
-        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
-            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
-        }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
-            userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
-        }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-            userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
         }
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
             var walletSubjectID = calculateWalletSubjectID(accessTokenInfo);
