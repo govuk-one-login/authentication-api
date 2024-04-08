@@ -162,6 +162,12 @@ variable "auth_check_account_id" {
   description = "Account id of the auth check aws account"
 }
 
+variable "orchestration_account_id" {
+  type        = string
+  description = "Account id of the corresponding Orchestration aws account"
+  default     = ""
+}
+
 variable "dlq_alarm_threshold" {
   default     = 1
   type        = number
