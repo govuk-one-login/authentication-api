@@ -151,18 +151,15 @@ class CheckUserExistsHandlerTest {
         assertTrue(
                 result.getBody()
                         .contains(
-                                "\"lockType\":\"codeBlock\","
+                                "\"lockoutInformation\":["
+                                        + "{\"lockType\":\"codeBlock\","
                                         + "\"mfaMethodType\":\"AUTH_APP\","
                                         + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"SIGN_IN\""));
-
-        assertTrue(
-                result.getBody()
-                        .contains(
-                                "\"lockType\":\"codeBlock\","
+                                        + "\"journeyType\":\"SIGN_IN\"},"
+                                        + "{\"lockType\":\"codeBlock\","
                                         + "\"mfaMethodType\":\"AUTH_APP\","
                                         + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\""));
+                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
     }
 
     @Test
