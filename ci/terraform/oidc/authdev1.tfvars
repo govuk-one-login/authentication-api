@@ -50,9 +50,6 @@ extended_feature_flags_enabled = true
 
 orch_client_id = "orchestrationAuth"
 
-support_auth_orch_split           = true
-support_auth_orch_split_user_info = true
-
 orch_frontend_api_gateway_integration_enabled = false
 
 orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-redirect"

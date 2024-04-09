@@ -33,14 +33,14 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
                         return ttl;
                     }
                 };
-        dynamoService = new AccessTokenService(configuration, true);
+        dynamoService = new AccessTokenService(configuration);
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
 
-        dynamoService = new AccessTokenService(configuration, true);
+        dynamoService = new AccessTokenService(configuration);
     }
 
     @Override

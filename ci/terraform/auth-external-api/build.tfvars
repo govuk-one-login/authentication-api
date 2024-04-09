@@ -11,4 +11,3 @@ scaling_trigger        = 0.6
 
 orch_client_id                  = "orchestrationAuth"
 orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA=="
-support_auth_orch_split         = true

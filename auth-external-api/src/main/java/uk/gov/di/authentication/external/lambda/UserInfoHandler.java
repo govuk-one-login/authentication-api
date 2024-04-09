@@ -58,7 +58,7 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(new DynamoService(configurationService), configurationService);
-        this.accessTokenService = new AccessTokenService(configurationService, true);
+        this.accessTokenService = new AccessTokenService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 

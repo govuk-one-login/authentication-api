@@ -125,10 +125,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Clock.systemDefaultZone();
     }
 
-    public boolean isAuthOrchSplitEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "true").equals("true");
-    }
-
     public String getBulkEmailLoaderLambdaName() {
         return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
     }

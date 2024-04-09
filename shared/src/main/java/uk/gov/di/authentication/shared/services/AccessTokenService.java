@@ -16,17 +16,10 @@ import java.util.Optional;
 public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
     private static final Logger LOG = LogManager.getLogger(AccessTokenService.class);
     private final long timeToExist;
-    private final boolean isAccessTokenStoreEnabled;
-
-    public AccessTokenService(
-            ConfigurationService configurationService, boolean isAccessTokenStoreEnabled) {
-        super(AccessTokenStore.class, "access-token-store", configurationService);
-        this.timeToExist = configurationService.getAccessTokenExpiry();
-        this.isAccessTokenStoreEnabled = isAccessTokenStoreEnabled;
-    }
 
     public AccessTokenService(ConfigurationService configurationService) {
-        this(configurationService, configurationService.isAuthOrchSplitEnabled());
+        super(AccessTokenStore.class, "access-token-store", configurationService);
+        this.timeToExist = configurationService.getAccessTokenExpiry();
     }
 
     public void addAccessTokenStore(
@@ -36,45 +29,36 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
             boolean isNewAccount,
             String sectorIdentifier,
             Long passwordResetTime) {
-        if (isAccessTokenStoreEnabled) {
-            var tokenStore =
-                    get(accessToken)
-                            .orElse(new AccessTokenStore())
-                            .withAccessToken(accessToken)
-                            .withSubjectID(subjectID)
-                            .withClaims(claims)
-                            .withUsed(false)
-                            .withNewAccount(isNewAccount)
-                            .withSectorIdentifier(sectorIdentifier)
-                            .withTimeToExist(
-                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                            .toInstant()
-                                            .getEpochSecond())
-                            .withPasswordResetTime(passwordResetTime);
-            update(tokenStore);
-        }
+        var tokenStore =
+                get(accessToken)
+                        .orElse(new AccessTokenStore())
+                        .withAccessToken(accessToken)
+                        .withSubjectID(subjectID)
+                        .withClaims(claims)
+                        .withUsed(false)
+                        .withNewAccount(isNewAccount)
+                        .withSectorIdentifier(sectorIdentifier)
+                        .withTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond())
+                        .withPasswordResetTime(passwordResetTime);
+        update(tokenStore);
     }
 
     public Optional<AccessTokenStore> getAccessTokenStore(String accessToken) {
-        return isAccessTokenStoreEnabled
-                ? get(accessToken)
-                        .filter(
-                                t ->
-                                        t.getTimeToExist()
-                                                > NowHelper.now().toInstant().getEpochSecond())
-                : Optional.empty();
+        return get(accessToken)
+                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public Optional<AccessTokenStore> setAccessTokenStoreUsed(String accessToken, boolean used) {
-        return isAccessTokenStoreEnabled
-                ? get(accessToken)
-                        .map(
-                                ts -> {
-                                    ts.setUsed(used);
-                                    update(ts);
-                                    return ts;
-                                })
-                : Optional.empty();
+        return get(accessToken)
+                .map(
+                        ts -> {
+                            ts.setUsed(used);
+                            update(ts);
+                            return ts;
+                        });
     }
 
     public AccessToken getAccessTokenFromAuthorizationHeader(String authorizationHeader)
@@ -89,14 +73,12 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
     }
 
     public Optional<AccessTokenStore> setAccessTokenTtlTestOnly(String accessToken, long newTtl) {
-        return isAccessTokenStoreEnabled
-                ? get(accessToken)
-                        .map(
-                                ts -> {
-                                    ts.setTimeToExist(newTtl);
-                                    update(ts);
-                                    return ts;
-                                })
-                : Optional.empty();
+        return get(accessToken)
+                .map(
+                        ts -> {
+                            ts.setTimeToExist(newTtl);
+                            update(ts);
+                            return ts;
+                        });
     }
 }
