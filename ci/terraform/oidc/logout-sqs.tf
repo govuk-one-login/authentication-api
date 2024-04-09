@@ -128,9 +128,13 @@ data "aws_iam_policy_document" "back_channel_logout_queue_write_access_policy_do
   policy_id = "${var.environment}-back-channel-logout-queue-write-access-policy"
 
   statement {
-    effect    = "Allow"
-    sid       = "AllowWriteAccessToBackChannelLogoutQueue"
-    actions   = ["sqs:SendMessage", ]
+    effect = "Allow"
+    sid    = "AllowWriteAccessToBackChannelLogoutQueue"
+    actions = [
+      "sqs:SendMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes"
+    ]
     resources = [aws_sqs_queue.back_channel_logout_queue.arn]
   }
 
@@ -166,6 +170,7 @@ data "aws_iam_policy_document" "back_channel_logout_queue_read_access_policy_doc
       "sqs:ReceiveMessage",
       "sqs:DeleteMessage",
       "sqs:GetQueueAttributes",
+      "sqs:ChangeMessageVisibility"
     ]
     resources = [aws_sqs_queue.back_channel_logout_queue.arn]
   }
