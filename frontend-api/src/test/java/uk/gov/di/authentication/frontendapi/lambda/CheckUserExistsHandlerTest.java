@@ -387,7 +387,7 @@ class CheckUserExistsHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .withEmail("joe.bloggs@digital.cabinet-office.gov.uk")
+                .withEmail(EMAIL_ADDRESS)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(SUBJECT.getValue())
