@@ -141,13 +141,7 @@ class CheckUserExistsHandlerTest {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
                         EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
                 .thenReturn(6);
-        MFAMethod mfaMethod1 =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        "first-value",
-                        true,
-                        true,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
         var event = userExistsRequest(EMAIL_ADDRESS);
@@ -177,20 +171,8 @@ class CheckUserExistsHandlerTest {
         var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
         setupUserProfileAndClient(Optional.of(userProfile));
 
-        MFAMethod mfaMethod1 =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        "first-value",
-                        true,
-                        false,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-        MFAMethod mfaMethod2 =
-                new MFAMethod(
-                        MFAMethodType.SMS.getValue(),
-                        "second-value",
-                        true,
-                        true,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
+        MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
@@ -255,20 +237,8 @@ class CheckUserExistsHandlerTest {
         usingValidSession();
         setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
-        MFAMethod mfaMethod1 =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        "first-value",
-                        true,
-                        false,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-        MFAMethod mfaMethod2 =
-                new MFAMethod(
-                        MFAMethodType.SMS.getValue(),
-                        "second-value",
-                        true,
-                        true,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
+        MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
@@ -440,5 +410,15 @@ class CheckUserExistsHandlerTest {
                                 PERSISTENT_SESSION_ID))
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp("123.123.123.123"));
+    }
+
+
+    private MFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
+        return new MFAMethod(
+                mfaMethodType.getValue(),
+                "some-credential-value",
+                true,
+                enabled,
+                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
     }
 }
