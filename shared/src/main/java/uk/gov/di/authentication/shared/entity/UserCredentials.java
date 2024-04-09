@@ -163,19 +163,20 @@ public class UserCredentials {
         } else {
             boolean primaryFound = false;
 
-            for (MFAMethodV2 existingMethod : this.mfaMethodsV2) {
-                if ("PRIMARY".equals(existingMethod.getPriorityIdentifier())) {
-                    // Replace the existing "PRIMARY" with the provided mfaMethodV2
-                    existingMethod.setPriorityIdentifier("SECONDARY");
-                    mfaMethodV2.setPriorityIdentifier("PRIMARY");
+            /* for (MFAMethodV2 existingMethod : this.mfaMethodsV2) {
+                if (PriorityIdentifier.PRIMARY
+                        .getValue()
+                        .equals(existingMethod.getPriorityIdentifier())) {
+                    existingMethod.setPriorityIdentifier(PriorityIdentifier.SECONDARY);
+                    mfaMethodV2.setPriorityIdentifier(PriorityIdentifier.PRIMARY);
                     primaryFound = true;
                     break;
                 }
-            }
+            }*/
 
             // If there is no existing "PRIMARY," add the provided mfaMethodV2 as "PRIMARY"
             if (!primaryFound) {
-                mfaMethodV2.setPriorityIdentifier("PRIMARY");
+                mfaMethodV2.setPriorityIdentifier(PriorityIdentifier.PRIMARY);
                 this.mfaMethodsV2.add(mfaMethodV2);
             }
         }

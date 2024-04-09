@@ -27,7 +27,7 @@ public class MFAMethodV2 {
     private boolean enabled;
     private String updated;
     private int mfaIdentifier;
-    private String priorityIdentifier;
+    private PriorityIdentifier priorityIdentifier;
     private String endPoint;
 
     public MFAMethodV2() {}
@@ -39,7 +39,7 @@ public class MFAMethodV2 {
             boolean enabled,
             String updated,
             int mfaIdentifier,
-            String priorityIdentifier,
+            PriorityIdentifier priorityIdentifier,
             String endPoint) {
         this.mfaMethodType = mfaMethodType;
         this.credentialValue = credentialValue;
@@ -108,11 +108,11 @@ public class MFAMethodV2 {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_PRIORITY_IDENTIFIER)
-    public String getPriorityIdentifier() {
+    public PriorityIdentifier getPriorityIdentifier() {
         return priorityIdentifier;
     }
 
-    public void setPriorityIdentifier(String priorityIdentifier) {
+    public void setPriorityIdentifier(PriorityIdentifier priorityIdentifier) {
         this.priorityIdentifier = priorityIdentifier;
     }
 
@@ -174,7 +174,7 @@ public class MFAMethodV2 {
                                         .build()),
                         Map.entry(
                                 ATTRIBUTE_PRIORITY_IDENTIFIER,
-                                AttributeValue.fromS(getPriorityIdentifier())),
+                                AttributeValue.fromS(getPriorityIdentifier().getValue())),
                         Map.entry(ATTRIBUTE_END_POINT, AttributeValue.fromS(getEndPoint()))));
     }
 }

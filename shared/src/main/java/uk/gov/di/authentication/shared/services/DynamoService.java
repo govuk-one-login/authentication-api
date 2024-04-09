@@ -16,14 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.MFAMethodV2;
-import uk.gov.di.authentication.shared.entity.TermsAndConditions;
-import uk.gov.di.authentication.shared.entity.User;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -479,7 +472,7 @@ public class DynamoService implements AuthenticationService {
             boolean methodVerified,
             boolean enabled,
             String credentialValue,
-            String priorityIdentifier,
+            PriorityIdentifier priorityIdentifier,
             int mfaIdentifier,
             String endpoint) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
