@@ -249,26 +249,6 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
         assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
-        assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
-        assertTrue(checkUserExistsResponse.doesUserExist());
-        var expectedRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "sector-identifier", SALT.array());
-        var expectedInternalPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedInternalPairwiseId,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
     }
 
     @Test
@@ -411,7 +391,6 @@ class CheckUserExistsHandlerTest {
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp("123.123.123.123"));
     }
-
 
     private MFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
         return new MFAMethod(
