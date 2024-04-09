@@ -131,7 +131,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
         usingValidSession();
         var userProfile = generateUserProfile().withAccountVerified(1);
-        setupUserProfileAndClient(userProfile);
+        setupUserProfileAndClient(Optional.of(userProfile));
         when(codeStorageService.getMfaCodeBlockTimeToLive(
                         EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                 .thenReturn(15L);
@@ -175,7 +175,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
         var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
-        setupUserProfileAndClient(userProfile);
+        setupUserProfileAndClient(Optional.of(userProfile));
 
         MFAMethod mfaMethod1 =
                 new MFAMethod(
@@ -226,11 +226,8 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
         usingValidSession();
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
+
+        setupUserProfileAndClient(Optional.empty());
 
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
@@ -256,7 +253,7 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
         usingValidSession();
-        setupUserProfileAndClient(generateUserProfile());
+        setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
         MFAMethod mfaMethod1 =
                 new MFAMethod(
@@ -354,9 +351,8 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
         usingValidSession();
+        setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfile()));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
 
         var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
@@ -369,7 +365,7 @@ class CheckUserExistsHandlerTest {
                         ACCOUNT_TEMPORARILY_LOCKED,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -420,10 +416,13 @@ class CheckUserExistsHandlerTest {
                 authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 
-    private void setupUserProfileAndClient(UserProfile userProfile) {
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
+    private void setupUserProfileAndClient(Optional<UserProfile> maybeUserProfile) {
+        maybeUserProfile.ifPresent(
+                profile ->
+                        when(authenticationService.getOrGenerateSalt(profile))
+                                .thenReturn(SALT.array()));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
+                .thenReturn(maybeUserProfile);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
