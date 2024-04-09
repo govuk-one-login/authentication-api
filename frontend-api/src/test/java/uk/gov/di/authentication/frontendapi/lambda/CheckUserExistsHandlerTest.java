@@ -130,8 +130,7 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
         usingValidSession();
-        var userProfile = generateUserProfile();
-        userProfile.setAccountVerified(1);
+        var userProfile = generateUserProfile().withAccountVerified(1);
         setupUserProfileAndClient(userProfile);
         when(codeStorageService.getMfaCodeBlockTimeToLive(
                         EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
@@ -175,8 +174,7 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
-        var userProfile = generateUserProfile();
-        userProfile.setPhoneNumber(PHONE_NUMBER);
+        var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
         setupUserProfileAndClient(userProfile);
 
         MFAMethod mfaMethod1 =
@@ -258,8 +256,7 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
         usingValidSession();
-        var userProfile = generateUserProfile();
-        setupUserProfileAndClient(userProfile);
+        setupUserProfileAndClient(generateUserProfile());
 
         MFAMethod mfaMethod1 =
                 new MFAMethod(
