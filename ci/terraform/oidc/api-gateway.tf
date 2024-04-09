@@ -766,5 +766,5 @@ resource "aws_api_gateway_integration" "orch_openid_configuration_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = var.orch_openid_configuration_uri
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_openid_configuration_name}:latest/invocations"
 }
