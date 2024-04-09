@@ -151,8 +151,9 @@ class CheckUserExistsHandlerTest {
                         NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
+        var event = userExistsRequest(EMAIL_ADDRESS);
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
         assertTrue(
                 result.getBody()
@@ -195,7 +196,7 @@ class CheckUserExistsHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
@@ -230,11 +231,10 @@ class CheckUserExistsHandlerTest {
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
-        when(authenticationService.getUserProfileByEmailMaybe(
-                        "joe.bloggs@digital.cabinet-office.gov.uk"))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
@@ -278,7 +278,7 @@ class CheckUserExistsHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
@@ -337,17 +337,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn400IfEmailAddressIsInvalid() {
         usingValidSession();
 
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(
-                                Map.of(
-                                        "Session-Id",
-                                        session.getSessionId(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        CLIENT_SESSION_ID))
-                        .withBody("{ \"email\": \"joe.bloggs\" }")
-                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
@@ -361,7 +351,7 @@ class CheckUserExistsHandlerTest {
                         "joe.bloggs",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -372,17 +362,7 @@ class CheckUserExistsHandlerTest {
                 .thenReturn(Optional.of(generateUserProfile()));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
 
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(
-                                Map.of(
-                                        "Session-Id",
-                                        session.getSessionId(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        CLIENT_SESSION_ID))
-                        .withBody(format("{\"email\": \"%s\" }", EMAIL_ADDRESS))
-                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
@@ -397,7 +377,7 @@ class CheckUserExistsHandlerTest {
                         EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PERSISTENT_SESSION_ID);
     }
 
     private void usingValidSession() {
@@ -452,19 +432,17 @@ class CheckUserExistsHandlerTest {
                 .thenReturn(Optional.of(getClientSession()));
     }
 
-    private APIGatewayProxyResponseEvent createUserExistsApiResponse() {
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(
-                                Map.of(
-                                        "Session-Id",
-                                        session.getSessionId(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        CLIENT_SESSION_ID,
-                                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                        PERSISTENT_SESSION_ID))
-                        .withBody(format("{\"email\": \"%s\" }", EMAIL_ADDRESS))
-                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
-        return handler.handleRequest(event, context);
+    private APIGatewayProxyRequestEvent userExistsRequest(String email) {
+        return new APIGatewayProxyRequestEvent()
+                .withHeaders(
+                        Map.of(
+                                "Session-Id",
+                                session.getSessionId(),
+                                CLIENT_SESSION_ID_HEADER,
+                                CLIENT_SESSION_ID,
+                                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                                PERSISTENT_SESSION_ID))
+                .withBody(format("{\"email\": \"%s\" }", email))
+                .withRequestContext(contextWithSourceIp("123.123.123.123"));
     }
 }
