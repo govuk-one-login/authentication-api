@@ -305,7 +305,6 @@ class AccountInterventionServiceTest {
                 .method("GET")
                 .willRespondWith()
                 .status(500)
-                .body("")
                 .toPact();
     }
 
