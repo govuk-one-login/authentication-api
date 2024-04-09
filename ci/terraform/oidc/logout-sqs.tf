@@ -107,3 +107,18 @@ resource "aws_sqs_queue_policy" "back_channel_logout_dlq_queue_policy" {
   queue_url = aws_sqs_queue.back_channel_logout_dead_letter_queue.id
   policy    = data.aws_iam_policy_document.back_channel_logout_dlq_queue_policy_document.json
 }
+
+resource "aws_kms_key" "back_channel_logout_queue_encryption_key" {
+  description              = "KMS encryption key for back channel logout queue"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "back_channel_logout_queue_encryption_key_alias" {
+  name          = "alias/${var.environment}-back-channel-logout-queue-kms-alias"
+  target_key_id = aws_kms_key.back_channel_logout_queue_encryption_key.id
+}
