@@ -8,8 +8,8 @@ resource "aws_sqs_queue" "back_channel_logout_queue" {
     maxReceiveCount     = 3
   })
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = aws_kms_key.back_channel_logout_queue_encryption_key.arn
+  kms_data_key_reuse_period_seconds = 300
 
   tags = local.default_tags
 }
@@ -128,9 +128,9 @@ data "aws_iam_policy_document" "back_channel_logout_queue_write_access_policy_do
   policy_id = "${var.environment}-back-channel-logout-queue-write-access-policy"
 
   statement {
-    effect    = "Allow"
-    sid       = "AllowWriteAccessToBackChannelLogoutQueue"
-    actions   = [
+    effect = "Allow"
+    sid    = "AllowWriteAccessToBackChannelLogoutQueue"
+    actions = [
       "sqs:SendMessage",
       "sqs:ChangeMessageVisibility",
       "sqs:GetQueueAttributes"
