@@ -4,7 +4,8 @@ module "backchannel_logout_request_role" {
   role_name   = "backchannel-logout-request-role"
 
   policies_to_attach = [
-    aws_iam_policy.oidc_token_kms_signing_policy.arn
+    aws_iam_policy.oidc_token_kms_signing_policy.arn,
+    aws_iam_policy.back_channel_logout_queue_read_access_policy.arn
   ]
 }
 
