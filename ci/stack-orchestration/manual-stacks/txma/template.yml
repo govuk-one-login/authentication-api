@@ -81,6 +81,46 @@ Resources:
         - Key: 'ProducerType'
           Value: 'SQS'
 
+  TxMAAuditEventQueueMessageAgeCloudWatchAlarm:
+    Condition: TxMAIntegrationEnabled
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: txma-audit-event-queue-message-age-alarm
+      AlarmDescription: !Sub "${AWS::StackName}-AuditEventQueue contains message(s) older than 24 hours which means TxMA is failing to ingest events. ACCOUNT: di-orchestration-${Environment}."
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt TxMASQSProducerAuditEventQueue.QueueName
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 86400 # 24 hours in seconds
+      EvaluationPeriods: 1
+      Period: 60
+      Statistic: Maximum
+      AlarmActions:
+        - !ImportValue
+          'Fn::Sub': '${Environment}-orch-be-deploy-SlackEventsArn'
+
+  TxMADeadLetterQueueCloudWatchAlarm:
+    Condition: TxMAIntegrationEnabled
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: txma-dead-letter-queue-alarm
+      AlarmDescription: !Sub "${AWS::StackName}-AuditEventDeadLetterQueue contains message(s) which means they have been rejected by TxMA. ACCOUNT: di-orchestration-${Environment}."
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt TxMAAuditEventDeadLetterQueue.QueueName
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 60
+      Statistic: Maximum
+      AlarmActions:
+        - !ImportValue
+          'Fn::Sub': '${Environment}-orch-be-deploy-SlackEventsArn'
+
   TxMASQSProducerAuditEventQueueEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
