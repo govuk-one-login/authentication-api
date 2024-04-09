@@ -336,11 +336,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean isResetPasswordConfirmationSmsEnabled() {
-        return List.of("build", "staging", "integration", "local", "production")
-                .contains(getEnvironment());
-    }
-
     public boolean isExtendedFeatureFlagsEnabled() {
         return System.getenv()
                 .getOrDefault("EXTENDED_FEATURE_FLAGS_ENABLED", "false")

@@ -177,7 +177,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
                 LOG.info("Placing message on queue to send password reset confirmation to Email");
                 sqsClient.send(serialiseRequest(emailNotifyRequest));
-                if (shouldSendConfirmationToSms(userProfile, configurationService)) {
+                if (shouldSendConfirmationToSms(userProfile)) {
                     var smsNotifyRequest =
                             new NotifyRequest(
                                     userProfile.getPhoneNumber(),
@@ -235,11 +235,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         }
     }
 
-    private boolean shouldSendConfirmationToSms(
-            UserProfile userProfile, ConfigurationService configurationService) {
-        return Objects.nonNull(userProfile.getPhoneNumber())
-                && userProfile.isPhoneNumberVerified()
-                && configurationService.isResetPasswordConfirmationSmsEnabled();
+    private boolean shouldSendConfirmationToSms(UserProfile userProfile) {
+        return Objects.nonNull(userProfile.getPhoneNumber()) && userProfile.isPhoneNumberVerified();
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {
