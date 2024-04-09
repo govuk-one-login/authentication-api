@@ -85,7 +85,7 @@ public class LogoutService {
                                             session.getEmailAddress(),
                                             configurationService.getInternalSectorUri()));
             LOG.info("Deleting Client Session");
-            clientSessionService.deleteClientSessionFromRedis(clientSessionId);
+            clientSessionService.deleteStoredClientSession(clientSessionId);
         }
         LOG.info("Deleting Session");
         sessionService.deleteSessionFromRedis(session.getSessionId());

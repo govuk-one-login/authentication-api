@@ -1,15 +1,17 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.util.Map;
 import java.util.Optional;
 
+import static java.text.MessageFormat.format;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -45,23 +47,6 @@ public class ClientSessionService {
         objectMapper = SerializationService.getInstance();
     }
 
-    public void storeClientSession(String clientSessionId, ClientSession clientSession) {
-        try {
-            redisConnectionService.saveWithExpiry(
-                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                    objectMapper.writeValueAsString(clientSession),
-                    configurationService.getSessionExpiry());
-        } catch (JsonException e) {
-            LOG.error("Error saving client session to Redis");
-            throw new RuntimeException(e);
-        }
-        LOG.info("Generated new ClientSession");
-    }
-
-    public String generateClientSessionId() {
-        return IdGenerator.generate();
-    }
-
     public Optional<ClientSession> getClientSession(String clientSessionId) {
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
@@ -83,23 +68,30 @@ public class ClientSessionService {
         }
     }
 
-    public void saveClientSession(String clientSessionId, ClientSession clientSession) {
+    public void updateStoredClientSession(String clientSessionId, ClientSession clientSession) {
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
+        var clientSessionKey = CLIENT_SESSION_PREFIX.concat(clientSessionId);
+
+        if (!redisConnectionService.keyExists(clientSessionKey)) {
+            LOG.error(
+                    "Couldn't update client session with given key as it was not present in redis");
+            throw new IllegalArgumentException(
+                    format("Client session with ID {0} not found.", clientSessionId));
+        }
+
         try {
-            redisConnectionService.saveWithExpiry(
-                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                    objectMapper.writeValueAsString(clientSession),
-                    configurationService.getSessionExpiry());
-        } catch (JsonException e) {
+            var oldClientSession = redisConnectionService.getValue(clientSessionKey);
+            var newClientSession = objectMapper.writeValueAsString(clientSession);
+            var updatedClientSession =
+                    JsonUpdateHelper.updateJson(oldClientSession, newClientSession);
+            var expiry = configurationService.getSessionExpiry();
+            redisConnectionService.saveWithExpiry(clientSessionKey, updatedClientSession, expiry);
+        } catch (JsonException | JsonSyntaxException e) {
             LOG.error("Error saving client session to Redis");
             throw new RuntimeException(e);
         }
-    }
-
-    public void deleteClientSessionFromRedis(String clientSessionId) {
-        redisConnectionService.deleteValue(clientSessionId);
     }
 
     public Optional<ClientSession> getClientSessionFromRequestHeaders(Map<String, String> headers) {

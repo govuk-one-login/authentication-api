@@ -432,7 +432,7 @@ public class AuthorisationHandler
                         configurationService.getDocAppDomain());
         LOG.info("Doc app request received");
 
-        clientSessionService.saveClientSession(
+        clientSessionService.storeClientSession(
                 clientSessionId, clientSession.setDocAppSubjectId(subjectId));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
