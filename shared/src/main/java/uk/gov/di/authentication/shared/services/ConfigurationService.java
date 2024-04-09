@@ -173,7 +173,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isAuthOrchSplitEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
+        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "true").equals("true");
     }
 
     public boolean isEmailCheckEnabled() {

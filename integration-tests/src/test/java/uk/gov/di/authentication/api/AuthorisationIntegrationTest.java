@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -99,6 +100,14 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
+
+    @RegisterExtension
+    public static final KmsKeyExtension tokenSigningKey = new KmsKeyExtension("token-signing-key");
+
+    public static final String publicKey =
+            "-----BEGIN PUBLIC KEY-----\n"
+                    + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())
+                    + "\n-----END PUBLIC KEY-----\n";
 
     private final KeyPair keyPair = generateRsaKeyPair();
     private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
@@ -161,6 +170,16 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 public URI getDocAppAuthorisationCallbackURI() {
                     return CALLBACK_URI;
                 }
+
+                @Override
+                public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
+                    return tokenSigningKey.getKeyAlias();
+                }
+
+                @Override
+                public String getOrchestrationToAuthenticationEncryptionPublicKey() {
+                    return publicKey;
+                }
             };
 
     @Test
@@ -206,7 +225,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
                 equalTo(true));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -233,7 +251,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
         assertThat(
                 response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(2));
         assertThat(
@@ -274,7 +291,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
         assertThat(
                 response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(3));
         assertThat(
@@ -316,7 +332,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
@@ -368,7 +383,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
@@ -401,7 +415,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
@@ -570,7 +583,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -650,7 +662,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-        assertThat(URI.create(redirectUri).getQuery(), equalTo("prompt=login"));
+        assertThat(URI.create(redirectUri).getQuery(), containsString("prompt=login"));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
