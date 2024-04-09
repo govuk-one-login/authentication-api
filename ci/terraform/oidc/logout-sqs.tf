@@ -128,9 +128,9 @@ data "aws_iam_policy_document" "back_channel_logout_queue_write_access_policy_do
   policy_id = "${var.environment}-back-channel-logout-queue-write-access-policy"
 
   statement {
-    effect = "Allow"
-    sid    = "AllowWriteAccessToBackChannelLogoutQueue"
-    actions = [
+    effect    = "Allow"
+    sid       = "AllowWriteAccessToBackChannelLogoutQueue"
+    actions   = [
       "sqs:SendMessage",
       "sqs:ChangeMessageVisibility",
       "sqs:GetQueueAttributes"
