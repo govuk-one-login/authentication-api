@@ -582,6 +582,12 @@ variable "orch_account_id" {
   default = ""
 }
 
+variable "storage_token_kms_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access by the orchestration account to the storage token signing key"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

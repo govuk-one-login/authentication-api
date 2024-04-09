@@ -62,4 +62,5 @@ support_email_check_enabled = true
 orch_backend_api_gateway_integration_enabled = true
 orch_openid_configuration_name               = "dev-orch-be-deploy-OpenIdConfigurationFunction-5vYKOtKeTBRw"
 
-orch_account_id = "816047645251"
+orch_account_id                                = "816047645251"
+storage_token_kms_cross_account_access_enabled = true
