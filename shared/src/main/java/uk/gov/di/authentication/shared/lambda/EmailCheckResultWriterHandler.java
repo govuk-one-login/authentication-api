@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.utils.lambda;
+package uk.gov.di.authentication.shared.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;

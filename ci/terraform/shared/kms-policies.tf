@@ -152,25 +152,3 @@ data "aws_iam_policy_document" "user_profile_encryption_key_policy_document" {
     ]
   }
 }
-
-resource "aws_iam_policy" "email_check_results_encryption_key_kms_policy" {
-  name        = "${var.environment}-email-check-results-table-encryption-key-kms-policy"
-  path        = "/"
-  description = "IAM policy for managing KMS encryption of the email check results table"
-
-  policy = data.aws_iam_policy_document.email_check_results_encryption_key_kms_policy_document.json
-}
-
-data "aws_iam_policy_document" "email_check_results_encryption_key_kms_policy_document" {
-  statement {
-    sid    = "AllowAccessToEmailCheckResultsTableKmsEncryptionKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:*",
-    ]
-    resources = [
-      aws_kms_key.email_check_result_encryption_key.arn
-    ]
-  }
-}
