@@ -72,11 +72,6 @@ public class InitiateIPVAuthorisationService {
             String persistentSessionCookieId,
             Boolean reproveIdentity,
             List<String> levelsOfConfidence) {
-        if (!configurationService.isIdentityEnabled()) {
-            LOG.error("Identity is not enabled");
-            throw new RuntimeException("Identity is not enabled");
-        }
-
         attachLogFieldToLogs(CLIENT_ID, rpClientID);
         LOG.info("IPVAuthorisationHandler received request");
         var pairwiseSubject = userInfo.getSubject();

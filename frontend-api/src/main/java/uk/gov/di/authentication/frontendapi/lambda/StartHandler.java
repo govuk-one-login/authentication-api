@@ -139,11 +139,7 @@ public class StartHandler
                     reauthenticate);
             var userStartInfo =
                     startService.buildUserStartInfo(
-                            userContext,
-                            cookieConsent,
-                            gaTrackingId,
-                            configurationService.isIdentityEnabled(),
-                            reauthenticate);
+                            userContext, cookieConsent, gaTrackingId, reauthenticate);
             var clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),

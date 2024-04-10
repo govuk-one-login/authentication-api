@@ -192,8 +192,7 @@ class StartServiceTest {
                         Optional.empty(),
                         false);
         var userStartInfo =
-                startService.buildUserStartInfo(
-                        userContext, cookieConsent, gaTrackingId, true, false);
+                startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId, false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -206,21 +205,15 @@ class StartServiceTest {
 
     private static Stream<Arguments> userStartIdentityInfo() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true, true),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, true, false),
-                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false, false));
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), true, true),
+                Arguments.of(jsonArrayOf("Cl.Cm"), false, true),
+                Arguments.of(jsonArrayOf("P2.Cl.Cm"), false, false));
     }
 
     @ParameterizedTest
     @MethodSource("userStartIdentityInfo")
     void shouldCreateUserStartInfoWithCorrectIdentityRequiredValue(
-            String vtr,
-            boolean expectedIdentityRequiredValue,
-            boolean rpSupportsIdentity,
-            boolean identityEnabled) {
+            String vtr, boolean expectedIdentityRequiredValue, boolean rpSupportsIdentity) {
         var userContext =
                 buildUserContext(
                         vtr,
@@ -235,11 +228,7 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
-                        "some-cookie-consent",
-                        "some-ga-tracking-id",
-                        identityEnabled,
-                        false);
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
@@ -272,7 +261,7 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, false);
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -424,7 +413,7 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, true);
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", true);
 
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
     }
@@ -457,7 +446,7 @@ class StartServiceTest {
                 .setEmailAddress(EMAIL);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, false);
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));

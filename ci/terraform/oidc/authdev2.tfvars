@@ -4,7 +4,6 @@ dns_state_key                               = null
 dns_state_role                              = null
 shared_state_bucket                         = "di-auth-development-tfstate"
 test_clients_enabled                        = "true"
-ipv_api_enabled                             = true
 ipv_authorisation_callback_uri              = ""
 ipv_authorisation_uri                       = ""
 ipv_authorisation_client_id                 = ""

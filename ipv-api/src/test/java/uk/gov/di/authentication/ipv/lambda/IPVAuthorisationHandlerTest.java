@@ -75,14 +75,12 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -166,24 +164,7 @@ public class IPVAuthorisationHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
-    }
-
-    @Test
-    void shouldThrowWhenIdentityIsNotEnabled() {
-        usingValidSession();
-        usingValidClientSession();
-        when(configService.isIdentityEnabled()).thenReturn(false);
-
-        var exception =
-                assertThrows(
-                        RuntimeException.class,
-                        this::makeHandlerRequest,
-                        "Expected to throw exception");
-
-        assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
-        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test

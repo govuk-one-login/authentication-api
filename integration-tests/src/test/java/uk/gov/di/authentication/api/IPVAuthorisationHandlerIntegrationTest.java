@@ -200,11 +200,6 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Override
-        public boolean isIdentityEnabled() {
-            return true;
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

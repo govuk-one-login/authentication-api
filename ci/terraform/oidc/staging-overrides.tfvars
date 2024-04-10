@@ -1,6 +1,5 @@
 custom_doc_app_claim_enabled                = true
 ipv_capacity_allowed                        = true
-ipv_api_enabled                             = true
 doc_app_authorisation_client_id             = "authOrchestratorDocApp"
 doc_app_authorisation_uri                   = "https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize"
 doc_app_backend_uri                         = "https://api-backend-api.review-b.staging.account.gov.uk"

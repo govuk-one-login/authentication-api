@@ -17,8 +17,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -36,7 +34,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -98,22 +95,14 @@ class AccessTokenServiceTest {
                 not(hasItem(withMessageContaining(CLIENT_ID, SUBJECT.toString()))));
     }
 
-    private static Stream<Boolean> identityEnabled() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldReturnAccessTokenInfoWhenAccessTokenIsValid(boolean identityEnabled)
+    @Test
+    void shouldReturnAccessTokenInfoWhenAccessTokenIsValid()
             throws Json.JsonException, AccessTokenException {
-        List<String> expectedIdentityClaims = null;
-        if (identityEnabled) {
-            accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
-            expectedIdentityClaims =
-                    oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
-                            .map(ClaimsSetRequest.Entry::getClaimName)
-                            .collect(Collectors.toList());
-        }
+        accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
+        List<String> expectedIdentityClaims =
+                oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
+                        .map(ClaimsSetRequest.Entry::getClaimName)
+                        .collect(Collectors.toList());
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
@@ -125,8 +114,7 @@ class AccessTokenServiceTest {
                                         INTERNAL_SUBJECT.getValue(),
                                         INTERNAL_PAIRWISE_SUBJECT.getValue())));
 
-        var accessTokenInfo =
-                validationService.parse(accessToken.toAuthorizationHeader(), identityEnabled);
+        var accessTokenInfo = validationService.parse(accessToken.toAuthorizationHeader());
 
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
@@ -153,7 +141,7 @@ class AccessTokenServiceTest {
                                         INTERNAL_SUBJECT.getValue(),
                                         INTERNAL_PAIRWISE_SUBJECT.getValue())));
 
-        var accessTokenInfo = validationService.parse(accessToken.toAuthorizationHeader(), true);
+        var accessTokenInfo = validationService.parse(accessToken.toAuthorizationHeader());
 
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
@@ -165,17 +153,14 @@ class AccessTokenServiceTest {
         assertThat(accessTokenInfo.getIdentityClaims(), equalTo(null));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenTokenSignatureIsInvalid(boolean identityEndpoint) {
+    @Test
+    void shouldThrowExceptionWhenTokenSignatureIsInvalid() {
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(false);
 
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () ->
-                                validationService.parse(
-                                        accessToken.toAuthorizationHeader(), identityEndpoint),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(
@@ -184,44 +169,37 @@ class AccessTokenServiceTest {
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenTokenHasExpired(boolean identityEndpoint) {
+    @Test
+    void shouldThrowExceptionWhenTokenHasExpired() {
         accessToken = createSignedAccessToken(null, true);
 
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () ->
-                                validationService.parse(
-                                        accessToken.toAuthorizationHeader(), identityEndpoint),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Access Token"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenClientIsNotFoundInClientRegistry(boolean identityEndpoint) {
+    @Test
+    void shouldThrowExceptionWhenClientIsNotFoundInClientRegistry() {
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.empty());
 
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () ->
-                                validationService.parse(
-                                        accessToken.toAuthorizationHeader(), identityEndpoint),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Client not found"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenScopesAreInvalid(boolean identityEndpoint) {
+    @Test
+    void shouldThrowExceptionWhenScopesAreInvalid() {
         var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.ADDRESS.getValue());
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
@@ -230,9 +208,7 @@ class AccessTokenServiceTest {
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () ->
-                                validationService.parse(
-                                        accessToken.toAuthorizationHeader(), identityEndpoint),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Scopes"));
@@ -260,19 +236,16 @@ class AccessTokenServiceTest {
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse(accessToken.toAuthorizationHeader(), true),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Identity claims"));
         assertThat(accessTokenException.getError(), equalTo(OAuth2Error.INVALID_REQUEST));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenAccessTokenNotFoundInRedis(boolean identityEndpoint) {
-        if (identityEndpoint) {
-            accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
-        }
+    @Test
+    void shouldThrowExceptionWhenAccessTokenNotFoundInRedis() {
+        accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
@@ -282,22 +255,16 @@ class AccessTokenServiceTest {
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () ->
-                                validationService.parse(
-                                        accessToken.toAuthorizationHeader(), identityEndpoint),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Access Token"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenAccessTokenSentIsNotTheSameAsInRedis(boolean identityEndpoint)
-            throws Json.JsonException {
-        if (identityEndpoint) {
-            accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
-        }
+    @Test
+    void shouldThrowExceptionWhenAccessTokenSentIsNotTheSameAsInRedis() throws Json.JsonException {
+        accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
@@ -312,22 +279,19 @@ class AccessTokenServiceTest {
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () ->
-                                validationService.parse(
-                                        accessToken.toAuthorizationHeader(), identityEndpoint),
+                        () -> validationService.parse(accessToken.toAuthorizationHeader()),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Invalid Access Token"));
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    @ParameterizedTest
-    @MethodSource("identityEnabled")
-    void shouldThrowExceptionWhenUnableToParseAccessToken(boolean identityEndpoint) {
+    @Test
+    void shouldThrowExceptionWhenUnableToParseAccessToken() {
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,
-                        () -> validationService.parse("rubbish-access-token", identityEndpoint),
+                        () -> validationService.parse("rubbish-access-token"),
                         "Expected to throw AccessTokenException");
 
         assertThat(accessTokenException.getMessage(), equalTo("Unable to parse AccessToken"));

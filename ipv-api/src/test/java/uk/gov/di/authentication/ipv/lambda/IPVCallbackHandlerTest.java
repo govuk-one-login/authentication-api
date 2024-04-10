@@ -265,7 +265,6 @@ class IPVCallbackHandlerTest {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
@@ -282,20 +281,6 @@ class IPVCallbackHandlerTest {
                                 "",
                                 Map.of(ResponseHeaders.LOCATION, accessDeniedURI.toString()),
                                 null));
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
-            throws URISyntaxException, UnsuccessfulCredentialResponseException {
-        when(configService.isIdentityEnabled()).thenReturn(false);
-        usingValidSession();
-        usingValidClientSession();
-
-        var event = getApiGatewayProxyRequestEvent(null, clientRegistry);
-
-        assertDoesRedirectToFrontendErrorPage(event, "error");
-
-        verifyNoInteractions(auditService);
     }
 
     @Test

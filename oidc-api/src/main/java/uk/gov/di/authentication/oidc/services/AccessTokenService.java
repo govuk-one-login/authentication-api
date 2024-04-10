@@ -51,8 +51,7 @@ public class AccessTokenService {
         this.tokenValidationService = tokenValidationService;
     }
 
-    public AccessTokenInfo parse(String authorizationHeader, boolean identityEnabled)
-            throws AccessTokenException {
+    public AccessTokenInfo parse(String authorizationHeader) throws AccessTokenException {
         AccessToken accessToken;
         try {
             accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
@@ -101,7 +100,7 @@ public class AccessTokenService {
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
             List<String> identityClaims = null;
-            if (identityEnabled && client.isIdentityVerificationSupported()) {
+            if (client.isIdentityVerificationSupported()) {
                 LOG.info("Identity is enabled AND client supports identity verification");
                 identityClaims = getIdentityClaims(signedJWT.getJWTClaimsSet());
             }

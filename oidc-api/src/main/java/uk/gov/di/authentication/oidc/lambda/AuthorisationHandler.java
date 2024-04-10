@@ -320,9 +320,7 @@ public class AuthorisationHandler
                         && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
         var identityRequested =
                 identityRequired(
-                        authRequest.toParameters(),
-                        client.isIdentityVerificationSupported(),
-                        configurationService.isIdentityEnabled());
+                        authRequest.toParameters(), client.isIdentityVerificationSupported());
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 clientSessionId,
@@ -753,8 +751,7 @@ public class AuthorisationHandler
         var identityRequired =
                 identityRequired(
                         authenticationRequest.toParameters(),
-                        clientRegistry.isIdentityVerificationSupported(),
-                        configurationService.isIdentityEnabled());
+                        clientRegistry.isIdentityVerificationSupported());
 
         var amScopePresent =
                 requestedScopesContain(CustomScopeValue.ACCOUNT_MANAGEMENT, authenticationRequest);

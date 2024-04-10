@@ -89,8 +89,7 @@ public class UserInfoService {
             populateInfo(userInfo, accessTokenInfo);
         }
 
-        if (configurationService.isIdentityEnabled()
-                && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
+        if (Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
             return populateIdentityInfo(accessTokenInfo, userInfo);
         } else {
             LOG.info("No identity claims present");

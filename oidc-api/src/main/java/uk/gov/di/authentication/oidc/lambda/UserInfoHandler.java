@@ -116,8 +116,7 @@ public class UserInfoHandler
                             getHeaderValueFromHeaders(
                                     input.getHeaders(),
                                     AUTHORIZATION_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()),
-                            configurationService.isIdentityEnabled());
+                                    configurationService.getHeadersCaseInsensitive()));
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {
             LOG.warn("AccessTokenException. Sending back UserInfoErrorResponse");

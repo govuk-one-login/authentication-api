@@ -38,7 +38,6 @@ module "userinfo" {
     DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
     EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
-    IDENTITY_ENABLED                     = var.ipv_api_enabled
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     SUPPORT_AUTH_ORCH_SPLIT              = var.support_auth_orch_split_user_info
     OIDC_API_BASE_URL                    = local.api_base_url

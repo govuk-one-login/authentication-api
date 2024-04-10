@@ -286,10 +286,6 @@ variable "client_registry_api_enabled" {
   default = true
 }
 
-variable "ipv_api_enabled" {
-  default = false
-}
-
 variable "ipv_capacity_allowed" {
   default = false
 }
