@@ -130,9 +130,8 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
         usingValidSession();
-        var userProfile = generateUserProfile();
-        userProfile.setAccountVerified(1);
-        setupUserProfileAndClient(userProfile);
+        var userProfile = generateUserProfile().withAccountVerified(1);
+        setupUserProfileAndClient(Optional.of(userProfile));
         when(codeStorageService.getMfaCodeBlockTimeToLive(
                         EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                 .thenReturn(15L);
@@ -142,60 +141,39 @@ class CheckUserExistsHandlerTest {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
                         EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
                 .thenReturn(6);
-        MFAMethod mfaMethod1 =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        "first-value",
-                        true,
-                        true,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
+        var event = userExistsRequest(EMAIL_ADDRESS);
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
         assertTrue(
                 result.getBody()
                         .contains(
-                                "\"lockType\":\"codeBlock\","
+                                "\"lockoutInformation\":["
+                                        + "{\"lockType\":\"codeBlock\","
                                         + "\"mfaMethodType\":\"AUTH_APP\","
                                         + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"SIGN_IN\""));
-
-        assertTrue(
-                result.getBody()
-                        .contains(
-                                "\"lockType\":\"codeBlock\","
+                                        + "\"journeyType\":\"SIGN_IN\"},"
+                                        + "{\"lockType\":\"codeBlock\","
                                         + "\"mfaMethodType\":\"AUTH_APP\","
                                         + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\""));
+                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
     }
 
     @Test
     void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
-        var userProfile = generateUserProfile();
-        userProfile.setPhoneNumber(PHONE_NUMBER);
-        setupUserProfileAndClient(userProfile);
+        var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
+        setupUserProfileAndClient(Optional.of(userProfile));
 
-        MFAMethod mfaMethod1 =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        "first-value",
-                        true,
-                        false,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-        MFAMethod mfaMethod2 =
-                new MFAMethod(
-                        MFAMethodType.SMS.getValue(),
-                        "second-value",
-                        true,
-                        true,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
+        MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
@@ -227,14 +205,10 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
         usingValidSession();
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(getClientSession()));
-        when(authenticationService.getUserProfileByEmailMaybe(
-                        "joe.bloggs@digital.cabinet-office.gov.uk"))
-                .thenReturn(Optional.empty());
 
-        var result = createUserExistsApiResponse();
+        setupUserProfileAndClient(Optional.empty());
+
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
@@ -258,53 +232,20 @@ class CheckUserExistsHandlerTest {
     @Test
     void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
         usingValidSession();
-        var userProfile = generateUserProfile();
-        setupUserProfileAndClient(userProfile);
+        setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
-        MFAMethod mfaMethod1 =
-                new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        "first-value",
-                        true,
-                        false,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-        MFAMethod mfaMethod2 =
-                new MFAMethod(
-                        MFAMethodType.SMS.getValue(),
-                        "second-value",
-                        true,
-                        true,
-                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
+        MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                 .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
-        var result = createUserExistsApiResponse();
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
         assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
-        assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
-        assertTrue(checkUserExistsResponse.doesUserExist());
-        var expectedRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "sector-identifier", SALT.array());
-        var expectedInternalPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedInternalPairwiseId,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
     }
 
     @Test
@@ -337,17 +278,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn400IfEmailAddressIsInvalid() {
         usingValidSession();
 
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(
-                                Map.of(
-                                        "Session-Id",
-                                        session.getSessionId(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        CLIENT_SESSION_ID))
-                        .withBody("{ \"email\": \"joe.bloggs\" }")
-                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(userExistsRequest("joe.bloggs"), context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
@@ -361,28 +292,17 @@ class CheckUserExistsHandlerTest {
                         "joe.bloggs",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
     void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
         usingValidSession();
+        setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfile()));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
 
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(
-                                Map.of(
-                                        "Session-Id",
-                                        session.getSessionId(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        CLIENT_SESSION_ID))
-                        .withBody(format("{\"email\": \"%s\" }", EMAIL_ADDRESS))
-                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
@@ -392,12 +312,12 @@ class CheckUserExistsHandlerTest {
                         ACCOUNT_TEMPORARILY_LOCKED,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PERSISTENT_SESSION_ID);
     }
 
     private void usingValidSession() {
@@ -407,7 +327,7 @@ class CheckUserExistsHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .withEmail("joe.bloggs@digital.cabinet-office.gov.uk")
+                .withEmail(EMAIL_ADDRESS)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(SUBJECT.getValue())
@@ -443,28 +363,38 @@ class CheckUserExistsHandlerTest {
                 authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 
-    private void setupUserProfileAndClient(UserProfile userProfile) {
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
+    private void setupUserProfileAndClient(Optional<UserProfile> maybeUserProfile) {
+        maybeUserProfile.ifPresent(
+                profile ->
+                        when(authenticationService.getOrGenerateSalt(profile))
+                                .thenReturn(SALT.array()));
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
+                .thenReturn(maybeUserProfile);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
     }
 
-    private APIGatewayProxyResponseEvent createUserExistsApiResponse() {
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(
-                                Map.of(
-                                        "Session-Id",
-                                        session.getSessionId(),
-                                        CLIENT_SESSION_ID_HEADER,
-                                        CLIENT_SESSION_ID,
-                                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                        PERSISTENT_SESSION_ID))
-                        .withBody(format("{\"email\": \"%s\" }", EMAIL_ADDRESS))
-                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
-        return handler.handleRequest(event, context);
+    private APIGatewayProxyRequestEvent userExistsRequest(String email) {
+        return new APIGatewayProxyRequestEvent()
+                .withHeaders(
+                        Map.of(
+                                "Session-Id",
+                                session.getSessionId(),
+                                CLIENT_SESSION_ID_HEADER,
+                                CLIENT_SESSION_ID,
+                                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                                PERSISTENT_SESSION_ID))
+                .withBody(format("{\"email\": \"%s\" }", email))
+                .withRequestContext(contextWithSourceIp("123.123.123.123"));
+    }
+
+    private MFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
+        return new MFAMethod(
+                mfaMethodType.getValue(),
+                "some-credential-value",
+                true,
+                enabled,
+                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
     }
 }
