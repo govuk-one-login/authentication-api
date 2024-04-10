@@ -145,18 +145,6 @@ output "events_topic_encryption_key_arn" {
   value = aws_kms_key.events_topic_encryption.arn
 }
 
-output "stub_rp_client_credentials" {
-  value = [
-    for i, rp in var.stub_rp_clients : {
-      client_name = rp.client_name
-      client_id   = random_string.stub_rp_client_id[i].result
-      private_key = tls_private_key.stub_rp_client_private_key[i].private_key_pem
-      public_key  = tls_private_key.stub_rp_client_private_key[i].public_key_pem
-    }
-  ]
-  sensitive = true
-}
-
 output "stub_relying_party_client_credentials" {
   value = [
     for i, rp in var.stub_rp_clients : {

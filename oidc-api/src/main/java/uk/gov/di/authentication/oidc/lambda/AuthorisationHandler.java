@@ -305,6 +305,16 @@ public class AuthorisationHandler
                     clientSessionId);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        try {
+            cloudwatchMetricsService.putEmbeddedValue(
+                    "rpStateLength",
+                    authRequest.getState().getValue().length(),
+                    Map.of("clientId", authRequest.getClientID().getValue()));
+        } catch (Exception e) {
+            LOG.warn("Error recording state length, continuing: ", e);
+        }
+
         boolean reauthRequested =
                 authRequest.getCustomParameter("id_token_hint") != null
                         && !authRequest.getCustomParameter("id_token_hint").isEmpty()
@@ -424,7 +434,7 @@ public class AuthorisationHandler
                         configurationService.getDocAppDomain());
         LOG.info("Doc app request received");
 
-        clientSessionService.saveClientSession(
+        clientSessionService.storeClientSession(
                 clientSessionId, clientSession.setDocAppSubjectId(subjectId));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
@@ -620,7 +630,7 @@ public class AuthorisationHandler
                         .claim("rp_client_id", client.getClientID())
                         .claim("rp_sector_host", rpSectorIdentifierHost)
                         .claim("rp_redirect_uri", authenticationRequest.getRedirectionURI())
-                        .claim("rp_state", authenticationRequest.getState())
+                        .claim("rp_state", authenticationRequest.getState().getValue())
                         .claim("client_name", client.getClientName())
                         .claim("cookie_consent_shared", client.isCookieConsentShared())
                         .claim("consent_required", client.isConsentRequired())

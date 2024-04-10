@@ -1462,7 +1462,7 @@ class AuthorisationHandlerTest {
 
             var response = makeDocAppHandlerRequest();
 
-            verify(clientSessionService).saveClientSession(anyString(), any());
+            verify(clientSessionService).storeClientSession(anyString(), any());
 
             assertThat(response, hasStatus(302));
             assertThat(

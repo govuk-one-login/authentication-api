@@ -134,7 +134,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFULL,
+                    FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
                     userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
                     userContext

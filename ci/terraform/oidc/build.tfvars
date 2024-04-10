@@ -34,4 +34,6 @@ orch_redirect_uri                  = "https://oidc.build.account.gov.uk/orchestr
 authorize_protected_subnet_enabled = true
 
 orch_backend_api_gateway_integration_enabled = false
-orch_openid_configuration_uri                = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:767397776536:function:build-orch-be-deploy-OpenIdConfigurationFunction-EROoeGPLtVmV:latest/invocations"
+orch_openid_configuration_name               = "build-orch-be-deploy-OpenIdConfigurationFunction-EROoeGPLtVmV"
+
+orch_account_id = "767397776536"

@@ -173,7 +173,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isAuthOrchSplitEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
+        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "true").equals("true");
     }
 
     public boolean isEmailCheckEnabled() {
@@ -334,11 +334,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
                 .equals("true");
-    }
-
-    public boolean isResetPasswordConfirmationSmsEnabled() {
-        return List.of("build", "staging", "integration", "local", "production")
-                .contains(getEnvironment());
     }
 
     public boolean isExtendedFeatureFlagsEnabled() {

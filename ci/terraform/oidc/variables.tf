@@ -523,7 +523,7 @@ variable "orch_backend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "orch_openid_configuration_uri" {
+variable "orch_openid_configuration_name" {
   type    = string
   default = ""
 }
@@ -575,6 +575,11 @@ variable "send_storage_token_to_ipv_enabled" {
   default     = false
   type        = bool
   description = "Feature flag which toggles whether signed VC storage token is included as claim in JAR sent to IPV"
+}
+
+variable "orch_account_id" {
+  type    = string
+  default = ""
 }
 
 locals {

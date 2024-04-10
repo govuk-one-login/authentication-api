@@ -1,16 +1,14 @@
 plugins {
     id "java"
     id "jacoco"
+    id "au.com.dius.pact" version "4.6.8"
 }
 
 group "uk.gov.di.authentication.oidc"
 version "unspecified"
 
 dependencies {
-
-    implementation project(path: ':ipv-api')
-    testImplementation project(path: ':ipv-api')
-    compileOnly             configurations.kms,
+    compileOnly configurations.kms,
             configurations.lambda,
             configurations.sqs,
             configurations.sns,
@@ -25,19 +23,47 @@ dependencies {
             project(":client-registry-api"),
             project(":doc-checking-app-api")
 
+    implementation project(path: ':ipv-api')
+
     testImplementation configurations.tests,
             configurations.lambda_tests,
+            project(path: ':ipv-api'),
             project(":orchestration-shared-test"),
             configurations.lambda,
             configurations.sqs,
             configurations.kms,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.pact_consumer
+
     testRuntimeOnly configurations.test_runtime
 }
 
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
+    exclude 'uk/gov/di/authentication/oidc/contract/**'
+}
+
+var pactDir = "$rootDir/oidc-api/src/test/pact"
+
+task pactConsumerTests (type: Test, group: "verification") {
+    useJUnitPlatform()
+    include '/uk/gov/di/authentication/oidc/contract/**'
+    systemProperties['pact.rootDir'] = pactDir
+}
+
+pact {
+    publish {
+        pactDirectory = pactDir
+        pactBrokerUrl = "${System.env.PACT_URL}?testSource=${System.env.PACT_BROKER_SOURCE_HEADER}"
+        pactBrokerUsername = "${System.env.PACT_USER}"
+        pactBrokerPassword = "${System.env.PACT_PASSWORD}"
+        consumerVersion = "${System.env.CONSUMER_APP_VERSION}"
+        consumerBranch = "${System.env.GIT_BRANCH}"
+        tags = [
+            "${System.env.GIT_BRANCH}"
+        ]
+    }
 }
 
 task buildZip(type: Zip) {

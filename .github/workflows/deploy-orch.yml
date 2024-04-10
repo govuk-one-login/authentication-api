@@ -4,9 +4,14 @@ env:
   AWS_REGION: eu-west-2
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    secrets:
+      ORCH_GH_ACTIONS_ROLE_ARN:
+        required: true
+      ORCH_ARTIFACT_BUCKET_NAME:
+        required: true
+      ORCH_SIGNING_PROFILE_NAME:
+        required: true
 
 jobs:
   deploy:

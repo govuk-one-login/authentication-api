@@ -131,7 +131,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     authenticationService.getPhoneNumber(request.getEmail()).orElse(null),

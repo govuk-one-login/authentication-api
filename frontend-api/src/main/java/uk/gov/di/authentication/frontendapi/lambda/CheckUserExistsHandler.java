@@ -10,9 +10,12 @@ import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -29,6 +32,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
@@ -184,12 +188,32 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     AuditService.UNKNOWN,
                     persistentSessionId,
                     pair("rpPairwiseId", rpPairwiseId));
+
+            var lockoutInformation =
+                    Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
+                            .map(
+                                    journeyType -> {
+                                        var ttl =
+                                                codeStorageService.getMfaCodeBlockTimeToLive(
+                                                        emailAddress,
+                                                        MFAMethodType.AUTH_APP,
+                                                        journeyType);
+                                        return new LockoutInformation(
+                                                "codeBlock",
+                                                MFAMethodType.AUTH_APP,
+                                                ttl,
+                                                journeyType);
+                                    })
+                            .filter(info -> info.lockTTL() > 0)
+                            .toList();
+
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
                             emailAddress,
                             userExists,
                             userMfaDetail.getMfaMethodType(),
-                            getLastDigitsOfPhoneNumber(userMfaDetail));
+                            getLastDigitsOfPhoneNumber(userMfaDetail),
+                            lockoutInformation);
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");
