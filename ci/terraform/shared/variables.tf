@@ -173,3 +173,9 @@ variable "dlq_alarm_threshold" {
   type        = number
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
+
+variable "client_registry_table_policy_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access to the client registry table"
+}
