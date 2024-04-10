@@ -15,14 +15,27 @@ For example:
 1. Ensure `x` message appears in a modal
 -->
 
-## 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
+## Checklist
+
+<!-- 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
 
 Be careful when making changes to code in 'shared' components where each team has a copy.
 Check with counterparts to see if changes need to be made in the other team's code.
 
 In particular pay attention to classes representing Session data where changes need to be applied on both sides to avoid deserialization errors.
-
+-->
 - [ ] Impact on orch and auth mutual dependencies has been checked.
+
+<!-- UCD Review
+When a new feature or front-end change goes live, ensure that a review of it has been performed by UCD. The review may have already taken place, but it is important to check that it did before going live.
+
+Think about if the change you are making here will enable a change UCD should review (i.e. toggling a feature flag).
+
+Contact UCD colleagues in the Authentication team to identify the best way to approach the review.
+
+Delete this item if this PR does not need a UCD review.
+-->
+- [ ] A UCD review has been performed.
 
 ## Related PRs
 
