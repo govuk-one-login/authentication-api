@@ -48,6 +48,7 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String LOCATION = "location";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
+    private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
     private AuthenticationAuthCodeHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
@@ -166,7 +167,8 @@ class AuthenticationAuthCodeHandlerTest {
                         anyList(),
                         eq(false),
                         anyString(),
-                        eq(false));
+                        eq(false),
+                        eq(null));
         assertThat(result, hasStatus(200));
         var jsonBody = new JSONObject(result.getBody());
         assertTrue(jsonBody.has(LOCATION));
@@ -176,6 +178,41 @@ class AuthenticationAuthCodeHandlerTest {
         assertTrue(uri.getQuery().contains("state"));
         assertTrue(uri.getQuery().contains(TEST_STATE));
         assertFalse(uri.getQuery().contains("random_query_parameter"));
+    }
+
+    @Test
+    void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough()
+            throws URISyntaxException {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(
+                format(
+                        "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"password-reset-time\": \"%d\" }",
+                        TEST_REDIRECT_URI,
+                        TEST_STATE,
+                        List.of("email-verified", "email"),
+                        TEST_SECTOR_IDENTIFIER,
+                        false,
+                        PASSWORD_RESET_TIME));
+
+        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+        var userProfile = new UserProfile();
+        userProfile.setSubjectID(TEST_SUBJECT_ID);
+        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+
+        var result = handler.handleRequest(event, context);
+
+        verify(dynamoAuthCodeService, times(1))
+                .saveAuthCode(
+                        eq(userProfile.getSubjectID()),
+                        anyString(),
+                        anyList(),
+                        eq(false),
+                        anyString(),
+                        eq(false),
+                        eq(PASSWORD_RESET_TIME));
+        assertThat(result, hasStatus(200));
     }
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {

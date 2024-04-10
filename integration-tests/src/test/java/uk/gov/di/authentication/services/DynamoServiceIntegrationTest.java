@@ -6,13 +6,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.MFAMethodV2;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -181,7 +175,7 @@ class DynamoServiceIntegrationTest {
                 true,
                 true,
                 TEST_MFA_APP_CREDENTIAL,
-                "PRIMARY",
+                PriorityIdentifier.PRIMARY,
                 1,
                 "test");
         UserCredentials updatedUserCredentials =
@@ -193,7 +187,7 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
         assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
-        assertThat(mfaMethod.getPriorityIdentifier(), equalTo("PRIMARY"));
+        assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.PRIMARY));
         assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
         assertThat(mfaMethod.getEndPoint(), equalTo("test"));
     }

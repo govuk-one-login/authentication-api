@@ -16,6 +16,7 @@ public class AuthCodeStore {
     private static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
     private static final String ATTRIBUTE_SECTOR_IDENTIFIER = "SectorIdentifier";
     private static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
+    private static final String ATTRIBUTE_PASSWORD_RESET_TIME = "PasswordResetTime";
 
     private String subjectID;
     private String authCode;
@@ -24,6 +25,7 @@ public class AuthCodeStore {
     private boolean hasBeenUsed;
     private String sectorIdentifier;
     private boolean isNewAccount;
+    private Long passwordResetTime;
 
     public AuthCodeStore() {}
 
@@ -123,6 +125,20 @@ public class AuthCodeStore {
 
     public AuthCodeStore withIsNewAccount(boolean isNewAccount) {
         this.isNewAccount = isNewAccount;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PASSWORD_RESET_TIME)
+    public Long getPasswordResetTime() {
+        return passwordResetTime;
+    }
+
+    public void setPasswordResetTime(Long passwordResetTime) {
+        this.passwordResetTime = passwordResetTime;
+    }
+
+    public AuthCodeStore withPasswordResetTime(Long passwordResetTime) {
+        this.passwordResetTime = passwordResetTime;
         return this;
     }
 }

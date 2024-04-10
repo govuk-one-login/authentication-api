@@ -56,7 +56,8 @@ class S3ToDynamoDbHandlerTest {
         this.mockS3TextContent = Files.readString(path, StandardCharsets.UTF_8);
 
         var getObjectResponse = GetObjectResponse.builder().build();
-        var mockInputStream = new ByteArrayInputStream(mockS3TextContent.getBytes());
+        var mockInputStream =
+                new ByteArrayInputStream(mockS3TextContent.getBytes(StandardCharsets.UTF_8));
         var mockS3ObjectInputStream =
                 new ResponseInputStream<>(
                         getObjectResponse, AbortableInputStream.create(mockInputStream));

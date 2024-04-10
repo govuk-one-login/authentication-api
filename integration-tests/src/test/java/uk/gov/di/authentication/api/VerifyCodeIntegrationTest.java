@@ -178,7 +178,34 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
+        }
+        var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456", JourneyType.PASSWORD_RESET);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        codeRequest.getNotificationType(), JourneyType.PASSWORD_RESET);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
+        assertThat(
+                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
+                equalTo(false));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+    }
+
+    @Test
+    void shouldHaveMaxRetryCountAndSetBlockDuringRegistrationWithFeatureFlagOff()
+            throws Json.JsonException {
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
@@ -229,7 +256,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
 
@@ -255,7 +282,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
         }
         var codeRequest = new VerifyCodeRequest(RESET_PASSWORD_WITH_CODE, "123456");
 
@@ -286,7 +313,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
         }
         var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456", journeyType);
 

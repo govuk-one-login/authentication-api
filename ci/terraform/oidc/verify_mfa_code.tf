@@ -40,6 +40,8 @@ module "verify_mfa_code" {
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                = var.test_clients_enabled
     INTERNAl_SECTOR_URI                 = var.internal_sector_uri
+    CODE_MAX_RETRIES_INCREASED          = var.code_max_retries_increased
+    REDUCED_LOCKOUT_DURATION            = var.reduced_lockout_duration
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
 

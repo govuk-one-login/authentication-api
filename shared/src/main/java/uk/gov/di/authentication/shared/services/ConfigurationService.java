@@ -84,6 +84,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
     }
 
+    public long getReducedLockoutDuration() {
+        return Long.parseLong(System.getenv().getOrDefault("REDUCED_LOCKOUT_DURATION", "900"));
+    }
+
     public int getBulkUserEmailBatchQueryLimit() {
         return Integer.parseInt(
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_QUERY_LIMIT", "25"));
@@ -145,9 +149,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
 
-    public int getCodeMaxRetriesRegistration() {
+    public int getIncreasedCodeMaxRetries() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("CODE_MAX_RETRIES_REGISTRATION", "999999"));
+                System.getenv().getOrDefault("CODE_MAX_RETRIES_INCREASED", "999999"));
+    }
+
+    public boolean removeRetryLimitForRegistrationEmailCodeEntry() {
+        return System.getenv()
+                .getOrDefault("REMOVE_RETRY_LIMIT_REGISTRATION_EMAIL_CODE", "false")
+                .equals("true");
     }
 
     public int getAuthAppCodeWindowLength() {
@@ -194,7 +204,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getMaxPasswordRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
+        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "6"));
     }
 
     public int getMaxEmailReAuthRetries() {

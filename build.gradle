@@ -1,4 +1,6 @@
 import java.util.stream.Collectors
+import com.github.spotbugs.snom.Confidence
+import com.github.spotbugs.snom.Effort
 
 buildscript {
     repositories {
@@ -11,8 +13,9 @@ buildscript {
 plugins {
     id "com.diffplug.spotless" version "6.25.0"
     id "com.avast.gradle.docker-compose" version "0.17.6"
-    id "org.sonarqube" version "4.4.1.3373"
+    id "org.sonarqube" version "5.0.0.4638"
     id "jacoco-report-aggregation"
+    id 'com.github.spotbugs' version '6.0.9'
 }
 
 apply plugin: "java"
@@ -21,7 +24,7 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.25.2",
+        aws_sdk_v2_version: "2.25.22",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.11.4",
         gson: "2.10.1",
@@ -29,7 +32,8 @@ ext {
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.29",
         junit: "5.10.2",
-        xray: "2.15.1"
+        xray: "2.15.2",
+        pact: "4.6.8"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -56,10 +60,19 @@ repositories {
 }
 
 subprojects {
+    apply plugin: "com.github.spotbugs"
     repositories {
         maven {
             url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
         }
+    }
+
+    spotbugs {
+        ignoreFailures = false
+        showStackTraces = true
+        effort = Effort.valueOf('MAX')
+        reportLevel = Confidence.valueOf('HIGH')
+        excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
     }
 
     configurations {
@@ -87,11 +100,12 @@ subprojects {
         test_runtime
         xray
         pact_consumer
+        pact_provider
     }
 
     configurations.all {
         resolutionStrategy {
-            force 'org.apache.logging.log4j:log4j-api:2.23.0', 'org.apache.logging.log4j:log4j-core:2.23.0'
+            force 'org.apache.logging.log4j:log4j-api:2.23.1', 'org.apache.logging.log4j:log4j-core:2.23.1'
         }
     }
 
@@ -125,9 +139,9 @@ subprojects {
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
         lettuce "org.apache.commons:commons-pool2:2.12.0",
-                "io.lettuce:lettuce-core:6.3.1.RELEASE"
+                "io.lettuce:lettuce-core:6.3.2.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.31"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.33"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.12"
@@ -148,8 +162,8 @@ subprojects {
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
                 "org.mockito:mockito-core:5.11.0",
-                "org.awaitility:awaitility:4.2.0",
-                "com.approvaltests:approvaltests:22.4.0",
+                "org.awaitility:awaitility:4.2.1",
+                "com.approvaltests:approvaltests:23.0.1",
                 configurations.hamcrest,
                 "org.reflections:reflections:0.10.2"
 
@@ -162,7 +176,13 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        pact_consumer "au.com.dius.pact.consumer:junit5:4.6.7"
+        spotbugs "com.github.spotbugs:spotbugs:4.8.3"
+
+        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
+
+        pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
+
+        pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
     }
 }
 

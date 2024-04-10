@@ -1,5 +1,7 @@
 package uk.gov.di.orchestration.sharedtest.basetest;
 
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -9,8 +11,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public abstract class ApiGatewayHandlerIntegrationTest
-        extends HandlerIntegrationTest<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+import static org.mockito.Mockito.mock;
+
+public abstract class ApiGatewayHandlerIntegrationTest extends IntegrationTest {
+
+    protected final Context context = mock(Context.class);
+    protected RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> handler;
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {

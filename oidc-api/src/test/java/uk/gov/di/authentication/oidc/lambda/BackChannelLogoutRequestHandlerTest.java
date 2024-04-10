@@ -57,7 +57,7 @@ class BackChannelLogoutRequestHandlerTest {
         handler.handleRequest(inputEvent(null), null);
 
         verify(tokenService, never())
-                .generateSignedJWT(any(), eq(Optional.of("logout+jwt")), eq(ES256));
+                .generateSignedJwtUsingExternalKey(any(), eq(Optional.of("logout+jwt")), eq(ES256));
         verify(request, never()).post(any(), any());
     }
 
@@ -73,7 +73,7 @@ class BackChannelLogoutRequestHandlerTest {
 
         when(configuration.getOidcApiBaseURL())
                 .thenReturn(Optional.of("https://base-url.account.gov.uk"));
-        when(tokenService.generateSignedJWT(
+        when(tokenService.generateSignedJwtUsingExternalKey(
                         any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
 

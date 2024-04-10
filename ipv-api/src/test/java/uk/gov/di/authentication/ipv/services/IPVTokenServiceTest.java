@@ -250,8 +250,7 @@ class IPVTokenServiceTest {
                 "{"
                         + "  \"access_token\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
                         + "  \"token_type\": \"bearer\","
-                        + "  \"expires_in\": \"3600\","
-                        + "  \"uri\": \"https://localhost\""
+                        + "  \"expires_in\": \"3600\""
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);

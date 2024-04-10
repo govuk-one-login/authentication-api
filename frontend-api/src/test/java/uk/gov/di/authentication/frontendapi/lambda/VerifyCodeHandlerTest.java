@@ -445,6 +445,79 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
+    void shouldNotReturnStandardRetryLimitForEmailOTPDuringRegistration() {
+        when(configurationService.removeRetryLimitForRegistrationEmailCodeEntry()).thenReturn(true);
+        when(configurationService.getIncreasedCodeMaxRetries()).thenReturn(999999);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+        JourneyType journeyType = JourneyType.REGISTRATION;
+        var codeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getCodeRequestType(MFAMethodType.EMAIL, journeyType);
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+                .thenReturn(false);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                .thenReturn(100);
+
+        var result = makeCallWithCode(CODE, VERIFY_EMAIL.toString(), journeyType);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
+        verifyNoInteractions(accountModifiersService);
+        verify(configurationService, never()).getCodeMaxRetries();
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.INVALID_CODE_SENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("notification-type", VERIFY_EMAIL.name()),
+                        pair("account-recovery", false),
+                        pair("journey-type", "REGISTRATION"));
+    }
+
+    @Test
+    void shouldReturnStandardRetryLimitForEmailOTPDuringRegistrationWithFlagOff() {
+        when(configurationService.removeRetryLimitForRegistrationEmailCodeEntry())
+                .thenReturn(false);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+        JourneyType journeyType = JourneyType.REGISTRATION;
+        var codeBlockedKeyPrefix =
+                CODE_BLOCKED_KEY_PREFIX
+                        + CodeRequestType.getCodeRequestType(MFAMethodType.EMAIL, journeyType);
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+                .thenReturn(false);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                .thenReturn(100);
+
+        var result = makeCallWithCode(CODE, VERIFY_EMAIL.toString(), journeyType);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
+        verifyNoInteractions(accountModifiersService);
+        verify(configurationService, never()).getIncreasedCodeMaxRetries();
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("notification-type", VERIFY_EMAIL.name()),
+                        pair("account-recovery", false),
+                        pair("journey-type", "REGISTRATION"));
+    }
+
+    @Test
     void
             shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);

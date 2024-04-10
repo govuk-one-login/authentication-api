@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -277,12 +278,41 @@ public class TokenService {
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 
         try {
-            return generateSignedJWT(
+            return generateSignedJwtUsingExternalKey(
                     idTokenClaims.toJWTClaimsSet(), Optional.empty(), signingAlgorithm);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public AccessToken generateStorageToken(Subject internalPairwiseSubject) {
+
+        LOG.info("Generating storage token");
+        Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
+        var jwtID = UUID.randomUUID().toString();
+
+        LOG.info("Storage token being created with JWTID: {}", jwtID);
+
+        List<String> aud =
+                List.of(
+                        configService.getCredentialStoreURI().toString(),
+                        configService.getIPVAudience());
+
+        JWTClaimsSet.Builder claimSetBuilder =
+                new JWTClaimsSet.Builder()
+                        .issuer(configService.getOidcApiBaseURL().get())
+                        .audience(aud)
+                        .expirationTime(expiryDate)
+                        .issueTime(NowHelper.now())
+                        .subject(internalPairwiseSubject.getValue())
+                        .jwtID(jwtID);
+
+        SignedJWT signedJWT =
+                generateSignedJwtUsingStorageKey(claimSetBuilder.build(), Optional.empty());
+
+        return new BearerAccessToken(
+                signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
     }
 
     private AccessToken generateAndStoreAccessToken(
@@ -323,7 +353,8 @@ public class TokenService {
         }
 
         SignedJWT signedJWT =
-                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
+                generateSignedJwtUsingExternalKey(
+                        claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
         AccessToken accessToken =
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
@@ -364,7 +395,9 @@ public class TokenService {
                         .subject(rpPairwiseSubject.getValue())
                         .jwtID(jwtId)
                         .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), signingAlgorithm);
+
+        SignedJWT signedJWT =
+                generateSignedJwtUsingExternalKey(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
@@ -385,10 +418,34 @@ public class TokenService {
         return refreshToken;
     }
 
-    public SignedJWT generateSignedJWT(
+    public SignedJWT generateSignedJwtUsingExternalKey(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
+        String alias =
+                algorithm == JWSAlgorithm.ES256
+                        ? configService.getExternalTokenSigningKeyAlias()
+                        : configService.getExternalTokenSigningKeyRsaAlias();
+        return generateSignedJWT(claimsSet, type, algorithm, alias);
+    }
 
-        var signingKeyId = getSigningKeyId(algorithm);
+    public SignedJWT generateSignedJwtUsingStorageKey(
+            JWTClaimsSet claimsSet, Optional<String> type) {
+        return generateSignedJWT(
+                claimsSet,
+                type,
+                JWSAlgorithm.ES256,
+                configService.getStorageTokenSigningKeyAlias());
+    }
+
+    private SignedJWT generateSignedJWT(
+            JWTClaimsSet claimsSet,
+            Optional<String> type,
+            JWSAlgorithm algorithm,
+            String signingKeyAlias) {
+
+        var signingKeyId =
+                kmsConnectionService
+                        .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKeyAlias).build())
+                        .keyId();
 
         try {
             var jwsHeader = new JWSHeader.Builder(algorithm).keyID(hashSha256String(signingKeyId));
@@ -405,7 +462,9 @@ public class TokenService {
             String message = encodedHeader + "." + encodedClaims;
             SignRequest signRequest =
                     SignRequest.builder()
-                            .message(SdkBytes.fromByteArray(message.getBytes()))
+                            .message(
+                                    SdkBytes.fromByteArray(
+                                            message.getBytes(StandardCharsets.UTF_8)))
                             .keyId(signingKeyId)
                             .signingAlgorithm(signingAlgorithm)
                             .build();
@@ -428,15 +487,5 @@ public class TokenService {
             LOG.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
-    }
-
-    private String getSigningKeyId(JWSAlgorithm algorithm) {
-        var signingKey =
-                algorithm == JWSAlgorithm.ES256
-                        ? configService.getExternalTokenSigningKeyAlias()
-                        : configService.getExternalTokenSigningKeyRsaAlias();
-        return kmsConnectionService
-                .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
-                .keyId();
     }
 }

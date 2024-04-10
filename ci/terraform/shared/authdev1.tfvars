@@ -9,12 +9,12 @@ di_tools_signing_profile_version_arn         = "arn:aws:signer:eu-west-2:7066156
 stub_rp_clients = [
   {
     client_name           = "di-auth-stub-relying-party-authdev1"
-    sector_identifier_uri = "https://di-auth-stub-relying-party-authdev1.london.cloudapps.digital"
+    sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
-      "https://di-auth-stub-relying-party-authdev1.london.cloudapps.digital/oidc/authorization-code/callback",
+      "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
-      "https://di-auth-stub-relying-party-authdev1.london.cloudapps.digital/signed-out",
+      "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "0"
     consent_required                = "0"

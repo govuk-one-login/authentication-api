@@ -58,13 +58,13 @@ public class CodeStorageService {
         return getCount(email, prefix);
     }
 
-    public void increaseIncorrectMfaCodeAttemptsCount(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+    public void increaseIncorrectMfaCodeAttemptsCount(String email, boolean reducedLockout) {
+        increaseCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX, reducedLockout);
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
         String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        increaseCount(email, prefix);
+        increaseCount(email, prefix, false);
     }
 
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
@@ -77,25 +77,29 @@ public class CodeStorageService {
     }
 
     public void increaseIncorrectPasswordCount(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX, false);
     }
 
     public void increaseIncorrectEmailCount(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
+        increaseCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX, false);
     }
 
     public void increaseIncorrectPasswordCountReauthJourney(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX, false);
     }
 
-    private void increaseCount(String email, String prefix) {
+    private void increaseCount(String email, String prefix, boolean reducedLockout) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
         Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
             redisConnectionService.saveWithExpiry(
-                    key, String.valueOf(newCount), configurationService.getLockoutDuration());
+                    key,
+                    String.valueOf(newCount),
+                    reducedLockout
+                            ? configurationService.getReducedLockoutDuration()
+                            : configurationService.getLockoutDuration());
             LOG.info("count increased from: {} to: {}", count, newCount);
         } catch (Exception e) {
             throw new RuntimeException(e);

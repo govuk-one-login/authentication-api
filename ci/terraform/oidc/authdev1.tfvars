@@ -13,27 +13,28 @@ logging_endpoint_arns                       = []
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
+send_storage_token_to_ipv_enabled           = true
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
-g5p2NHAekvIAJaNb6ZkLuLXYdLBax+2c9f4ALTrltmLMBpgtS6VQg2zO8UmSE4bX
-+Nhaw2nf3/VRBIlAi2NiD4cUIwNtxIx5qpBeDxb+YR7NuTJ0nFq6u6jv34RB1RWE
-J1sEOiv9aSPEt6eK8TGL6uZbPGU8CKJuWwPfW1ko/lyuM1HG0G/KAZ8DaLJzOMWX
-+2aZatj9RHtOCtGxwMrZlU4n/O1gbVPBfXx9RugTi0W4upmeNFR5CsC+WgENkr0v
-pXEyIW7edR6lDsSYzJI+yurVFyt82Bn7Vo2x5CIoLiH/1ZcKaApNU02/eK/gMBf+
-EwIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs0gyWacjheeaMslIDBdf
+4ljBMyrEzAeJW+ZyvGZlV6KhPPCz6lMx8knb/ar1LqkqX1M2hh1qS+ijYtzz4cCE
+MP/YWuvIL3CkFEUlw1ITwg6TDH9ixFeFHG0K4keHmmAHms5N4zuUKwZWHUgo6nDt
+LM3o5PIvdz57A1ewtkzLizLBHIhTMImXeHzFyEDH7LufROfJH9lZ079r2sNzfKSm
+xhgnWpMKrXtYUkYR/+vmvCJcR4okWS5WK9QKh2PUw+fXBRxnaf09sRvvgh2x/I9A
+wxACgcz//hhZ9O1h3Kt6BTyvhqZ00FwO//2bdosdX9kjCC+bRCwlUToIY0CmzOFO
+kwIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
 auth_to_orch_token_signing_public_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvvr/3/mHEPLpgsLR3ocLiGrVpVLJ
-AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgim+WxL5qzcUSboPEiAcbu+DBn8v
+PirNO+f1KP1HGi7oYdoiFgVXejoUmpxKXeQRtOF6PgTBkrRMzmI51YFLDQ==
 -----END PUBLIC KEY-----
 EOT
 
-enable_api_gateway_execution_request_tracing = false
+enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
 lambda_max_concurrency = 0
@@ -45,14 +46,17 @@ lockout_duration                          = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
-extended_feature_flags_enabled = false
+extended_feature_flags_enabled = true
 
 orch_client_id = "orchestrationAuth"
 
-support_auth_orch_split = false
+support_auth_orch_split           = true
+support_auth_orch_split_user_info = true
 
 orch_frontend_api_gateway_integration_enabled = false
 
 orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-redirect"
+
+authorize_protected_subnet_enabled = true
 
 support_email_check_enabled = true

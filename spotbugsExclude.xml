@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+<!--Random number is immediately formatted to string, which is used throughout tests-->
+    <Match>
+        <Class name="uk.gov.di.accountmanagement.queuehandlers.NotificationHandlerIntegrationTest" />
+        <Bug code="DMI" />
+    </Match>
+    <Match>
+        <Class name="uk.gov.di.authentication.queuehandlers.NotificationHandlerIntegrationTest" />
+        <Bug code="DMI" />
+    </Match>
+    <!--False positive-->
+    <Match>
+        <Class name="uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest$TestConfigurationService" />
+        <Bug code="DMI" />
+    </Match>
+</FindBugsFilter>

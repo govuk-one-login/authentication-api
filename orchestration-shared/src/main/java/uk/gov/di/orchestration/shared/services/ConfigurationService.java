@@ -13,7 +13,6 @@ import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
-import uk.gov.di.orchestration.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
@@ -141,6 +140,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getAuthenticationBackendURI() {
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+    }
+
+    public URI getCredentialStoreURI() {
+        return URI.create(
+                System.getenv()
+                        .getOrDefault(
+                                "CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk"));
     }
 
     public boolean isCustomDocAppClaimEnabled() {
@@ -339,17 +345,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return notifyCallbackBearerToken;
     }
 
-    public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
-            String templateId) {
-        for (DeliveryReceiptsNotificationType type : DeliveryReceiptsNotificationType.values()) {
-            if (commaSeparatedListContains(
-                    templateId, systemService.getenv(type.getTemplateName()))) {
-                return Optional.of(type);
-            }
-        }
-        return Optional.empty();
-    }
-
     boolean commaSeparatedListContains(String searchTerm, String stringToSearch) {
         return (searchTerm != null
                 && !searchTerm.isBlank()
@@ -406,6 +401,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
+    }
+
+    public String getStorageTokenClaimName() {
+        return System.getenv()
+                .getOrDefault(
+                        "STORAGE_TOKEN_CLAIM_NAME",
+                        "https://vocab.account.gov.uk/v1/storageAccessToken");
+    }
+
+    public boolean sendStorageTokenToIpvEnabled() {
+        return System.getenv()
+                .getOrDefault("SEND_STORAGE_TOKEN_TO_IPV_ENABLED", "false")
+                .equals("true");
     }
 
     public Optional<String> getSqsEndpointUri() {

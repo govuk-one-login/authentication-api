@@ -366,7 +366,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         throws Json.JsonException {
             setupTestWithDefaultEnvVars();
             accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
+                    SUBJECT_ID.getValue(), false, true, true, true);
 
             var session = redis.getSession(SESSION_ID);
             assertNotNull(session);
@@ -379,6 +379,50 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             constructQueryStringParameters());
 
             assertRedirectToSuspendedPage(response);
+        }
+
+        @Test
+        void
+                shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
+                        throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertUserInfoStoredAndRedirectedToRp(response);
+        }
+
+        @Test
+        void
+                shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
+                        throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, true, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertUserInfoStoredAndRedirectedToRp(response);
         }
 
         @Test
@@ -549,6 +593,56 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             constructQueryStringParameters());
 
             assertRedirectToSuspendedPage(response);
+        }
+
+        @Test
+        void
+                shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
+                        throws Json.JsonException,
+                                java.text.ParseException,
+                                ParseException,
+                                JOSEException {
+            setupTestWithDefaultEnvVars();
+            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToIpv(response, false);
+        }
+
+        @Test
+        void
+                shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
+                        throws Json.JsonException,
+                                java.text.ParseException,
+                                ParseException,
+                                JOSEException {
+            setupTestWithDefaultEnvVars();
+            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, true, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToIpv(response, true);
         }
 
         @Test
@@ -791,6 +885,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 boolean abortOnAisErrorResponse) {
             super(
                     tokenSigningKey,
+                    storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,

@@ -185,7 +185,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldCallLoginEndpoint5TimesAndReturn400WhenUserIdLockedOut() throws Json.JsonException {
+    void shouldCallLoginEndpoint6TimesAndReturn400WhenUserIdLockedOut() throws Json.JsonException {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
@@ -223,11 +223,18 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
                         headers,
                         Map.of());
-        assertThat(response5, hasStatus(400));
+        assertThat(response5, hasStatus(401));
+        var response6 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response6, hasStatus(400));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         ACCOUNT_TEMPORARILY_LOCKED,
+                        INVALID_CREDENTIALS,
                         INVALID_CREDENTIALS,
                         INVALID_CREDENTIALS,
                         INVALID_CREDENTIALS,
@@ -275,7 +282,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
                         headers,
                         Map.of());
-        assertThat(response5, hasStatus(400));
+        assertThat(response5, hasStatus(401));
         var response6 =
                 makeRequest(
                         Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),

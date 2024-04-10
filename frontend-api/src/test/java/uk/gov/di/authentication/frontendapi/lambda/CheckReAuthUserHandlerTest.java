@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -12,7 +13,9 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -32,7 +35,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {
@@ -43,12 +48,16 @@ class CheckReAuthUserHandlerTest {
     private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
 
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private static final String CLIENT_ID = "test-client-id";
+    private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
+
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
     private final UserContext userContext = mock(UserContext.class);
@@ -62,14 +71,18 @@ class CheckReAuthUserHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
+        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(userContext.getSession()).thenReturn(session);
+        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         var userProfile = generateUserProfile();
         userProfile.setSubjectID(TEST_SUBJECT_ID);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
         handler =
                 new CheckReAuthUserHandler(
                         configurationService,
@@ -77,6 +90,7 @@ class CheckReAuthUserHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
+                        auditService,
                         codeStorageService);
     }
 
@@ -107,6 +121,18 @@ class CheckReAuthUserHandlerTest {
                         new CheckReauthUserRequest(EMAIL_ADDRESS, expectedRpPairwiseSub),
                         userContext);
         assertEquals(200, result.getStatusCode());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFULL,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -127,6 +153,18 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -148,6 +186,39 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
+        var context = mock(Context.class);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        userContext);
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
     }
 
     @Test
@@ -169,6 +240,18 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
     }
 
     private UserProfile generateUserProfile() {
@@ -183,6 +266,7 @@ class CheckReAuthUserHandlerTest {
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", session.getSessionId());
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
         return headers;
     }
 }

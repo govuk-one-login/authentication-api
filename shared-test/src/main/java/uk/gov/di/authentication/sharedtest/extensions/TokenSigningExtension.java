@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 public class TokenSigningExtension extends KmsKeyExtension {
@@ -42,7 +43,7 @@ public class TokenSigningExtension extends KmsKeyExtension {
             Base64URL encodedHeader = jwsHeader.toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
-            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
+            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
             SignRequest signRequest =
                     SignRequest.builder()
                             .message(SdkBytes.fromByteBuffer(messageToSign))

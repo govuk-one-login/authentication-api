@@ -48,6 +48,7 @@ public class UserInfoService {
 
         userInfo.setClaim("rp_pairwise_id", rpPairwiseId);
         userInfo.setClaim("new_account", accessTokenInfo.getIsNewAccount());
+        userInfo.setClaim("password_reset_time", accessTokenInfo.getPasswordResetTime());
 
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue())) {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());

@@ -3,13 +3,13 @@ package uk.gov.di.orchestration.shared.services;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.Session;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ACCOUNT_INTERVENTION_STATUS;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ACCOUNT_INTERVENTION_STATE;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -86,14 +86,13 @@ public class CloudwatchMetricsService {
     }
 
     public void incrementLogout(
-            Optional<String> clientId,
-            Optional<AccountInterventionStatus> accountInterventionStatus) {
+            Optional<String> clientId, Optional<AccountIntervention> intervention) {
         String accountInterventionStr = "unknown";
-        if (accountInterventionStatus.isPresent()) {
-            if (accountInterventionStatus.get().suspended()) {
+        if (intervention.isPresent()) {
+            if (intervention.get().getSuspended()) {
                 accountInterventionStr = "suspended";
             }
-            if (accountInterventionStatus.get().blocked()) {
+            if (intervention.get().getBlocked()) {
                 accountInterventionStr = "blocked";
             }
         }
@@ -104,7 +103,7 @@ public class CloudwatchMetricsService {
                         configurationService.getEnvironment(),
                         CLIENT.getValue(),
                         clientId.orElse("unknown"),
-                        ACCOUNT_INTERVENTION_STATUS.getValue(),
+                        ACCOUNT_INTERVENTION_STATE.getValue(),
                         accountInterventionStr));
     }
 }

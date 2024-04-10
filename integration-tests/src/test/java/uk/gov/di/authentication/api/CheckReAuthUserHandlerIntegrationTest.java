@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -30,6 +31,7 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -50,7 +52,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var sessionId = redis.createSession();
         headers = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
-        handler = new CheckReAuthUserHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new CheckReAuthUserHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
@@ -132,6 +134,59 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                         Collections.emptyMap(),
                         Map.of("principalId", expectedPairwiseId));
 
+        assertThat(response, hasStatus(400));
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasBeenBlockedForMaxPasswordRetries() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://randomSectorIDuRI.COM");
+
+        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var expectedPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", expectedPairwiseId));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
+    }
+
+    @Test
+    void shouldReturn400WhenUserProfileNotFoundAndHasEnteredInvalidEmailTooManyTimes() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://" + INTERNAl_SECTOR_HOST);
+
+        var randomEmail = "random_email@email.com";
+
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+
+        var request = new CheckReauthUserRequest(randomEmail, "random-pairwise-id");
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of());
         assertThat(response, hasStatus(400));
     }
 

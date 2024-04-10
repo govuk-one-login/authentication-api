@@ -37,7 +37,7 @@ class MfaCodeProcessorFactoryTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getCodeMaxRetriesRegistration()).thenReturn(999999);
+        when(configurationService.getIncreasedCodeMaxRetries()).thenReturn(999999);
 
         when(userContext.getSession()).thenReturn(session);
     }

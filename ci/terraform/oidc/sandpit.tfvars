@@ -13,6 +13,7 @@ logging_endpoint_arns                       = []
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
+send_storage_token_to_ipv_enabled           = true
 auth_frontend_public_encryption_key         = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
@@ -53,8 +54,10 @@ support_auth_orch_split_user_info = true
 
 orch_frontend_api_gateway_integration_enabled = true
 
-orch_redirect_uri = "https://oidc.sandpit.account.gov.uk/orchestration-redirect"
-
+orch_redirect_uri                  = "https://oidc.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
 support_email_check_enabled = true
+
+orch_backend_api_gateway_integration_enabled = true
+orch_openid_configuration_uri                = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:767397776536:function:build-orch-be-deploy-OpenIdConfigurationFunction-EROoeGPLtVmV:latest/invocations"

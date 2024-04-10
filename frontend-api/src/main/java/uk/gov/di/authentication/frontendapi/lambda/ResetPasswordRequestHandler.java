@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
+import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -36,10 +37,11 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -181,7 +183,37 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             sqsClient.send(serialiseNotifyRequest(notifyRequest));
         }
         LOG.info("Successfully processed request");
-        return generateEmptySuccessApiGatewayResponse();
+        var maybeResponse = generateResponseWithMfaDetail(resetPasswordRequest, userContext);
+        if (maybeResponse.isPresent()) {
+            try {
+                return generateApiGatewayProxyResponse(200, maybeResponse.get());
+            } catch (JsonException e) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            }
+        } else {
+            LOG.error("Could not find user profile for reset password request");
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1056);
+        }
+    }
+
+    Optional<ResetPasswordRequestHandlerResponse> generateResponseWithMfaDetail(
+            ResetPasswordRequest resetPasswordRequest, UserContext userContext) {
+        return authenticationService
+                .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
+                .map(
+                        userProfile -> {
+                            var userMfaDetail =
+                                    getUserMFADetail(
+                                            userContext,
+                                            authenticationService.getUserCredentialsFromEmail(
+                                                    resetPasswordRequest.getEmail()),
+                                            userProfile.getPhoneNumber(),
+                                            userProfile.isPhoneNumberVerified());
+
+                            return new ResetPasswordRequestHandlerResponse(
+                                    userMfaDetail.getMfaMethodType(),
+                                    getLastDigitsOfPhoneNumber(userMfaDetail));
+                        });
     }
 
     private Optional<ErrorResponse> validatePasswordResetCount(

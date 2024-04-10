@@ -42,6 +42,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     private static final String TEST_PASSWORD = "password-1";
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
+    private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
 
     @RegisterExtension
     public static final AccountInterventionsStubExtension accountInterventionsStubExtension =
@@ -84,14 +85,15 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                         Map.of());
         assertThat(response, hasStatus(200));
         var accountInterventionsResponse =
-                new AccountInterventionsResponse(false, isUserBlocked, false);
+                new AccountInterventionsResponse(
+                        false, isUserBlocked, false, false, APPLIED_AT_TIMESTAMP);
         assertThat(
                 response,
                 hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
                 String.format(
-                        "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false}",
-                        isUserBlocked),
+                        "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false,\"reproveIdentity\":false,\"appliedAt\":\"%s\"}",
+                        isUserBlocked, APPLIED_AT_TIMESTAMP),
                 response.getBody());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(expectedAuditEvent));
     }

@@ -6,4 +6,6 @@ import org.apache.logging.log4j.core.config.plugins.validation.constraints.Requi
 public record AccountInterventionsResponse(
         @Expose @Required boolean passwordResetRequired,
         @Expose @Required boolean blocked,
-        @Expose @Required boolean temporarilySuspended) {}
+        @Expose @Required boolean temporarilySuspended,
+        @Expose @Required boolean reproveIdentity,
+        @Expose @Required String appliedAt) {}

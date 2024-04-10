@@ -7,12 +7,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
-import uk.gov.di.orchestration.shared.entity.DeliveryReceiptsNotificationType;
 
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,33 +66,6 @@ class ConfigurationServiceTest {
         ConfigurationService configurationService = new ConfigurationService();
         assertEquals(
                 result, configurationService.commaSeparatedListContains(searchTerm, searchString));
-    }
-
-    @Test
-    void shouldGetNotificationTypeFromTemplateId() {
-        when(systemService.getenv("VERIFY_EMAIL_TEMPLATE_ID")).thenReturn("1234-abcd");
-        when(systemService.getenv("EMAIL_UPDATED_TEMPLATE_ID")).thenReturn("1234-efgh,4567-ijkl");
-        when(systemService.getenv("TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID"))
-                .thenReturn("1234-bulk");
-
-        ConfigurationService configurationService = new ConfigurationService();
-        configurationService.setSystemService(systemService);
-
-        assertEquals(
-                Optional.of(DeliveryReceiptsNotificationType.VERIFY_EMAIL),
-                configurationService.getNotificationTypeFromTemplateId("1234-abcd"));
-        assertEquals(
-                Optional.empty(),
-                configurationService.getNotificationTypeFromTemplateId("1234-wxyz"));
-        assertEquals(
-                Optional.of(DeliveryReceiptsNotificationType.EMAIL_UPDATED),
-                configurationService.getNotificationTypeFromTemplateId("4567-ijkl"));
-        assertEquals(
-                Optional.of(DeliveryReceiptsNotificationType.EMAIL_UPDATED),
-                configurationService.getNotificationTypeFromTemplateId("1234-efgh"));
-        assertEquals(
-                Optional.of(DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL),
-                configurationService.getNotificationTypeFromTemplateId("1234-bulk"));
     }
 
     @Test

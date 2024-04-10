@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -265,10 +266,11 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
-        var accountStatus = new AccountInterventionStatus(true, false, false, false);
+        AccountIntervention intervention =
+                new AccountIntervention(new AccountInterventionState(true, false, false, false));
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, accountStatus);
+                        session, event, CLIENT_ID, intervention);
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
@@ -285,7 +287,7 @@ public class LogoutServiceTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
         verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
+                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -295,10 +297,12 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
-        var accountStatus = new AccountInterventionStatus(false, true, false, false);
+        AccountIntervention intervention =
+                new AccountIntervention(new AccountInterventionState(false, true, false, false));
+
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, accountStatus);
+                        session, event, CLIENT_ID, intervention);
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
@@ -315,7 +319,7 @@ public class LogoutServiceTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
         verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
+                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -371,15 +375,15 @@ public class LogoutServiceTest {
 
     @Test
     void throwsWhenGenerateAccountInterventionLogoutResponseCalledInappropriately() {
-        AccountInterventionStatus status =
-                new AccountInterventionStatus(false, false, false, false);
+        AccountIntervention intervention =
+                new AccountIntervention(new AccountInterventionState(false, false, false, false));
 
         RuntimeException exception =
                 assertThrows(
                         RuntimeException.class,
                         () ->
                                 logoutService.handleAccountInterventionLogout(
-                                        session, event, CLIENT_ID, status),
+                                        session, event, CLIENT_ID, intervention),
                         "Expected to throw exception");
 
         assertEquals("Account status must be blocked or suspended", exception.getMessage());
