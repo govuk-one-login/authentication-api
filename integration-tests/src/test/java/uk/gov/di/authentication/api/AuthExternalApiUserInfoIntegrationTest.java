@@ -58,11 +58,6 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         configurationParameters) {
 
                     @Override
-                    public boolean isAuthOrchSplitEnabled() {
-                        return true;
-                    }
-
-                    @Override
                     public String getTxmaAuditQueueUrl() {
                         return txmaAuditQueue.getQueueUrl();
                     }
