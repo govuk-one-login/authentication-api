@@ -186,15 +186,77 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
-        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
         assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.PRIMARY));
         assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
         assertThat(mfaMethod.getEndPoint(), equalTo("test"));
     }
 
+   /* @Test
+    void shouldUpdateAuthAppMFAMethodV2() {
+        setUpDynamo();
+        dynamoService.addMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                TEST_MFA_APP_CREDENTIAL,
+                PriorityIdentifier.PRIMARY,
+                1,
+                "test");
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        dynamoService.updateMFAMethodV2() {
+
+        }
+
+        assertThat(updatedUserCredentials.getMfaMethodsV2().size(), equalTo(1));
+        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodsV2().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.PRIMARY));
+        assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
+        assertThat(mfaMethod.getEndPoint(), equalTo("test"));
+    }
+   */
+
+    /*
+    void shouldDeleteAuthAppMFAMethodV2() {
+
+        setUpDynamo();
+        dynamoService.addMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                TEST_MFA_APP_CREDENTIAL,
+                PriorityIdentifier.PRIMARY,
+                1,
+                "test");
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+
+        dynamoService.deleteMFAMethodV2()
+
+        assertThat(updatedUserCredentials.getMfaMethodsV2().size(), equalTo(1));
+        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodsV2().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.PRIMARY));
+        assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
+        assertThat(mfaMethod.getEndPoint(), equalTo("test"));
+
+    }
+*/
+
+
+
     @Test
     void
-            shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
+    shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);

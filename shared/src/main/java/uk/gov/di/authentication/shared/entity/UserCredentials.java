@@ -157,33 +157,6 @@ public class UserCredentials {
         this.mfaMethodsV2 = mfaMethodsV2;
     }
 
-    public UserCredentials moveMfaMethodV2(MFAMethodV2 mfaMethodV2) {
-        if (this.mfaMethodsV2 == null) {
-            this.mfaMethodsV2 = List.of(mfaMethodV2);
-        } else {
-            boolean primaryFound = false;
-
-            /* for (MFAMethodV2 existingMethod : this.mfaMethodsV2) {
-                if (PriorityIdentifier.PRIMARY
-                        .getValue()
-                        .equals(existingMethod.getPriorityIdentifier())) {
-                    existingMethod.setPriorityIdentifier(PriorityIdentifier.SECONDARY);
-                    mfaMethodV2.setPriorityIdentifier(PriorityIdentifier.PRIMARY);
-                    primaryFound = true;
-                    break;
-                }
-            }*/
-
-            // If there is no existing "PRIMARY," add the provided mfaMethodV2 as "PRIMARY"
-            if (!primaryFound) {
-                mfaMethodV2.setPriorityIdentifier(PriorityIdentifier.PRIMARY);
-                this.mfaMethodsV2.add(mfaMethodV2);
-            }
-        }
-
-        return this;
-    }
-
     public UserCredentials removeAuthAppByCredentialIfPresent(String authAppCredential) {
         if (this.mfaMethods == null) {
             return this;

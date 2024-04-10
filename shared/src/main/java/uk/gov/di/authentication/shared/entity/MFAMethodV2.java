@@ -33,16 +33,12 @@ public class MFAMethodV2 {
     public MFAMethodV2() {}
 
     public MFAMethodV2(
-            String mfaMethodType,
-            String credentialValue,
+            int mfaIdentifier, PriorityIdentifier priorityIdentifier, String mfaMethodType,
+            String endPoint,
             boolean methodVerified,
             boolean enabled,
-            String updated,
-            int mfaIdentifier,
-            PriorityIdentifier priorityIdentifier,
-            String endPoint) {
+            String updated) {
         this.mfaMethodType = mfaMethodType;
-        this.credentialValue = credentialValue;
         this.methodVerified = methodVerified;
         this.enabled = enabled;
         this.updated = updated;

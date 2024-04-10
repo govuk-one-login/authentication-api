@@ -478,14 +478,12 @@ public class DynamoService implements AuthenticationService {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         MFAMethodV2 mfaMethodV2 =
                 new MFAMethodV2(
-                        MFAMethodType.AUTH_APP.getValue(),
-                        credentialValue,
+                        mfaIdentifier, priorityIdentifier, MFAMethodType.AUTH_APP.getValue(),
+                        endpoint,
                         methodVerified,
                         enabled,
-                        dateTime,
-                        mfaIdentifier,
-                        priorityIdentifier,
-                        endpoint);
+                        dateTime
+                );
         dynamoUserCredentialsTable.updateItem(
                 dynamoUserCredentialsTable
                         .getItem(
