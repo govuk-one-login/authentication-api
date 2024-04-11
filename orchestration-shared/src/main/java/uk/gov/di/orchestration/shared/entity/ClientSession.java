@@ -30,9 +30,11 @@ public class ClientSession {
 
     @Expose private VtrList vtrList;
 
-    @Expose private boolean mfaRequired;
+    // ATO-98: This should only ever be null if a session was in progress during release.
+    @Expose private Boolean mfaRequired;
 
-    @Expose private boolean identityRequired;
+    // ATO-98: This should only ever be null if a session was in progress during release.
+    @Expose private Boolean identityRequired;
 
     @Expose private Subject docAppSubjectId;
 
