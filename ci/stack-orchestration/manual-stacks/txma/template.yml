@@ -98,8 +98,7 @@ Resources:
       Period: 60
       Statistic: Maximum
       AlarmActions:
-        - !ImportValue
-          'Fn::Sub': '${Environment}-orch-be-deploy-SlackEventsArn'
+        - !ImportValue '${Environment}-orch-be-deploy-SlackEventsArn'
 
   TxMADeadLetterQueueCloudWatchAlarm:
     Condition: TxMAIntegrationEnabled
@@ -118,8 +117,7 @@ Resources:
       Period: 60
       Statistic: Maximum
       AlarmActions:
-        - !ImportValue
-          'Fn::Sub': '${Environment}-orch-be-deploy-SlackEventsArn'
+        - !ImportValue '${Environment}-orch-be-deploy-SlackEventsArn'
 
   TxMASQSProducerAuditEventQueueEncryptionKey:
     Type: AWS::KMS::Key
