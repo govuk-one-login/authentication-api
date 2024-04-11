@@ -517,8 +517,14 @@ resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
 data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
   statement {
     actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
       "dynamodb:Get*",
-      "dynamodb:Scan*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
     ]
     effect = "Allow"
     principals {
