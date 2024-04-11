@@ -179,3 +179,9 @@ variable "client_registry_table_cross_account_access_enabled" {
   type        = bool
   description = "Whether the service should allow cross-account access to the client registry table"
 }
+
+variable "orch_privatesub_cidr_blocks" {
+  type        = list(string)
+  description = "Orchestration private subnet cidr blocks"
+  default     = []
+}
