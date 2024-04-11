@@ -7,7 +7,7 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v0.72.2
+    rev: v0.86.2
     hooks:
       - id: cfn-python-lint
         exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|.*.approved.json$
