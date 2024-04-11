@@ -159,6 +159,10 @@ public class ValidationHelper {
                 List.of(CodeRequestType.SMS_REGISTRATION, CodeRequestType.SMS_ACCOUNT_RECOVERY)
                         .contains(
                                 CodeRequestType.getCodeRequestType(notificationType, journeyType));
+        LOG.info("reduced lockout: {}", reducedLockout);
+        if (!reducedLockout) {
+            LOG.info("notificationType: {}, journeyType: {}", notificationType, journeyType);
+        }
         codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress, reducedLockout);
 
         if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries) {
