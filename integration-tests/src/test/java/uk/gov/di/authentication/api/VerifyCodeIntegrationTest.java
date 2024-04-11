@@ -178,7 +178,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456", JourneyType.PASSWORD_RESET);
 
@@ -205,7 +205,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
@@ -256,7 +256,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
 
@@ -282,7 +282,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(RESET_PASSWORD_WITH_CODE, "123456");
 
@@ -313,7 +313,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456", journeyType);
 

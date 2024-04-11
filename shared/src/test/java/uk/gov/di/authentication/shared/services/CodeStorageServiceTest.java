@@ -73,7 +73,7 @@ class CodeStorageServiceTest {
 
     @BeforeAll
     static void init() {
-        when(configurationService.getLockoutDuration()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getLockoutCountTTL()).thenReturn(CODE_EXPIRY_TIME);
     }
 
     @Test
@@ -330,7 +330,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(null);
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL, false);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -360,7 +360,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL, false);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(

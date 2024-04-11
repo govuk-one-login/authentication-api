@@ -215,6 +215,11 @@ variable "lockout_duration" {
   default = 900
 }
 
+variable "lockout_count_ttl" {
+  type    = number
+  default = 900
+}
+
 variable "reduced_lockout_duration" {
   type    = number
   default = 900
