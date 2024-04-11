@@ -362,6 +362,58 @@ resource "aws_kms_key" "doc_app_auth_signing_key" {
   customer_master_key_spec = "ECC_NIST_P256"
 
   tags = local.default_tags
+
+  policy = var.doc_app_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_doc_app_auth_signing_key_policy.json : data.aws_iam_policy_document.doc_app_auth_signing_key_policy.json
+}
+
+data "aws_iam_policy_document" "doc_app_auth_signing_key_policy" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "cross_account_doc_app_auth_signing_key_policy" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid    = "AllowOrchAccessToKmsDocAppSigningKey-${var.environment}"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
+    }
+  }
 }
 
 resource "aws_kms_alias" "doc_app_auth_signing_key_alias" {
@@ -581,22 +633,62 @@ resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "Allow IAM to manage this key",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        Action = [
-          "kms:*"
-        ],
-        Resource = "*"
-      }
+  policy                   = var.doc_app_cross_account_access_enabled ? data.aws_iam_policy_document.doc_app_credential_table_encryption_key_policy.json : data.aws_iam_policy_document.cross_account_doc_app_credential_table_encryption_key_policy.json
+  tags                     = local.default_tags
+}
+
+data "aws_iam_policy_document" "doc_app_credential_table_encryption_key_policy" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
     ]
-  })
-  tags = local.default_tags
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "cross_account_doc_app_credential_table_encryption_key_policy" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid    = "AllowOrchAccessToKmsDocAppSigningKey-${var.environment}"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
+    }
+  }
 }
 
 resource "aws_kms_key" "identity_credentials_table_encryption_key" {
