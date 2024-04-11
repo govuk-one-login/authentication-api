@@ -81,6 +81,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.identity_progress.method_trigger_value,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].integration_trigger_value : null,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].method_trigger_value : null,
+      local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].integration_trigger_value : null,
+      local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].method_trigger_value : null,
       local.account_modifiers_encryption_policy_arn,
     ]))
   }
@@ -105,6 +107,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.ipv-authorize,
     module.doc-app-authorize,
     module.orch_auth_code,
+    module.check_reauth_user,
   ]
 }
 
@@ -203,6 +206,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.processing-identity,
     module.doc-app-authorize,
     module.orch_auth_code,
+    module.check_reauth_user,
     aws_api_gateway_deployment.deployment,
   ]
 }
