@@ -19,12 +19,30 @@ public class MfaHelper {
 
     private MfaHelper() {}
 
+    public static boolean mfaRequired(Map<String, List<String>> authRequestParams) {
+        AuthenticationRequest authRequest;
+        try {
+            authRequest = AuthenticationRequest.parse(authRequestParams);
+        } catch (ParseException e) {
+            throw new RuntimeException();
+        }
+        List<String> vtr = authRequest.getCustomParameter("vtr");
+        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
+
+        return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
+    }
+
     public static UserMfaDetail getUserMFADetail(
             UserContext userContext,
             UserCredentials userCredentials,
             String phoneNumber,
             boolean isPhoneNumberVerified) {
-        var isMfaRequired = userContext.getClientSession().getMfaRequired();
+        var clientSession = userContext.getClientSession();
+        var mfaRequired = clientSession.getMfaRequired();
+        // ATO-98: This should only ever be null if a session was in progress during release.
+        boolean isMfaRequired = mfaRequired != null
+                ? mfaRequired
+                : mfaRequired(userContext.getClientSession().getAuthRequestParams());
         var mfaMethodVerified = isPhoneNumberVerified;
 
         var mfaMethod = getPrimaryMFAMethod(userCredentials);
