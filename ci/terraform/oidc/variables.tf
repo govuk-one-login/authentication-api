@@ -522,13 +522,24 @@ variable "orch_frontend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "orch_backend_api_gateway_integration_enabled" {
-  description = "Flag to enable API Gateway integration with the Orchestration backend"
+variable "orch_openid_configuration_enabled" {
+  description = "Flag to enable routing openid configuration traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_doc_app_callback_enabled" {
+  description = "Flag to enable routing doc app callback traffic to the orchestration account"
   type        = bool
   default     = false
 }
 
 variable "orch_openid_configuration_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_doc_app_callback_name" {
   type    = string
   default = ""
 }

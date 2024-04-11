@@ -33,7 +33,6 @@ orch_client_id                     = "orchestrationAuth"
 orch_redirect_uri                  = "https://oidc.build.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
-orch_backend_api_gateway_integration_enabled = false
-orch_openid_configuration_name               = "build-orch-be-deploy-OpenIdConfigurationFunction-EROoeGPLtVmV"
+orch_openid_configuration_name = "build-orch-be-deploy-OpenIdConfigurationFunction-EROoeGPLtVmV"
 
 orch_account_id = "767397776536"

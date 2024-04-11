@@ -211,6 +211,10 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   tags = local.default_tags
 }
 
+data "aws_kms_alias" "dynamo_amazon_managed" {
+  name = "alias/aws/dynamodb"
+}
+
 resource "aws_dynamodb_table" "doc_app_credential_table" {
   name         = "${var.environment}-doc-app-credential"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
@@ -229,7 +233,8 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = var.doc_app_cross_account_access_enabled ? aws_kms_key.doc_app_credential_table_encryption_key.arn : data.aws_kms_alias.dynamo_amazon_managed.target_key_arn
   }
 
   lifecycle {
@@ -242,6 +247,32 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
   }
 
   tags = local.default_tags
+}
+
+resource "aws_dynamodb_resource_policy" "doc_app_credential_table_policy" {
+  count        = var.doc_app_cross_account_access_enabled ? 1 : 0
+  resource_arn = aws_dynamodb_table.doc_app_credential_table.arn
+  policy       = data.aws_iam_policy_document.cross_account_doc_app_credential_table_policy.json
+}
+
+data "aws_iam_policy_document" "cross_account_doc_app_credential_table_policy" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    principals {
+      identifiers = [var.orchestration_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
 }
 
 resource "aws_dynamodb_table" "common_passwords_table" {

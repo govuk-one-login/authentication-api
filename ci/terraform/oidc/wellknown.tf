@@ -9,8 +9,8 @@ module "openid_configuration_role" {
 module "openid_configuration_discovery" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = var.orch_backend_api_gateway_integration_enabled ? "openid-configuration-auth" : "openid-configuration"
-  path_part       = var.orch_backend_api_gateway_integration_enabled ? "openid-configuration-auth" : "openid-configuration"
+  endpoint_name   = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
+  path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
   endpoint_method = ["GET"]
   environment     = var.environment
 

@@ -14,7 +14,6 @@ remove_retry_limit_registration_email_code = true
 lockout_duration                           = 60
 reduced_lockout_duration                   = 30
 
-orch_backend_api_gateway_integration_enabled = false
-orch_openid_configuration_name               = "staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl"
+orch_openid_configuration_name = "staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl"
 
 orch_account_id = "590183975515"
