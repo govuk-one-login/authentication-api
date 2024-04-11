@@ -95,13 +95,15 @@ public class CodeStorageService {
         String key = prefix + encodedHash;
         Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
+        long expiry = reducedLockout
+                ? configurationService.getReducedLockoutDuration()
+                : configurationService.getLockoutDuration();
+        LOG.info("lockout expiry: {}", expiry);
         try {
             redisConnectionService.saveWithExpiry(
                     key,
                     String.valueOf(newCount),
-                    reducedLockout
-                            ? configurationService.getReducedLockoutDuration()
-                            : configurationService.getLockoutDuration());
+                    expiry);
             LOG.info("count increased from: {} to: {}", count, newCount);
         } catch (Exception e) {
             throw new RuntimeException(e);
