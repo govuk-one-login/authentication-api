@@ -39,11 +39,11 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   lifecycle {
@@ -123,11 +123,11 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   lifecycle {
@@ -164,7 +164,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   server_side_encryption {
@@ -193,11 +193,11 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   lifecycle {
@@ -226,11 +226,11 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   lifecycle {
@@ -259,11 +259,11 @@ resource "aws_dynamodb_table" "common_passwords_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   lifecycle {
@@ -287,7 +287,7 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
   }
 
   point_in_time_recovery {
-    enabled = !var.use_localstack
+    enabled = true
   }
 
   server_side_encryption {
