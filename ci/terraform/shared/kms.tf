@@ -579,7 +579,7 @@ resource "aws_kms_key" "client_registry_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = data.aws_iam_policy_document.storage_token_signing_key_access_policy.json
+  policy                   = var.client_registry_table_cross_account_access_enabled ? data.aws_iam_policy_document.client_registry_table_encryption_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.client_registry_table_encryption_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -590,7 +590,22 @@ resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
   target_key_id = aws_kms_key.client_registry_table_encryption_key.key_id
 }
 
-data "aws_iam_policy_document" "storage_token_signing_key_access_policy" {
+data "aws_iam_policy_document" "client_registry_table_encryption_key_access_policy" {
+  statement {
+    sid    = "key-policy-dynamodb"
+    effect = "Allow"
+    actions = [
+      "kms:*",
+    ]
+    principals {
+      identifiers = [data.aws_caller_identity.current.account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "client_registry_table_encryption_key_access_policy_with_orch_access" {
   statement {
     sid    = "key-policy-dynamodb"
     effect = "Allow"
@@ -605,7 +620,7 @@ data "aws_iam_policy_document" "storage_token_signing_key_access_policy" {
   }
 
   statement {
-    sid    = "Allow Orch access to KMS storage client encryption key"
+    sid    = "Allow Orch access to KMS storage client registry encryption key"
     effect = "Allow"
 
     actions = [
