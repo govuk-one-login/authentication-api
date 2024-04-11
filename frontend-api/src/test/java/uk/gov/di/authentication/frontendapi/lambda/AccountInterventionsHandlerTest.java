@@ -194,7 +194,7 @@ public class AccountInterventionsHandlerTest {
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
         verify(cloudwatchMetricsService)
-                .incrementCounter("AISException", Map.of("Environment", "test-environment"));
+                .incrementCounter("AuthAISException", Map.of("Environment", "test-environment"));
         verify(cloudwatchMetricsService)
                 .incrementCounter("AuthAisErrorIgnored", Map.of("Environment", "test-environment"));
     }

@@ -190,7 +190,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private APIGatewayProxyResponseEvent handleErrorForAIS(
             UnsuccessfulAccountInterventionsResponseException e) {
         cloudwatchMetricsService.incrementCounter(
-                configurationService.getAccountInterventionsErrorMetricName(),
+                "Auth" + configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of("Environment", configurationService.getEnvironment()));
         LOG.error(
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
