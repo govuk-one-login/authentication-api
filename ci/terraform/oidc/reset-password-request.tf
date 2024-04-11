@@ -29,6 +29,7 @@ module "reset-password-request" {
     FRONTEND_BASE_URL    = "https://${local.frontend_fqdn}/"
     RESET_PASSWORD_ROUTE = var.reset_password_route
     LOCKOUT_DURATION     = var.lockout_duration
+    LOCKOUT_COUNT_TTL    = var.lockout_count_ttl
     SQS_ENDPOINT         = var.use_localstack ? "http://localhost:45678/" : null
     EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url

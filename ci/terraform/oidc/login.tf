@@ -40,6 +40,7 @@ module "login" {
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     INTERNAl_SECTOR_URI      = var.internal_sector_uri
     LOCKOUT_DURATION         = var.lockout_duration
+    LOCKOUT_COUNT_TTL        = var.lockout_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 

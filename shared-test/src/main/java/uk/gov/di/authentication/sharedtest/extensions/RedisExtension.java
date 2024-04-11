@@ -256,8 +256,8 @@ public class RedisExtension
         codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
     }
 
-    public void increaseMfaCodeAttemptsCount(String email, boolean reducedLockout) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email, reducedLockout);
+    public void increaseMfaCodeAttemptsCount(String email) {
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email);
     }
 
     public void addToRedis(String key, String value, Long expiry) {

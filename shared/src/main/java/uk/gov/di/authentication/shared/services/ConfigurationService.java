@@ -80,6 +80,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
+    public long getLockoutCountTTL() {
+        return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_COUNT_TTL", "900"));
+    }
+
     public long getLockoutDuration() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
     }
