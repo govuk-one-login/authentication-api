@@ -158,9 +158,11 @@ public class StartService {
             consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             uplift = UpliftHelper.upliftRequired(userContext);
             var clientRegistry = userContext.getClient().orElseThrow();
+            var clientSession = userContext.getClientSession();
             identityRequired =
                     IdentityHelper.identityRequired(
-                            userContext.getClientSession().getIdentityRequired(),
+                            clientSession.getIdentityRequired(),
+                            clientSession.getAuthRequestParams(),
                             clientRegistry.isIdentityVerificationSupported(),
                             identityEnabled);
         }

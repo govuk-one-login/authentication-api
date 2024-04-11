@@ -4,12 +4,12 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,8 +25,8 @@ public class ClientSessionServiceIntegrationTest {
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     private static final String CLIENT_NAME = "CLIENT_NAME";
-    private static List<VectorOfTrust> VTR_LIST =
-            List.of(VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE));
+    private static VtrList VTR_LIST =
+            VtrList.of(VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE));
     private static final Subject SUBJECT_ID = new Subject("SUBJECT_ID");
     private static final String ID_TOKEN_HINT = "TOKEN_ID_HINT";
 

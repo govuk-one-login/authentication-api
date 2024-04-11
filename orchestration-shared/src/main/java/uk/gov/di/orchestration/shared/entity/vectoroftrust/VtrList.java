@@ -162,8 +162,8 @@ public class VtrList {
      * @return The candidate VoTs from the VTR. If any VoTs don't require identification, then one
      *     with the lowest Credential Trust Level is returned as a singleton. If all require
      *     identification, of those that have the lowest Credential Trust Level, for each kind of
-     *     identification (i.g. standard vs hmrc) the ones with the lowest Level of Confidence
-     *     are returned.
+     *     identification (i.g. standard vs hmrc) the ones with the lowest Level of Confidence are
+     *     returned.
      */
     public List<VectorOfTrust> getSelection() {
         return this.selection;

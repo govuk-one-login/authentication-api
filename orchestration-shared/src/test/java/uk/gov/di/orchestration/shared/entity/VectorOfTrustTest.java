@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevelCode.C1;
@@ -45,6 +46,7 @@ class VectorOfTrustTest {
     private static VectorOfTrust votP2ClCm;
     private static VectorOfTrust votP2C2;
     private static VectorOfTrust votPCL250C2;
+    private static VectorOfTrust votP2Cl;
 
     @BeforeAll
     static void Setup() {
@@ -60,6 +62,7 @@ class VectorOfTrustTest {
         votP2ClCm = VectorOfTrust.of(CL_CM, P2);
         votP2C2 = VectorOfTrust.of(C2, P2);
         votPCL250C2 = VectorOfTrust.of(C2, PCL250);
+        votP2Cl = VectorOfTrust.of(CL, P2);
     }
 
     @Test
@@ -328,10 +331,14 @@ class VectorOfTrustTest {
 
     @ParameterizedTest
     @MethodSource("deserializeTestCases")
-    public void ShouldDeserializeCorrectly(String json, VectorOfTrust expectedVot) {
+    void ShouldDeserializeCorrectly(String json, VectorOfTrust expectedVot) {
         var actualVot = gson.fromJson(json, VectorOfTrust.class);
 
         assertThat(actualVot, is(equalTo(expectedVot)));
+        // ATO-98: This should only ever be null if a session was in progress during release.
+        assertThat(actualVot.getCredentialTrustLevelCode(), is(notNullValue()));
+        // ATO-98: This should only ever be null if a session was in progress during release.
+        assertThat(actualVot.getLevelOfConfidenceCode(), is(notNullValue()));
     }
 
     static Stream<Arguments> deserializeTestCases() {
@@ -365,6 +372,15 @@ class VectorOfTrustTest {
                             "levelOfConfidence": "NONE"
                         }
                         """,
-                        votP0Cl));
+                        votP0Cl),
+                arguments(
+                        """
+                        {
+                            "credentialTrustLevel": "LOW_LEVEL",
+                            "levelOfConfidence": "MEDIUM_LEVEL"
+                        }
+                        """,
+                        votP2Cl) // ATO-98: Simulate a session in progress during release.
+                );
     }
 }

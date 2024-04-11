@@ -18,10 +18,10 @@ import static java.text.MessageFormat.format;
  */
 public class VectorOfTrust implements Comparable<VectorOfTrust> {
 
-    @Expose private final CredentialTrustLevelCode credentialTrustLevelCode;
+    @Expose private CredentialTrustLevelCode credentialTrustLevelCode;
     @Expose private final CredentialTrustLevel credentialTrustLevel;
 
-    @Expose private final LevelOfConfidenceCode levelOfConfidenceCode;
+    @Expose private LevelOfConfidenceCode levelOfConfidenceCode;
     @Expose private final LevelOfConfidence levelOfConfidence;
 
     public static final VectorOfTrust DEFAULT = VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL);
@@ -81,10 +81,18 @@ public class VectorOfTrust implements Comparable<VectorOfTrust> {
     }
 
     public CredentialTrustLevelCode getCredentialTrustLevelCode() {
+        // ATO-98: This should only ever be null if a session was in progress during release.
+        if (credentialTrustLevelCode == null) {
+            credentialTrustLevelCode = credentialTrustLevel.getDefaultCode();
+        }
         return credentialTrustLevelCode;
     }
 
     public LevelOfConfidenceCode getLevelOfConfidenceCode() {
+        // ATO-98: This should only ever be null if a session was in progress during release.
+        if (levelOfConfidenceCode == null) {
+            levelOfConfidenceCode = levelOfConfidence.getDefaultCode();
+        }
         return levelOfConfidenceCode;
     }
 
@@ -106,7 +114,8 @@ public class VectorOfTrust implements Comparable<VectorOfTrust> {
 
     @Override
     public String toString() {
-        return Stream.concat(levelOfConfidenceCode.stream(), credentialTrustLevelCode.stream())
+        return Stream.concat(
+                        getLevelOfConfidenceCode().stream(), getCredentialTrustLevelCode().stream())
                 .map(Enum::toString)
                 .collect(Collectors.joining("."));
     }

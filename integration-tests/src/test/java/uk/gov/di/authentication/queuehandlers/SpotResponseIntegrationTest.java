@@ -12,8 +12,8 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.sharedtest.basetest.IntegrationTest;
 import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.sharedtest.basetest.IntegrationTest;
 
 import java.util.Arrays;
 import java.util.Collections;

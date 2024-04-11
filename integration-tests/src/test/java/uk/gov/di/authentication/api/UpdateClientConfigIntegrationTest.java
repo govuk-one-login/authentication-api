@@ -6,10 +6,10 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -83,8 +83,8 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         updateRequest.setClientType(expectedClientType);
         var expectedAcceptedLevelsOfConfidence =
                 List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue());
+                        LevelOfConfidence.MEDIUM_LEVEL.toString(),
+                        LevelOfConfidence.HMRC200.toString());
         updateRequest.setClientLoCs(expectedAcceptedLevelsOfConfidence);
         var expectedBackchannelLogoutUri = "https://api.example.com/backchannel/logout";
         updateRequest.setBackChannelLogoutUri(expectedBackchannelLogoutUri);

@@ -183,12 +183,9 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest().toParameters());
-        when(clientSession.getMfaRequired())
-                .thenReturn(false);
-        when(clientSession.getMfaRequired())
-                .thenReturn(false);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getMfaRequired()).thenReturn(false);
+        when(clientSession.getMfaRequired()).thenReturn(false);
         var vot =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("P0.Cl")));
@@ -470,7 +467,6 @@ class LoginHandlerTest {
         when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(clientSession.getMfaRequired()).thenReturn(true);
-
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

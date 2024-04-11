@@ -15,9 +15,11 @@ public class ClientSession {
 
     @Expose private VectorOfTrust effectiveVectorOfTrust;
 
-    @Expose private boolean mfaRequired;
+    // ATO-98: This should only ever be null if a session was in progress during release.
+    @Expose private Boolean mfaRequired;
 
-    @Expose private boolean identityRequired;
+    // ATO-98: This should only ever be null if a session was in progress during release.
+    @Expose private Boolean identityRequired;
 
     @Expose private Subject docAppSubjectId;
 
@@ -59,11 +61,11 @@ public class ClientSession {
         return clientName;
     }
 
-    public boolean getMfaRequired() {
+    public Boolean getMfaRequired() {
         return mfaRequired;
     }
 
-    public boolean getIdentityRequired() {
+    public Boolean getIdentityRequired() {
         return identityRequired;
     }
 }
