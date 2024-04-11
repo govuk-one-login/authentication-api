@@ -193,6 +193,10 @@ public class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        verify(cloudwatchMetricsService)
+                .incrementCounter("AISException", Map.of("Environment", "test-environment"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter("AuthAisErrorIgnored", Map.of("Environment", "test-environment"));
     }
 
     @Test

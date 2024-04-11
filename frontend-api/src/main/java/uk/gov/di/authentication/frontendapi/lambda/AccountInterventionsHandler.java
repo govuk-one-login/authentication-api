@@ -183,6 +183,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 || !configurationService.accountInterventionsServiceActionEnabled()) {
             try {
                 LOG.error("Swallowing error and returning default account interventions response");
+                cloudwatchMetricsService.incrementCounter(
+                        "AuthAisErrorIgnored",
+                        Map.of("Environment", configurationService.getEnvironment()));
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException ex) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
