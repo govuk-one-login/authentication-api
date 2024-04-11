@@ -90,6 +90,11 @@ Globals:
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
 
 Resources:
+  MainKmskeyAlias:
+    Type: 'AWS::KMS::Alias'
+    Properties:
+      AliasName: "alias/mainKmsKey"
+      TargetKeyId: !Ref MainKmsKey
   MainKmsKey:
     Type: AWS::KMS::Key
     Properties:
@@ -224,8 +229,70 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  SessionFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    IgnoreGlobals:
+      - SnapStart
+    Properties:
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.SessionHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          OIDC_API_BASE_URL: !Sub https://oidc.${Environment}.account.gov.uk/
+          ENVIRONMENT: !Sub ${Environment}
+          FRONTEND_BASE_URL: !Sub https://signin.${Environment}.account.gov.uk/
+          REDIS_KEY: session
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_173
+      Policies:
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - "arn:aws:ssm:eu-west-2:816047645251:parameter/dev-session-redis-master-host"
+              - "arn:aws:ssm:eu-west-2:816047645251:parameter/dev-session-redis-tls"
+              - "arn:aws:ssm:eu-west-2:816047645251:parameter/dev-session-redis-port"
+              - "arn:aws:ssm:eu-west-2:816047645251:parameter/dev-session-redis-password"
+          - Sid: AllowDecryptOfParameters
+            Effect: "Allow"
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+          Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - CidrIp: 10.0.0.0/16
+          Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+
   SlackEvents:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub ${Environment}-slack-events
-      KmsMasterKeyId: !Ref MainKmsKey
+      KmsMasterKeyId: !GetAtt MainKmsKey.Arn

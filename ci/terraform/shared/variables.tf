@@ -167,3 +167,8 @@ variable "dlq_alarm_threshold" {
   type        = number
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
+
+variable "orch_privatesub_cidr_blocks" {
+  type    = string
+  default = "Orchestration private subnet cidr blocks"
+}
