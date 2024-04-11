@@ -159,6 +159,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         response.state().suspended(),
                         response.state().reproveIdentity(),
                         response.intervention().appliedAt());
+        incrementResultMetric(responseFromApi);
         if (!configurationService.accountInterventionsServiceActionEnabled()) {
             LOG.info(
                     String.format(
@@ -168,6 +169,22 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         } else {
             return responseFromApi;
         }
+    }
+
+    private void incrementResultMetric(AccountInterventionsResponse response) {
+        cloudwatchMetricsService.incrementCounter(
+                "AuthAisResult",
+                Map.of(
+                        "Environment",
+                        configurationService.getEnvironment(),
+                        "blocked",
+                        String.valueOf(response.blocked()),
+                        "suspended",
+                        String.valueOf(response.temporarilySuspended()),
+                        "resetPassword",
+                        String.valueOf(response.passwordResetRequired()),
+                        "reproveIdentity",
+                        String.valueOf(response.reproveIdentity())));
     }
 
     private APIGatewayProxyResponseEvent handleErrorForAIS(
