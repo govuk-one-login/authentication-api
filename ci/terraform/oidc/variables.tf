@@ -599,10 +599,10 @@ variable "cmk_for_back_channel_logout_enabled" {
   description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
 }
 
-variable "storage_token_kms_cross_account_access_enabled" {
+variable "kms_cross_account_access_enabled" {
   default     = false
   type        = bool
-  description = "Whether the service should allow cross-account access by the orchestration account to the storage token signing key"
+  description = "Whether the service should allow cross-account access by the orchestration account to kms"
 }
 
 locals {
