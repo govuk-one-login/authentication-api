@@ -208,6 +208,23 @@ data "aws_iam_policy_document" "dynamo_doc_app_write_access_policy_document" {
       data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToDocAppCredentialTableKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [
+      local.doc_app_credential_encryption_key_arn
+    ]
+  }
 }
 
 data "aws_iam_policy_document" "dynamo_doc_app_read_access_policy_document" {
@@ -224,6 +241,23 @@ data "aws_iam_policy_document" "dynamo_doc_app_read_access_policy_document" {
     ]
     resources = [
       data.aws_dynamodb_table.doc_app_cri_credential_table.arn,
+    ]
+  }
+
+  statement {
+    sid    = "AllowAccessToDocAppCredentialTableKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [
+      local.doc_app_credential_encryption_key_arn
     ]
   }
 }

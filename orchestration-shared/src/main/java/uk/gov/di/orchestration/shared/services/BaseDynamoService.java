@@ -22,6 +22,9 @@ public class BaseDynamoService<T> {
     public BaseDynamoService(
             Class<T> objectClass, String table, ConfigurationService configurationService) {
         var tableName = configurationService.getEnvironment() + "-" + table;
+        if (configurationService.getDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getDynamoArnPrefix() + tableName;
+        }
 
         client = createDynamoClient(configurationService);
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();

@@ -221,6 +221,10 @@ output "doc_app_credential_encryption_policy_arn" {
   value = aws_iam_policy.doc_app_credential_encryption_key_kms_policy.arn
 }
 
+output "doc_app_credential_encryption_key_arn" {
+  value = aws_kms_key.doc_app_credential_table_encryption_key.arn
+}
+
 output "user_credentials_encryption_policy_arn" {
   value = aws_iam_policy.user_credentials_encryption_key_kms_policy.arn
 }

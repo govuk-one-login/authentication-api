@@ -179,3 +179,9 @@ variable "client_registry_table_cross_account_access_enabled" {
   type        = bool
   description = "Whether the service should allow cross-account access to the client registry table"
 }
+
+variable "doc_app_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag to control cross-account access to the doc app signing key"
+}
