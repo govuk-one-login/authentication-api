@@ -22,16 +22,13 @@ import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -79,147 +76,103 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     public Void handleRequest(SQSEvent event, Context context) {
         return segmentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
-                () -> notifcationRequestHandler(event, context));
+                () -> notificationRequestHandler(event, context));
     }
 
-    public Void notifcationRequestHandler(SQSEvent event, Context context) {
+    public Void notificationRequestHandler(SQSEvent event, Context context) {
 
         if (event != null && event.getRecords() != null) {
             LOG.info("Processing Notification batch size: {}", event.getRecords().size());
         }
         for (SQSMessage msg : event.getRecords()) {
             LOG.info("Processing Notification message with id: {}", msg.getMessageId());
-            try {
-                NotifyRequest notifyRequest =
-                        objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                try {
-                    Map<String, Object> notifyPersonalisation = new HashMap<>();
-                    switch (notifyRequest.getNotificationType()) {
-                        case ACCOUNT_CREATED_CONFIRMATION:
-                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                            notifyPersonalisation.put(
-                                    "gov-uk-accounts-url",
-                                    configurationService.getGovUKAccountsURL().toString());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    ACCOUNT_CREATED_CONFIRMATION,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case VERIFY_EMAIL:
-                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                            notifyPersonalisation.put(
-                                    "email-address", notifyRequest.getDestination());
-                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    VERIFY_EMAIL,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case VERIFY_PHONE_NUMBER:
-                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                            notificationService.sendText(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    VERIFY_PHONE_NUMBER,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case MFA_SMS:
-                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                            notificationService.sendText(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    MFA_SMS,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case PASSWORD_RESET_CONFIRMATION:
-                            Map<String, Object> passwordResetConfirmationPersonalisation =
-                                    new HashMap<>();
-                            passwordResetConfirmationPersonalisation.put(
-                                    "contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    passwordResetConfirmationPersonalisation,
-                                    PASSWORD_RESET_CONFIRMATION,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case PASSWORD_RESET_CONFIRMATION_SMS:
-                            Map<String, Object> passwordResetConfirmationSmsPersonalisation =
-                                    Map.of("contact-us-link", buildContactUsUrl());
-                            notificationService.sendText(
-                                    notifyRequest.getDestination(),
-                                    passwordResetConfirmationSmsPersonalisation,
-                                    PASSWORD_RESET_CONFIRMATION_SMS,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case RESET_PASSWORD_WITH_CODE:
-                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                            notifyPersonalisation.put(
-                                    "email-address", notifyRequest.getDestination());
-                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    RESET_PASSWORD_WITH_CODE,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
-                            notifyPersonalisation.put(
-                                    "email-address", notifyRequest.getDestination());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION:
-                            Map<String, Object>
-                                    changeHowGetSecurityCodesConfirmationPersonalisation =
-                                            new HashMap<>();
-                            changeHowGetSecurityCodesConfirmationPersonalisation.put(
-                                    "contact-us-link", buildContactUsUrl());
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    changeHowGetSecurityCodesConfirmationPersonalisation,
-                                    CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
-                                    notifyRequest.getLanguage());
-                            break;
-                    }
-                    writeTestClientOtpToS3(
-                            notifyRequest.getNotificationType(),
-                            notifyRequest.getCode(),
-                            notifyRequest.getDestination());
-                } catch (NotificationClientException e) {
-                    LOG.error(
-                            "Error sending with Notify using NotificationType: {}",
-                            notifyRequest.getNotificationType());
-
-                    if (isPhoneNotification(notifyRequest.getNotificationType())) {
-                        String countryCode =
-                                PhoneNumberHelper.maybeGetCountry(notifyRequest.getDestination())
-                                        .orElse("unable to parse country");
-                        throw new RuntimeException(
-                                String.format(
-                                        "Error sending Notify SMS with NotificationType: %s and country code: %s",
-                                        notifyRequest.getNotificationType(), countryCode),
-                                e);
-                    }
-
-                    throw new RuntimeException(
-                            String.format(
-                                    "Error sending Notify email with NotificationType: %s",
-                                    notifyRequest.getNotificationType()),
-                            e);
-                }
-            } catch (JsonException e) {
-                LOG.error("Error when mapping message from queue to a NotifyRequest");
-                throw new RuntimeException(
-                        "Error when mapping message from queue to a NotifyRequest");
-            }
+            var request = parseNotifyRequest(msg);
+            sendNotifyMessage(request);
         }
         return null;
+    }
+
+    private NotifyRequest parseNotifyRequest(SQSMessage msg) {
+        try {
+            return objectMapper.readValue(msg.getBody(), NotifyRequest.class);
+        } catch (JsonException e) {
+            LOG.error("Error when mapping message from queue to a NotifyRequest");
+            throw new RuntimeException("Error when mapping message from queue to a NotifyRequest");
+        }
+    }
+
+    private Map<String, Object> getPersonalisation(NotifyRequest notifyRequest) {
+        return switch (notifyRequest.getNotificationType()) {
+            case ACCOUNT_CREATED_CONFIRMATION -> Map.of(
+                    "contact-us-link",
+                    buildContactUsUrl(),
+                    "gov-uk-accounts-url",
+                    configurationService.getGovUKAccountsURL().toString());
+            case VERIFY_EMAIL, RESET_PASSWORD_WITH_CODE -> Map.of(
+                    "validation-code", notifyRequest.getCode(),
+                    "email-address", notifyRequest.getDestination(),
+                    "contact-us-link", buildContactUsUrl());
+            case VERIFY_PHONE_NUMBER, MFA_SMS -> Map.of("validation-code", notifyRequest.getCode());
+            case PASSWORD_RESET_CONFIRMATION,
+                    CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
+                    PASSWORD_RESET_CONFIRMATION_SMS -> Map.of(
+                    "contact-us-link", buildContactUsUrl());
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> Map.of(
+                    "validation-code",
+                    notifyRequest.getCode(),
+                    "email-address",
+                    notifyRequest.getDestination());
+            case TERMS_AND_CONDITIONS_BULK_EMAIL -> Collections.emptyMap();
+        };
+    }
+
+    private void sendNotifyMessage(NotifyRequest request) {
+
+        if (request.getNotificationType() == TERMS_AND_CONDITIONS_BULK_EMAIL) {
+            LOG.info("Not dispatching terms and conditions bulk email.");
+            return;
+        }
+
+        try {
+            var personalisation = getPersonalisation(request);
+
+            if (request.getNotificationType().isEmail()) {
+                notificationService.sendEmail(
+                        request.getDestination(),
+                        personalisation,
+                        request.getNotificationType(),
+                        request.getLanguage());
+            } else {
+                notificationService.sendText(
+                        request.getDestination(),
+                        personalisation,
+                        request.getNotificationType(),
+                        request.getLanguage());
+            }
+            writeTestClientOtpToS3(
+                    request.getNotificationType(), request.getCode(), request.getDestination());
+        } catch (NotificationClientException e) {
+            LOG.error(
+                    "Error sending with Notify using NotificationType: {}",
+                    request.getNotificationType());
+
+            if (isPhoneNotification(request.getNotificationType())) {
+                String countryCode =
+                        PhoneNumberHelper.maybeGetCountry(request.getDestination())
+                                .orElse("unable to parse country");
+                throw new RuntimeException(
+                        String.format(
+                                "Error sending Notify SMS with NotificationType: %s and country code: %s",
+                                request.getNotificationType(), countryCode),
+                        e);
+            }
+
+            throw new RuntimeException(
+                    String.format(
+                            "Error sending Notify email with NotificationType: %s",
+                            request.getNotificationType()),
+                    e);
+        }
     }
 
     private boolean isPhoneNotification(NotificationType notificationType) {

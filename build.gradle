@@ -14,7 +14,7 @@ plugins {
     id "com.avast.gradle.docker-compose" version "0.17.6"
     id "org.sonarqube" version "5.0.0.4638"
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.0.10'
+    id 'com.github.spotbugs' version '6.0.11'
 }
 
 apply plugin: "java"
@@ -23,7 +23,7 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.25.27",
+        aws_sdk_v2_version: "2.25.29",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.11.4",
         gson: "2.10.1",

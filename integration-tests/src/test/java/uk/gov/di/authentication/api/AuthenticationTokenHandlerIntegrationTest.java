@@ -220,11 +220,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         }
 
         @Override
-        public boolean isAuthOrchSplitEnabled() {
-            return true;
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

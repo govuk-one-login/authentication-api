@@ -162,8 +162,20 @@ variable "auth_check_account_id" {
   description = "Account id of the auth check aws account"
 }
 
+variable "orchestration_account_id" {
+  type        = string
+  description = "Account id of the corresponding Orchestration aws account"
+  default     = ""
+}
+
 variable "dlq_alarm_threshold" {
   default     = 1
   type        = number
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
+}
+
+variable "client_registry_table_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access to the client registry table"
 }

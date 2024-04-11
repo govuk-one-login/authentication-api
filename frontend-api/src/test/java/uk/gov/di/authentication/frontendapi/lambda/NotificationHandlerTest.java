@@ -30,12 +30,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -181,6 +183,22 @@ public class NotificationHandlerTest {
                         personalisation,
                         VERIFY_PHONE_NUMBER,
                         SupportedLanguage.EN);
+    }
+
+    @Test
+    void shouldNotSendAnythingWhenATermsAndConditionsBulkEmail() throws Json.JsonException {
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        TERMS_AND_CONDITIONS_BULK_EMAIL,
+                        "",
+                        SupportedLanguage.EN);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verifyNoInteractions(notificationService);
     }
 
     @Test

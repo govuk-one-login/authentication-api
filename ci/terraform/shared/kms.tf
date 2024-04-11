@@ -579,22 +579,65 @@ resource "aws_kms_key" "client_registry_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "key-policy-dynamodb",
-    Statement = [
-      {
-        Sid       = "Allow IAM to manage this key",
-        Effect    = "Allow",
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        Action = [
-          "kms:*"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
+  policy                   = var.client_registry_table_cross_account_access_enabled ? data.aws_iam_policy_document.client_registry_table_encryption_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.client_registry_table_encryption_key_access_policy.json
+
   tags = local.default_tags
+}
+
+
+resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
+  name          = "alias/${var.environment}-client-registry-table-encryption-key"
+  target_key_id = aws_kms_key.client_registry_table_encryption_key.key_id
+}
+
+data "aws_iam_policy_document" "client_registry_table_encryption_key_access_policy" {
+  statement {
+    sid    = "key-policy-dynamodb"
+    effect = "Allow"
+    actions = [
+      "kms:*",
+    ]
+    principals {
+      identifiers = [data.aws_caller_identity.current.account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "client_registry_table_encryption_key_access_policy_with_orch_access" {
+  statement {
+    sid    = "key-policy-dynamodb"
+    effect = "Allow"
+    actions = [
+      "kms:*",
+    ]
+    principals {
+      identifiers = [data.aws_caller_identity.current.account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "Allow Orch access to KMS storage client registry encryption key"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = [var.orchestration_account_id]
+    }
+  }
 }
 
 resource "aws_kms_key" "user_profile_table_encryption_key" {
