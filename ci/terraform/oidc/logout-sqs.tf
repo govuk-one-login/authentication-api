@@ -8,8 +8,8 @@ resource "aws_sqs_queue" "back_channel_logout_queue" {
     maxReceiveCount     = 3
   })
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = var.cmk_for_back_channel_logout_enabled ? aws_kms_key.back_channel_logout_queue_encryption_key.arn : "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
 
   tags = local.default_tags
 }

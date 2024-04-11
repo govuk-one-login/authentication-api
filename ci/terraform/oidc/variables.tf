@@ -582,6 +582,12 @@ variable "orch_account_id" {
   default = ""
 }
 
+variable "cmk_for_back_channel_logout_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
+}
+
 variable "storage_token_kms_cross_account_access_enabled" {
   default     = false
   type        = bool
