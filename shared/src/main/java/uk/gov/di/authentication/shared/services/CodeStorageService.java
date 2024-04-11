@@ -98,7 +98,7 @@ public class CodeStorageService {
         long expiry = reducedLockout
                 ? configurationService.getReducedLockoutDuration()
                 : configurationService.getLockoutDuration();
-        LOG.info("lockout expiry: {}", expiry);
+        LOG.info("lockout expiry: {} for key: {}", expiry, key);
         try {
             redisConnectionService.saveWithExpiry(
                     key,
