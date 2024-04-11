@@ -63,3 +63,5 @@ orch_backend_api_gateway_integration_enabled = true
 orch_openid_configuration_name               = "dev-orch-be-deploy-OpenIdConfigurationFunction-5vYKOtKeTBRw"
 
 orch_account_id = "816047645251"
+
+cmk_for_back_channel_logout_enabled = true

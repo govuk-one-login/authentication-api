@@ -582,6 +582,12 @@ variable "orch_account_id" {
   default = ""
 }
 
+variable "cmk_for_back_channel_logout_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
