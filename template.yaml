@@ -29,7 +29,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "aqyf5d32s2"
       authAccountId: "761723964695"
-      serviceDomain: dev.account.gov.uk
+      serviceDomain: sandpit.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
     build:
