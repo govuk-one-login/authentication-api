@@ -4,4 +4,3 @@ di_tools_signing_profile_version_arn = "arn:aws:signer:eu-west-2:114407264696:/s
 tools_account_id                     = 706615647326
 orchestration_account_id             = 058264132019
 dlq_alarm_threshold                  = 999999
-orchestration_account_id             = "058264132019"

@@ -185,3 +185,9 @@ variable "back_channel_logout_cross_account_access_enabled" {
   type        = bool
   description = "Whether the service should allow cross-account access by orchestration to the back channel logout queue"
 }
+
+variable "kms_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access by the orchestration account to kms"
+}

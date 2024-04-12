@@ -58,3 +58,4 @@ enforce_code_signing     = false
 orchestration_account_id = 816047645251
 
 back_channel_logout_cross_account_access_enabled = true
+kms_cross_account_access_enabled                 = true

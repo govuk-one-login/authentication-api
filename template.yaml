@@ -31,22 +31,37 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "aqyf5d32s2"
       authAccountId: "761723964695"
+      serviceDomain: dev.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
       authAccountId: "761723964695"
+      serviceDomain: build.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
       authAccountId: "758531536632"
+      serviceDomain: staging.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
       authAccountId: "761723964695"
+      serviceDomain: integration.account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
       authAccountId: "172348255554"
+      serviceDomain: account.gov.uk
+      idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
+      backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
 
 Globals:
   Function:
@@ -71,8 +86,6 @@ Globals:
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
     MemorySize: 1536
     Timeout: 30
-    SnapStart:
-      ApplyOn: PublishedVersions
     Runtime: java17
     Architectures:
       - x86_64
@@ -88,6 +101,11 @@ Globals:
       - !Sub
         - '{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}'
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+    VpcConfig:
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
 Resources:
   MainKmsKey:
@@ -131,9 +149,13 @@ Resources:
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          OIDC_API_BASE_URL: !Sub https://oidc.${Environment}.account.gov.uk/
+          OIDC_API_BASE_URL:  !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ENVIRONMENT: !Sub ${Environment}
-          FRONTEND_BASE_URL: !Sub https://signin.${Environment}.account.gov.uk/
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -220,6 +242,118 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Ref OpenIdConfigurationFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  BackChannelLogoutRequestFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
+    DependsOn:
+      - BackChannelLogoutRequestFunctionLogGroup
+    Properties:
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          OIDC_API_BASE_URL: !Sub
+          - https://oidc.${ServiceDomain}/
+          - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+      Policies:
+        Statement:
+          - Sid: AllowIdTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  BackChannelLogoutRequestFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BackChannelLogoutRequestFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: sqs.amazonaws.com
+      SourceArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, backchannelLogoutQueueArn ]
+
+  BackChannelLogoutRequestFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-backchannel-logout-request-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  BackChannelLogoutRequestFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-backchannel-logout-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref BackChannelLogoutRequestFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-backchannel-logout-request-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  BackChannelLogoutRequestFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: BackChannelLogoutRequestFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: BackChannelLogoutRequestFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  BackChannelLogoutRequestFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref BackChannelLogoutRequestFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref BackChannelLogoutRequestFunction.Alias
             Period: 60
             Stat: Sum
             Unit: Count

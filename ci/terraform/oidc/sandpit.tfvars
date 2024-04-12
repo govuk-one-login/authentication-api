@@ -64,5 +64,5 @@ orch_openid_configuration_name               = "dev-orch-be-deploy-OpenIdConfigu
 
 orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true
-storage_token_kms_cross_account_access_enabled   = true
+kms_cross_account_access_enabled                 = true
 cmk_for_back_channel_logout_enabled              = true
