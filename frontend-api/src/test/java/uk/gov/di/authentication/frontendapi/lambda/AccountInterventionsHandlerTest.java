@@ -193,6 +193,10 @@ public class AccountInterventionsHandlerTest {
         var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        verify(cloudwatchMetricsService)
+                .incrementCounter("AuthAISException", Map.of("Environment", "test-environment"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter("AuthAisErrorIgnored", Map.of("Environment", "test-environment"));
     }
 
     @Test
@@ -299,6 +303,20 @@ public class AccountInterventionsHandlerTest {
                         "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
                         resetPassword, blocked, suspended, reproveIdentity, APPLIED_AT_TIMESTAMP),
                 result.getBody());
+        var expectedMetricDimensions =
+                Map.of(
+                        "Environment",
+                        TEST_ENVIRONMENT,
+                        "blocked",
+                        String.valueOf(blocked),
+                        "suspended",
+                        String.valueOf(suspended),
+                        "reproveIdentity",
+                        String.valueOf(reproveIdentity),
+                        "resetPassword",
+                        String.valueOf(resetPassword));
+        verify(cloudwatchMetricsService)
+                .incrementCounter("AuthAisResult", expectedMetricDimensions);
         verify(auditService)
                 .submitAuditEvent(
                         expectedEvent,

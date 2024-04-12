@@ -159,6 +159,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         response.state().suspended(),
                         response.state().reproveIdentity(),
                         response.intervention().appliedAt());
+        incrementResultMetric(responseFromApi);
         if (!configurationService.accountInterventionsServiceActionEnabled()) {
             LOG.info(
                     String.format(
@@ -170,10 +171,26 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         }
     }
 
+    private void incrementResultMetric(AccountInterventionsResponse response) {
+        cloudwatchMetricsService.incrementCounter(
+                "AuthAisResult",
+                Map.of(
+                        "Environment",
+                        configurationService.getEnvironment(),
+                        "blocked",
+                        String.valueOf(response.blocked()),
+                        "suspended",
+                        String.valueOf(response.temporarilySuspended()),
+                        "resetPassword",
+                        String.valueOf(response.passwordResetRequired()),
+                        "reproveIdentity",
+                        String.valueOf(response.reproveIdentity())));
+    }
+
     private APIGatewayProxyResponseEvent handleErrorForAIS(
             UnsuccessfulAccountInterventionsResponseException e) {
         cloudwatchMetricsService.incrementCounter(
-                configurationService.getAccountInterventionsErrorMetricName(),
+                "Auth" + configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of("Environment", configurationService.getEnvironment()));
         LOG.error(
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
@@ -183,6 +200,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 || !configurationService.accountInterventionsServiceActionEnabled()) {
             try {
                 LOG.error("Swallowing error and returning default account interventions response");
+                cloudwatchMetricsService.incrementCounter(
+                        "AuthAisErrorIgnored",
+                        Map.of("Environment", configurationService.getEnvironment()));
                 return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException ex) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
