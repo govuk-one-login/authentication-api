@@ -35,7 +35,8 @@ data "aws_iam_policy_document" "id_token_signing_key_rsa_access_policy_with_orch
     effect = "Allow"
 
     actions = [
-      "kms:GetPublicKey"
+      "kms:GetPublicKey",
+      "kms:Sign"
     ]
     resources = ["*"]
 
