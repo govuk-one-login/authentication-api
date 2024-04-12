@@ -79,7 +79,7 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   provisioned_concurrent_executions = local.authorizer_provisioned_concurrency
 
   lifecycle {
-    ignore_changes = [provisioned_concurrent_executions]
+    ignore_changes = [provisioned_concurrent_executions] # Ignoring as this is targeted by aws_app_autoscaling_target.lambda_target resource
   }
 
 }
