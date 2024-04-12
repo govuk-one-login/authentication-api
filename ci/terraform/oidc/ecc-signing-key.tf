@@ -4,7 +4,7 @@ resource "aws_kms_key" "storage_token_signing_key_ecc" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  policy = var.storage_token_kms_cross_account_access_enabled ? data.aws_iam_policy_document.storage_token_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.storage_token_signing_key_access_policy.json
+  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.storage_token_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.storage_token_signing_key_access_policy.json
 
   tags = local.default_tags
 }
