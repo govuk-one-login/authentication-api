@@ -4,7 +4,7 @@ resource "aws_kms_key" "id_token_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  policy = var.back_channel_logout_cross_account_access_enabled ? data.aws_iam_policy_document.id_token_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.id_token_signing_key_access_policy.json
+  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.id_token_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.id_token_signing_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -65,7 +65,6 @@ data "aws_iam_policy_document" "id_token_signing_key_access_policy" {
 }
 
 data "aws_iam_policy_document" "kms_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid    = "AllowAccessToKmsSigningKey"
     effect = "Allow"
@@ -80,7 +79,6 @@ data "aws_iam_policy_document" "kms_policy_document" {
 }
 
 data "aws_iam_policy_document" "kms_signing_policy_document" {
-  count = var.use_localstack ? 0 : 1
   statement {
     sid    = "AllowAccessToKmsSigningKey"
     effect = "Allow"
@@ -101,7 +99,7 @@ resource "aws_iam_policy" "lambda_kms_signing_policy" {
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing"
 
-  policy = data.aws_iam_policy_document.kms_signing_policy_document[0].json
+  policy = data.aws_iam_policy_document.kms_signing_policy_document.json
 }
 
 
@@ -111,7 +109,7 @@ resource "aws_iam_policy" "lambda_kms_policy" {
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda"
 
-  policy = data.aws_iam_policy_document.kms_policy_document[0].json
+  policy = data.aws_iam_policy_document.kms_policy_document.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms" {
