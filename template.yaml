@@ -29,37 +29,67 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "aqyf5d32s2"
       authAccountId: "761723964695"
+      authEnvironment: sandpit
       serviceDomain: sandpit.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
+      docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppCriDataV2Endpoint: credentials/issue
+      docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
       authAccountId: "761723964695"
+      authEnvironment: build
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
+      docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppCriDataV2Endpoint: credentials/issue
+      docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppCredentialTableKeyArn: placeholder
+      docAppSigningKeyArn: placeholder
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
       authAccountId: "758531536632"
+      authEnvironment: staging
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
+      docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
+      docAppCriDataV2Endpoint: userinfo/v2
+      docAppAud: https://www.review-b.staging.account.gov.uk
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
       authAccountId: "761723964695"
+      authEnvironment: integration
       serviceDomain: integration.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
+      docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
+      docAppCriDataV2Endpoint: userinfo/v2
+      docAppAud: https://www.review-b.integration.account.gov.uk
+      docAppCredentialTableKeyArn: placeholder
+      docAppSigningKeyArn: placeholder
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
       authAccountId: "172348255554"
+      authEnvironment: production
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
+      docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
+      docAppCriDataV2Endpoint: userinfo/v2
+      docAppAud: https://www.review-b.account.gov.uk
+      docAppCredentialTableKeyArn: placeholder
+      docAppSigningKeyArn: placeholder
 
 Globals:
   Function:
@@ -255,7 +285,7 @@ Resources:
   BackChannelLogoutRequestFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
+    # checkov:skip=CKV_AWS_117: VPC settings are global
     DependsOn:
       - BackChannelLogoutRequestFunctionLogGroup
     Properties:
@@ -278,6 +308,8 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -363,6 +395,120 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+  DocAppCallbackFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    DependsOn:
+      - DocAppCallbackFunctionLogGroup
+    Properties:
+      AutoPublishAlias: latest
+      CodeUri: ./doc-checking-app-api
+      Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          CUSTOM_DOC_APP_CLAIM_ENABLED: true
+          DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/doc-app-callback
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DOC_APP_AUTHORISATION_CLIENT_ID: authOrchestratorDocApp
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !Sub
+            - "alias/${AuthEnvironment}-doc-app-auth-kms-key-alias"
+            - AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          DOC_APP_BACKEND_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
+          DOC_APP_CRI_DATA_V2_ENDPOINT: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCriDataV2Endpoint ]
+          DOC_APP_CRI_DATA_ENDPOINT: unused
+          DOC_APP_V2_DATA_ENDPOINT_ENABLED: true
+          DOC_APP_JWKS_URL: !Sub
+            - ${DocAppBackendUri}/.well-known/jwks.json
+            - DocAppBackendUri: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
+          DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
+          DOC_APP_NEW_AUD_CLAIM_ENABLED: true
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          LOGIN_URI: !Sub
+            - https://signin.${ServiceDomain}/doc-app-callback
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          REDIS_KEY: session
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+          - Sid: AllowDecryptOfParameters
+            Effect: "Allow"
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowDocAppCredentialTableAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowDocAppCredentialTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
+          - Sid: AllowDocAppSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_173
+  DocAppCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-doc-app-callback-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+  DocAppCallbackFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DocAppCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -382,6 +528,11 @@ Resources:
           IpProtocol: tcp
           FromPort: 6379
           ToPort: 6379
+        - DestinationPrefixListId: pl-b3a742da
+          Description: Allow traffic to dynamoDb
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
 
   SlackEvents:
     Type: AWS::SNS::Topic

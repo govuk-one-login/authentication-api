@@ -59,8 +59,12 @@ authorize_protected_subnet_enabled = true
 
 support_email_check_enabled = true
 
-orch_backend_api_gateway_integration_enabled = true
-orch_openid_configuration_name               = "dev-orch-be-deploy-OpenIdConfigurationFunction-6Abl5SEjt8kV"
+
+orch_openid_configuration_enabled = false
+orch_openid_configuration_name    = "dev-orch-be-deploy-OpenIdConfigurationFunction-6Abl5SEjt8kV"
+orch_doc_app_callback_enabled     = true
+orch_doc_app_callback_name        = "dev-orch-be-deploy-DocAppCallbackFunction-RVJSUW5JaiRv"
+
 
 orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true
