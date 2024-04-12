@@ -84,6 +84,8 @@ Globals:
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
     MemorySize: 1536
     Timeout: 30
+    SnapStart:
+      ApplyOn: PublishedVersions
     Runtime: java17
     Architectures:
       - x86_64
@@ -100,6 +102,8 @@ Globals:
         - '{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}'
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
     VpcConfig:
+      SecurityGroupIds:
+        - !Ref LambdaSecurityGroup
       SubnetIds:
         - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
         - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
