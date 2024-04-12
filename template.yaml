@@ -49,8 +49,8 @@ Mappings:
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
-      docAppCredentialTableKeyArn: placeholder
-      docAppSigningKeyArn: placeholder
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -75,8 +75,8 @@ Mappings:
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.integration.account.gov.uk
-      docAppCredentialTableKeyArn: placeholder
-      docAppSigningKeyArn: placeholder
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -88,8 +88,8 @@ Mappings:
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.account.gov.uk
-      docAppCredentialTableKeyArn: placeholder
-      docAppSigningKeyArn: placeholder
+      docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
+      docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
 
 Globals:
   Function:

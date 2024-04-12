@@ -16,4 +16,9 @@ reduced_lockout_duration                   = 30
 
 orch_openid_configuration_name = "staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl"
 
-orch_account_id = "590183975515"
+orch_account_id                                  = "590183975515"
+orch_doc_app_callback_enabled                    = true
+orch_doc_app_callback_name                       = "staging-orch-be-deploy-DocAppCallbackFunction-temp"
+back_channel_logout_cross_account_access_enabled = true
+kms_cross_account_access_enabled                 = true
+cmk_for_back_channel_logout_enabled              = true
