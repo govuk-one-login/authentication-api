@@ -1,0 +1,139 @@
+{
+  "consumer": {
+    "name": "SSEAdminAPIClient"
+  },
+  "provider": {
+    "name": "ClientRegistryProvider"
+  },
+  "interactions": [
+    {
+      "description": "add a Client",
+      "providerState": "Client not exists",
+      "request": {
+        "method": "post",
+        "path": "/connect/register",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "contentType": "application/json",
+        "body": {
+          "client_name": "My test service",
+          "public_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0o0K0A7H58Ngl4FyxTKece+hNhWIbeqm/YO4g7G2Cm8UvNvg4kUDsLVtTKMJNuoEaugkILOm393u4MPy7VT0O0ksL8e3tI6ehtfKiIaCaX/pyFiTimojBJTugwtrraJ3gd6rXm/qzUdBoY+AbYzN5OUkpuJ6/Hfm2w7GrOur5bMgiD8DvqQZA5HOqTswjoPeQK/NW3jaca7gQ9LRKu/QeuYXpQHsALoW2xr+Xpz57NWyutq1Ttt5aWHUQ7EzUBfwBDsBDef8a0cWKMUPcEdUaPD8MLVgbRRGbabkBAEO7sYdMlb3IhYMM9j8N8oct8cPgJtEYEN20TFai5fwQM3dUQIDAQAB",
+          "redirect_uris": [
+            "http://localhost/"
+          ],
+          "contacts": [
+            "pacttest.account@digital.cabinet-office.gov.uk"
+          ],
+          "scopes": [
+            "openid",
+            "email",
+            "phone"
+          ],
+          "subject_type": "pairwise",
+          "service_type": "MANDATORY",
+          "sector_identifier_uri": "http://gov.uk"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "contentType": "application/json",
+        "body": {
+          "client_id": "1tfp8ZknlERfGlGd8RyLPmmgzBU",
+          "client_name": "My test service",
+          "redirect_uris": [
+            "http://localhost/"
+          ],
+          "contacts": [
+            "pacttest.account@digital.cabinet-office.gov.uk"
+          ],
+          "scopes": [
+            "openid",
+            "email",
+            "phone"
+          ],
+          "post_logout_redirect_uris": [],
+          "back_channel_logout_uri": null,
+          "subject_type": "pairwise",
+          "token_endpoint_auth_method": "private_key_jwt",
+          "response_type": "code",
+          "service_type": "MANDATORY",
+          "claims": [],
+          "sector_identifier_uri": "http://gov.uk",
+          "client_type": "web"
+        },
+        "matchingRules": {
+          "body": {
+            "$.client_id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "[A-Za-z0-9\\-_]{27}"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "update a Client",
+      "providerState": "Client exists",
+      "request": {
+        "method": "put",
+        "path": "/connect/register/1tfp8ZknlERfGlGd8RyLPmmgzBU",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "contentType": "application/json",
+        "body": {
+          "client_name": "My test service",
+          "public_key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0o0K0A7H58Ngl4FyxTKece+hNhWIbeqm/YO4g7G2Cm8UvNvg4kUDsLVtTKMJNuoEaugkILOm393u4MPy7VT0O0ksL8e3tI6ehtfKiIaCaX/pyFiTimojBJTugwtrraJ3gd6rXm/qzUdBoY+AbYzN5OUkpuJ6/Hfm2w7GrOur5bMgiD8DvqQZA5HOqTswjoPeQK/NW3jaca7gQ9LRKu/QeuYXpQHsALoW2xr+Xpz57NWyutq1Ttt5aWHUQ7EzUBfwBDsBDef8a0cWKMUPcEdUaPD8MLVgbRRGbabkBAEO7sYdMlb3IhYMM9j8N8oct8cPgJtEYEN20TFai5fwQM3dUQIDAQAB",
+          "contacts": [
+            "account.pacttest@digital.cabinet-office.gov.uk"
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "contentType": "application/json",
+        "body": {
+          "client_id": "1tfp8ZknlERfGlGd8RyLPmmgzBU",
+          "client_name": "My test service",
+          "redirect_uris": [
+            "http://localhost/"
+          ],
+          "contacts": [
+            "account.pacttest@digital.cabinet-office.gov.uk"
+          ],
+          "scopes": [
+            "openid",
+            "email",
+            "phone"
+          ],
+          "post_logout_redirect_uris": [],
+          "back_channel_logout_uri": null,
+          "subject_type": "pairwise",
+          "token_endpoint_auth_method": "private_key_jwt",
+          "response_type": "code",
+          "service_type": "MANDATORY",
+          "claims": [],
+          "sector_identifier_uri": "http://gov.uk",
+          "client_type": "web"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  }
+}

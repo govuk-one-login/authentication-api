@@ -10,9 +10,11 @@ import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -30,7 +32,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -115,10 +119,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
+            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+            var userExists = userProfile.isPresent();
+            userContext.getSession().setEmailAddress(emailAddress);
+
             var incorrectPasswordCount = codeStorageService.getIncorrectPasswordCount(emailAddress);
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User account is locked");
+                sessionService.save(userContext.getSession());
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -134,9 +143,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
             }
 
-            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
-            var userExists = userProfile.isPresent();
-            userContext.getSession().setEmailAddress(emailAddress);
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var internalPairwiseId = AuditService.UNKNOWN;
@@ -182,12 +188,32 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     AuditService.UNKNOWN,
                     persistentSessionId,
                     pair("rpPairwiseId", rpPairwiseId));
+
+            var lockoutInformation =
+                    Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
+                            .map(
+                                    journeyType -> {
+                                        var ttl =
+                                                codeStorageService.getMfaCodeBlockTimeToLive(
+                                                        emailAddress,
+                                                        MFAMethodType.AUTH_APP,
+                                                        journeyType);
+                                        return new LockoutInformation(
+                                                "codeBlock",
+                                                MFAMethodType.AUTH_APP,
+                                                ttl,
+                                                journeyType);
+                                    })
+                            .filter(info -> info.lockTTL() > 0)
+                            .toList();
+
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
                             emailAddress,
                             userExists,
                             userMfaDetail.getMfaMethodType(),
-                            getLastDigitsOfPhoneNumber(userMfaDetail));
+                            getLastDigitsOfPhoneNumber(userMfaDetail),
+                            lockoutInformation);
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");
@@ -196,19 +222,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-        }
-    }
-
-    String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
-        if (userMfaDetail.getPhoneNumber() != null
-                && !userMfaDetail.getPhoneNumber().isEmpty()
-                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
-                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
-            return userMfaDetail
-                    .getPhoneNumber()
-                    .substring(userMfaDetail.getPhoneNumber().length() - NUMBER_OF_LAST_DIGITS);
-        } else {
-            return null;
         }
     }
 }

@@ -133,6 +133,7 @@ class VerifyMfaCodeHandlerTest {
 
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(configurationService.getLockoutDuration()).thenReturn(900L);
+        when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
@@ -659,9 +660,14 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        long blockTime = 900L;
+        if (List.of(CodeRequestType.SMS_REGISTRATION, CodeRequestType.SMS_ACCOUNT_RECOVERY)
+                .contains(codeRequestType)) {
+            blockTime = 300L;
+        }
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)

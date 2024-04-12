@@ -19,7 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
-import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
+import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -139,7 +139,7 @@ class LoginHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -199,7 +199,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
@@ -270,7 +270,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
@@ -336,7 +336,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
@@ -395,7 +395,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
@@ -457,7 +457,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
@@ -525,7 +525,7 @@ class LoginHandlerTest {
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         assertThat(response.getMfaMethodType(), equalTo(SMS));
         assertThat(response.isMfaMethodVerified(), equalTo(true));
@@ -621,7 +621,7 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -658,7 +658,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -707,7 +707,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(4);
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(5);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
@@ -739,7 +739,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -854,7 +854,7 @@ class LoginHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
-                        pair("attemptNoFailedAt", 5));
+                        pair("attemptNoFailedAt", 6));
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
@@ -1013,7 +1013,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 

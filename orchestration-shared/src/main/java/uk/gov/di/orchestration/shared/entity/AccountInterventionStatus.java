@@ -1,10 +1,10 @@
 package uk.gov.di.orchestration.shared.entity;
 
-import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
-
-public record AccountInterventionStatus(
-        @Expose boolean blocked,
-        @Expose boolean suspended,
-        @Expose @SerializedName("reproveIdentity") boolean reproveIdentity,
-        @Expose @SerializedName("resetPassword") boolean resetPassword) {}
+public enum AccountInterventionStatus {
+    NO_INTERVENTION,
+    BLOCKED,
+    SUSPENDED_NO_ACTION,
+    SUSPENDED_REPROVE_ID,
+    SUSPENDED_RESET_PASSWORD,
+    SUSPENDED_RESET_PASSWORD_REPROVE_ID,
+}

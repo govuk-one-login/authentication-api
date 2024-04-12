@@ -5,6 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 
@@ -205,86 +206,131 @@ class ValidationHelperTest {
 
     private static Stream<Arguments> validateCodeTestParameters() {
         return Stream.of(
-                arguments(VERIFY_EMAIL, Optional.empty(), VALID_CODE, 0, STORED_VALID_CODE),
-                arguments(VERIFY_PHONE_NUMBER, Optional.empty(), VALID_CODE, 0, STORED_VALID_CODE),
-                arguments(MFA_SMS, Optional.empty(), VALID_CODE, 0, STORED_VALID_CODE),
+                arguments(
+                        VERIFY_EMAIL,
+                        JourneyType.PASSWORD_RESET,
+                        Optional.empty(),
+                        VALID_CODE,
+                        0,
+                        STORED_VALID_CODE),
+                arguments(
+                        VERIFY_PHONE_NUMBER,
+                        JourneyType.REGISTRATION,
+                        Optional.empty(),
+                        VALID_CODE,
+                        0,
+                        STORED_VALID_CODE),
+                arguments(
+                        MFA_SMS,
+                        JourneyType.PASSWORD_RESET_MFA,
+                        Optional.empty(),
+                        VALID_CODE,
+                        0,
+                        STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
+                        JourneyType.PASSWORD_RESET,
                         Optional.empty(),
                         VALID_CODE,
                         0,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_EMAIL,
+                        JourneyType.PASSWORD_RESET,
                         Optional.of(ErrorResponse.ERROR_1036),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         VERIFY_PHONE_NUMBER,
+                        JourneyType.ACCOUNT_RECOVERY,
                         Optional.of(ErrorResponse.ERROR_1037),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         MFA_SMS,
+                        JourneyType.REAUTHENTICATION,
                         Optional.of(ErrorResponse.ERROR_1035),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
+                        JourneyType.PASSWORD_RESET,
                         Optional.of(ErrorResponse.ERROR_1021),
                         VALID_CODE,
                         0,
                         NO_CODE_STORED),
                 arguments(
                         VERIFY_EMAIL,
+                        JourneyType.PASSWORD_RESET,
                         Optional.of(ErrorResponse.ERROR_1036),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
+                        JourneyType.REGISTRATION,
                         Optional.of(ErrorResponse.ERROR_1037),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         MFA_SMS,
+                        JourneyType.PASSWORD_RESET_MFA,
                         Optional.of(ErrorResponse.ERROR_1035),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
+                        JourneyType.PASSWORD_RESET,
                         Optional.of(ErrorResponse.ERROR_1021),
                         INVALID_CODE,
                         1,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_EMAIL,
+                        JourneyType.PASSWORD_RESET,
                         Optional.of(ErrorResponse.ERROR_1033),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         VERIFY_PHONE_NUMBER,
+                        JourneyType.REGISTRATION,
                         Optional.of(ErrorResponse.ERROR_1034),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         MFA_SMS,
+                        JourneyType.PASSWORD_RESET_MFA,
                         Optional.of(ErrorResponse.ERROR_1027),
                         INVALID_CODE,
                         6,
                         STORED_VALID_CODE),
                 arguments(
                         RESET_PASSWORD_WITH_CODE,
+                        JourneyType.PASSWORD_RESET,
                         Optional.of(ErrorResponse.ERROR_1039),
                         INVALID_CODE,
                         6,
+                        STORED_VALID_CODE),
+                arguments(
+                        VERIFY_PHONE_NUMBER,
+                        JourneyType.PASSWORD_RESET_MFA,
+                        Optional.of(ErrorResponse.ERROR_1034),
+                        INVALID_CODE,
+                        100,
+                        STORED_VALID_CODE),
+                arguments(
+                        VERIFY_PHONE_NUMBER,
+                        JourneyType.PASSWORD_RESET_MFA,
+                        Optional.of(ErrorResponse.ERROR_1034),
+                        INVALID_CODE,
+                        100,
                         STORED_VALID_CODE));
     }
 
@@ -357,6 +403,7 @@ class ValidationHelperTest {
     @MethodSource("validateCodeTestParameters")
     void shouldReturnCorrectErrorForCodeValidationScenarios(
             NotificationType notificationType,
+            JourneyType journeyType,
             Optional<ErrorResponse> expectedResult,
             String input,
             int previousAttempts,
@@ -373,6 +420,12 @@ class ValidationHelperTest {
         assertEquals(
                 expectedResult,
                 ValidationHelper.validateVerificationCode(
-                        notificationType, storedCode, input, codeStorageService, EMAIL_ADDRESS, 5));
+                        notificationType,
+                        journeyType,
+                        storedCode,
+                        input,
+                        codeStorageService,
+                        EMAIL_ADDRESS,
+                        5));
     }
 }

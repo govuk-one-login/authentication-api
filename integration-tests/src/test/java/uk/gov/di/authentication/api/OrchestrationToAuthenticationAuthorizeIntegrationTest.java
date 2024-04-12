@@ -65,8 +65,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                     + "\n-----END PUBLIC KEY-----\n";
 
     private final ConfigurationService configurationService =
-            new OrchestrationToAuthenticationAuthorizeIntegrationTest.TestConfigurationService(
-                    true);
+            new OrchestrationToAuthenticationAuthorizeIntegrationTest.TestConfigurationService();
 
     @BeforeEach
     void setup() {
@@ -333,21 +332,14 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
 
     private class TestConfigurationService extends IntegrationTestConfigurationService {
 
-        private final boolean authOrchSplitEnabled;
-
-        public TestConfigurationService(boolean authOrchSplitEnabled) {
+        public TestConfigurationService() {
             super(
                     externalTokenSigner,
+                    storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
-            this.authOrchSplitEnabled = authOrchSplitEnabled;
-        }
-
-        @Override
-        public boolean isAuthOrchSplitEnabled() {
-            return authOrchSplitEnabled;
         }
 
         @Override

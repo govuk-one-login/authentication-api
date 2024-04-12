@@ -71,7 +71,7 @@ public class TokenHandler
     public TokenHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = new DynamoAuthCodeService(configurationService);
-        this.accessTokenStoreService = new AccessTokenService(configurationService);
+        this.accessTokenStoreService = new AccessTokenService(configurationService, true);
         this.tokenUtilityService = new TokenService();
 
         String orchestratorCallbackRedirectUri =
@@ -155,7 +155,8 @@ public class TokenHandler
                     authCodeStore.getSubjectID(),
                     authCodeStore.getClaims(),
                     authCodeStore.getIsNewAccount(),
-                    authCodeStore.getSectorIdentifier());
+                    authCodeStore.getSectorIdentifier(),
+                    authCodeStore.getPasswordResetTime());
 
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 

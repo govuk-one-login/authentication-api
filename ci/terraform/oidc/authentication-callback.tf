@@ -20,28 +20,6 @@ module "oidc_api_authentication_callback_role" {
   ]
 }
 
-data "aws_iam_policy_document" "storage_token_kms_signing_policy_document" {
-  statement {
-    sid    = "AllowAccessToVcTokenKmsSigningKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:Sign",
-      "kms:GetPublicKey",
-    ]
-    resources = [
-      aws_kms_key.storage_token_signing_key_ecc.arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "storage_token_kms_signing_policy" {
-  name_prefix = "kms-signing-policy"
-  path        = "/${var.environment}/storage-token/"
-  description = "IAM policy for managing KMS connection for a lambda which allows signing of storage token payloads"
-
-  policy = data.aws_iam_policy_document.storage_token_kms_signing_policy_document.json
-}
 
 module "authentication_callback" {
   source = "../modules/endpoint-module"
@@ -71,13 +49,13 @@ module "authentication_callback" {
     ORCH_CLIENT_ID                              = var.orch_client_id
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS        = local.orch_to_auth_signing_key_alias_name
     REDIS_KEY                                   = local.redis_key
-    SUPPORT_AUTH_ORCH_SPLIT                     = var.support_auth_orch_split
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                           = local.api_base_url
     FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     STORAGE_TOKEN_SIGNING_KEY_ALIAS             = aws_kms_alias.storage_token_signing_key_alias.name
+    SEND_STORAGE_TOKEN_TO_IPV_ENABLED           = var.send_storage_token_to_ipv_enabled
   }
 
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"

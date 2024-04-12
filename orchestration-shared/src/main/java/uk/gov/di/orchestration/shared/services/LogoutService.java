@@ -7,7 +7,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -63,10 +63,10 @@ public class LogoutService {
             Session session,
             APIGatewayProxyRequestEvent input,
             String clientId,
-            AccountInterventionStatus accountStatus) {
+            AccountIntervention intervention) {
         destroySessions(session);
         return generateAccountInterventionLogoutResponse(
-                input, clientId, session.getSessionId(), accountStatus);
+                input, clientId, session.getSessionId(), intervention);
     }
 
     public void destroySessions(Session session) {
@@ -85,7 +85,7 @@ public class LogoutService {
                                             session.getEmailAddress(),
                                             configurationService.getInternalSectorUri()));
             LOG.info("Deleting Client Session");
-            clientSessionService.deleteClientSessionFromRedis(clientSessionId);
+            clientSessionService.deleteStoredClientSession(clientSessionId);
         }
         LOG.info("Deleting Session");
         sessionService.deleteSessionFromRedis(session.getSessionId());
@@ -165,19 +165,19 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             String sessionId,
-            AccountInterventionStatus accountStatus) {
+            AccountIntervention intervention) {
         URI redirectURI;
-        if (accountStatus.blocked()) {
+        if (intervention.getBlocked()) {
             redirectURI = configurationService.getAccountStatusBlockedURI();
             LOG.info("Generating Account Intervention blocked logout response");
-        } else if (accountStatus.suspended()) {
+        } else if (intervention.getSuspended()) {
             redirectURI = configurationService.getAccountStatusSuspendedURI();
             LOG.info("Generating Account Intervention suspended logout response");
         } else {
             throw new RuntimeException("Account status must be blocked or suspended");
         }
 
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(accountStatus));
+        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
         return generateLogoutResponse(
                 redirectURI,
                 Optional.empty(),

@@ -29,13 +29,12 @@ module "orch_auth_code" {
   environment     = var.environment
 
   handler_environment_variables = {
-    SUPPORT_AUTH_ORCH_SPLIT = var.support_auth_orch_split
-    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-    ENVIRONMENT             = var.environment
-    TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI     = var.internal_sector_uri
-    REDIS_KEY               = local.redis_key
+    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT          = var.environment
+    TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    REDIS_KEY            = local.redis_key
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.AuthenticationAuthCodeHandler::handleRequest"
 

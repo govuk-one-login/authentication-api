@@ -64,6 +64,11 @@ public class RedisConnectionService implements AutoCloseable {
                 () -> executeCommand(commands -> commands.setex(key, expiry, value)));
     }
 
+    public Long getTimeToLive(final String key) {
+        return segmentedFunctionCall(
+                "Redis: getTimeToLive", () -> executeCommand(commands -> commands.ttl(key)));
+    }
+
     public boolean keyExists(final String key) {
         return segmentedFunctionCall(
                 "Redis: keyExists", () -> executeCommand(commands -> commands.exists(key) == 1));

@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
+import java.util.Optional;
 
 public class AuthCodeRequest {
 
@@ -32,17 +33,23 @@ public class AuthCodeRequest {
     @Required
     private boolean isNewAccount;
 
+    @SerializedName("password-reset-time")
+    @Expose
+    private Long passwordResetTime;
+
     public AuthCodeRequest(
             String redirectUri,
             String state,
             List<String> claims,
             String sectorIdentifier,
-            boolean isNewAccount) {
+            boolean isNewAccount,
+            Optional<Long> passwordResetTime) {
         this.redirectUri = redirectUri;
         this.state = state;
         this.claims = claims;
         this.sectorIdentifier = sectorIdentifier;
         this.isNewAccount = isNewAccount;
+        passwordResetTime.ifPresent(p -> this.passwordResetTime = p);
     }
 
     public String getRedirectUri() {
@@ -79,6 +86,10 @@ public class AuthCodeRequest {
 
     public boolean isNewAccount() {
         return isNewAccount;
+    }
+
+    public Long getPasswordResetTime() {
+        return passwordResetTime;
     }
 
     public void setNewAccount(boolean newAccount) {

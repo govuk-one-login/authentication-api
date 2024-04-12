@@ -52,6 +52,7 @@ class TokenHandlerTest {
     private static final String VALID_AUTH_CODE = "valid-auth-code";
     private static final String SUBJECT_ID = "any";
     private static final String CLIENT_ID = "test-client-id";
+    private static final Long PASSWORD_RESET_TIME = 1710255274L;
     private static final UserProfile USER_PROFILE =
             new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
     private static final AuthCodeStore VALID_AUTH_CODE_STORE =
@@ -62,7 +63,8 @@ class TokenHandlerTest {
                     .withClaims(List.of("any"))
                     .withSubjectID("any")
                     .withHasBeenUsed(false)
-                    .withTimeToExist(UNIX_TIME_16_08_2099);
+                    .withTimeToExist(UNIX_TIME_16_08_2099)
+                    .withPasswordResetTime(PASSWORD_RESET_TIME);
     private static final String USED_AUTH_CODE = "used-auth-code";
     private static final AuthCodeStore USED_AUTH_CODE_STORE =
             new AuthCodeStore()
@@ -223,7 +225,8 @@ class TokenHandlerTest {
                         VALID_AUTH_CODE_STORE.getSubjectID(),
                         VALID_AUTH_CODE_STORE.getClaims(),
                         VALID_AUTH_CODE_STORE.getIsNewAccount(),
-                        VALID_AUTH_CODE_STORE.getSectorIdentifier());
+                        VALID_AUTH_CODE_STORE.getSectorIdentifier(),
+                        VALID_AUTH_CODE_STORE.getPasswordResetTime());
         verify(authCodeService).updateHasBeenUsed(VALID_AUTH_CODE, true);
 
         verify(auditService)

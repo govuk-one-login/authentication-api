@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -12,7 +13,7 @@ import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
-import uk.gov.di.orchestration.sharedtest.basetest.HandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.basetest.IntegrationTest;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,13 +36,15 @@ import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 
-public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
+public class SpotResponseIntegrationTest extends IntegrationTest {
 
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String REQUEST_ID = "request-id";
+
+    private RequestHandler<SQSEvent, Object> handler;
 
     @BeforeEach
     void setup() {

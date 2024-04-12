@@ -13,6 +13,13 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /user-exists (CheckUserExistsHandler.java)
     auth_internal_api ->> auth_internal_api : Checks if account with email already exists
     auth_internal_api ->> auth_frontend: CheckUserExistsResponse.java object returned
+    auth_frontend ->> auth_frontend: Validates that the user already has an account
+    auth_frontend ->> auth_internal_api : Request to /account-interventions (AccountInterventionsHandler.java)
+    auth_internal_api ->> account_interventions : Request to account interventions api (AccountInterventionsRequest.java)
+    account_interventions ->> auth_internal_api : Response from Account Interventions containing suspension=false & passwordReset=false & blocked=false
+    auth_internal_api ->> auth_internal_api : Generates audit event for "no account intervention" Account Intervention
+    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned
+    auth_frontend ->> auth_frontend : Validates that no intervention is required
     auth_frontend ->> auth_internal_api : Request to /login (LoginHandler.java)
     auth_internal_api ->> auth_internal_api : Validates if password is correct
     auth_internal_api ->> auth_frontend: LoginResponse.java object returned
@@ -22,12 +29,6 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /verify-mfa-code (VerifyMfaCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Validates whether Auth App MFA code is valid
     auth_internal_api ->> auth_frontend: 204 response 
-    auth_frontend ->> auth_internal_api : Request to /account-interventions (AccountInterventionsHandler.java)
-    auth_internal_api ->> account_interventions : Request to account interventions api (AccountInterventionsRequest.java)
-    account_interventions ->> auth_internal_api : Response from Account Interventions containing suspension=false & passwordReset=false & blocked=false
-    auth_internal_api ->> auth_internal_api : Generates audit event for "no account intervention" Account Intervention
-    auth_internal_api ->> auth_frontend: AccountInterventions.java object returned
-    auth_frontend ->> auth_frontend : Validates that no intervention is required
     auth_frontend ->> auth_internal_api : Request to /orch-auth-code (AuthenticationAuthCodeHandler.java)
     auth_internal_api ->> auth_internal_api : Generates and store Authorization Code with 5 min TTL
     auth_internal_api ->> auth_frontend: AuthCodeResponse.java object returned

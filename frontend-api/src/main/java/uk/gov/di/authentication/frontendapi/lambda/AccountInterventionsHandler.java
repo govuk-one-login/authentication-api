@@ -16,12 +16,14 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.time.Clock;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -36,8 +38,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
-    private final AccountInterventionsResponse noAccountInterventions =
-            new AccountInterventionsResponse(false, false, false);
+    private NowClock clock;
 
     private static final Map<State, FrontendAuditableEvent>
             ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT =
@@ -63,7 +64,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             AuthenticationService authenticationService,
             AccountInterventionsService accountInterventionsService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NowClock clock) {
         super(
                 AccountInterventionsRequest.class,
                 configurationService,
@@ -74,6 +76,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         this.accountInterventionsService = accountInterventionsService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.clock = clock;
     }
 
     public AccountInterventionsHandler() {
@@ -85,6 +88,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         accountInterventionsService = new AccountInterventionsService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.clock = new NowClock(Clock.systemUTC());
     }
 
     @Override
@@ -109,7 +113,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             LOG.info(
                     "Account interventions service call is disabled, returning default no interventions response");
             try {
-                return generateApiGatewayProxyResponse(200, noAccountInterventions, true);
+                return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException e) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }
@@ -152,13 +156,15 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 new AccountInterventionsResponse(
                         response.state().resetPassword(),
                         response.state().blocked(),
-                        response.state().suspended());
+                        response.state().suspended(),
+                        response.state().reproveIdentity(),
+                        response.intervention().appliedAt());
         if (!configurationService.accountInterventionsServiceActionEnabled()) {
             LOG.info(
                     String.format(
                             "Account interventions action disabled, discarding response %s from api and returning no interventions",
                             responseFromApi));
-            return noAccountInterventions;
+            return noAccountInterventions();
         } else {
             return responseFromApi;
         }
@@ -177,7 +183,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 || !configurationService.accountInterventionsServiceActionEnabled()) {
             try {
                 LOG.error("Swallowing error and returning default account interventions response");
-                return generateApiGatewayProxyResponse(200, noAccountInterventions, true);
+                return generateApiGatewayProxyResponse(200, noAccountInterventions(), true);
             } catch (JsonException ex) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }
@@ -233,5 +239,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     accountInterventionsInboundResponse.state().resetPassword(),
                     accountInterventionsInboundResponse.state().reproveIdentity());
         }
+    }
+
+    private AccountInterventionsResponse noAccountInterventions() {
+        return new AccountInterventionsResponse(
+                false, false, false, false, String.valueOf(clock.now().toInstant().toEpochMilli()));
     }
 }

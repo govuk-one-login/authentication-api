@@ -11,7 +11,7 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -163,16 +163,18 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
             if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
-                var aisResult =
+                AccountIntervention intervention =
                         segmentedFunctionCall(
-                                "AIS: getAccountStatus",
+                                "AIS: getAccountIntervention",
                                 () ->
-                                        accountInterventionService.getAccountStatus(
+                                        accountInterventionService.getAccountIntervention(
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (aisResult.suspended() || aisResult.blocked())) {
-                    return performIntervention(input, userContext, client, aisResult);
+                        && (intervention.getSuspended() || intervention.getBlocked())) {
+                    return performIntervention(input, userContext, client, intervention);
                 }
+            } else if (processingStatus == ProcessingIdentityStatus.ERROR) {
+                LOG.error("Error response received from SPOT");
             }
             return generateApiGatewayProxyResponse(
                     200, new ProcessingIdentityResponse(processingStatus));
@@ -192,11 +194,11 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             ClientRegistry client,
-            AccountInterventionStatus aisResult)
+            AccountIntervention intervention)
             throws Json.JsonException {
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(
-                        userContext.getSession(), input, client.getClientID(), aisResult);
+                        userContext.getSession(), input, client.getClientID(), intervention);
         var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
         return generateApiGatewayProxyResponse(
                 200,

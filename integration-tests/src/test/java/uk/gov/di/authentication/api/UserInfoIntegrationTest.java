@@ -19,7 +19,6 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
@@ -94,6 +93,16 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     OIDCScopeValue.PHONE.getValue());
     private static final Date EXPIRY_DATE = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
 
+    private static final UserInfo AUTH_USER_INFO =
+            new UserInfo(
+                    new JWTClaimsSet.Builder()
+                            .subject(INTERNAL_PAIRWISE_SUBJECT.getValue())
+                            .claim("email_verified", true)
+                            .claim("email", TEST_EMAIL_ADDRESS)
+                            .claim("phone_number_verified", true)
+                            .claim("phone_number", FORMATTED_PHONE_NUMBER)
+                            .build());
+
     @RegisterExtension
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
@@ -103,6 +112,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var configuration =
                 new IntegrationTestConfigurationService(
                         externalTokenSigner,
+                        storageTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,
@@ -118,6 +128,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         DOC_APP_CREDENTIAL =
                 generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair).serialize();
+
+        userInfoStorageExtension.addAuthenticationUserInfoData(
+                INTERNAL_PAIRWISE_SUBJECT.getValue(), AUTH_USER_INFO);
     }
 
     @Test
@@ -333,86 +346,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
-    @Nested
-    class AuthOrchSplitEnabled {
-        private static class UserInfoConfigurationService
-                extends UserInfoIntegrationTest.UserInfoConfigurationService {
-            @Override
-            public boolean isAuthOrchSplitEnabled() {
-                return true;
-            }
-        }
-
-        private static final UserInfo AUTH_USER_INFO =
-                new UserInfo(
-                        new JWTClaimsSet.Builder()
-                                .subject(INTERNAL_PAIRWISE_SUBJECT.getValue())
-                                .claim("email_verified", true)
-                                .claim("email", TEST_EMAIL_ADDRESS)
-                                .claim("phone_number_verified", true)
-                                .claim("phone_number", FORMATTED_PHONE_NUMBER)
-                                .build());
-
-        @BeforeEach
-        void setup() throws JOSEException, NoSuchAlgorithmException {
-            var configuration = new AuthOrchSplitEnabled.UserInfoConfigurationService();
-
-            handler = new UserInfoHandler(configuration);
-            var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
-            DOC_APP_CREDENTIAL =
-                    generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair).serialize();
-
-            userInfoStorageExtension.addAuthenticationUserInfoData(
-                    INTERNAL_PAIRWISE_SUBJECT.getValue(), AUTH_USER_INFO);
-        }
-
-        @Test
-        void shouldCallUserInfoWithAccessTokenAndReturn200()
-                throws Json.JsonException, ParseException {
-            var claimsSet =
-                    new JWTClaimsSet.Builder()
-                            .claim("scope", SCOPES)
-                            .issuer("issuer-id")
-                            .expirationTime(EXPIRY_DATE)
-                            .issueTime(NowHelper.now())
-                            .claim("client_id", "client-id-one")
-                            .subject(PUBLIC_SUBJECT.getValue())
-                            .jwtID(UUID.randomUUID().toString())
-                            .build();
-            var signedJWT = externalTokenSigner.signJwt(claimsSet);
-            var accessToken = new BearerAccessToken(signedJWT.serialize());
-            var accessTokenStore =
-                    new AccessTokenStore(
-                            accessToken.getValue(),
-                            INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
-            var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
-            redis.addToRedis(
-                    ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
-                    accessTokenStoreString,
-                    300L);
-            setUpDynamo(null, null, 0, false);
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            Map.of("Authorization", accessToken.toAuthorizationHeader()),
-                            Map.of());
-
-            assertThat(response, hasStatus(200));
-
-            var userInfoResponse = UserInfo.parse(response.getBody());
-            assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
-            assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
-            assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
-            assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
-            assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
-            assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(5));
-
-            assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
-        }
-    }
-
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)
             throws JOSEException {
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
@@ -559,6 +492,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         public UserInfoConfigurationService() {
             super(
                     externalTokenSigner,
+                    storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,

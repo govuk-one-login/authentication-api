@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -140,7 +141,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         journeyType.getValue());
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
             }
-
             Optional<ErrorResponse> codeRequestValid =
                     validateCodeRequestAttempts(email, journeyType, userContext);
             if (codeRequestValid.isPresent()) {
@@ -152,12 +152,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        pair("journey-type", journeyType));
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
@@ -172,7 +173,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,

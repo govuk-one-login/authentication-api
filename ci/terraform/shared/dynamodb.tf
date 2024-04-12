@@ -507,3 +507,30 @@ resource "aws_dynamodb_table" "email-check-result" {
 
   tags = local.default_tags
 }
+
+resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
+  count        = var.client_registry_table_cross_account_access_enabled ? 1 : 0
+  resource_arn = aws_dynamodb_table.client_registry_table.arn
+  policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
+}
+
+data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
+  statement {
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [var.orchestration_account_id]
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}

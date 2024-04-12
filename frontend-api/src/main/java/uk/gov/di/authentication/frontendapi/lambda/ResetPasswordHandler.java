@@ -123,7 +123,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         LOG.info("Request received to ResetPasswordHandler");
         try {
             Optional<ErrorResponse> passwordValidationError =
-                    passwordValidator.validate(request.getPassword());
+                    passwordValidator.validate(request.password());
 
             if (passwordValidationError.isPresent()) {
                 LOG.info("Error message: {}", passwordValidationError.get().getMessage());
@@ -134,13 +134,13 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                             userContext.getSession().getEmailAddress());
 
             if (Objects.nonNull(userCredentials.getPassword())) {
-                if (verifyPassword(userCredentials.getPassword(), request.getPassword())) {
+                if (verifyPassword(userCredentials.getPassword(), request.password())) {
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
                 }
             } else {
                 LOG.info("Resetting password for migrated user");
             }
-            authenticationService.updatePassword(userCredentials.getEmail(), request.getPassword());
+            authenticationService.updatePassword(userCredentials.getEmail(), request.password());
             var userProfile =
                     authenticationService.getUserProfileByEmail(
                             userContext.getSession().getEmailAddress());
@@ -177,7 +177,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
                 LOG.info("Placing message on queue to send password reset confirmation to Email");
                 sqsClient.send(serialiseRequest(emailNotifyRequest));
-                if (shouldSendConfirmationToSms(userProfile, configurationService)) {
+                if (shouldSendConfirmationToSms(userProfile)) {
                     var smsNotifyRequest =
                             new NotifyRequest(
                                     userProfile.getPhoneNumber(),
@@ -186,6 +186,24 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     LOG.info("Placing message on queue to send password reset confirmation to SMS");
                     sqsClient.send(serialiseRequest(smsNotifyRequest));
                 }
+            }
+            if (request.isForcedPasswordReset()) {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE,
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        internalCommonSubjectId.getValue(),
+                        userCredentials.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        userContext
+                                .getUserProfile()
+                                .map(UserProfile::getPhoneNumber)
+                                .orElse(AuditService.UNKNOWN),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             }
             auditService.submitAuditEvent(
                     auditableEvent,
@@ -217,11 +235,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         }
     }
 
-    private boolean shouldSendConfirmationToSms(
-            UserProfile userProfile, ConfigurationService configurationService) {
-        return Objects.nonNull(userProfile.getPhoneNumber())
-                && userProfile.isPhoneNumberVerified()
-                && configurationService.isResetPasswordConfirmationSmsEnabled();
+    private boolean shouldSendConfirmationToSms(UserProfile userProfile) {
+        return Objects.nonNull(userProfile.getPhoneNumber()) && userProfile.isPhoneNumberVerified();
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {

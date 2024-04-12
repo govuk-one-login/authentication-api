@@ -29,17 +29,21 @@ module "verify_code" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                         = var.environment
-    LOCKOUT_DURATION                    = var.lockout_duration
-    TXMA_AUDIT_QUEUE_URL                = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                 = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                           = local.redis_key
-    DYNAMO_ENDPOINT                     = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TERMS_CONDITIONS_VERSION            = var.terms_and_conditions
-    TEST_CLIENT_VERIFY_EMAIL_OTP        = var.test_client_verify_email_otp
-    TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
-    TEST_CLIENTS_ENABLED                = var.test_clients_enabled
-    INTERNAl_SECTOR_URI                 = var.internal_sector_uri
+    ENVIRONMENT                                = var.environment
+    LOCKOUT_DURATION                           = var.lockout_duration
+    TXMA_AUDIT_QUEUE_URL                       = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                        = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                                  = local.redis_key
+    DYNAMO_ENDPOINT                            = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION                   = var.terms_and_conditions
+    TEST_CLIENT_VERIFY_EMAIL_OTP               = var.test_client_verify_email_otp
+    TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP        = var.test_client_verify_phone_number_otp
+    TEST_CLIENTS_ENABLED                       = var.test_clients_enabled
+    INTERNAl_SECTOR_URI                        = var.internal_sector_uri
+    REMOVE_RETRY_LIMIT_REGISTRATION_EMAIL_CODE = var.remove_retry_limit_registration_email_code
+    CODE_MAX_RETRIES_INCREASED                 = var.code_max_retries_increased
+    REDUCED_LOCKOUT_DURATION                   = var.reduced_lockout_duration
+    LOCKOUT_COUNT_TTL                          = var.lockout_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest"
 

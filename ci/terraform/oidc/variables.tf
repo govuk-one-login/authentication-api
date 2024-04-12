@@ -215,6 +215,16 @@ variable "lockout_duration" {
   default = 900
 }
 
+variable "lockout_count_ttl" {
+  type    = number
+  default = 900
+}
+
+variable "reduced_lockout_duration" {
+  type    = number
+  default = 900
+}
+
 variable "otp_code_ttl_duration" {
   type    = number
   default = 900
@@ -323,6 +333,18 @@ variable "internal_sector_uri" {
   type    = string
   default = "undefined"
 }
+
+variable "remove_retry_limit_registration_email_code" {
+  type    = bool
+  default = false
+}
+
+variable "code_max_retries_increased" {
+  type    = number
+  default = 999999
+}
+
+
 
 variable "endpoint_memory_size" {
   default = 1536
@@ -493,9 +515,22 @@ variable "orch_client_id" {
 }
 
 variable "orch_frontend_api_gateway_integration_enabled" {
+  # When this flag is enabled in a particular environment, the corresponding orchestration-frontend flag
+  # (OidcApiGatewayIntegrationEnabled) should also be enabled for that environment.
   description = "Flag to enable API Gateway integration with the Orchestration frontend"
   type        = bool
   default     = false
+}
+
+variable "orch_backend_api_gateway_integration_enabled" {
+  description = "Flag to enable API Gateway integration with the Orchestration backend"
+  type        = bool
+  default     = false
+}
+
+variable "orch_openid_configuration_name" {
+  type    = string
+  default = ""
 }
 
 variable "account_intervention_service_action_enabled" {
@@ -539,6 +574,29 @@ variable "support_email_check_enabled" {
   default     = false
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
+}
+
+variable "send_storage_token_to_ipv_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles whether signed VC storage token is included as claim in JAR sent to IPV"
+}
+
+variable "orch_account_id" {
+  type    = string
+  default = ""
+}
+
+variable "cmk_for_back_channel_logout_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
+}
+
+variable "storage_token_kms_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access by the orchestration account to the storage token signing key"
 }
 
 locals {

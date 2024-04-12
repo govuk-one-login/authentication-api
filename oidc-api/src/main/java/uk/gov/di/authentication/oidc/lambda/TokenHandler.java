@@ -210,7 +210,7 @@ public class TokenHandler
                         getSigningAlgorithm(clientRegistry),
                         authCodeExchangeData);
 
-        clientSessionService.saveClientSession(
+        clientSessionService.updateStoredClientSession(
                 authCodeExchangeData.getClientSessionId(),
                 clientSession.setIdTokenHint(
                         tokenResponse.getOIDCTokens().getIDToken().serialize()));

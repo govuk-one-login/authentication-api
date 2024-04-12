@@ -4,6 +4,8 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 
+import java.util.List;
+
 public class CheckUserExistsResponse {
 
     @SerializedName("email")
@@ -21,6 +23,10 @@ public class CheckUserExistsResponse {
     @SerializedName("phoneNumberLastThree")
     @Expose
     private String phoneNumberLastThree;
+
+    @SerializedName("lockoutInformation")
+    @Expose
+    private List<LockoutInformation> lockoutInformation;
 
     public CheckUserExistsResponse() {}
 
@@ -42,6 +48,19 @@ public class CheckUserExistsResponse {
         this.phoneNumberLastThree = phoneNumberLastThree;
     }
 
+    public CheckUserExistsResponse(
+            String email,
+            boolean doesUserExist,
+            MFAMethodType mfaMethodType,
+            String phoneNumberLastThree,
+            List<LockoutInformation> lockoutInformation) {
+        this.email = email;
+        this.doesUserExist = doesUserExist;
+        this.mfaMethodType = mfaMethodType;
+        this.phoneNumberLastThree = phoneNumberLastThree;
+        this.lockoutInformation = lockoutInformation;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -56,5 +75,9 @@ public class CheckUserExistsResponse {
 
     public String getPhoneNumberLastThree() {
         return phoneNumberLastThree;
+    }
+
+    public List<LockoutInformation> getLockoutInformation() {
+        return lockoutInformation;
     }
 }

@@ -116,6 +116,8 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getClaims()).ifPresent(clientRegistry::withClaims);
         Optional.ofNullable(updateRequest.getClientLoCs())
                 .ifPresent(clientRegistry::withClientLoCs);
+        Optional.ofNullable(updateRequest.getBackChannelLogoutUri())
+                .ifPresent(clientRegistry::withBackChannelLogoutUri);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }

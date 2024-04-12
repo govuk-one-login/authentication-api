@@ -275,6 +275,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     }
 
     private static IntegrationTestConfigurationService configWithSendMode(String sendMode) {
+        SecureRandom secureRandom = new SecureRandom();
         return new IntegrationTestConfigurationService(
                 auditTopic,
                 notificationsQueue,
@@ -303,7 +304,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
             @Override
             public String getNotifyApiKey() {
                 byte[] bytes = new byte[36];
-                new SecureRandom().nextBytes(bytes);
+                secureRandom.nextBytes(bytes);
                 return Hex.encodeHexString(bytes);
             }
 

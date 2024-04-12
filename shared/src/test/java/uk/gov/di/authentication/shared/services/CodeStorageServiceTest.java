@@ -4,7 +4,10 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -18,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 class CodeStorageServiceTest {
 
@@ -69,7 +73,7 @@ class CodeStorageServiceTest {
 
     @BeforeAll
     static void init() {
-        when(configurationService.getLockoutDuration()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getLockoutCountTTL()).thenReturn(CODE_EXPIRY_TIME);
     }
 
     @Test
@@ -305,6 +309,20 @@ class CodeStorageServiceTest {
         assertThat(
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType),
                 equalTo(4));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"AUTH_APP", "SMS"})
+    void shouldReturnMfaCodeBlockTimeForAuthAppAndSMS(MFAMethodType mfaMethodType) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(mfaMethodType, JourneyType.SIGN_IN);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        when(redisConnectionService.getTimeToLive(codeBlockedKeyPrefix + TEST_EMAIL_HASH))
+                .thenReturn(4L);
+        assertThat(
+                codeStorageService.getMfaCodeBlockTimeToLive(
+                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
+                equalTo(4L));
     }
 
     @Test

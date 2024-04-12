@@ -44,6 +44,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -237,7 +238,7 @@ public class TokenService {
                             OAuth2Error.INVALID_REQUEST_CODE, "Request is missing refresh token"));
         }
         try {
-            RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
+            new RefreshToken(requestBody.get("refresh_token"));
         } catch (IllegalArgumentException e) {
             LOG.warn("Invalid RefreshToken", e);
             return Optional.of(
@@ -413,7 +414,9 @@ public class TokenService {
             String message = encodedHeader + "." + encodedClaims;
             SignRequest signRequest =
                     SignRequest.builder()
-                            .message(SdkBytes.fromByteArray(message.getBytes()))
+                            .message(
+                                    SdkBytes.fromByteArray(
+                                            message.getBytes(StandardCharsets.UTF_8)))
                             .keyId(signingKeyId)
                             .signingAlgorithm(signingAlgorithm)
                             .build();

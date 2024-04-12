@@ -279,8 +279,6 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
@@ -341,7 +339,7 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         "wrong.email@gov.uk",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -485,12 +483,13 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", journeyType));
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @ParameterizedTest
@@ -526,12 +525,13 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", journeyType));
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @ParameterizedTest
@@ -568,12 +568,13 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", journeyType));
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test

@@ -6,8 +6,15 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -24,14 +31,17 @@ import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
+import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
+import java.net.URI;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
 
 public abstract class HandlerIntegrationTest<Q, S> {
@@ -241,6 +251,40 @@ public abstract class HandlerIntegrationTest<Q, S> {
         clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
         persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
         return headers;
+    }
+
+    public static void setUpClientSession(
+            String emailAddress,
+            String clientSessionId,
+            ClientID clientId,
+            String clientName,
+            URI redirectUri)
+            throws Json.JsonException {
+
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                new ClientID(clientId),
+                                URI.create("http://localhost/redirect"))
+                        .nonce(new Nonce())
+                        .build();
+        redis.createClientSession(clientSessionId, clientName, authRequest.toParameters());
+        clientStore.registerClient(
+                clientId.getValue(),
+                clientName,
+                singletonList(redirectUri.toString()),
+                singletonList(emailAddress),
+                new Scope(OIDCScopeValue.OPENID).toStringList(),
+                Base64.getMimeEncoder()
+                        .encodeToString(
+                                KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public",
+                true);
     }
 
     protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {

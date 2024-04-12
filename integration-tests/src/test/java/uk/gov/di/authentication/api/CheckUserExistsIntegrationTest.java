@@ -1,11 +1,6 @@
 package uk.gov.di.authentication.api;
 
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,31 +9,31 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -66,13 +61,20 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = redis.createSession();
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
+
         if (MFAMethodType.SMS == mfaMethodType) {
             userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, "credential");
             userStore.addVerifiedPhoneNumber(emailAddress, "+44987654321");
         } else {
             userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");
         }
-        setUpClientSession("joe.bloggs+1@digital.cabinet-office.gov.uk", clientSessionId);
+
+        setUpClientSession(
+                "joe.bloggs+1@digital.cabinet-office.gov.uk",
+                clientSessionId,
+                CLIENT_ID,
+                CLIENT_NAME,
+                REDIRECT_URI);
 
         var request = new CheckUserExistsRequest(emailAddress);
         var response =
@@ -91,9 +93,53 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             assertThat(checkUserExistsResponse.getPhoneNumberLastThree(), equalTo("321"));
         } else if (MFAMethodType.AUTH_APP.equals(mfaMethodType)) {
             assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
-        } else {
-            fail();
         }
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
+    }
+
+    @Test
+    void shouldCallUserExistsEndpointAndReturnLockoutInformationForAuthAppMfa()
+            throws JsonException {
+        var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
+
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
+
+        userStore.signUp(emailAddress, "password-1");
+        userStore.addMfaMethod(emailAddress, MFAMethodType.AUTH_APP, true, true, "credential");
+
+        var clientSessionId = IdGenerator.generate();
+
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        redis.blockMfaCodesForEmail(emailAddress, codeBlockedKeyPrefix);
+
+        setUpClientSession(
+                "joe.bloggs+1@digital.cabinet-office.gov.uk",
+                clientSessionId,
+                CLIENT_ID,
+                CLIENT_NAME,
+                REDIRECT_URI);
+
+        var request = new CheckUserExistsRequest(emailAddress);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+        CheckUserExistsResponse checkUserExistsResponse =
+                objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
+        assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+        assertTrue(checkUserExistsResponse.doesUserExist());
+        var lockoutInformation = checkUserExistsResponse.getLockoutInformation();
+        assertNotNull(lockoutInformation);
+        assertThat(lockoutInformation.get(0).lockTTL() > 0, is(true));
+        assertThat(lockoutInformation.get(0).journeyType(), is(JourneyType.SIGN_IN));
+        assertThat(lockoutInformation.get(0).mfaMethodType(), is(MFAMethodType.AUTH_APP));
+
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
     }
 
@@ -103,7 +149,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = redis.createSession();
         var clientSessionId = IdGenerator.generate();
-        setUpClientSession(emailAddress, clientSessionId);
+        setUpClientSession(emailAddress, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
         var response =
@@ -133,6 +179,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.incrementPasswordCount(emailAddress);
         redis.incrementPasswordCount(emailAddress);
         redis.incrementPasswordCount(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
 
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
@@ -151,33 +198,5 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(ACCOUNT_TEMPORARILY_LOCKED));
-    }
-
-    private void setUpClientSession(String emailAddress, String clientSessionId)
-            throws JsonException {
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
-                        .nonce(new Nonce())
-                        .build();
-        redis.createClientSession(clientSessionId, CLIENT_NAME, authRequest.toParameters());
-        clientStore.registerClient(
-                CLIENT_ID.getValue(),
-                CLIENT_NAME,
-                singletonList(REDIRECT_URI.toString()),
-                singletonList(emailAddress),
-                new Scope(OIDCScopeValue.OPENID).toStringList(),
-                Base64.getMimeEncoder()
-                        .encodeToString(
-                                KeyPairHelper.GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                true);
     }
 }

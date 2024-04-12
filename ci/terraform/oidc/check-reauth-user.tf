@@ -30,6 +30,7 @@ module "check_reauth_user" {
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
     REDIS_KEY            = local.redis_key
     LOCKOUT_DURATION     = var.lockout_duration
+    LOCKOUT_COUNT_TTL    = var.lockout_count_ttl
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest"

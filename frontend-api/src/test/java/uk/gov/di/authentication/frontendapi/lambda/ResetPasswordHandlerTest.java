@@ -128,7 +128,6 @@ class ResetPasswordHandlerTest {
                 .validate("password");
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(configurationService.isResetPasswordConfirmationSmsEnabled()).thenReturn(true);
         when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(true);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         usingValidSession();

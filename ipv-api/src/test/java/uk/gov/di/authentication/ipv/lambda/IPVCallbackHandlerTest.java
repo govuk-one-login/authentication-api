@@ -40,7 +40,8 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
@@ -75,6 +76,7 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -152,7 +154,8 @@ class IPVCallbackHandlerTest {
                     VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
                     VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL));
     private IPVCallbackHandler handler;
-    private final byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
+    private final byte[] salt =
+            "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private final URI accessDeniedURI =
             new AuthenticationErrorResponse(
@@ -267,8 +270,10 @@ class IPVCallbackHandlerTest {
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
-        when(accountInterventionService.getAccountStatus(any(), any()))
-                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+        when(accountInterventionService.getAccountIntervention(anyString(), any()))
+                .thenReturn(
+                        new AccountIntervention(
+                                new AccountInterventionState(false, false, false, false)));
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString()))
                 .thenReturn(
@@ -329,7 +334,8 @@ class IPVCallbackHandlerTest {
                                 userProfile, configService.getInternalSectorUri(), dynamoService)
                         .getValue();
         verify(accountInterventionService)
-                .getAccountStatus(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                .getAccountIntervention(
+                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
     }
 
     @ParameterizedTest
@@ -676,7 +682,8 @@ class IPVCallbackHandlerTest {
         assertEquals(
                 accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
         verify(accountInterventionService)
-                .getAccountStatus(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                .getAccountIntervention(
+                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(dynamoIdentityService);
@@ -757,7 +764,7 @@ class IPVCallbackHandlerTest {
     @Test
     void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
             throws URISyntaxException {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
+        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
         var userProfile = generateUserProfile();
         usingValidSession();

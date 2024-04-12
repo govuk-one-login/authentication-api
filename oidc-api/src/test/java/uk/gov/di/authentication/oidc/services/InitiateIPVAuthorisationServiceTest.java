@@ -22,6 +22,8 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -42,6 +44,7 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -85,6 +88,8 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String RP_PAIRWISE_ID = "urn:fdc:gov.uk:2022:dkjfshsdkjh";
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final Boolean REPROVE_IDENTITY = true;
+    private static final String SERIALIZED_JWT =
+            "eyJraWQiOiIwOWRkYjY1ZWIzY2U0MWEzYjczYTJhOTM0ZTM5NDg4NmQyYTIyYjU0ZmQwMzVmYWJlZWM3YWMxYzllYzliNzBiIiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLnRlc3QuYWNjb3VudC5nb3YudWsiLCJodHRwczovL2lkZW50aXR5LnRlc3QuYWNjb3VudC5nb3YudWsiXSwic3ViIjoia3NFUjVWcDRuZU1ONWM2WHJlSV9uUDhGNFZuc2VqS2x1b3BOX05mZjlfNCIsImlzcyI6Imh0dHBzOi8vb2lkYy50ZXN0LmFjY291bnQuZ292LnVrLyIsImV4cCI6MTcwOTA1MTE2MywiaWF0IjoxNzA5MDQ3NTYzLCJqdGkiOiJkZmNjZjc1MS1iZTU1LTRkZjQtYWEzZi1hOTkzMTkzZDUyMTYifQ.rpZ2IqMwlFLbZ8a7En-EuQ480zcorvNd-GZcwjlxlK3Twq9J1GNiuj9teSLINP_zmeirx7Y8p3DUYWk_hyRhww";
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -95,6 +100,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
     private InitiateIPVAuthorisationService initiateAuthorisationService;
+    private final TokenService tokenService = mock(TokenService.class);
     private APIGatewayProxyRequestEvent event;
     private final ClaimsSetRequest.Entry nameEntry =
             new ClaimsSetRequest.Entry("name").withClaimRequirement(ClaimRequirement.ESSENTIAL);
@@ -124,7 +130,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         auditService,
                         authorisationService,
                         cloudwatchMetricsService,
-                        noSessionOrchestrationService);
+                        noSessionOrchestrationService,
+                        tokenService);
 
         event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
@@ -134,6 +141,11 @@ public class InitiateIPVAuthorisationServiceTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configService.sendStorageTokenToIpvEnabled()).thenReturn(true);
+        when(configService.getStorageTokenClaimName())
+                .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
+        AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
+        when(tokenService.generateStorageToken(any())).thenReturn(storageToken);
     }
 
     @Test
@@ -196,7 +208,7 @@ public class InitiateIPVAuthorisationServiceTest {
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
-
+        verify(tokenService).generateStorageToken(any());
         verify(authorisationService)
                 .constructRequestJWT(
                         any(State.class),

@@ -1,13 +1,16 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,11 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    private static final URI REDIRECT_URI =
+            URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
+    private static final ClientID CLIENT_ID = new ClientID("test-client");
+    private static final String CLIENT_NAME = "some-client-name";
 
     @BeforeEach
     public void setUp() {
@@ -40,14 +48,16 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String sessionId = redis.createSession();
         String persistentSessionId = "test-persistent-id";
         redis.addEmailToSession(sessionId, email);
+        var clientSessionId = IdGenerator.generate();
+        setUpClientSession(email, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 
         var response =
                 makeRequest(
                         Optional.of(new ResetPasswordRequest(email)),
-                        constructFrontendHeaders(sessionId, null, persistentSessionId),
+                        constructFrontendHeaders(sessionId, clientSessionId, persistentSessionId),
                         Map.of());
 
-        assertThat(response, hasStatus(204));
+        assertThat(response, hasStatus(200));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 

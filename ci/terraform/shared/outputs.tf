@@ -145,13 +145,13 @@ output "events_topic_encryption_key_arn" {
   value = aws_kms_key.events_topic_encryption.arn
 }
 
-output "stub_rp_client_credentials" {
+output "stub_relying_party_client_credentials" {
   value = [
     for i, rp in var.stub_rp_clients : {
       client_name = rp.client_name
-      client_id   = random_string.stub_rp_client_id[i].result
-      private_key = tls_private_key.stub_rp_client_private_key[i].private_key_pem
-      public_key  = tls_private_key.stub_rp_client_private_key[i].public_key_pem
+      client_id   = random_string.stub_relying_party_client_id[rp.client_name].result
+      private_key = tls_private_key.stub_relying_party_client_private_key[rp.client_name].private_key_pem_pkcs8
+      public_key  = tls_private_key.stub_relying_party_client_private_key[rp.client_name].public_key_pem
     }
   ]
   sensitive = true
@@ -227,4 +227,12 @@ output "user_credentials_encryption_policy_arn" {
 
 output "user_profile_encryption_policy_arn" {
   value = aws_iam_policy.user_profile_encryption_key_kms_policy.arn
+}
+
+output "email_check_results_encryption_policy_arn" {
+  value = aws_iam_policy.email_check_results_encryption_key_kms_policy.arn
+}
+
+output "client_registry_kms_key_arn" {
+  value = aws_kms_key.client_registry_table_encryption_key.arn
 }

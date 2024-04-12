@@ -58,11 +58,6 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         configurationParameters) {
 
                     @Override
-                    public boolean isAuthOrchSplitEnabled() {
-                        return true;
-                    }
-
-                    @Override
                     public String getTxmaAuditQueueUrl() {
                         return txmaAuditQueue.getQueueUrl();
                     }
@@ -200,7 +195,12 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     private UserProfile addTokenToDynamoAndCreateAssociatedUser(
             String accessToken, List<String> claims, boolean isNewAccount) {
         accessTokenStoreExtension.addAccessTokenStore(
-                accessToken, TEST_SUBJECT.getValue(), claims, isNewAccount, RP_SECTOR_ID_HOST);
+                accessToken,
+                TEST_SUBJECT.getValue(),
+                claims,
+                isNewAccount,
+                RP_SECTOR_ID_HOST,
+                1710255455L);
 
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);

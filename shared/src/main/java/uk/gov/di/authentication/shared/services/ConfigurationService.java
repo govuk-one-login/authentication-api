@@ -80,8 +80,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
+    public long getLockoutCountTTL() {
+        return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_COUNT_TTL", "900"));
+    }
+
     public long getLockoutDuration() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
+    }
+
+    public long getReducedLockoutDuration() {
+        return Long.parseLong(System.getenv().getOrDefault("REDUCED_LOCKOUT_DURATION", "900"));
     }
 
     public int getBulkUserEmailBatchQueryLimit() {
@@ -145,9 +153,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
     }
 
-    public int getCodeMaxRetriesRegistration() {
+    public int getIncreasedCodeMaxRetries() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("CODE_MAX_RETRIES_REGISTRATION", "999999"));
+                System.getenv().getOrDefault("CODE_MAX_RETRIES_INCREASED", "999999"));
+    }
+
+    public boolean removeRetryLimitForRegistrationEmailCodeEntry() {
+        return System.getenv()
+                .getOrDefault("REMOVE_RETRY_LIMIT_REGISTRATION_EMAIL_CODE", "false")
+                .equals("true");
     }
 
     public int getAuthAppCodeWindowLength() {
@@ -163,7 +177,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isAuthOrchSplitEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
+        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "true").equals("true");
     }
 
     public boolean isEmailCheckEnabled() {
@@ -194,7 +208,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getMaxPasswordRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
+        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "6"));
     }
 
     public int getMaxEmailReAuthRetries() {
@@ -324,11 +338,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
                 .equals("true");
-    }
-
-    public boolean isResetPasswordConfirmationSmsEnabled() {
-        return List.of("build", "staging", "integration", "local", "production")
-                .contains(getEnvironment());
     }
 
     public boolean isExtendedFeatureFlagsEnabled() {

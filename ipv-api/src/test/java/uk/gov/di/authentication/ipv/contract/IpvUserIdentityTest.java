@@ -143,7 +143,7 @@ public class IpvUserIdentityTest {
                         tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
                 .comment("test")
-                .status(400)
+                .status(403)
                 .toPact();
     }
 
