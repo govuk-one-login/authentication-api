@@ -20,8 +20,6 @@ Parameters:
 Conditions:
   UsePermissionsBoundary:
     !Not [ !Equals [ none, !Ref PermissionsBoundary ] ]
-  IsProd:
-    !Equals [ production, !Ref Environment ]
   UseCodeSigning:
     !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
 
@@ -90,6 +88,11 @@ Globals:
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
 
 Resources:
+  MainKmskeyAlias:
+    Type: 'AWS::KMS::Alias'
+    Properties:
+      AliasName: "alias/mainKmsKey"
+      TargetKeyId: !Ref MainKmsKey
   MainKmsKey:
     Type: AWS::KMS::Key
     Properties:
@@ -182,7 +185,6 @@ Resources:
       Statistic: Sum
       Threshold: 10
 
-
   OpenIdConfigurationFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -224,8 +226,27 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+          Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - CidrIp: 10.0.0.0/16
+          Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+
   SlackEvents:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub ${Environment}-slack-events
-      KmsMasterKeyId: !Ref MainKmsKey
+      KmsMasterKeyId: !GetAtt MainKmsKey.Arn
