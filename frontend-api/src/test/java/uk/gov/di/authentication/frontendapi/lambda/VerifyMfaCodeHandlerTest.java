@@ -23,6 +23,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -194,21 +195,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", JourneyType.REGISTRATION));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_VERIFIED,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", false),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", JourneyType.REGISTRATION));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -243,21 +235,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", JourneyType.PASSWORD_RESET_MFA));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_VERIFIED,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", false),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", JourneyType.PASSWORD_RESET_MFA));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -286,21 +269,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", JourneyType.REGISTRATION));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_VERIFIED,
+                pair("mfa-type", MFAMethodType.SMS.getValue()),
+                pair("account-recovery", false),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", JourneyType.REGISTRATION));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -332,21 +306,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", true),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_VERIFIED,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", true),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -378,21 +343,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", true),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_VERIFIED,
+                pair("mfa-type", MFAMethodType.SMS.getValue()),
+                pair("account-recovery", true),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -419,21 +375,12 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_VERIFIED,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", false),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", journeyType));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -524,21 +471,12 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -571,21 +509,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -619,22 +548,13 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.INVALID_CODE_SENT,
+                pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("loginFailureCount", 0),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", journeyType));
     }
 
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
@@ -670,21 +590,12 @@ class VerifyMfaCodeHandlerTest {
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                pair("mfa-type", MFAMethodType.SMS.getValue()),
+                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -709,21 +620,12 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedPrefix, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                pair("mfa-type", MFAMethodType.SMS.getValue()),
+                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -752,22 +654,13 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", journeyType));
+        assertAuditEventSubmittedWithMetadata(
+                FrontendAuditableEvent.INVALID_CODE_SENT,
+                pair("mfa-type", MFAMethodType.SMS.getValue()),
+                pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("loginFailureCount", 0),
+                pair("MFACodeEntered", CODE),
+                pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -832,5 +725,21 @@ class VerifyMfaCodeHandlerTest {
                 .state(new State())
                 .nonce(new Nonce())
                 .build();
+    }
+
+    private void assertAuditEventSubmittedWithMetadata(
+            AuditableEvent event, AuditService.MetadataPair... pairs) {
+        verify(auditService)
+                .submitAuditEvent(
+                        event,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pairs);
     }
 }

@@ -283,83 +283,42 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String code,
             JourneyType journeyType,
             boolean isAccountRecovery) {
-
-        switch (auditableEvent) {
-            case CODE_MAX_RETRIES_REACHED:
-                auditService.submitAuditEvent(
-                        auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
-                        pair("mfa-type", mfaMethodType.getValue()),
-                        pair("account-recovery", isAccountRecovery),
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", journeyType));
-                break;
-            case INVALID_CODE_SENT:
-                auditService.submitAuditEvent(
-                        auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
-                        pair("mfa-type", mfaMethodType.getValue()),
-                        pair("account-recovery", isAccountRecovery),
-                        pair("loginFailureCount", session.getRetryCount()),
-                        pair("MFACodeEntered", code),
-                        pair("journey-type", journeyType));
-                break;
-            case CODE_VERIFIED:
-                auditService.submitAuditEvent(
-                        auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
-                        pair("mfa-type", mfaMethodType.getValue()),
-                        pair("account-recovery", isAccountRecovery),
-                        pair("MFACodeEntered", code),
-                        pair("journey-type", journeyType));
-                break;
-            default:
-                auditService.submitAuditEvent(
-                        auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
-                        pair("mfa-type", mfaMethodType.getValue()),
-                        pair("account-recovery", isAccountRecovery),
-                        pair("journey-type", journeyType));
-        }
+        var metadataPairs =
+                switch (auditableEvent) {
+                    case CODE_MAX_RETRIES_REACHED -> List.of(
+                            pair("mfa-type", mfaMethodType.getValue()),
+                            pair("account-recovery", isAccountRecovery),
+                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                            pair("journey-type", journeyType));
+                    case INVALID_CODE_SENT -> List.of(
+                            pair("mfa-type", mfaMethodType.getValue()),
+                            pair("account-recovery", isAccountRecovery),
+                            pair("loginFailureCount", session.getRetryCount()),
+                            pair("MFACodeEntered", code),
+                            pair("journey-type", journeyType));
+                    case CODE_VERIFIED -> List.of(
+                            pair("mfa-type", mfaMethodType.getValue()),
+                            pair("account-recovery", isAccountRecovery),
+                            pair("MFACodeEntered", code),
+                            pair("journey-type", journeyType));
+                    default -> List.of(
+                            pair("mfa-type", mfaMethodType.getValue()),
+                            pair("account-recovery", isAccountRecovery),
+                            pair("journey-type", journeyType));
+                };
+        auditService.submitAuditEvent(
+                auditableEvent,
+                userContext.getClientSessionId(),
+                session.getSessionId(),
+                userContext
+                        .getClient()
+                        .map(ClientRegistry::getClientID)
+                        .orElse(AuditService.UNKNOWN),
+                session.getInternalCommonSubjectIdentifier(),
+                session.getEmailAddress(),
+                IpAddressHelper.extractIpAddress(input),
+                AuditService.UNKNOWN,
+                extractPersistentIdFromHeaders(input.getHeaders()),
+                metadataPairs.toArray(new AuditService.MetadataPair[0]));
     }
 }
