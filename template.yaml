@@ -530,6 +530,7 @@ Resources:
           Description: Allow traffic to dynamoDb
           IpProtocol: tcp
           FromPort: 443
+          ToPort: 443
 
   SlackEvents:
     Type: AWS::SNS::Topic
