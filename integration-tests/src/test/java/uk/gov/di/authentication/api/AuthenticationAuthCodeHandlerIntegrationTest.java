@@ -35,8 +35,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler =
-                new AuthenticationAuthCodeHandler(AUTH_CODE_HANDLER_ENABLED_CONFIGURATION_SERVICE);
+        handler = new AuthenticationAuthCodeHandler(TEST_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 

@@ -9,4 +9,3 @@ endpoint_memory_size   = 1536
 
 orch_client_id                  = "orchestrationAuth"
 orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENB3csRUIdoaTHNn079Jl7JpiXzxF0p2ZIddCErxtIhGMTTqtbQZJCPesSKUVE/DQbpIko3mLoisuFgmQfFouCw=="
-support_auth_orch_split         = true

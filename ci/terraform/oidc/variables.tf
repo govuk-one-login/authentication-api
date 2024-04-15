@@ -115,14 +115,6 @@ variable "service_domain" {
   default = null
 }
 
-variable "support_auth_orch_split" {
-  default = false
-}
-
-variable "support_auth_orch_split_user_info" {
-  default = false
-}
-
 variable "aws_endpoint" {
   type    = string
   default = null

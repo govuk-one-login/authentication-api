@@ -178,23 +178,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
-    protected static final ConfigurationService AUTH_CODE_HANDLER_ENABLED_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
-                    tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
-
-                @Override
-                public boolean isAuthOrchSplitEnabled() {
-                    return true;
-                }
-            };
-
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);
