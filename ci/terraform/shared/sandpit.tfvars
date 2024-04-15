@@ -55,7 +55,7 @@ stub_rp_clients = [
 
 logging_endpoint_enabled = false
 enforce_code_signing     = false
-orchestration_account_id = 816047645251
+orchestration_account_id = "816047645251"
 
 orch_privatesub_cidr_blocks = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
 
