@@ -129,13 +129,13 @@ Globals:
       - !Sub
         - '{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}'
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
-    VpcConfig:
-      SecurityGroupIds:
-        - !Ref LambdaSecurityGroup
-      SubnetIds:
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+#    VpcConfig:
+#      SecurityGroupIds:
+#        - !Ref LambdaSecurityGroup
+#      SubnetIds:
+#        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+#        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+#        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
 Resources:
   MainKmskeyAlias:
@@ -508,29 +508,29 @@ Resources:
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
           ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
 
-  LambdaSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Lambda Security Group permissions ruleset
-      VpcId:
-        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
-      SecurityGroupEgress:
-        - DestinationSecurityGroupId:
-            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
-          Description: Allow outbound traffic to vpc endpoints
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-        - CidrIp: 10.0.0.0/16
-          Description: Allow outbound traffic to vpc endpoints
-          IpProtocol: tcp
-          FromPort: 6379
-          ToPort: 6379
-        - DestinationPrefixListId: pl-b3a742da
-          Description: Allow traffic to dynamoDb
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
+#  LambdaSecurityGroup:
+#    Type: AWS::EC2::SecurityGroup
+#    Properties:
+#      GroupDescription: Lambda Security Group permissions ruleset
+#      VpcId:
+#        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+#      SecurityGroupEgress:
+#        - DestinationSecurityGroupId:
+#            Fn::ImportValue: !Sub ${VpcStackName}-AWSServicesEndpointSecurityGroupId
+#          Description: Allow outbound traffic to vpc endpoints
+#          IpProtocol: tcp
+#          FromPort: 443
+#          ToPort: 443
+#        - CidrIp: 10.0.0.0/16
+#          Description: Allow outbound traffic to vpc endpoints
+#          IpProtocol: tcp
+#          FromPort: 6379
+#          ToPort: 6379
+#        - DestinationPrefixListId: pl-b3a742da
+#          Description: Allow traffic to dynamoDb
+#          IpProtocol: tcp
+#          FromPort: 443
+#          ToPort: 443
 
   SlackEvents:
     Type: AWS::SNS::Topic
