@@ -152,6 +152,68 @@ public class DcmawTokenTest {
                 response.toHTTPResponse().getContent(), equalTo(getSuccessfulTokenHttpResponse()));
     }
 
+    @Pact(consumer = "OrchTokenConsumer")
+    RequestResponsePact invalidAuthCodeReturnsInvalidRequest(PactDslWithProvider builder) {
+        return builder.given("dummyAuthCode is a invalid authorization code")
+                .given("the JWT is signed with " + PRIVATE_JWT_KEY)
+                .given("localHost is a valid resource URI")
+                .given("the audience is " + DOC_APP_AUD)
+                .uponReceiving("Invalid auth code")
+                .path("/" + DOC_APP_TOKEN_PATH)
+                .method("POST")
+                .body(
+                        "client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&"
+                                + "code=dummyAuthCode&"
+                                + "grant_type=authorization_code&"
+                                + "resource="
+                                + "http://localhost:1234/token"
+                                + "&"
+                                + "client_assertion="
+                                + CLIENT_ASSERTION_HEADER
+                                + "."
+                                + CLIENT_ASSERTION_BODY
+                                + "."
+                                + CLIENT_ASSERTION_SIGNATURE
+                                + "&"
+                                + "client_id="
+                                + CLIENT_ID.getValue())
+                .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .willRespondWith()
+                .status(400)
+                .toPact();
+    }
+
+    @Test
+    @PactTestFor(
+            providerName = "DcmawCriTokenProvider",
+            pactMethod = "invalidAuthCodeReturnsInvalidRequest",
+            pactVersion = PactSpecVersion.V3)
+    void getDocAppTokenErrorResponse(MockServer mockServer) {
+        when(configService.getDocAppBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
+
+        TokenRequest tokenRequest;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.parse("2000-01-01T00:00:00.00Z")));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(5L, ChronoUnit.MINUTES))
+                    .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
+            try (var mockJwtId =
+                    mockConstruction(
+                            JWTID.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("1");
+                            })) {
+                tokenRequest = docAppCriService.constructTokenRequest("dummyAuthCode");
+            }
+        }
+        TokenResponse response = docAppCriService.sendTokenRequest(tokenRequest);
+
+        assertThat(response.indicatesSuccess(), equalTo(false));
+        assertThat(response.toHTTPResponse().getStatusCode(), equalTo(400));
+    }
+
     private SignResponse mockKmsReturn() {
         byte[] signature_bytes;
 
