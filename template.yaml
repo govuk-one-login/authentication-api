@@ -537,3 +537,10 @@ Resources:
     Properties:
       TopicName: !Sub ${Environment}-slack-events
       KmsMasterKeyId: !GetAtt MainKmsKey.Arn
+
+Outputs:
+  SlackEventsArn:
+    Description: 'ARN of the SlackEvents SNS topic'
+    Value: !Ref SlackEvents
+    Export:
+      Name: !Sub '${AWS::StackName}-SlackEventsArn'
