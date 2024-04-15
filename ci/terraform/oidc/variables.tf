@@ -442,11 +442,6 @@ variable "doc_app_rp_client_id" {
   default = "undefined"
 }
 
-variable "doc_app_use_cri_data_v2_endpoint" {
-  type    = bool
-  default = false
-}
-
 variable "spot_account_number" {
   type        = string
   default     = "undefined"

@@ -17,7 +17,6 @@ support_auth_orch_split_user_info           = true
 custom_doc_app_claim_enabled                = true
 ipv_no_session_response_enabled             = true
 doc_app_cri_data_v2_endpoint                = "credentials/issue"
-doc_app_use_cri_data_v2_endpoint            = true
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true

@@ -250,10 +250,7 @@ public class DocAppCallbackHandler
             }
 
             try {
-                var criDataEndpoint =
-                        configurationService.isDocAppCriV2DataEndpointEnabled()
-                                ? configurationService.getDocAppCriV2DataEndpoint()
-                                : configurationService.getDocAppCriDataEndpoint();
+                var criDataEndpoint = configurationService.getDocAppCriV2DataEndpoint();
 
                 var criDataURI =
                         buildURI(
