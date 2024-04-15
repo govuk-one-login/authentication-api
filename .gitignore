@@ -24,3 +24,6 @@ logs/
 
 # Contract Tests
 pact/
+
+# Terraform artifacts
+/ci/terraform/oidc/orch-frontend/authorizer-lambda.zip
