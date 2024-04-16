@@ -99,6 +99,17 @@ class CheckUserExistsHandlerTest {
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
 
+    private final AuditService.AuditContext auditContext =
+            new AuditService.AuditContext(
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    CLIENT_ID,
+                    AuditService.UNKNOWN,
+                    EMAIL_ADDRESS,
+                    "123.123.123.123",
+                    AuditService.UNKNOWN,
+                    PERSISTENT_SESSION_ID);
+
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(CheckUserExistsHandler.class);
@@ -191,14 +202,7 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedInternalPairwiseId,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        auditContext.withPairwiseId(expectedInternalPairwiseId),
                         AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
     }
 
@@ -218,14 +222,7 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        auditContext,
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
 
@@ -285,14 +282,15 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "joe.bloggs",
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        new AuditService.AuditContext(
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                "joe.bloggs",
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PERSISTENT_SESSION_ID));
     }
 
     @Test
@@ -307,17 +305,7 @@ class CheckUserExistsHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
         verify(sessionService, times(1)).save(any());
-        verify(auditService)
-                .submitAuditEvent(
-                        ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(ACCOUNT_TEMPORARILY_LOCKED, auditContext);
     }
 
     private void usingValidSession() {

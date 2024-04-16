@@ -12,7 +12,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -34,6 +33,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -102,20 +103,19 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     ValidationHelper.validateEmailAddress(emailAddress);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+            var auditContext =
+                    new AuditService.AuditContext(
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            userContext.getClientId(),
+                            AuditService.UNKNOWN,
+                            emailAddress,
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            persistentSessionId);
             if (errorResponse.isPresent()) {
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                auditService.submitAuditEvent(CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -129,16 +129,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 LOG.info("User account is locked");
                 sessionService.save(userContext.getSession());
 
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getClientId(),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                auditService.submitAuditEvent(ACCOUNT_TEMPORARILY_LOCKED, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
             }
@@ -174,20 +165,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
+
+            var auditContextWithPairwiseId = auditContext.withPairwiseId(internalPairwiseId);
             auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    internalPairwiseId,
-                    emailAddress,
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    persistentSessionId,
-                    pair("rpPairwiseId", rpPairwiseId));
+                    auditableEvent, auditContextWithPairwiseId, pair("rpPairwiseId", rpPairwiseId));
 
             var lockoutInformation =
                     Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)

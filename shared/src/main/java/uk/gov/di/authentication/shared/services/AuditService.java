@@ -39,6 +39,46 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri());
     }
 
+    public record AuditContext(
+            String clientSessionId,
+            String sessionId,
+            String clientId,
+            String subjectId,
+            String email,
+            String ipAddress,
+            String phoneNumber,
+            String persistentSessionId) {
+
+        public AuditContext withPairwiseId(String id) {
+            return new AuditContext(
+                    clientSessionId,
+                    sessionId,
+                    clientId,
+                    id,
+                    email,
+                    ipAddress,
+                    phoneNumber,
+                    persistentSessionId);
+        }
+    }
+    ;
+
+    public void submitAuditEvent(
+            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
+        submitAuditEvent(
+                event,
+                auditContext.clientSessionId,
+                auditContext.sessionId,
+                auditContext.clientId,
+                auditContext.subjectId,
+                auditContext.email,
+                auditContext.ipAddress,
+                auditContext.phoneNumber,
+                auditContext.persistentSessionId,
+                metadataPairs);
+    }
+    ;
+
     public void submitAuditEvent(
             AuditableEvent event,
             String clientSessionId,
