@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.entity;
 
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 public enum DeliveryReceiptsNotificationType implements TemplateAware {
@@ -50,8 +49,7 @@ public enum DeliveryReceiptsNotificationType implements TemplateAware {
     }
 
     @Override
-    public String getTemplateId(
-            SupportedLanguage language, ConfigurationService configurationService) {
+    public String getTemplateId(ConfigurationService configurationService) {
         return null;
     }
 

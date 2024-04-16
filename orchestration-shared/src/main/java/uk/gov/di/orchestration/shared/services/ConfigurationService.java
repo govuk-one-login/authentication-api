@@ -276,10 +276,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public boolean isNotifyTemplatePerLanguage() {
-        return System.getenv().getOrDefault("NOTIFY_TEMPLATE_PER_LANGUAGE", "false").equals("true");
-    }
-
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }

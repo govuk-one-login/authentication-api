@@ -66,8 +66,7 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL, SupportedLanguage.EN);
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
     }
 
     @Test
@@ -86,11 +85,7 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(
-                        TEST_PHONE_NUMBER,
-                        personalisation,
-                        VERIFY_PHONE_NUMBER,
-                        SupportedLanguage.EN);
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
     }
 
     @Test
@@ -109,9 +104,7 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService)
-                .sendEmail(
-                        TEST_EMAIL_ADDRESS, personalisation, EMAIL_UPDATED, SupportedLanguage.EN);
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, EMAIL_UPDATED);
     }
 
     @Test
@@ -130,11 +123,7 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(
-                        TEST_EMAIL_ADDRESS,
-                        personalisation,
-                        PASSWORD_UPDATED,
-                        SupportedLanguage.EN);
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, PASSWORD_UPDATED);
     }
 
     @Test
@@ -153,11 +142,7 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(
-                        TEST_EMAIL_ADDRESS,
-                        personalisation,
-                        PHONE_NUMBER_UPDATED,
-                        SupportedLanguage.EN);
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, PHONE_NUMBER_UPDATED);
     }
 
     @Test
@@ -175,9 +160,7 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService)
-                .sendEmail(
-                        TEST_EMAIL_ADDRESS, personalisation, DELETE_ACCOUNT, SupportedLanguage.EN);
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, DELETE_ACCOUNT);
     }
 
     @Test
@@ -211,7 +194,7 @@ public class NotificationHandlerTest {
 
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL, SupportedLanguage.EN);
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
 
         RuntimeException exception =
                 assertThrows(
@@ -238,11 +221,7 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendText(
-                        TEST_PHONE_NUMBER,
-                        personalisation,
-                        VERIFY_PHONE_NUMBER,
-                        SupportedLanguage.EN);
+                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
 
         RuntimeException exception =
                 assertThrows(

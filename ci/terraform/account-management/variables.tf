@@ -14,11 +14,6 @@ variable "notify_url" {
   default = null
 }
 
-variable "notify_template_per_language" {
-  default = false
-  type    = bool
-}
-
 variable "notify_template_map" {
   type = map(string)
   default = {

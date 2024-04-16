@@ -9,7 +9,6 @@ import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -190,11 +189,7 @@ public class BulkUserEmailSenderScheduledEventHandler
     private boolean sendNotifyEmail(String email) throws NotificationClientException {
         if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
             LOG.info("Bulk user email sending email.");
-            notificationService.sendEmail(
-                    email,
-                    Map.of(),
-                    TERMS_AND_CONDITIONS_BULK_EMAIL,
-                    LocaleHelper.SupportedLanguage.EN);
+            notificationService.sendEmail(email, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
             return true;
         } else {
             LOG.info("Bulk user email email sending not enabled.");

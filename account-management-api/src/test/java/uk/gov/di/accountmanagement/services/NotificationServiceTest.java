@@ -2,7 +2,6 @@ package uk.gov.di.accountmanagement.services;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.NotificationType;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
@@ -32,10 +31,7 @@ class NotificationServiceTest {
         emailPersonalisation.put("email-address", TEST_EMAIL);
 
         notificationService.sendEmail(
-                TEST_EMAIL,
-                emailPersonalisation,
-                NotificationType.EMAIL_UPDATED,
-                SupportedLanguage.EN);
+                TEST_EMAIL, emailPersonalisation, NotificationType.EMAIL_UPDATED);
 
         verify(notificationClient).sendEmail("123456", TEST_EMAIL, emailPersonalisation, "");
     }
@@ -47,10 +43,7 @@ class NotificationServiceTest {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", "some-code");
         notificationService.sendText(
-                TEST_PHONE_NUMBER,
-                phonePersonalisation,
-                NotificationType.PHONE_NUMBER_UPDATED,
-                SupportedLanguage.EN);
+                TEST_PHONE_NUMBER, phonePersonalisation, NotificationType.PHONE_NUMBER_UPDATED);
 
         verify(notificationClient).sendSms("567890", TEST_PHONE_NUMBER, phonePersonalisation, "");
     }
