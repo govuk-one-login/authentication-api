@@ -12,8 +12,6 @@ import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.USER_LANGUAGE_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
-import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage.CY;
-import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage.EN;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
@@ -51,13 +49,11 @@ public class LocaleHelper {
         }
         LOG.info("ui_locales is present: {}", authenticationRequest.getUILocales());
         for (LangTag langTag : authenticationRequest.getUILocales()) {
-            if (langTag.getPrimaryLanguage().equalsIgnoreCase(EN.getLanguage())) {
-                return Optional.of(EN);
-            }
-            if (configurationService.isLanguageEnabled(CY)
-                    && langTag.getPrimaryLanguage()
-                            .equalsIgnoreCase(SupportedLanguage.CY.getLanguage())) {
-                return Optional.of(CY);
+            if (langTag.getPrimaryLanguage().equalsIgnoreCase(SupportedLanguage.EN.getLanguage())) {
+                return Optional.of(SupportedLanguage.EN);
+            } else if (langTag.getPrimaryLanguage()
+                    .equalsIgnoreCase(SupportedLanguage.CY.getLanguage())) {
+                return Optional.of(SupportedLanguage.CY);
             }
         }
         return Optional.empty();
