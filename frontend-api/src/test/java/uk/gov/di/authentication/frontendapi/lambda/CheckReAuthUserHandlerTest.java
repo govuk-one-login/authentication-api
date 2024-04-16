@@ -157,8 +157,7 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(auditService)
-                .submitAuditEvent(REAUTHENTICATION_INVALID, auditContext);
+        verify(auditService).submitAuditEvent(REAUTHENTICATION_INVALID, auditContext);
     }
 
     @Test
@@ -182,9 +181,7 @@ class CheckReAuthUserHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
         verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContext);
+                .submitAuditEvent(FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED, auditContext);
     }
 
     @Test
