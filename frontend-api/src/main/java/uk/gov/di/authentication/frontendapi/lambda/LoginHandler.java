@@ -122,18 +122,21 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             var clientId = userContext.getClientId();
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
+            var auditContext =
+                    new AuditService.AuditContext(
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            clientId,
+                            AuditService.UNKNOWN,
+                            request.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            persistentSessionId);
+
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
 
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -152,6 +155,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             configurationService.getInternalSectorUri(),
                             authenticationService);
 
+            var auditContextWithSubjectId =
+                    new AuditService.AuditContext(
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            clientId,
+                            internalCommonSubjectIdentifier.getValue(),
+                            request.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            userProfile.getPhoneNumber(),
+                            persistentSessionId);
+
             int incorrectPasswordCount =
                     isReauthJourney
                             ? codeStorageService.getIncorrectPasswordCountReauthJourney(
@@ -164,14 +178,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
-                        internalCommonSubjectIdentifier.getValue(),
-                        userProfile.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        userProfile.getPhoneNumber(),
-                        persistentSessionId,
+                        auditContextWithSubjectId,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
@@ -188,14 +195,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 }
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
-                        internalCommonSubjectIdentifier.getValue(),
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
+                        auditContextWithSubjectId,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair(
                                 "incorrectPasswordCount",
@@ -207,14 +207,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
-                            clientId,
-                            internalCommonSubjectIdentifier.getValue(),
-                            userProfile.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            userProfile.getPhoneNumber(),
-                            persistentSessionId,
+                            auditContextWithSubjectId,
                             pair("internalSubjectId", userProfile.getSubjectID()),
                             pair(
                                     "attemptNoFailedAt",
@@ -279,14 +272,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    clientId,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    userProfile.getPhoneNumber(),
-                    persistentSessionId,
+                    auditContextWithSubjectId,
                     pair("internalSubjectId", userProfile.getSubjectID()));
 
             if (!userMfaDetail.isMfaRequired()) {

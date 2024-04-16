@@ -131,6 +131,17 @@ class LoginHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
+    private final AuditService.AuditContext successContext =
+            new AuditService.AuditContext(
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    CLIENT_ID.getValue(),
+                    expectedCommonSubject,
+                    EMAIL,
+                    "123.123.123.123",
+                    PHONE_NUMBER,
+                    PERSISTENT_ID);
+
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
 
@@ -204,14 +215,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
@@ -273,14 +277,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
@@ -338,14 +335,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
@@ -396,14 +386,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
@@ -455,14 +438,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
@@ -524,14 +500,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
@@ -723,7 +692,7 @@ class LoginHandlerTest {
     @EnumSource(MFAMethodType.class)
     void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession(
             MFAMethodType mfaMethodType) {
-        UserProfile userProfile = generateUserProfile(null);
+        UserProfile userProfile = generateUserProfile(null).withEmail(EMAIL);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
@@ -748,14 +717,15 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        new AuditService.AuditContext(
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                "",
+                                expectedCommonSubject,
+                                EMAIL,
+                                "123.123.123.123",
+                                userProfile.getPhoneNumber(),
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
@@ -829,14 +799,15 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        new AuditService.AuditContext(
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                "",
+                                expectedCommonSubject,
+                                EMAIL,
+                                "123.123.123.123",
+                                PHONE_NUMBER,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
                         pair("attemptNoFailedAt", 6));
@@ -952,14 +923,15 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        new AuditService.AuditContext(
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                "",
+                                "",
+                                EMAIL,
+                                "123.123.123.123",
+                                "",
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
@@ -1004,14 +976,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        successContext,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
