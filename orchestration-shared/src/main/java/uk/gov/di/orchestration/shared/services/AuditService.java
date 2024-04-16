@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
@@ -9,11 +10,13 @@ import uk.gov.di.orchestration.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.orchestration.audit.TxmaAuditEvent.auditEventWithTime;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.AuditField.TXMA_ENCODED_HEADER;
 
 public class AuditService {
 
@@ -93,6 +96,12 @@ public class AuditService {
                                         .map(url -> StringUtils.removeEnd(url, "/"))
                                         .orElse("UNKNOWN"))
                         .withUser(user);
+
+        if (ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName()) != null) {
+            txmaAuditEvent.addRestricted(
+                    "device_information",
+                    Map.of("encoded", ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName())));
+        }
 
         Arrays.stream(metadataPairs)
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
