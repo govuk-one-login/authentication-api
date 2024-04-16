@@ -21,6 +21,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -76,6 +78,20 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
         LOG.info("Processing CheckReAuthUser request");
 
+        var auditContext =
+                new AuditService.AuditContext(
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        AuditService.UNKNOWN,
+                        request.email(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
         try {
             return authenticationService
                     .getUserProfileByEmailMaybe(request.email())
@@ -95,24 +111,15 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 }
 
                                 return verifyReAuthentication(
-                                        userProfile, userContext, request.rpPairwiseId(), input);
+                                        userProfile,
+                                        userContext,
+                                        request.rpPairwiseId(),
+                                        auditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(() -> generateErrorResponse(request.email(), userContext, input));
+                    .orElseGet(() -> generateErrorResponse(request.email(), auditContext));
         } catch (AccountLockedException e) {
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
-                    request.email(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            auditService.submitAuditEvent(ACCOUNT_TEMPORARILY_LOCKED, auditContext);
             LOG.error("Account is locked due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
@@ -122,7 +129,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserProfile userProfile,
             UserContext userContext,
             String rpPairwiseId,
-            APIGatewayProxyRequestEvent input) {
+            AuditService.AuditContext auditContext) {
         var client = userContext.getClient().orElseThrow();
         var calculatedPairwiseId =
                 ClientSubjectHelper.getSubject(
@@ -133,19 +140,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         .getValue();
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            auditService.submitAuditEvent(REAUTHENTICATION_SUCCESSFUL, auditContext);
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
             return Optional.of(rpPairwiseId);
@@ -163,24 +158,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String email, UserContext userContext, APIGatewayProxyRequestEvent input) {
+            String email, AuditService.AuditContext auditContext) {
         if (hasEnteredIncorrectEmailTooManyTimes(email)) {
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                AuditService.UNKNOWN,
-                email,
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                FrontendAuditableEvent.REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
         codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);

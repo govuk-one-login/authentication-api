@@ -37,6 +37,8 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_INVALID;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -63,6 +65,17 @@ class CheckReAuthUserHandlerTest {
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
+
+    private final AuditService.AuditContext auditContext =
+            new AuditService.AuditContext(
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    CLIENT_ID,
+                    AuditService.UNKNOWN,
+                    EMAIL_ADDRESS,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    PERSISTENT_SESSION_ID);
 
     private CheckReAuthUserHandler handler;
 
@@ -122,17 +135,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(200, result.getStatusCode());
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(REAUTHENTICATION_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -155,16 +158,7 @@ class CheckReAuthUserHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
         verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                .submitAuditEvent(REAUTHENTICATION_INVALID, auditContext);
     }
 
     @Test
@@ -190,14 +184,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        auditContext);
     }
 
     @Test
@@ -241,17 +228,7 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(REAUTHENTICATION_INVALID, auditContext);
     }
 
     private UserProfile generateUserProfile() {
