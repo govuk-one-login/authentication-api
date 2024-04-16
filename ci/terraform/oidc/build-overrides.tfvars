@@ -10,7 +10,6 @@ doc_app_new_aud_claim_enabled               = true
 doc_app_encryption_key_id                   = "KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs"
 spot_enabled                                = false
 internal_sector_uri                         = "https://identity.build.account.gov.uk"
-extended_feature_flags_enabled              = true
 support_auth_orch_split                     = true
 support_auth_orch_split_user_info           = true
 custom_doc_app_claim_enabled                = true

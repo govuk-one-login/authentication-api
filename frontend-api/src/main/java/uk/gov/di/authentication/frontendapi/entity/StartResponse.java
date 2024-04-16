@@ -16,20 +16,11 @@ public class StartResponse {
     @Expose
     private ClientStartInfo client;
 
-    @SerializedName("featureFlags")
-    @Expose
-    private Features features;
-
     public StartResponse() {}
 
     public StartResponse(UserStartInfo user, ClientStartInfo client) {
         this.user = user;
         this.client = client;
-    }
-
-    public StartResponse(UserStartInfo user, ClientStartInfo client, Features features) {
-        this(user, client);
-        this.features = features;
     }
 
     public UserStartInfo getUser() {
@@ -38,9 +29,5 @@ public class StartResponse {
 
     public ClientStartInfo getClient() {
         return client;
-    }
-
-    public Features getFeatures() {
-        return features;
     }
 }

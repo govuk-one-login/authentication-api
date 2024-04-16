@@ -25,7 +25,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
-import uk.gov.di.authentication.frontendapi.entity.Features;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
@@ -55,7 +54,6 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -122,20 +120,19 @@ class StartHandlerTest {
 
     private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
         return Stream.of(
-                Arguments.of(null, "some-ga-tracking-id", true),
-                Arguments.of("some-cookie-consent-value", null, true),
-                Arguments.of(null, null, true),
-                Arguments.of("some-cookie-consent-value", "some-ga-tracking-id", true),
-                Arguments.of(null, "some-ga-tracking-id", false),
-                Arguments.of("some-cookie-consent-value", null, false),
-                Arguments.of(null, null, false),
-                Arguments.of("some-cookie-consent-value", "some-ga-tracking-id", false));
+                Arguments.of(null, "some-ga-tracking-id"),
+                Arguments.of("some-cookie-consent-value", null),
+                Arguments.of(null, null),
+                Arguments.of("some-cookie-consent-value", "some-ga-tracking-id"),
+                Arguments.of(null, "some-ga-tracking-id"),
+                Arguments.of("some-cookie-consent-value", null),
+                Arguments.of(null, null),
+                Arguments.of("some-cookie-consent-value", "some-ga-tracking-id"));
     }
 
     @ParameterizedTest
     @MethodSource("cookieConsentGaTrackingIdValues")
-    void shouldReturn200WithStartResponse(
-            String cookieConsentValue, String gaTrackingId, Boolean isFeaturesEnabled)
+    void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
             throws ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
@@ -147,9 +144,6 @@ class StartHandlerTest {
         when(startService.buildUserStartInfo(
                         userContext, cookieConsentValue, gaTrackingId, true, false))
                 .thenReturn(userStartInfo);
-        Features features = new Features();
-        when(startService.getSessionFeatures()).thenReturn(features);
-        when(configurationService.isExtendedFeatureFlagsEnabled()).thenReturn(isFeaturesEnabled);
         usingValidClientSession();
         usingValidSession();
 
@@ -187,11 +181,6 @@ class StartHandlerTest {
                 response.getUser().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
         assertThat(response.getUser().getCookieConsent(), equalTo(cookieConsentValue));
         assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
-        if (isFeaturesEnabled) {
-            assertThat(response.getFeatures(), not(equalTo(null)));
-        } else {
-            assertThat(response.getFeatures(), equalTo(null));
-        }
 
         verify(auditService)
                 .submitAuditEvent(

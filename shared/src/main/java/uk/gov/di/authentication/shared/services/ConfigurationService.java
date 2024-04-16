@@ -328,12 +328,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean isExtendedFeatureFlagsEnabled() {
-        return System.getenv()
-                .getOrDefault("EXTENDED_FEATURE_FLAGS_ENABLED", "false")
-                .equals("true");
-    }
-
     public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
         return supportedLanguage.equals(SupportedLanguage.EN)
                 || supportedLanguage.equals(SupportedLanguage.CY);
