@@ -128,7 +128,6 @@ class ResetPasswordHandlerTest {
                 .validate("password");
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(true);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         usingValidSession();
         usingValidClientSession();
@@ -386,37 +385,6 @@ class ResetPasswordHandlerTest {
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
         verifyNoInteractions(accountModifiersService);
-    }
-
-    @Test
-    void shouldNotUpdateAccountModifiersTableWhenPasswordResetSuccessfullyButFeatureIsDisabled()
-            throws Json.JsonException {
-        when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(false);
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
-
-        var result = generateRequest(NEW_PASSWORD);
-
-        assertThat(result, hasStatus(204));
-        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountModifiersService);
-        verify(sqsClient, times(1))
-                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
-        verify(sqsClient, never())
-                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        TEST_CLIENT_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID);
     }
 
     @Test

@@ -70,12 +70,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("ACCOUNT_RECOVERY_BLOCK_TTL", "172800"));
     }
 
-    public boolean isAccountRecoveryBlockEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_RECOVERY_BLOCK_ENABLED", "false")
-                .equals("true");
-    }
-
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
