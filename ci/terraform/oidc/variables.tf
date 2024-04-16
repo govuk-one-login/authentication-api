@@ -611,6 +611,12 @@ variable "kms_cross_account_access_enabled" {
   description = "Whether the service should allow cross-account access by the orchestration account to kms"
 }
 
+variable "oidc_origin_domain_enabled" {
+  type        = bool
+  default     = false
+  description = "Feature flag to control the creation of DNS records for the origin.oidc domain"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
