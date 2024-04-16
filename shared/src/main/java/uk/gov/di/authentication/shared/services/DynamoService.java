@@ -4,34 +4,16 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Expression;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
-import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.*;
+import software.amazon.awssdk.enhanced.dynamodb.model.*;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.*;
-import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
-import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.helpers.*;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -471,19 +453,19 @@ public class DynamoService implements AuthenticationService {
             MFAMethodType mfaMethodType,
             boolean methodVerified,
             boolean enabled,
-            String credentialValue,
             PriorityIdentifier priorityIdentifier,
             int mfaIdentifier,
             String endpoint) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         MFAMethodV2 mfaMethodV2 =
                 new MFAMethodV2(
-                        mfaIdentifier, priorityIdentifier, MFAMethodType.AUTH_APP.getValue(),
+                        mfaIdentifier,
+                        priorityIdentifier,
+                        MFAMethodType.AUTH_APP.getValue(),
                         endpoint,
                         methodVerified,
                         enabled,
-                        dateTime
-                );
+                        dateTime);
         dynamoUserCredentialsTable.updateItem(
                 dynamoUserCredentialsTable
                         .getItem(
@@ -491,6 +473,57 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .withMfaMethodsV2(List.of(mfaMethodV2)));
+    }
+
+    public void updateMFAmethodV2(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            PriorityIdentifier priorityIdentifier,
+            int mfaIdentifier,
+            String endpoint) {
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        MFAMethodV2 updatedMfaMethodV2 =
+                new MFAMethodV2(
+                        mfaIdentifier,
+                        priorityIdentifier,
+                        MFAMethodType.AUTH_APP.getValue(),
+                        endpoint,
+                        methodVerified,
+                        enabled,
+                        dateTime);
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withMfaMethodsV2(List.of(updatedMfaMethodV2)));
+    }
+
+    public void deleteMFAmethodV2(String email, int mfaIdentifier) {
+
+        dynamoUserCredentialsTable.deleteItem(
+                DeleteItemEnhancedRequest.builder()
+                        .key(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .sortValue(mfaIdentifier)
+                                        .build())
+                        .build());
+    }
+
+    public List<MFAMethodV2> readMFAMethodsV2(String email) {
+        var userItem =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
+        if (userItem != null && userItem.getMfaMethodsV2() != null) {
+            return userItem.getMfaMethodsV2();
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     @Override

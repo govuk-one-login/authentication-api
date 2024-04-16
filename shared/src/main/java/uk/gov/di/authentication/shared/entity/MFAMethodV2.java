@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
@@ -15,14 +16,12 @@ public class MFAMethodV2 {
     public static final String ATTRIBUTE_MFA_IDENTIFIER = "MfaIdentifier";
     public static final String ATTRIBUTE_PRIORITY_IDENTIFIER = "PriorityIdentifier";
     public static final String ATTRIBUTE_MFA_METHOD_TYPE = "MfaMethodType";
-    public static final String ATTRIBUTE_CREDENTIAL_VALUE = "CredentialValue";
     public static final String ATTRIBUTE_END_POINT = "EndPoint";
     public static final String ATTRIBUTE_METHOD_VERIFIED = "MethodVerified";
     public static final String ATTRIBUTE_ENABLED = "Enabled";
     public static final String ATTRIBUTE_UPDATED = "Updated";
 
     private String mfaMethodType;
-    private String credentialValue;
     private boolean methodVerified;
     private boolean enabled;
     private String updated;
@@ -33,7 +32,9 @@ public class MFAMethodV2 {
     public MFAMethodV2() {}
 
     public MFAMethodV2(
-            int mfaIdentifier, PriorityIdentifier priorityIdentifier, String mfaMethodType,
+            int mfaIdentifier,
+            PriorityIdentifier priorityIdentifier,
+            String mfaMethodType,
             String endPoint,
             boolean methodVerified,
             boolean enabled,
@@ -54,15 +55,6 @@ public class MFAMethodV2 {
 
     public void setMfaMethodType(String mfaMethodType) {
         this.mfaMethodType = mfaMethodType;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_CREDENTIAL_VALUE)
-    public String getCredentialValue() {
-        return credentialValue;
-    }
-
-    public void setCredentialValue(String credentialValue) {
-        this.credentialValue = credentialValue;
     }
 
     @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
@@ -95,6 +87,7 @@ public class MFAMethodV2 {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_IDENTIFIER)
+    @DynamoDbSecondarySortKey(indexNames = {"PRIMARY_INDEX"})
     public int getMfaIdentifier() {
         return mfaIdentifier;
     }
@@ -127,7 +120,6 @@ public class MFAMethodV2 {
         if (o == null || getClass() != o.getClass()) return false;
         MFAMethodV2 that = (MFAMethodV2) o;
         return Objects.equals(mfaMethodType, that.mfaMethodType)
-                && Objects.equals(credentialValue, that.credentialValue)
                 && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
                 && Objects.equals(updated, that.updated)
@@ -139,14 +131,13 @@ public class MFAMethodV2 {
     @Override
     public int hashCode() {
         return Objects.hash(
-                mfaMethodType,
-                credentialValue,
-                methodVerified,
-                enabled,
-                updated,
                 mfaIdentifier,
                 priorityIdentifier,
-                endPoint);
+                mfaMethodType,
+                endPoint,
+                methodVerified,
+                enabled,
+                updated);
     }
 
     AttributeValue toAttributeValue() {
@@ -155,9 +146,6 @@ public class MFAMethodV2 {
                         Map.entry(
                                 ATTRIBUTE_MFA_METHOD_TYPE,
                                 AttributeValue.fromS(getMfaMethodType())),
-                        Map.entry(
-                                ATTRIBUTE_CREDENTIAL_VALUE,
-                                AttributeValue.fromS(getCredentialValue())),
                         Map.entry(
                                 ATTRIBUTE_METHOD_VERIFIED,
                                 AttributeValue.fromN(isMethodVerified() ? "1" : "0")),

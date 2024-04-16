@@ -174,7 +174,6 @@ class DynamoServiceIntegrationTest {
                 MFAMethodType.AUTH_APP,
                 true,
                 true,
-                TEST_MFA_APP_CREDENTIAL,
                 PriorityIdentifier.PRIMARY,
                 1,
                 "test");
@@ -191,7 +190,7 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.getEndPoint(), equalTo("test"));
     }
 
-   /* @Test
+    @Test
     void shouldUpdateAuthAppMFAMethodV2() {
         setUpDynamo();
         dynamoService.addMFAMethodV2(
@@ -199,29 +198,33 @@ class DynamoServiceIntegrationTest {
                 MFAMethodType.AUTH_APP,
                 true,
                 true,
-                TEST_MFA_APP_CREDENTIAL,
                 PriorityIdentifier.PRIMARY,
                 1,
                 "test");
+
+        dynamoService.updateMFAmethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                false,
+                PriorityIdentifier.SECONDARY,
+                1,
+                "test");
+
         UserCredentials updatedUserCredentials =
                 dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-
-        dynamoService.updateMFAMethodV2() {
-
-        }
 
         assertThat(updatedUserCredentials.getMfaMethodsV2().size(), equalTo(1));
         MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodsV2().get(0);
         assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
-        assertThat(mfaMethod.isEnabled(), equalTo(true));
-        assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.PRIMARY));
+        assertThat(mfaMethod.isEnabled(), equalTo(false));
+        assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.SECONDARY));
         assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
         assertThat(mfaMethod.getEndPoint(), equalTo("test"));
     }
-   */
 
-    /*
+    @Test
     void shouldDeleteAuthAppMFAMethodV2() {
 
         setUpDynamo();
@@ -230,33 +233,50 @@ class DynamoServiceIntegrationTest {
                 MFAMethodType.AUTH_APP,
                 true,
                 true,
-                TEST_MFA_APP_CREDENTIAL,
                 PriorityIdentifier.PRIMARY,
                 1,
                 "test");
-        UserCredentials updatedUserCredentials =
-                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
+        List<MFAMethodV2> users = dynamoService.readMFAMethodsV2(TEST_EMAIL);
 
-        dynamoService.deleteMFAMethodV2()
+        assertThat(users.size(), equalTo(1));
 
-        assertThat(updatedUserCredentials.getMfaMethodsV2().size(), equalTo(1));
-        MFAMethodV2 mfaMethod = updatedUserCredentials.getMfaMethodsV2().get(0);
-        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
-        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
-        assertThat(mfaMethod.isEnabled(), equalTo(true));
-        assertThat(mfaMethod.getPriorityIdentifier(), equalTo(PriorityIdentifier.PRIMARY));
-        assertThat(mfaMethod.getMfaIdentifier(), equalTo(1));
-        assertThat(mfaMethod.getEndPoint(), equalTo("test"));
+        dynamoService.deleteMFAmethodV2(TEST_EMAIL, 1); // I can't sort them by mfaIdentifier
 
+        users = dynamoService.readMFAMethodsV2(TEST_EMAIL);
+        assertThat(users.size(), equalTo(0));
     }
-*/
 
-
+    @Test
+    void shouldReadAuthAppMFAMethodv2() {
+        setUpDynamo();
+        dynamoService.addMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                true,
+                PriorityIdentifier.PRIMARY,
+                1,
+                "test");
+        dynamoService.addMFAMethodV2(
+                TEST_EMAIL,
+                MFAMethodType.AUTH_APP,
+                true,
+                false,
+                PriorityIdentifier.SECONDARY,
+                3,
+                "google");
+        List<MFAMethodV2> users = dynamoService.readMFAMethodsV2(TEST_EMAIL);
+        assertThat(
+                users.size(),
+                equalTo(2)); // apprently the add method just creates a new entity every time so it
+        // remains to 1.
+        // we need to update the add method in order to create maybe a map which we update.
+    }
 
     @Test
     void
-    shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
+            shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
