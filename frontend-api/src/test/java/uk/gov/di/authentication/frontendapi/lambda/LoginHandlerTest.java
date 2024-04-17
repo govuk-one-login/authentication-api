@@ -138,6 +138,14 @@ class LoginHandlerTest {
                     CLIENT_SESSION_ID_HEADER,
                     CLIENT_SESSION_ID);
 
+    private final String validBodyWithEmailAndPassword =
+            format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL.toUpperCase());
+
+    private final String validBodyWithReauthJourney =
+            format(
+                    "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                    PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
+
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
 
@@ -186,14 +194,8 @@ class LoginHandlerTest {
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
@@ -251,15 +253,9 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        ;
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithReauthJourney);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
@@ -313,13 +309,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -367,13 +357,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -422,13 +406,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -485,13 +463,7 @@ class LoginHandlerTest {
 
         usingDefaultVectorOfTrust();
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -542,13 +514,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
-
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
 
@@ -582,9 +548,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -619,9 +583,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -654,9 +616,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -683,12 +643,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        PASSWORD, EMAIL, JourneyType.REAUTHENTICATION));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithReauthJourney);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -715,10 +670,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -758,9 +710,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
 
         when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
@@ -790,14 +740,10 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-
         usingValidSession();
         usingDefaultVectorOfTrust();
 
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(auditService)
@@ -839,12 +785,10 @@ class LoginHandlerTest {
 
         when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
                 .thenReturn(false);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
 
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
@@ -860,9 +804,8 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
+        var bodyWithoutEmail = format("{ \"password\": \"%s\"}", PASSWORD);
+        var event = eventWithHeadersAndBody(validHeaders, bodyWithoutEmail);
 
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -876,9 +819,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.empty());
@@ -894,13 +835,10 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
 
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(auditService)
@@ -933,13 +871,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(validHeaders, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -1053,5 +985,14 @@ class LoginHandlerTest {
                                 new ClientRegistry()
                                         .withSmokeTest(true)
                                         .withClientID(CLIENT_ID.getValue())));
+    }
+
+    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
+            Map<String, String> headers, String body) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(body);
+        return event;
     }
 }
