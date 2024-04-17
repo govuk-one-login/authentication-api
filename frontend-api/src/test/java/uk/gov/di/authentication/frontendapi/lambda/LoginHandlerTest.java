@@ -110,7 +110,8 @@ class LoginHandlerTest {
     private static final AuditService.MetadataPair incorrectPasswordCountPair =
             pair("incorrectPasswordCount", 0);
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private static final Session session =
+            new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
     private static final Map<String, String> VALID_HEADERS =
             Map.of(
                     PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
@@ -204,7 +205,6 @@ class LoginHandlerTest {
                 response.getRedactedPhoneNumber(),
                 equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
@@ -249,13 +249,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
-
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
                 pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
@@ -280,8 +273,7 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
+    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -294,13 +286,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
@@ -333,13 +318,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
@@ -375,11 +353,8 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
@@ -423,13 +398,8 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         assertThat(response.getMfaMethodType(), equalTo(SMS));
         assertThat(response.isMfaMethodVerified(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
@@ -500,9 +470,6 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -532,12 +499,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
                 .save(
@@ -645,8 +606,7 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
+    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -661,11 +621,11 @@ class LoginHandlerTest {
         when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
-        APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result2, hasStatus(200));
+        assertThat(result, hasStatus(200));
 
-        objectMapper.readValue(result2.getBody(), LoginResponse.class);
+        LoginResponse loginResponse = objectMapper.readValue(result.getBody(), LoginResponse.class);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
                 .save(
@@ -822,11 +782,8 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
