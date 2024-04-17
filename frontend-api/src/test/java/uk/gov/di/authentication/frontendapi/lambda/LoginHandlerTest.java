@@ -368,27 +368,6 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfPasswordIsEnteredAgain(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-        verifyNoInteractions(cloudwatchMetricsService);
-        verifySessionIsSaved();
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
     void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts(
             MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
@@ -486,8 +465,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse loginResponse = objectMapper.readValue(result.getBody(), LoginResponse.class);
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
     }
