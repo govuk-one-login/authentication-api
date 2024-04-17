@@ -218,14 +218,7 @@ class LoginHandlerTest {
                         false,
                         false);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @Test
@@ -261,14 +254,7 @@ class LoginHandlerTest {
                         false,
                         false);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -292,14 +278,7 @@ class LoginHandlerTest {
                 pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -324,14 +303,7 @@ class LoginHandlerTest {
                 pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -361,14 +333,7 @@ class LoginHandlerTest {
                 pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @Test
@@ -406,14 +371,7 @@ class LoginHandlerTest {
                 pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -436,14 +394,7 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.isPasswordChangeRequired(), equalTo(true));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -472,14 +423,7 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -500,14 +444,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -529,12 +466,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
@@ -556,12 +488,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
@@ -596,12 +523,7 @@ class LoginHandlerTest {
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
@@ -627,14 +549,7 @@ class LoginHandlerTest {
 
         LoginResponse loginResponse = objectMapper.readValue(result.getBody(), LoginResponse.class);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -670,12 +585,7 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
@@ -699,12 +609,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @Test
@@ -719,7 +624,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any(Session.class));
+        verify(sessionService, never()).save(any());
     }
 
     @Test
@@ -734,7 +639,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any(Session.class));
+        verify(sessionService, never()).save(any());
     }
 
     @Test
@@ -790,14 +695,7 @@ class LoginHandlerTest {
                 pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     private AuthenticationRequest generateAuthRequest() {
@@ -903,5 +801,16 @@ class LoginHandlerTest {
                         PHONE_NUMBER,
                         PERSISTENT_ID,
                         metadataPairs);
+    }
+
+    private void verifySessionIsSaved() {
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                        .equals(expectedCommonSubject)
+                                                && t.isNewAccount()
+                                                        == Session.AccountState.EXISTING));
     }
 }
