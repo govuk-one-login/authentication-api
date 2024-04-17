@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
@@ -525,6 +526,30 @@ class LoginHandlerTest {
         verifyNoInteractions(cloudwatchMetricsService);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(Boolean isReauthJourney) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(SMS, false);
+
+        usingValidSession();
+        usingDefaultVectorOfTrust();
+
+        var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, body);
+        handler.handleRequest(event, context);
+
+        if (isReauthJourney) {
+            verify(codeStorageService, atLeastOnce())
+                    .increaseIncorrectPasswordCountReauthJourney(EMAIL);
+        } else {
+            verify(codeStorageService, atLeastOnce()).increaseIncorrectPasswordCount(EMAIL);
+        }
     }
 
     @ParameterizedTest
