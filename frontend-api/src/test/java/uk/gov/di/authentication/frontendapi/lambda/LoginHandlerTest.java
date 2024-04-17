@@ -221,70 +221,9 @@ class LoginHandlerTest {
         verifySessionIsSaved();
     }
 
-    @Test
-    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequiredAndIsReauthJourney()
-            throws Json.JsonException {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
-
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        ;
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING,
-                        CLIENT_ID.getValue(),
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        false);
-
-        verifySessionIsSaved();
-    }
-
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-        verifyNoInteractions(cloudwatchMetricsService);
-
-        verifySessionIsSaved();
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequiredAndIsReauthJourney(
-            MFAMethodType mfaMethodType) throws Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
