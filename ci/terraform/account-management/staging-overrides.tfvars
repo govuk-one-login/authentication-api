@@ -1,4 +1,4 @@
-internal_sector_uri    = "https://identity.staging.account.gov.uk"
+internal_sector_uri = "https://identity.staging.account.gov.uk"
 
 
 performance_tuning = {
