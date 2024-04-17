@@ -53,7 +53,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -130,6 +129,14 @@ class LoginHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
+    private Map<String, String> validHeaders =
+            Map.of(
+                    PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                    PERSISTENT_ID,
+                    "Session-Id",
+                    session.getSessionId(),
+                    CLIENT_SESSION_ID_HEADER,
+                    CLIENT_SESSION_ID);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -166,10 +173,6 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -185,7 +188,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -235,10 +238,7 @@ class LoginHandlerTest {
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequiredAndIsReauthJourney()
             throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        Map<String, String> headers = validHeaders;
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -254,7 +254,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
@@ -305,10 +305,6 @@ class LoginHandlerTest {
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType)
             throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -319,7 +315,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -363,10 +359,6 @@ class LoginHandlerTest {
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequiredAndIsReauthJourney(
             MFAMethodType mfaMethodType) throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -377,7 +369,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
@@ -422,10 +414,6 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
             MFAMethodType mfaMethodType) throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -436,7 +424,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -478,10 +466,6 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200WithCorrectMfaMethodVerifiedStatus() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         var userProfile = generateUserProfile(null);
         var userCredentials =
                 new UserCredentials()
@@ -503,7 +487,7 @@ class LoginHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -559,7 +543,7 @@ class LoginHandlerTest {
         usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(new HashMap<>());
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -599,7 +583,7 @@ class LoginHandlerTest {
         usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -636,7 +620,7 @@ class LoginHandlerTest {
         usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -671,7 +655,7 @@ class LoginHandlerTest {
         usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -700,7 +684,7 @@ class LoginHandlerTest {
         usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
@@ -733,12 +717,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -755,7 +734,7 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        PERSISTENT_ID,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
@@ -780,7 +759,7 @@ class LoginHandlerTest {
         usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         handler.handleRequest(event, context);
 
@@ -813,12 +792,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         usingValidSession();
@@ -836,7 +810,7 @@ class LoginHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        PERSISTENT_ID,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
                         pair("attemptNoFailedAt", 6));
@@ -866,12 +840,7 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -892,12 +861,7 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         usingValidSession();
@@ -913,12 +877,7 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
@@ -937,12 +896,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+        event.setHeaders(validHeaders);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -959,7 +913,7 @@ class LoginHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PERSISTENT_ID);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
@@ -971,10 +925,6 @@ class LoginHandlerTest {
     void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         setUpSmokeTestClient();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -985,7 +935,7 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
