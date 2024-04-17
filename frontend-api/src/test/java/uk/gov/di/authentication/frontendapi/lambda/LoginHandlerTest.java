@@ -206,18 +206,9 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -266,18 +257,9 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -321,18 +303,9 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verify(sessionService, atLeastOnce())
@@ -369,18 +342,9 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verify(sessionService, atLeastOnce())
@@ -418,18 +382,9 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -477,18 +432,9 @@ class LoginHandlerTest {
         assertThat(response.isMfaMethodVerified(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verify(sessionService, atLeastOnce())
@@ -883,18 +829,9 @@ class LoginHandlerTest {
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -994,5 +931,21 @@ class LoginHandlerTest {
         event.setHeaders(headers);
         event.setBody(body);
         return event;
+    }
+
+    private void assertAuditServiceCalledWith(
+            FrontendAuditableEvent auditableEvent, AuditService.MetadataPair... metadataPairs) {
+        verify(auditService)
+                .submitAuditEvent(
+                        auditableEvent,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        PHONE_NUMBER,
+                        PERSISTENT_ID,
+                        metadataPairs);
     }
 }
