@@ -501,7 +501,6 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
     }
 
