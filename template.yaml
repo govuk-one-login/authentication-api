@@ -532,6 +532,15 @@ Resources:
           FromPort: 443
           ToPort: 443
 
+
+  TestParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${Environment}-test-parameter
+      Type: String
+      Value: date
+      Description: my test parameter
+
   SlackEvents:
     Type: AWS::SNS::Topic
     Properties:
