@@ -240,3 +240,7 @@ output "email_check_results_encryption_policy_arn" {
 output "client_registry_kms_key_arn" {
   value = aws_kms_key.client_registry_table_encryption_key.arn
 }
+
+output "user_profile_kms_key_arn" {
+  value = aws_kms_key.user_profile_table_encryption_key.arn
+}

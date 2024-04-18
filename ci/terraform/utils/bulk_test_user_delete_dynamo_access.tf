@@ -13,6 +13,20 @@ data "aws_iam_policy_document" "user_profile_dynamo_delete_access" {
       data.aws_dynamodb_table.user_profile.arn,
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.user_profile_kms_key_arn]
+  }
 }
 
 resource "aws_iam_policy" "user_profile_dynamo_delete_access" {

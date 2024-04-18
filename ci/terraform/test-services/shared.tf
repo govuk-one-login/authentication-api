@@ -20,4 +20,5 @@ locals {
   authentication_vpc_arn                = data.terraform_remote_state.shared.outputs.authentication_vpc_arn
   authentication_private_subnet_ids     = data.terraform_remote_state.shared.outputs.authentication_private_subnet_ids
   authentication_security_group_id      = data.terraform_remote_state.shared.outputs.authentication_security_group_id
+  user_profile_kms_key_arn              = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
 }

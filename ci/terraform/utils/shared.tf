@@ -24,4 +24,5 @@ locals {
     timeout = 900,
   }
   common_passwords_encryption_policy_arn = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
+  user_profile_kms_key_arn               = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
 }

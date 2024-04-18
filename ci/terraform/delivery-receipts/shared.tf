@@ -19,4 +19,5 @@ locals {
   lambda_code_signing_configuration_arn    = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
   bulk_user_email_table_encryption_key_arn = data.terraform_remote_state.shared.outputs.bulk_user_email_table_encryption_key_arn
   user_profile_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
+  user_profile_kms_key_arn                 = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
 }
