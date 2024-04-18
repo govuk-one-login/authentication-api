@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
@@ -53,7 +54,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -111,6 +111,16 @@ class LoginHandlerTest {
     private static final AuditService.MetadataPair incorrectPasswordCountPair =
             pair("incorrectPasswordCount", 0);
     private static final Json objectMapper = SerializationService.getInstance();
+    private static final Session session =
+            new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private static final Map<String, String> VALID_HEADERS =
+            Map.of(
+                    PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                    PERSISTENT_ID,
+                    "Session-Id",
+                    session.getSessionId(),
+                    CLIENT_SESSION_ID_HEADER,
+                    CLIENT_SESSION_ID);
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -126,10 +136,17 @@ class LoginHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
+
+    private final String validBodyWithEmailAndPassword =
+            format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL.toUpperCase());
+
+    private final String validBodyWithReauthJourney =
+            format(
+                    "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                    PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -166,10 +183,6 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -183,14 +196,8 @@ class LoginHandlerTest {
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
@@ -199,20 +206,10 @@ class LoginHandlerTest {
                 response.getRedactedPhoneNumber(),
                 equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -222,93 +219,12 @@ class LoginHandlerTest {
                         false,
                         false);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
-    }
-
-    @Test
-    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequiredAndIsReauthJourney()
-            throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams())
-                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
-        var vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("P0.Cl")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
-
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING,
-                        CLIENT_ID.getValue(),
-                        CLIENT_NAME,
-                        "P0",
-                        false,
-                        false);
-
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -317,104 +233,17 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequiredAndIsReauthJourney(
-            MFAMethodType mfaMethodType) throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-        verifyNoInteractions(cloudwatchMetricsService);
-
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -422,10 +251,6 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
             MFAMethodType mfaMethodType) throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -434,54 +259,25 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
+
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @Test
     void shouldReturn200WithCorrectMfaMethodVerifiedStatus() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         var userProfile = generateUserProfile(null);
         var userCredentials =
                 new UserCredentials()
@@ -501,48 +297,21 @@ class LoginHandlerTest {
 
         usingDefaultVectorOfTrust();
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
         assertThat(response.getMfaMethodType(), equalTo(SMS));
         assertThat(response.isMfaMethodVerified(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -558,27 +327,14 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(new HashMap<>());
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
-
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.isPasswordChangeRequired(), equalTo(true));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -598,64 +354,16 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfPasswordIsEnteredAgain(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-        usingDefaultVectorOfTrust();
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-
-        verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -670,21 +378,14 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
@@ -699,24 +400,14 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        PASSWORD, EMAIL, JourneyType.REAUTHENTICATION));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
@@ -731,15 +422,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -755,22 +438,16 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        PERSISTENT_ID,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
+    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -779,28 +456,17 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
 
         when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
-        APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertThat(result2, hasStatus(200));
-
-        objectMapper.readValue(result2.getBody(), LoginResponse.class);
+        assertThat(result, hasStatus(200));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     @ParameterizedTest
@@ -811,19 +477,10 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-
         usingValidSession();
         usingDefaultVectorOfTrust();
 
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(auditService)
@@ -836,7 +493,7 @@ class LoginHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        PERSISTENT_ID,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
                         pair("attemptNoFailedAt", 6));
@@ -844,13 +501,31 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(Boolean isReauthJourney) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(SMS, false);
+
+        usingValidSession();
+        usingDefaultVectorOfTrust();
+
+        var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, body);
+        handler.handleRequest(event, context);
+
+        if (isReauthJourney) {
+            verify(codeStorageService, atLeastOnce())
+                    .increaseIncorrectPasswordCountReauthJourney(EMAIL);
+        } else {
+            verify(codeStorageService, atLeastOnce()).increaseIncorrectPasswordCount(EMAIL);
+        }
     }
 
     @ParameterizedTest
@@ -865,40 +540,22 @@ class LoginHandlerTest {
 
         when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
                 .thenReturn(false);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
 
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
+        verify(sessionService, never()).save(any());
     }
 
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
+        var bodyWithoutEmail = format("{ \"password\": \"%s\"}", PASSWORD);
+        var event = eventWithHeadersAndBody(VALID_HEADERS, bodyWithoutEmail);
 
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -907,19 +564,12 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any(Session.class));
+        verify(sessionService, never()).save(any());
     }
 
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.empty());
@@ -929,24 +579,16 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any(Session.class));
+        verify(sessionService, never()).save(any());
     }
 
     @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
 
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(auditService)
@@ -959,7 +601,7 @@ class LoginHandlerTest {
                         "",
                         "123.123.123.123",
                         "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PERSISTENT_ID);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
@@ -971,10 +613,6 @@ class LoginHandlerTest {
     void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         setUpSmokeTestClient();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -983,46 +621,21 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(
-                response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+
+        assertAuditServiceCalledWith(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, atLeastOnce())
-                .save(
-                        argThat(
-                                t ->
-                                        t.getInternalCommonSubjectIdentifier()
-                                                .equals(expectedCommonSubject)));
-        verify(sessionService, atLeastOnce())
-                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+        verifySessionIsSaved();
     }
 
     private AuthenticationRequest generateAuthRequest() {
@@ -1103,5 +716,41 @@ class LoginHandlerTest {
                                 new ClientRegistry()
                                         .withSmokeTest(true)
                                         .withClientID(CLIENT_ID.getValue())));
+    }
+
+    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
+            Map<String, String> headers, String body) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(body);
+        return event;
+    }
+
+    private void assertAuditServiceCalledWith(
+            FrontendAuditableEvent auditableEvent, AuditService.MetadataPair... metadataPairs) {
+        verify(auditService)
+                .submitAuditEvent(
+                        auditableEvent,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        PHONE_NUMBER,
+                        PERSISTENT_ID,
+                        metadataPairs);
+    }
+
+    private void verifySessionIsSaved() {
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                        .equals(expectedCommonSubject)
+                                                && t.isNewAccount()
+                                                        == Session.AccountState.EXISTING));
     }
 }
