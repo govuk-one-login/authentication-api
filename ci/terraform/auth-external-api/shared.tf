@@ -26,4 +26,5 @@ locals {
   auth_code_store_signing_configuration_arn = data.terraform_remote_state.shared.outputs.auth_code_store_signing_configuration_arn
   access_token_store_signing_key_arn        = data.terraform_remote_state.shared.outputs.access_token_store_signing_key_arn
   user_credentials_encryption_policy_arn    = data.terraform_remote_state.shared.outputs.user_credentials_encryption_policy_arn
+  user_profile_kms_key_arn                  = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
 }

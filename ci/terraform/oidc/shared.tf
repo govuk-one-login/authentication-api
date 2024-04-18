@@ -72,4 +72,5 @@ locals {
   user_profile_encryption_policy_arn                  = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
   pending_email_check_queue_id                        = data.terraform_remote_state.shared.outputs.pending_email_check_queue_id
   pending_email_check_queue_access_policy_arn         = data.terraform_remote_state.shared.outputs.pending_email_check_queue_access_policy_arn
+  user_profile_kms_key_arn                            = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
 }
