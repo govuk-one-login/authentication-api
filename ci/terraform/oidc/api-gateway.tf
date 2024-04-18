@@ -307,13 +307,6 @@ resource "aws_api_gateway_base_path_mapping" "api" {
   domain_name = local.oidc_api_fqdn
 }
 
-resource "aws_api_gateway_base_path_mapping" "api_origin" {
-  count       = var.oidc_origin_domain_enabled ? 1 : 0
-  api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
-  domain_name = local.oidc_origin_api_fqdn
-}
-
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_api.name
