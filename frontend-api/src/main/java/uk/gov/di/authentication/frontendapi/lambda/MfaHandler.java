@@ -178,7 +178,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        pair("journey-type", journeyType));
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -198,7 +199,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        pair("journey-type", journeyType));
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
@@ -252,7 +254,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     IpAddressHelper.extractIpAddress(input),
                     phoneNumber,
                     persistentSessionId,
-                    pair("journey-type", journeyType));
+                    pair("journey-type", journeyType),
+                    pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
