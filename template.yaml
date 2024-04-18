@@ -538,6 +538,27 @@ Resources:
       TopicName: !Sub ${Environment}-slack-events
       KmsMasterKeyId: !GetAtt MainKmsKey.Arn
 
+  IpvCapacityParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${Environment}-ipv-capacity
+      Type: String
+      Value: undefined
+
+  AuthPublicEncryptionKeyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${Environment}-auth-public-encryption-key
+      Type: String
+      Value: undefined
+
+  IpvPublicEncryptionKeyParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${Environment}-ipv-public-encryption-key
+      Type: String
+      Value: undefined
+
 Outputs:
   SlackEventsArn:
     Description: 'ARN of the SlackEvents SNS topic'
