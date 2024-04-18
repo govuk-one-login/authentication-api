@@ -156,6 +156,52 @@ public class DcmawUserInfoTest {
                                 + "\n"));
     }
 
+    @Pact(consumer = "OrchUserInfoConsumer")
+    RequestResponsePact invalidAccessTokenReturnsError(PactDslWithProvider builder) {
+        return builder.given("accessToken is a invalid access token")
+                .given("invalid-subject-id is a invalid subject")
+                .given("dummyDcmawComponentId is a valid issuer")
+                .given("the current time is 2099-01-01 00:00:00")
+                .uponReceiving("Valid access token")
+                .path("/" + DOC_APP_USER_INFO_PATH)
+                .method("POST")
+                .matchHeader(
+                        "Authorization",
+                        "^(?i)Bearer (.*)(?-i)",
+                        tokens.getAccessToken().toAuthorizationHeader())
+                .willRespondWith()
+                .status(403)
+                .body(ERROR_MESSAGE)
+                .toPact();
+    }
+
+    @Test
+    @PactTestFor(
+            providerName = "DcmawUserInfoProvider",
+            pactMethod = "invalidAccessTokenReturnsError",
+            pactVersion = PactSpecVersion.V3)
+    void getDocAppUserInfoInvalidAccessTokenErrorResponse(MockServer mockServer) {
+
+        var request =
+                new HTTPRequest(
+                        POST,
+                        ConstructUriHelper.buildURI(mockServer.getUrl(), DOC_APP_USER_INFO_PATH));
+        request.setAuthorization(tokens.getAccessToken().toAuthorizationHeader());
+
+        UnsuccessfulCredentialResponseException exception =
+                assertThrows(
+                        UnsuccessfulCredentialResponseException.class,
+                        () -> docAppCriService.sendCriDataRequest(request, DOC_APP_SUBJECT_ID));
+
+        assertThat(exception.getHttpCode(), equalTo(403));
+        assertThat(
+                exception.getMessage(),
+                equalTo(
+                        "Error 403 when attempting to call CRI data endpoint: "
+                                + ERROR_MESSAGE
+                                + "\n"));
+    }
+
     private List<String> getUserInfoFromSuccessfulUserIdentityHttpResponse()
             throws ParseException, java.text.ParseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
