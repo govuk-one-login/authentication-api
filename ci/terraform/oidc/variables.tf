@@ -330,11 +330,6 @@ variable "internal_sector_uri" {
   default = "undefined"
 }
 
-variable "remove_retry_limit_registration_email_code" {
-  type    = bool
-  default = false
-}
-
 variable "code_max_retries_increased" {
   type    = number
   default = 999999

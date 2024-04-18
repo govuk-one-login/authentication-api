@@ -130,12 +130,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             ? getOtpCodeForTestClient(notificationType)
                             : codeStorageService.getOtpCode(
                                     session.getEmailAddress(), notificationType);
-            var maxRetries =
-                    codeRequestType == CodeRequestType.EMAIL_REGISTRATION
-                                    && configurationService
-                                            .removeRetryLimitForRegistrationEmailCodeEntry()
-                            ? configurationService.getIncreasedCodeMaxRetries()
-                            : configurationService.getCodeMaxRetries();
             var errorResponse =
                     ValidationHelper.validateVerificationCode(
                             notificationType,
@@ -144,7 +138,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             codeRequest.getCode(),
                             codeStorageService,
                             session.getEmailAddress(),
-                            maxRetries);
+                            configurationService.getCodeMaxRetries());
 
             if (errorResponse.stream().anyMatch(ErrorResponse.ERROR_1002::equals)) {
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
