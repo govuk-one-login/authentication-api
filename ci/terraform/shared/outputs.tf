@@ -241,6 +241,10 @@ output "client_registry_kms_key_arn" {
   value = aws_kms_key.client_registry_table_encryption_key.arn
 }
 
+output "identity_credentials_kms_key_arn" {
+  value = aws_kms_key.identity_credentials_table_encryption_key.arn
+}
+
 output "user_profile_kms_key_arn" {
   value = aws_kms_key.user_profile_table_encryption_key.arn
 }
