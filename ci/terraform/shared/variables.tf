@@ -174,16 +174,16 @@ variable "dlq_alarm_threshold" {
   description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
 }
 
-variable "client_registry_table_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the client registry table"
-}
-
 variable "orch_privatesub_cidr_blocks" {
   type        = list(string)
   description = "Orchestration private subnet cidr blocks"
   default     = []
+}
+
+variable "authentication_callback_userinfo_table_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access to the authentication callback userinfo table"
 }
 
 variable "back_channel_logout_cross_account_access_enabled" {
@@ -192,14 +192,20 @@ variable "back_channel_logout_cross_account_access_enabled" {
   description = "Whether the service should allow cross-account access by orchestration to the back channel logout queue"
 }
 
-variable "kms_cross_account_access_enabled" {
+variable "client_registry_table_cross_account_access_enabled" {
   default     = false
   type        = bool
-  description = "Whether the service should allow cross-account access by the orchestration account to kms"
+  description = "Whether the service should allow cross-account access to the client registry table"
 }
 
 variable "doc_app_cross_account_access_enabled" {
   default     = false
   type        = bool
   description = "Feature flag to control cross-account access to the doc app signing key"
+}
+
+variable "kms_cross_account_access_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should allow cross-account access by the orchestration account to kms"
 }
