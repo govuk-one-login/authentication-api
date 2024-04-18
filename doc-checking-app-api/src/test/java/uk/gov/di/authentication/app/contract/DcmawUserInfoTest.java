@@ -31,6 +31,7 @@ import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.CREDENTIAL_JWT;
@@ -107,6 +108,52 @@ public class DcmawUserInfoTest {
         var userInfo = docAppCriService.sendCriDataRequest(request, DOC_APP_SUBJECT_ID);
 
         assertThat(userInfo, equalTo(getUserInfoFromSuccessfulUserIdentityHttpResponse()));
+    }
+
+    @Pact(consumer = "OrchUserInfoConsumer")
+    RequestResponsePact validRequestReturnsAccessDenied(PactDslWithProvider builder) {
+        return builder.given("accessToken is a valid access token")
+                .given("invalid-subject-id is a invalid subject")
+                .given("dummyDcmawComponentId is a valid issuer")
+                .given("the current time is 2099-01-01 00:00:00")
+                .uponReceiving("Valid access token")
+                .path("/" + DOC_APP_USER_INFO_PATH)
+                .method("POST")
+                .matchHeader(
+                        "Authorization",
+                        "^(?i)Bearer (.*)(?-i)",
+                        tokens.getAccessToken().toAuthorizationHeader())
+                .willRespondWith()
+                .status(404)
+                .body(ERROR_MESSAGE)
+                .toPact();
+    }
+
+    @Test
+    @PactTestFor(
+            providerName = "DcmawUserInfoProvider",
+            pactMethod = "validRequestReturnsAccessDenied",
+            pactVersion = PactSpecVersion.V3)
+    void getDocAppUserInfoErrorDeniedResponse(MockServer mockServer) {
+
+        var request =
+                new HTTPRequest(
+                        POST,
+                        ConstructUriHelper.buildURI(mockServer.getUrl(), DOC_APP_USER_INFO_PATH));
+        request.setAuthorization(tokens.getAccessToken().toAuthorizationHeader());
+
+        UnsuccessfulCredentialResponseException exception =
+                assertThrows(
+                        UnsuccessfulCredentialResponseException.class,
+                        () -> docAppCriService.sendCriDataRequest(request, DOC_APP_SUBJECT_ID));
+
+        assertThat(exception.getHttpCode(), equalTo(404));
+        assertThat(
+                exception.getMessage(),
+                equalTo(
+                        "Error 404 when attempting to call CRI data endpoint: "
+                                + ERROR_MESSAGE
+                                + "\n"));
     }
 
     private List<String> getUserInfoFromSuccessfulUserIdentityHttpResponse()
