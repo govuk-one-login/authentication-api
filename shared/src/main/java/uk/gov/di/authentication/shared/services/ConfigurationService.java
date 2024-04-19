@@ -143,8 +143,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY", "3600"));
     }
 
+    // TODO: this fixes the issue but is arguably confusing.  Maybe we should have a number that
+    // says exactly how
+    // many attempts you get
     public int getCodeMaxRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
+        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "4"));
     }
 
     public int getIncreasedCodeMaxRetries() {
@@ -196,7 +199,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getMaxPasswordRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "6"));
+        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
     }
 
     public int getMaxEmailReAuthRetries() {
