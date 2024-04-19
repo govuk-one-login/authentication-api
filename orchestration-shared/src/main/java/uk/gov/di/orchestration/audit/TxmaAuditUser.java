@@ -1,6 +1,9 @@
 package uk.gov.di.orchestration.audit;
 
 import com.google.gson.annotations.Expose;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
 public class TxmaAuditUser {
 
@@ -59,5 +62,53 @@ public class TxmaAuditUser {
 
     public String getPhone() {
         return phone;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        TxmaAuditUser that = (TxmaAuditUser) o;
+
+        return new EqualsBuilder()
+                .append(userId, that.userId)
+                .append(transactionId, that.transactionId)
+                .append(email, that.email)
+                .append(phone, that.phone)
+                .append(ipAddress, that.ipAddress)
+                .append(sessionId, that.sessionId)
+                .append(persistentSessionId, that.persistentSessionId)
+                .append(govukSigninJourneyId, that.govukSigninJourneyId)
+                .isEquals();
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(userId)
+                .append(transactionId)
+                .append(email)
+                .append(phone)
+                .append(ipAddress)
+                .append(sessionId)
+                .append(persistentSessionId)
+                .append(govukSigninJourneyId)
+                .toHashCode();
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this)
+                .append("userId", userId)
+                .append("transactionId", transactionId)
+                .append("email", email)
+                .append("phone", phone)
+                .append("ipAddress", ipAddress)
+                .append("sessionId", sessionId)
+                .append("persistentSessionId", persistentSessionId)
+                .append("govukSigninJourneyId", govukSigninJourneyId)
+                .toString();
     }
 }

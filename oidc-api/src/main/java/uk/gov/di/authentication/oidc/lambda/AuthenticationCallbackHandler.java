@@ -26,6 +26,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -66,6 +67,7 @@ import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
@@ -206,6 +208,12 @@ public class AuthenticationCallbackHandler
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
 
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(userSession.getSessionId())
+                            .withPersistentSessionId(persistentSessionId);
+
             var authenticationRequest =
                     AuthenticationRequest.parse(clientSession.getAuthRequestParams());
 
@@ -218,23 +226,11 @@ public class AuthenticationCallbackHandler
 
             if (!requestValid) {
                 return generateAuthenticationErrorResponse(
-                        authenticationRequest,
-                        OAuth2Error.SERVER_ERROR,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        persistentSessionId);
+                        authenticationRequest, OAuth2Error.SERVER_ERROR, user);
             }
 
             auditService.submitAuditEvent(
-                    OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    userSession.getSessionId(),
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    persistentSessionId);
+                    OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED, clientId, user);
 
             var tokenRequest =
                     tokenService.constructTokenRequest(
@@ -245,13 +241,7 @@ public class AuthenticationCallbackHandler
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                        user);
             } else {
                 LOG.error(
                         "Authentication TokenResponse was not successful: {}",
@@ -259,13 +249,7 @@ public class AuthenticationCallbackHandler
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                        user);
                 return RedirectService.redirectToFrontendErrorPage(
                         configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
@@ -289,13 +273,7 @@ public class AuthenticationCallbackHandler
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                        user);
                 LOG.info("Adding Authentication userinfo to dynamo");
                 userInfoStorageService.addAuthenticationUserInfoData(
                         userInfo.getSubject().getValue(), userInfo);
@@ -462,15 +440,7 @@ public class AuthenticationCallbackHandler
 
             } catch (UnsuccessfulCredentialResponseException e) {
                 auditService.submitAuditEvent(
-                        OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                        clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                        AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
                 LOG.error(
                         "Orchestration to Authentication userinfo request was not successful: {}",
                         e.getMessage());
@@ -534,9 +504,7 @@ public class AuthenticationCallbackHandler
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
             AuthenticationRequest authenticationRequest,
             ErrorObject errorObject,
-            String clientSessionId,
-            String sessionId,
-            String persistentSessionId) {
+            TxmaAuditUser user) {
         LOG.warn(
                 "Error in Authentication Authorisation Response. ErrorCode: {}. ErrorDescription: {}",
                 errorObject.getCode(),
@@ -544,13 +512,7 @@ public class AuthenticationCallbackHandler
         auditService.submitAuditEvent(
                 OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                sessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                persistentSessionId);
+                user);
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),
