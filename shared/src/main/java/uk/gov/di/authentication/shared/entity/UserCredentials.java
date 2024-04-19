@@ -157,6 +157,25 @@ public class UserCredentials {
         this.mfaMethodsV2 = mfaMethodsV2;
     }
 
+    public UserCredentials addMfaMethodV2(MFAMethodV2 mfaMethodV2) {
+        if (this.mfaMethodsV2 == null) {
+            this.mfaMethodsV2 = List.of(mfaMethodV2);
+        }
+        else {
+            this.mfaMethodsV2.add(mfaMethodV2);
+        }
+        return this;
+    }
+
+    public UserCredentials deleteMfaMethodV2(int mfaIdentifier) {
+        if (this.mfaMethodsV2 == null ) {
+            return this;
+        } else {
+            this.mfaMethodsV2.removeIf(t -> t.getMfaIdentifier() == (mfaIdentifier));
+        }
+        return this;
+    }
+
     public UserCredentials removeAuthAppByCredentialIfPresent(String authAppCredential) {
         if (this.mfaMethods == null) {
             return this;

@@ -471,8 +471,7 @@ public class DynamoService implements AuthenticationService {
                         .getItem(
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .withMfaMethodsV2(List.of(mfaMethodV2)));
+                                        .build()).addMfaMethodV2(mfaMethodV2));
     }
 
     public void updateMFAmethodV2(
@@ -504,14 +503,13 @@ public class DynamoService implements AuthenticationService {
 
     public void deleteMFAmethodV2(String email, int mfaIdentifier) {
 
-        dynamoUserCredentialsTable.deleteItem(
-                DeleteItemEnhancedRequest.builder()
-                        .key(
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .sortValue(mfaIdentifier)
                                         .build())
-                        .build());
+                        .deleteMfaMethodV2(mfaIdentifier));
     }
 
     public List<MFAMethodV2> readMFAMethodsV2(String email) {

@@ -269,9 +269,7 @@ class DynamoServiceIntegrationTest {
         List<MFAMethodV2> users = dynamoService.readMFAMethodsV2(TEST_EMAIL);
         assertThat(
                 users.size(),
-                equalTo(2)); // apprently the add method just creates a new entity every time so it
-        // remains to 1.
-        // we need to update the add method in order to create maybe a map which we update.
+                equalTo(2));
     }
 
     @Test
