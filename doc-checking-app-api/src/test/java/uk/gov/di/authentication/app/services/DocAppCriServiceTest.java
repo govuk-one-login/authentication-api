@@ -34,7 +34,6 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.net.URI;
-import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPrivateKey;
@@ -167,9 +166,8 @@ class DocAppCriServiceTest {
                     JOSEException,
                     NoSuchAlgorithmException,
                     UnsuccessfulCredentialResponseException {
-        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
-        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
-        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build());
+        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build());
 
         var userInfoHTTPResponseContent =
                 format(
@@ -200,9 +198,8 @@ class DocAppCriServiceTest {
                     JOSEException,
                     IOException,
                     UnsuccessfulCredentialResponseException {
-        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
-        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
-        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build());
+        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build());
 
         var userInfoHTTPResponseContent =
                 format(
@@ -231,9 +228,8 @@ class DocAppCriServiceTest {
     @Test
     void shouldThrowWhenClientSessionAndUserInfoEndpointDocAppIdDoesNotMatch()
             throws IOException, JOSEException, NoSuchAlgorithmException {
-        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
-        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
-        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build());
+        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build());
 
         var userInfoHTTPResponseContent =
                 format(
@@ -292,11 +288,16 @@ class DocAppCriServiceTest {
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
 
-    public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)
-            throws JOSEException {
+    public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
+            throws JOSEException, NoSuchAlgorithmException {
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+
+        var keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        keyPairGenerator.initialize(256);
+        var keyPair = keyPairGenerator.generateKeyPair();
         var ecdsaSigner = new ECDSASigner((ECPrivateKey) keyPair.getPrivate());
+
         signedJWT.sign(ecdsaSigner);
         return signedJWT;
     }

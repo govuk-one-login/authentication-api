@@ -125,9 +125,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 };
 
         handler = new UserInfoHandler(configuration);
-        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
-        DOC_APP_CREDENTIAL =
-                generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair).serialize();
+        DOC_APP_CREDENTIAL = generateSignedJWT(new JWTClaimsSet.Builder().build()).serialize();
 
         userInfoStorageExtension.addAuthenticationUserInfoData(
                 INTERNAL_PAIRWISE_SUBJECT.getValue(), AUTH_USER_INFO);
@@ -346,11 +344,16 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
-    public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)
-            throws JOSEException {
+    public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
+            throws JOSEException, NoSuchAlgorithmException {
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+
+        var keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        keyPairGenerator.initialize(256);
+        var keyPair = keyPairGenerator.generateKeyPair();
         var ecdsaSigner = new ECDSASigner((ECPrivateKey) keyPair.getPrivate());
+
         signedJWT.sign(ecdsaSigner);
         return signedJWT;
     }
