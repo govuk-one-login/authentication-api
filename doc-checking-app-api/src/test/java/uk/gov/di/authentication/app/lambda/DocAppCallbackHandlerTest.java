@@ -181,9 +181,9 @@ class DocAppCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         DocAppAuditableEvent.AUTH_CODE_ISSUED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         PAIRWISE_SUBJECT_ID.getValue(),
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
@@ -430,9 +430,9 @@ class DocAppCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         AuditService.UNKNOWN,
-                        CLIENT_ID.getValue(),
                         PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -580,9 +580,9 @@ class DocAppCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         docAppAuditableEvent,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

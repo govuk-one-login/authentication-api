@@ -59,9 +59,9 @@ class SPOTResponseHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -98,9 +98,9 @@ class SPOTResponseHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

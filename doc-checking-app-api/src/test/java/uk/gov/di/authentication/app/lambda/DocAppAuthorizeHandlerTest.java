@@ -157,9 +157,9 @@ class DocAppAuthorizeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         DOC_APP_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
                         "123.123.123.123",

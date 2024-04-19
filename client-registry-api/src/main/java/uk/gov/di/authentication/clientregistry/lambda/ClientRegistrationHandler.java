@@ -69,8 +69,8 @@ public class ClientRegistrationHandler
         String ipAddress = IpAddressHelper.extractIpAddress(input);
         auditService.submitAuditEvent(
                 REGISTER_CLIENT_REQUEST_RECEIVED,
-                context.getAwsRequestId(),
                 AuditService.UNKNOWN,
+                context.getAwsRequestId(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -91,8 +91,8 @@ public class ClientRegistrationHandler
                         errorResponse.get().getDescription());
                 auditService.submitAuditEvent(
                         REGISTER_CLIENT_REQUEST_ERROR,
-                        context.getAwsRequestId(),
                         AuditService.UNKNOWN,
+                        context.getAwsRequestId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

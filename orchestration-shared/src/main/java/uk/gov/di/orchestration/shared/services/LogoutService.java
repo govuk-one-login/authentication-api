@@ -148,9 +148,9 @@ public class LogoutService {
         }
         auditService.submitAuditEvent(
                 LogoutAuditableEvent.LOG_OUT_SUCCESS,
+                clientId.orElse(AuditService.UNKNOWN),
                 AuditService.UNKNOWN,
                 sessionId.orElse(AuditService.UNKNOWN),
-                clientId.orElse(AuditService.UNKNOWN),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 IpAddressHelper.extractIpAddress(input),

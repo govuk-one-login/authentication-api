@@ -43,9 +43,9 @@ public class AuditService {
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
         submitAuditEvent(
                 event,
+                auditContext.clientId(),
                 auditContext.clientSessionId(),
                 auditContext.sessionId(),
-                auditContext.clientId(),
                 auditContext.subjectId(),
                 auditContext.email(),
                 auditContext.ipAddress(),
@@ -56,9 +56,9 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event,
+            String clientId,
             String clientSessionId,
             String sessionId,
-            String clientId,
             String subjectId,
             String email,
             String ipAddress,

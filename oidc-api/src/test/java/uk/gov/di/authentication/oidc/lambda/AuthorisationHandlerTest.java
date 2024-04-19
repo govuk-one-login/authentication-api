@@ -279,9 +279,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -423,9 +423,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -468,9 +468,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -543,9 +543,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -590,9 +590,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -641,8 +641,8 @@ class AuthorisationHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_SESSION_ID,
                             "",
+                            CLIENT_SESSION_ID,
                             "",
                             "",
                             "",
@@ -685,9 +685,9 @@ class AuthorisationHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             "",
-                            CLIENT_ID.getValue(),
                             "",
                             "",
                             "123.123.123.123",
@@ -723,9 +723,9 @@ class AuthorisationHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             "",
-                            CLIENT_ID.getValue(),
                             "",
                             "",
                             "123.123.123.123",
@@ -796,8 +796,8 @@ class AuthorisationHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
-                            CLIENT_SESSION_ID,
                             "",
+                            CLIENT_SESSION_ID,
                             "",
                             "",
                             "",
@@ -973,9 +973,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -1024,9 +1024,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID.getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             "123.123.123.123",
@@ -1317,9 +1317,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             "",
-                            CLIENT_ID.getValue(),
                             "",
                             "",
                             "123.123.123.123",
@@ -1379,9 +1379,9 @@ class AuthorisationHandlerTest {
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
                             CLIENT_SESSION_ID,
                             "",
-                            CLIENT_ID.getValue(),
                             "",
                             "",
                             "123.123.123.123",
@@ -1541,9 +1541,9 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         "",
-                        CLIENT_ID.getValue(),
                         "",
                         "",
                         "123.123.123.123",
@@ -1574,9 +1574,9 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         "",
-                        CLIENT_ID.getValue(),
                         "",
                         "",
                         "123.123.123.123",
@@ -1591,8 +1591,8 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                        CLIENT_SESSION_ID,
                         "",
+                        CLIENT_SESSION_ID,
                         "",
                         "",
                         "",
@@ -1742,8 +1742,8 @@ class AuthorisationHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             eq(event),
-                            eq(CLIENT_SESSION_ID),
                             any(),
+                            eq(CLIENT_SESSION_ID),
                             any(),
                             any(),
                             any(),
@@ -1786,9 +1786,9 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         AuditService.UNKNOWN,
-                        CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "123.123.123.123",

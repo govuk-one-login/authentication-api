@@ -205,9 +205,9 @@ public class DocAppCallbackHandler
 
             auditService.submitAuditEvent(
                     DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                    clientId,
                     clientSessionId,
                     session.getSessionId(),
-                    clientId,
                     clientSession.getDocAppSubjectId().getValue(),
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
@@ -222,9 +222,9 @@ public class DocAppCallbackHandler
                 LOG.info("TokenResponse was successful");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         session.getSessionId(),
-                        clientId,
                         clientSession.getDocAppSubjectId().getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -237,9 +237,9 @@ public class DocAppCallbackHandler
                 incrementDocAppCallbackErrorCounter(false, "UnsuccessfulTokenResponse");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         session.getSessionId(),
-                        clientId,
                         clientSession.getDocAppSubjectId().getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -269,9 +269,9 @@ public class DocAppCallbackHandler
                                 request, clientSession.getDocAppSubjectId().getValue());
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         session.getSessionId(),
-                        clientId,
                         clientSession.getDocAppSubjectId().getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -305,9 +305,9 @@ public class DocAppCallbackHandler
 
                 auditService.submitAuditEvent(
                         AUTH_CODE_ISSUED,
+                        clientId,
                         clientSessionId,
                         session.getSessionId(),
-                        clientId,
                         clientSession.getDocAppSubjectId().getValue(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
@@ -338,9 +338,9 @@ public class DocAppCallbackHandler
                     incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
                     auditService.submitAuditEvent(
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                            clientId,
                             clientSessionId,
                             session.getSessionId(),
-                            clientId,
                             clientSession.getDocAppSubjectId().getValue(),
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
@@ -378,9 +378,9 @@ public class DocAppCallbackHandler
         incrementDocAppCallbackErrorCounter(noSessionErrorResponse, errorObject.getCode());
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                authenticationRequest.getClientID().getValue(),
                 clientSessionId,
                 sessionId,
-                authenticationRequest.getClientID().getValue(),
                 docAppSubjectId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

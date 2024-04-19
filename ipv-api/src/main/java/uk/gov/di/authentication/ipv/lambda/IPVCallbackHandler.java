@@ -271,9 +271,9 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
+                    clientId,
                     clientSessionId,
                     session.getSessionId(),
-                    clientId,
                     internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
@@ -292,9 +292,9 @@ public class IPVCallbackHandler
                         tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         session.getSessionId(),
-                        clientId,
                         internalPairwiseSubjectId,
                         userProfile.getEmail(),
                         AuditService.UNKNOWN,
@@ -305,9 +305,9 @@ public class IPVCallbackHandler
             }
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                    clientId,
                     clientSessionId,
                     session.getSessionId(),
-                    clientId,
                     internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
@@ -327,9 +327,9 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                    clientId,
                     clientSessionId,
                     session.getSessionId(),
-                    clientId,
                     internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
@@ -423,9 +423,9 @@ public class IPVCallbackHandler
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SPOT_REQUESTED,
+                    clientId,
                     clientSessionId,
                     session.getSessionId(),
-                    clientId,
                     internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,

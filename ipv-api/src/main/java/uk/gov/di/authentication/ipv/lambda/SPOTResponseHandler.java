@@ -105,9 +105,9 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
     private void submitAuditEvent(AuditableEvent auditableEvent, LogIds logIds) {
         auditService.submitAuditEvent(
                 auditableEvent,
+                logIds.getClientId(),
                 logIds.getClientSessionId(),
                 logIds.getSessionId(),
-                logIds.getClientId(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

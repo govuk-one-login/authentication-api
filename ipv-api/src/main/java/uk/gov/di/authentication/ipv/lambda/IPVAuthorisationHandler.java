@@ -188,9 +188,9 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
+                    rpClientID.orElse(AuditService.UNKNOWN),
                     clientSessionId,
                     userContext.getSession().getSessionId(),
-                    rpClientID.orElse(AuditService.UNKNOWN),
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

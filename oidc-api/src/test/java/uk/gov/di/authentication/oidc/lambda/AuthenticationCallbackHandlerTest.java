@@ -197,9 +197,9 @@ class AuthenticationCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTHENTICATION_COMPLETE),
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(SESSION_ID),
-                        eq(CLIENT_ID.getValue()),
                         any(),
                         any(),
                         any(),
@@ -210,9 +210,9 @@ class AuthenticationCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(SESSION_ID),
-                        eq(CLIENT_ID.getValue()),
                         any(),
                         any(),
                         any(),
@@ -661,9 +661,9 @@ class AuthenticationCallbackHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             eq(event),
+                            eq(CLIENT_ID.getValue()),
                             eq(CLIENT_SESSION_ID),
                             eq(SESSION_ID),
-                            eq(CLIENT_ID.getValue()),
                             any(),
                             any(),
                             any(),

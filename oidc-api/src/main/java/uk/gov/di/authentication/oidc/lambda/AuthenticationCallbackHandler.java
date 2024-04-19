@@ -227,9 +227,9 @@ public class AuthenticationCallbackHandler
 
             auditService.submitAuditEvent(
                     OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                    clientId,
                     clientSessionId,
                     userSession.getSessionId(),
-                    clientId,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
@@ -244,9 +244,9 @@ public class AuthenticationCallbackHandler
                 LOG.info("TokenResponse was successful");
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         userSession.getSessionId(),
-                        clientId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -258,9 +258,9 @@ public class AuthenticationCallbackHandler
                         tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         userSession.getSessionId(),
-                        clientId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -288,9 +288,9 @@ public class AuthenticationCallbackHandler
 
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         userSession.getSessionId(),
-                        clientId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -328,9 +328,9 @@ public class AuthenticationCallbackHandler
 
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
+                        clientId,
                         clientSessionId,
                         userSession.getSessionId(),
-                        clientId,
                         userInfo.getSubject().getValue(),
                         Objects.isNull(userSession.getEmailAddress())
                                 ? AuditService.UNKNOWN
@@ -436,9 +436,9 @@ public class AuthenticationCallbackHandler
 
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        clientId,
                         clientSessionId,
                         userSession.getSessionId(),
-                        clientId,
                         userInfo.getSubject().getValue(),
                         Objects.isNull(userSession.getEmailAddress())
                                 ? AuditService.UNKNOWN
@@ -463,9 +463,9 @@ public class AuthenticationCallbackHandler
             } catch (UnsuccessfulCredentialResponseException e) {
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        clientId,
                         clientSessionId,
                         userSession.getSessionId(),
-                        clientId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -543,9 +543,9 @@ public class AuthenticationCallbackHandler
                 errorObject.getDescription());
         auditService.submitAuditEvent(
                 OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED,
+                authenticationRequest.getClientID().getValue(),
                 clientSessionId,
                 sessionId,
-                authenticationRequest.getClientID().getValue(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

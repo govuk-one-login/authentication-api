@@ -238,7 +238,7 @@ class ClientRegistrationHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                        REGISTER_CLIENT_REQUEST_ERROR, "", "request-id", "", "", "", "", "", "");
     }
 
     @Test
@@ -256,7 +256,7 @@ class ClientRegistrationHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                        REGISTER_CLIENT_REQUEST_ERROR, "", "request-id", "", "", "", "", "", "");
     }
 
     private static Stream<String> clientTypes() {
@@ -300,7 +300,7 @@ class ClientRegistrationHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "", "");
+                        REGISTER_CLIENT_REQUEST_RECEIVED, "", "request-id", "", "", "", "", "", "");
 
         return response;
     }

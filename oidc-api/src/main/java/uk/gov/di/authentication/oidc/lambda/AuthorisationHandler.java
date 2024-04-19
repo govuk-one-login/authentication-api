@@ -198,8 +198,8 @@ public class AuthorisationHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                clientSessionId,
                 AuditService.UNKNOWN,
+                clientSessionId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -327,9 +327,9 @@ public class AuthorisationHandler
                         configurationService.isIdentityEnabled());
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                authRequest.getClientID().getValue(),
                 clientSessionId,
                 AuditService.UNKNOWN,
-                authRequest.getClientID().getValue(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 ipAddress,
@@ -462,9 +462,9 @@ public class AuthorisationHandler
 
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                client.getClientID(),
                 clientSessionId,
                 session.getSessionId(),
-                client.getClientID(),
                 clientSession.getDocAppSubjectId().toString(),
                 AuditService.UNKNOWN,
                 ipAddress,
@@ -529,9 +529,9 @@ public class AuthorisationHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
+                authenticationRequest.getClientID().getValue(),
                 clientSessionId,
                 session.getSessionId(),
-                authenticationRequest.getClientID().getValue(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 ipAddress,
@@ -678,9 +678,9 @@ public class AuthorisationHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                clientId,
                 clientSessionId,
                 AuditService.UNKNOWN,
-                clientId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 ipAddress,
@@ -706,8 +706,8 @@ public class AuthorisationHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
-                clientSessionId,
                 AuditService.UNKNOWN,
+                clientSessionId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

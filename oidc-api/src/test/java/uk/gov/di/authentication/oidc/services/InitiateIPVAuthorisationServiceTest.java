@@ -218,9 +218,9 @@ public class InitiateIPVAuthorisationServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL_ADDRESS,
                         IP_ADDRESS,

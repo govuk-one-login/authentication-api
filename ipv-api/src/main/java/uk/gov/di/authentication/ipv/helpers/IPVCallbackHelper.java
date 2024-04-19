@@ -121,9 +121,9 @@ public class IPVCallbackHelper {
                 noSessionErrorResponse);
         auditService.submitAuditEvent(
                 IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                authenticationRequest.getClientID().getValue(),
                 clientSessionId,
                 sessionId,
-                authenticationRequest.getClientID().getValue(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -199,9 +199,9 @@ public class IPVCallbackHelper {
         var subjectId = authCodeResponseService.getSubjectId(session);
         auditService.submitAuditEvent(
                 IPVAuditableEvent.AUTH_CODE_ISSUED,
+                authRequest.getClientID().getValue(),
                 clientSessionId,
                 session.getSessionId(),
-                authRequest.getClientID().getValue(),
                 internalPairwiseSubjectId,
                 Objects.isNull(session.getEmailAddress())
                         ? AuditService.UNKNOWN

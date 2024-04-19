@@ -147,11 +147,11 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST,
-                    userSession.getClientSessionId(),
-                    userSession.getSession().getSessionId(),
                     userSession.getClientId() != null
                             ? userSession.getClientId()
                             : AuditService.UNKNOWN,
+                    userSession.getClientSessionId(),
+                    userSession.getSession().getSessionId(),
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     IpAddressHelper.extractIpAddress(input),

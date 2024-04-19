@@ -142,9 +142,9 @@ public class UserInfoHandler
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
                 accessTokenInfo.getClientID(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
                 subjectForAudit,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
