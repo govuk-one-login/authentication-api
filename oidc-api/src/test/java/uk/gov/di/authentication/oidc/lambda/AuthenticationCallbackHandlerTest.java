@@ -72,7 +72,8 @@ class AuthenticationCallbackHandlerTest {
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
     private static final String TEST_AUTH_USERINFO_PATH = "/test-userinfo";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
-    private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
+    private static final String PERSISTENT_SESSION_ID =
+            "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
     private static final Session session =
             new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
@@ -667,7 +668,7 @@ class AuthenticationCallbackHandlerTest {
                             any(),
                             any(),
                             any(),
-                            any());
+                            eq(PERSISTENT_SESSION_ID));
         }
     }
 }
