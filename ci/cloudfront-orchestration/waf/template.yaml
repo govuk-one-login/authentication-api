@@ -1,0 +1,212 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Stack to create a WAF to attach to the Cloudfront distribution for the OIDC API
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: ["dev", "build", "staging", "integration", "production"]
+  SmokeTestClientId:
+    Type: String
+    Default: none
+
+Conditions:
+  IsStaging:
+    !Equals [ staging, !Ref Environment ]
+  IsProduction:
+    !Equals [ production, !Ref Environment ]
+
+Resources:
+  WAF:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub "${Environment}-oidc-cloudfront-waf"
+      Scope: CLOUDFRONT
+      DefaultAction:
+        Allow: {}
+      Rules:
+        - Name: !Sub "${Environment}-oidc-waf-rate-based-rule"
+          Action:
+            Block: {}
+          Priority: 1
+          Statement:
+            RateBasedStatement:
+              Limit: !If [IsStaging, 600000, 3600]
+              AggregateKeyType: "IP"
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${Environment}OidcWafMaxRequestRate"
+            SampledRequestsEnabled: true
+        - Name: !Sub "${Environment}-oidc-common-rule-set"
+          OverrideAction:
+            None: {}
+          Priority: 2
+          Statement:
+            ManagedRuleGroupStatement:
+              Name: "AWSManagedRulesCommonRuleSet"
+              VendorName: "AWS"
+              RuleActionOverrides:
+                - Name: "GenericRFI_QUERYARGUMENTS"
+                  ActionToUse:
+                    Count: {}
+                - Name: "GenericRFI_BODY"
+                  ActionToUse:
+                    Count: {}
+                - Name: "NoUserAgent_HEADER"
+                  ActionToUse:
+                    Count: {}
+                - Name: "EC2MetaDataSSRF_QUERYARGUMENTS"
+                  ActionToUse:
+                    Count: {}
+                - Name: "SizeRestrictions_QUERYSTRING"
+                  ActionToUse:
+                    Count: {}
+                - Name: "EC2MetaDataSSRF_BODY"
+                  ActionToUse:
+                    Count: {}
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${Environment}OidcWafCommonRuleSet"
+            SampledRequestsEnabled: true
+        - Name: !Sub "${Environment}-oidc-bad-rule-set"
+          OverrideAction:
+            None: {}
+          Priority: 3
+          Statement:
+            ManagedRuleGroupStatement:
+              Name: "AWSManagedRulesKnownBadInputsRuleSet"
+              VendorName: "AWS"
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${Environment}OidcWafBadRuleSet"
+            SampledRequestsEnabled: true
+        - !If
+          - IsProduction
+          - Name: "production-smoke-test-client-exception"
+            Action:
+              Block: {}
+            Priority: 4
+            Statement:
+              AndStatement:
+                Statements:
+                  - LabelMatchStatement:
+                      Key: "awswaf:managed:aws:core-rule-set:EC2MetaDataSSRF_QueryArguments"
+                      Scope: "LABEL"
+                  - NotStatement:
+                      Statement:
+                        ByteMatchStatement:
+                          FieldToMatch:
+                            SingleQueryArgument:
+                              Name: "client_id"
+                          PositionalConstraint: "EXACTLY"
+                          SearchString: !Ref SmokeTestClientId
+                          TextTransformations:
+                            - Priority: 0
+                              Type: "NONE"
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: true
+              MetricName: "ProductionSmokeTestClientExceptionRule"
+              SampledRequestsEnabled: true
+          - !Ref AWS::NoValue
+        - Name: !Sub "${Environment}-default-query-param-limit"
+          Action:
+            Block: {}
+          Priority: 5
+          Statement:
+            AndStatement:
+              Statements:
+                - SizeConstraintStatement:
+                    ComparisonOperator: "GT"
+                    FieldToMatch:
+                      QueryString: {}
+                    Size: 2048
+                    TextTransformations:
+                      - Priority: 0
+                        Type: "NONE"
+                - NotStatement:
+                    Statement:
+                      ByteMatchStatement:
+                        FieldToMatch:
+                          UriPath: {}
+                        PositionalConstraint: "EXACTLY"
+                        SearchString: "/authorize"
+                        TextTransformations:
+                          - Priority: 0
+                            Type: "LOWERCASE"
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${Environment}OidcWafQueryParamSet"
+            SampledRequestsEnabled: true
+        - Name: !Sub "${Environment}-extended-query-param-limit"
+          Action:
+            Block: {}
+          Priority: 6
+          Statement:
+            SizeConstraintStatement:
+              ComparisonOperator: "GT"
+              FieldToMatch:
+                QueryString: {}
+              Size: 4096
+              TextTransformations:
+                - Priority: 0
+                  Type: "NONE"
+          VisibilityConfig:
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${Environment}OidcWafAuthorizeQueryParamSet"
+            SampledRequestsEnabled: true
+      VisibilityConfig:
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub "${Environment}OidcWafRules"
+        SampledRequestsEnabled: true
+
+  LogKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Encrypts logs for the OIDC WAF attached to Cloudfront
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: OidcWafLogKeyPolicy
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: Permit Cloudwatch
+            Effect: Allow
+            Principal:
+              Service: !Sub "logs.${AWS::Region}.amazonaws.com"
+            Action:
+              - "kms:Encrypt*"
+              - "kms:Decrypt*"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+              - "kms:Describe*"
+            Resource: "*"
+            Condition:
+              ArnEquals:
+                "kms:EncryptionContext:aws:logs:arn": !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws-waf-logs-cf-oidc-${Environment}"
+
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "aws-waf-logs-cf-oidc-${Environment}"
+      RetentionInDays: 30
+      KmsKeyId: !GetAtt LogKey.Arn
+
+  LoggingConfiguration:
+    Type: AWS::WAFv2::LoggingConfiguration
+    Properties:
+      LogDestinationConfigs:
+        - !GetAtt LogGroup.Arn
+      ResourceArn: !GetAtt WAF.Arn
+      LoggingFilter:
+        DefaultBehavior: "DROP"
+        Filters:
+          - Behavior: "KEEP"
+            Conditions:
+              - ActionCondition:
+                  Action: "BLOCK"
+            Requirement: "MEETS_ANY"
