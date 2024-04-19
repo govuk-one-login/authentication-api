@@ -532,7 +532,7 @@ resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.authentication_callback_userinfo_table_cross_account_access_enabled ? data.aws_iam_policy_document.authentication_callback_userinfo_encryption_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.authentication_callback_userinfo_encryption_key_access_policy.json
+  policy                   = var.authentication_callback_userinfo_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
   tags                     = local.default_tags
 }
 
@@ -540,57 +540,6 @@ resource "aws_kms_alias" "authentication_callback_userinfo_encryption_key_alias"
   name          = "alias/${var.environment}-authentication-callback-userinfo-encryption-key-alias"
   target_key_id = aws_kms_key.authentication_callback_userinfo_encryption_key.key_id
 }
-
-data "aws_iam_policy_document" "authentication_callback_userinfo_encryption_key_access_policy" {
-  statement {
-    sid    = "key-policy-dynamodb"
-    effect = "Allow"
-    actions = [
-      "kms:*",
-    ]
-    principals {
-      identifiers = [data.aws_caller_identity.current.account_id]
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
-}
-
-data "aws_iam_policy_document" "authentication_callback_userinfo_encryption_key_access_policy_with_orch_access" {
-  statement {
-    sid    = "key-policy-dynamodb"
-    effect = "Allow"
-    actions = [
-      "kms:*",
-    ]
-    principals {
-      identifiers = [data.aws_caller_identity.current.account_id]
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
-
-  statement {
-    sid    = "Allow Orch access to KMS storage authentication callback userinfo encryption key"
-    effect = "Allow"
-
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:CreateGrant",
-      "kms:DescribeKey",
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = [var.orchestration_account_id]
-    }
-  }
-}
-
 resource "aws_kms_key" "account_modifiers_table_encryption_key" {
   description              = "KMS encryption key for account modifiers table in DynamoDB"
   deletion_window_in_days  = 30
@@ -757,7 +706,7 @@ resource "aws_kms_key" "client_registry_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.client_registry_table_cross_account_access_enabled ? data.aws_iam_policy_document.client_registry_table_encryption_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.client_registry_table_encryption_key_access_policy.json
+  policy                   = var.client_registry_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -768,7 +717,7 @@ resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
   target_key_id = aws_kms_key.client_registry_table_encryption_key.key_id
 }
 
-data "aws_iam_policy_document" "client_registry_table_encryption_key_access_policy" {
+data "aws_iam_policy_document" "table_encryption_key_access_policy" {
   statement {
     sid    = "key-policy-dynamodb"
     effect = "Allow"
@@ -783,7 +732,7 @@ data "aws_iam_policy_document" "client_registry_table_encryption_key_access_poli
   }
 }
 
-data "aws_iam_policy_document" "client_registry_table_encryption_key_access_policy_with_orch_access" {
+data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy" {
   statement {
     sid    = "key-policy-dynamodb"
     effect = "Allow"
@@ -798,7 +747,7 @@ data "aws_iam_policy_document" "client_registry_table_encryption_key_access_poli
   }
 
   statement {
-    sid    = "Allow Orch access to KMS storage client registry encryption key"
+    sid    = "Allow Orch access to dynamo encryption key"
     effect = "Allow"
 
     actions = [
