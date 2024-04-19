@@ -515,6 +515,10 @@ variable "orch_openid_configuration_name" {
   type    = string
   default = ""
 }
+variable "orch_trustmark_name" {
+  type    = string
+  default = ""
+}
 
 variable "orch_doc_app_callback_name" {
   type    = string
