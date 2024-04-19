@@ -10,8 +10,8 @@ test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.staging.account.gov.uk"
 orch_redirect_uri                    = "https://oidc.staging.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled   = true
-lockout_duration                     = 60
-reduced_lockout_duration             = 30
+lockout_duration                     = 7200
+reduced_lockout_duration             = 900
 
 orch_openid_configuration_name = "staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl"
 
