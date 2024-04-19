@@ -162,6 +162,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         configurationService.getInternalSectorUri(),
                                         authenticationService)
                                 .getValue();
+
+                LOG.info("Setting internal common subject identifier in user session");
+                userContext.getSession().setInternalCommonSubjectIdentifier(internalPairwiseId);
+
                 var isPhoneNumberVerified = userProfile.get().isPhoneNumberVerified();
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
