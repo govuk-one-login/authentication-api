@@ -1,0 +1,22 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc.sandpit.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "arn:aws:acm:us-east-1:761723964695:certificate/ad7c375a-0a7f-4325-9804-fd78db8faf6a"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "CloudfrontWafAcl",
+    "ParameterValue": "arn:aws:wafv2:us-east-1:761723964695:global/webacl/dev-oidc-cloudfront-waf/87540c97-bbad-49f5-b11b-53a4d30e76ab"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  }
+]
