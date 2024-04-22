@@ -183,3 +183,40 @@ resource "aws_iam_policy" "spot_queue_encryption_policy" {
 
   policy = data.aws_iam_policy_document.spot_queue_encryption_policy.json
 }
+
+
+data "aws_iam_policy_document" "spot_queue_read_access_policy_document" {
+  version   = "2012-10-17"
+  policy_id = "${var.environment}-spot-queue-read-access-policy"
+
+  statement {
+    effect = "Allow"
+    sid    = "AllowReadAccessToSpotQueue"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ChangeMessageVisibility"
+    ]
+    resources = [aws_sqs_queue.spot_request_queue.arn]
+  }
+
+  statement {
+    effect = "Allow"
+    sid    = "AllowAccessToKeyForDecryptingPayloads"
+    actions = [
+      "kms:Decrypt"
+    ]
+    resources = [
+      aws_kms_key.spot_request_sqs_key.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "spot_queue_read_access_policy" {
+  name_prefix = "spot-queue-read-access-"
+  path        = "/${var.environment}/"
+  description = "IAM Policy for read access to the SPOT request queue"
+
+  policy = data.aws_iam_policy_document.back_channel_logout_queue_read_access_policy_document.json
+}
