@@ -32,3 +32,10 @@ which we have done by environment.
 
 To update the parameters used for our stacks, please update the parameters in
 the `configuration/[ENVIRONMENT]/[PIPELINE]/parameters.json` files.
+
+## SSM Parameters
+
+The following parameters are not provisioned by CloudFormation, and instead are managed manually in Systems Manager Parameter Store:
+- `<envrionment>-ipv-capacity`
+- `<environment>-auth-public-encryption-key`
+- `<environment>-ipv-public-encryption-key`
