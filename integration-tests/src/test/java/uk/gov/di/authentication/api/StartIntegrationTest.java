@@ -221,7 +221,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.user().getMfaMethodType(), equalTo(mfaMethodType));
+        assertThat(startResponse.user().mfaMethodType(), equalTo(mfaMethodType));
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
         verifyStandardUserInformationSetOnResponse(startResponse.user(), true);
         assertThat(startResponse.user().isAuthenticated(), equalTo(true));
@@ -366,8 +366,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             UserStartInfo userStartInfo, Boolean consentRequired) {
         assertFalse(userStartInfo.isConsentRequired());
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
-        assertThat(userStartInfo.getCookieConsent(), equalTo(null));
-        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(userStartInfo.cookieConsent(), equalTo(null));
+        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(null));
     }
 
     private Map<String, String> standardHeadersWithSessionId(String sessionId) {

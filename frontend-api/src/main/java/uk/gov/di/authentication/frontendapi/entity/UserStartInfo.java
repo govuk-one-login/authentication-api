@@ -5,94 +5,12 @@ import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
-public class UserStartInfo {
-
-    @SerializedName("consentRequired")
-    @Expose
-    @Required
-    private boolean consentRequired;
-
-    @SerializedName("upliftRequired")
-    @Expose
-    @Required
-    private boolean upliftRequired;
-
-    @SerializedName("identityRequired")
-    @Expose
-    @Required
-    private boolean identityRequired;
-
-    @SerializedName("authenticated")
-    @Expose
-    @Required
-    private boolean authenticated;
-
-    @SerializedName("cookieConsent")
-    @Expose
-    private String cookieConsent;
-
-    @SerializedName("gaCrossDomainTrackingId")
-    @Expose
-    private String gaCrossDomainTrackingId;
-
-    @SerializedName("docCheckingAppUser")
-    @Expose
-    private boolean docCheckingAppUser;
-
-    @SerializedName("mfaMethodType")
-    @Expose
-    private MFAMethodType mfaMethodType;
-
-    public UserStartInfo() {}
-
-    public UserStartInfo(
-            boolean consentRequired,
-            boolean upliftRequired,
-            boolean identityRequired,
-            boolean authenticated,
-            String cookieConsent,
-            String gaCrossDomainTrackingId,
-            boolean docCheckingAppUser,
-            MFAMethodType mfaMethodType) {
-        this.consentRequired = consentRequired;
-        this.upliftRequired = upliftRequired;
-        this.identityRequired = identityRequired;
-        this.authenticated = authenticated;
-        this.cookieConsent = cookieConsent;
-        this.gaCrossDomainTrackingId = gaCrossDomainTrackingId;
-        this.docCheckingAppUser = docCheckingAppUser;
-        this.mfaMethodType = mfaMethodType;
-    }
-
-    public boolean isConsentRequired() {
-        return consentRequired;
-    }
-
-    public boolean isUpliftRequired() {
-        return upliftRequired;
-    }
-
-    public boolean isIdentityRequired() {
-        return identityRequired;
-    }
-
-    public boolean isAuthenticated() {
-        return authenticated;
-    }
-
-    public String getCookieConsent() {
-        return cookieConsent;
-    }
-
-    public String getGaCrossDomainTrackingId() {
-        return gaCrossDomainTrackingId;
-    }
-
-    public boolean isDocCheckingAppUser() {
-        return docCheckingAppUser;
-    }
-
-    public MFAMethodType getMfaMethodType() {
-        return mfaMethodType;
-    }
-}
+public record UserStartInfo(
+        @SerializedName("consentRequired") @Expose @Required boolean isConsentRequired,
+        @SerializedName("upliftRequired") @Expose @Required boolean isUpliftRequired,
+        @SerializedName("identityRequired") @Expose @Required boolean isIdentityRequired,
+        @SerializedName("authenticated") @Expose @Required boolean isAuthenticated,
+        @SerializedName("cookieConsent") @Expose String cookieConsent,
+        @SerializedName("gaCrossDomainTrackingId") @Expose String gaCrossDomainTrackingId,
+        @SerializedName("docCheckingAppUser") @Expose boolean isDocCheckingAppUser,
+        @SerializedName("mfaMethodType") @Expose MFAMethodType mfaMethodType) {}

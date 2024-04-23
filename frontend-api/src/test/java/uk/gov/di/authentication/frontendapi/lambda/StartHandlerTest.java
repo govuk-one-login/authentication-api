@@ -166,8 +166,8 @@ class StartHandlerTest {
         assertThat(
                 response.user().isIdentityRequired(), equalTo(userStartInfo.isIdentityRequired()));
         assertThat(response.user().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
-        assertThat(response.user().getCookieConsent(), equalTo(cookieConsentValue));
-        assertThat(response.user().getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
+        assertThat(response.user().cookieConsent(), equalTo(cookieConsentValue));
+        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(gaTrackingId));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -231,8 +231,8 @@ class StartHandlerTest {
         assertFalse(response.user().isUpliftRequired());
         assertFalse(response.user().isAuthenticated());
         assertFalse(response.user().isConsentRequired());
-        assertThat(response.user().getCookieConsent(), equalTo(null));
-        assertThat(response.user().getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(response.user().cookieConsent(), equalTo(null));
+        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(null));
         verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
