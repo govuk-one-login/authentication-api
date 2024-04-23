@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -42,9 +43,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -104,13 +107,40 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
         assertThat(response, hasStatus(200));
 
-        StartResponse startResponse =
-                objectMapper.readValue(response.getBody(), StartResponse.class);
+        var user =
+                format(
+                        """
+                {
+                "consentRequired":false,
+                "upliftRequired":false,
+                "identityRequired":%b,
+                "authenticated":%b,
+                "cookieConsent":null,
+                "gaCrossDomainTrackingId":null,
+                "docCheckingAppUser":false,
+                "mfaMethodType":null}
+                """,
+                        identityRequired, isAuthenticated);
 
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), true);
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, state);
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(isAuthenticated));
-        assertThat(startResponse.getUser().isIdentityRequired(), equalTo(identityRequired));
+        var client =
+                format(
+                        """
+                {
+                "clientName":"test-client-name",
+                "scopes":["openid"],
+                "serviceType":"MANDATORY",
+                "cookieConsentShared":false,
+                "redirectUri":"http://localhost/redirect",
+                "state":"%s",
+                "isOneLoginService":false
+                }
+                """,
+                        state.getValue());
+
+        var expectedJson =
+                JsonParser.parseString(format("{\"user\": %s,\"client\": %s}", user, client));
+
+        assertThat(JsonParser.parseString(response.getBody()), is(equalTo(expectedJson)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
