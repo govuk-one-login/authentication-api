@@ -292,9 +292,9 @@ class AuthCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -397,9 +397,9 @@ class AuthCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         DOC_APP_SUBJECT_ID,
                         AuditService.UNKNOWN,
                         "123.123.123.123",

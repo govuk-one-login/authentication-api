@@ -91,9 +91,9 @@ public class UpdateClientConfigHandler
             if (!clientService.isValidClient(clientId)) {
                 auditService.submitAuditEvent(
                         UPDATE_CLIENT_REQUEST_ERROR,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
                         clientId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         ipAddress,
@@ -112,9 +112,9 @@ public class UpdateClientConfigHandler
                         errorResponse.get().getDescription());
                 auditService.submitAuditEvent(
                         UPDATE_CLIENT_REQUEST_ERROR,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
                         clientId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         ipAddress,

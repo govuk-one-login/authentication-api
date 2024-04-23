@@ -232,9 +232,9 @@ public class IPVAuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL_ADDRESS,
                         "123.123.123.123",

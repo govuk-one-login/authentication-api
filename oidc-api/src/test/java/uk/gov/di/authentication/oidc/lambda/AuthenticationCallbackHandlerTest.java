@@ -21,6 +21,7 @@ import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
@@ -197,9 +198,9 @@ class AuthenticationCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTHENTICATION_COMPLETE),
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(SESSION_ID),
-                        eq(CLIENT_ID.getValue()),
                         any(),
                         any(),
                         any(),
@@ -210,9 +211,9 @@ class AuthenticationCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
+                        eq(CLIENT_ID.getValue()),
                         eq(CLIENT_SESSION_ID),
                         eq(SESSION_ID),
-                        eq(CLIENT_ID.getValue()),
                         any(),
                         any(),
                         any(),
@@ -661,14 +662,12 @@ class AuthenticationCallbackHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             eq(event),
-                            eq(CLIENT_SESSION_ID),
-                            eq(SESSION_ID),
                             eq(CLIENT_ID.getValue()),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            eq(PERSISTENT_SESSION_ID));
+                            eq(
+                                    TxmaAuditUser.user()
+                                            .withSessionId(SESSION_ID)
+                                            .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                            .withGovukSigninJourneyId(CLIENT_SESSION_ID)));
         }
     }
 }

@@ -196,9 +196,9 @@ class IPVCallbackHelperTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                        authRequest.getClientID().getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        authRequest.getClientID().getValue(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

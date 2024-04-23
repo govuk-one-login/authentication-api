@@ -213,9 +213,9 @@ public class AuthCodeHandler
 
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTH_CODE_ISSUED,
+                    clientID.getValue(),
                     clientSessionId,
                     session.getSessionId(),
-                    clientID.getValue(),
                     internalCommonPairwiseSubjectId,
                     Objects.isNull(session.getEmailAddress())
                             ? AuditService.UNKNOWN

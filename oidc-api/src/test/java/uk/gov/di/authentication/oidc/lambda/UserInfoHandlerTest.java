@@ -93,9 +93,9 @@ class UserInfoHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
+                        "client-id",
                         AuditService.UNKNOWN,
                         "",
-                        "client-id",
                         AUDIT_SUBJECT_ID.getValue(),
                         "",
                         "",
@@ -122,9 +122,9 @@ class UserInfoHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
+                        "client-id",
                         AuditService.UNKNOWN,
                         "",
-                        "client-id",
                         AUDIT_SUBJECT_ID.getValue(),
                         "",
                         "",

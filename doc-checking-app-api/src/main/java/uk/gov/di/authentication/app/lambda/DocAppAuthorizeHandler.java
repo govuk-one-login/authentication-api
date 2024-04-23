@@ -170,9 +170,9 @@ public class DocAppAuthorizeHandler
             noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
             auditService.submitAuditEvent(
                     DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                    clientRegistry.getClientID(),
                     clientSessionId,
                     session.getSessionId(),
-                    clientRegistry.getClientID(),
                     clientSession.getDocAppSubjectId().toString(),
                     AuditService.UNKNOWN,
                     IpAddressHelper.extractIpAddress(input),

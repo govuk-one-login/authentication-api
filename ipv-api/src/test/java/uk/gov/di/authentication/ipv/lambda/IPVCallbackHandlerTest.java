@@ -949,9 +949,9 @@ class IPVCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         auditableEvent,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        CLIENT_ID.getValue(),
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,

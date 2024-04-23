@@ -110,9 +110,9 @@ public class InitiateIPVAuthorisationService {
 
         auditService.submitAuditEvent(
                 IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
+                rpClientID,
                 clientSessionId,
                 session.getSessionId(),
-                rpClientID,
                 session.getInternalCommonSubjectIdentifier(),
                 userInfo.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),

@@ -158,9 +158,9 @@ public class LogoutServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         LogoutAuditableEvent.LOG_OUT_SUCCESS,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         SESSION_ID,
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
@@ -185,9 +185,9 @@ public class LogoutServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         LogoutAuditableEvent.LOG_OUT_SUCCESS,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         SESSION_ID,
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
@@ -213,9 +213,9 @@ public class LogoutServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         LogoutAuditableEvent.LOG_OUT_SUCCESS,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         SESSION_ID,
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
@@ -243,8 +243,8 @@ public class LogoutServiceTest {
                 .submitAuditEvent(
                         LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
-                        SESSION_ID,
                         AuditService.UNKNOWN,
+                        SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
@@ -277,9 +277,9 @@ public class LogoutServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         LogoutAuditableEvent.LOG_OUT_SUCCESS,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         SESSION_ID,
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
@@ -308,9 +308,9 @@ public class LogoutServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         LogoutAuditableEvent.LOG_OUT_SUCCESS,
+                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         SESSION_ID,
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IP_ADDRESS,

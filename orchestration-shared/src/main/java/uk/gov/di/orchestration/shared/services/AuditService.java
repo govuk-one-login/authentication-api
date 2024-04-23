@@ -43,9 +43,9 @@ public class AuditService {
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
         submitAuditEvent(
                 event,
+                auditContext.clientId(),
                 auditContext.clientSessionId(),
                 auditContext.sessionId(),
-                auditContext.clientId(),
                 auditContext.subjectId(),
                 auditContext.email(),
                 auditContext.ipAddress(),
@@ -56,9 +56,9 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event,
+            String clientId,
             String clientSessionId,
             String sessionId,
-            String clientId,
             String subjectId,
             String email,
             String ipAddress,
@@ -76,6 +76,14 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId)
                         .withGovukSigninJourneyId(clientSessionId);
 
+        submitAuditEvent(event, clientId, user, metadataPairs);
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
+            String clientId,
+            TxmaAuditUser user,
+            MetadataPair... metadataPairs) {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
@@ -89,7 +97,7 @@ public class AuditService {
         Arrays.stream(metadataPairs)
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
 
-        Optional.ofNullable(phoneNumber)
+        Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
                 .flatMap(PhoneNumberHelper::maybeGetCountry)
                 .ifPresent(
