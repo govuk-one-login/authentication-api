@@ -61,8 +61,7 @@ class NoSessionOrchestrationServiceTest {
         queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
         queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
         var noSessionEntity =
-                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                        queryParams, true);
+                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(queryParams);
 
         assertThat(
                 noSessionEntity.getErrorObject().getCode(),
@@ -81,30 +80,6 @@ class NoSessionOrchestrationServiceTest {
     }
 
     @Test
-    void shouldThrowIfNoSessionResponseIsDisabled() {
-        when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
-                .thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(generateClientSession()));
-
-        Map<String, String> queryParams = new HashMap<>();
-        queryParams.put("state", STATE.getValue());
-        queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
-        queryParams.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
-        var noSessionException =
-                assertThrows(
-                        NoSessionException.class,
-                        () ->
-                                noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, false));
-
-        assertThat(
-                noSessionException.getMessage(),
-                equalTo(
-                        "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"));
-    }
-
-    @Test
     void shouldThrowIfErrorIsPresentButIsNotAccessDenied() {
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + STATE.getValue()))
                 .thenReturn(CLIENT_SESSION_ID);
@@ -120,12 +95,12 @@ class NoSessionOrchestrationServiceTest {
                         NoSessionException.class,
                         () ->
                                 noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, true));
+                                        queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
                 equalTo(
-                        "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: true"));
+                        "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
     @Test
@@ -141,12 +116,12 @@ class NoSessionOrchestrationServiceTest {
                         NoSessionException.class,
                         () ->
                                 noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, true));
+                                        queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
                 equalTo(
-                        "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: true"));
+                        "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
     @Test
@@ -160,12 +135,12 @@ class NoSessionOrchestrationServiceTest {
                         NoSessionException.class,
                         () ->
                                 noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, true));
+                                        queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
                 equalTo(
-                        "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: true"));
+                        "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
     @Test
@@ -180,12 +155,12 @@ class NoSessionOrchestrationServiceTest {
                         NoSessionException.class,
                         () ->
                                 noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, true));
+                                        queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
                 equalTo(
-                        "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: true"));
+                        "Session Cookie not present and access_denied or state param missing from error response"));
     }
 
     @Test
@@ -203,7 +178,7 @@ class NoSessionOrchestrationServiceTest {
                         NoSessionException.class,
                         () ->
                                 noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, true));
+                                        queryParams));
 
         assertThat(
                 noSessionException.getMessage(),
@@ -226,7 +201,7 @@ class NoSessionOrchestrationServiceTest {
                         NoSessionException.class,
                         () ->
                                 noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                        queryParams, true));
+                                        queryParams));
 
         assertThat(
                 noSessionException.getMessage(),

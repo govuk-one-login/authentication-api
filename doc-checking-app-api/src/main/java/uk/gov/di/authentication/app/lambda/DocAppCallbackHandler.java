@@ -144,8 +144,7 @@ public class DocAppCallbackHandler
                 LOG.warn("No session cookie present. Attempt to find session using state");
                 var noSessionEntity =
                         noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
-                                input.getQueryStringParameters(),
-                                configurationService.isCustomDocAppClaimEnabled());
+                                input.getQueryStringParameters());
                 var authRequest =
                         AuthenticationRequest.parse(
                                 noSessionEntity.getClientSession().getAuthRequestParams());

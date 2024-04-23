@@ -1,4 +1,3 @@
-custom_doc_app_claim_enabled                = true
 ipv_capacity_allowed                        = true
 ipv_api_enabled                             = true
 doc_app_authorisation_client_id             = "authOrchestratorDocApp"
@@ -19,7 +18,6 @@ ipv_backend_uri                             = "https://api.identity.staging.acco
 internal_sector_uri                         = "https://identity.staging.account.gov.uk"
 spot_enabled                                = true
 test_clients_enabled                        = "true"
-ipv_no_session_response_enabled             = true
 doc_app_cri_data_v2_endpoint                = "userinfo/v2"
 orch_client_id                              = "orchestrationAuth"
 auth_audience                               = "https://auth.staging.account.gov.uk"

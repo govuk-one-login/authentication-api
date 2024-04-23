@@ -18,17 +18,13 @@ public class DocAppSubjectIdHelper {
     private DocAppSubjectIdHelper() {}
 
     public static Subject calculateDocAppSubjectId(
-            Map<String, List<String>> authRequestParams,
-            boolean isCustomDocAppClaimEnabled,
-            URI docAppDomain) {
+            Map<String, List<String>> authRequestParams, URI docAppDomain) {
         try {
-            LOG.info(
-                    "Calculating DocAppSubjectId. CustomDocAppClaim is enabled: {}",
-                    isCustomDocAppClaimEnabled);
+            LOG.info("Calculating DocAppSubjectId");
             var authRequest = AuthenticationRequest.parse(authRequestParams);
             var secureRequestSubject =
                     authRequest.getRequestObject().getJWTClaimsSet().getSubject();
-            if (isCustomDocAppClaimEnabled && Objects.nonNull(secureRequestSubject)) {
+            if (Objects.nonNull(secureRequestSubject)) {
                 LOG.info("CustomDocAppClaimEnabled and SecureRequestObject contains Subject claim");
                 return new Subject(secureRequestSubject);
             } else {

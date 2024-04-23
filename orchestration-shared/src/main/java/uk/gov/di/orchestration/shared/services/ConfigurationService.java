@@ -149,10 +149,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                                 "CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk"));
     }
 
-    public boolean isCustomDocAppClaimEnabled() {
-        return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
-    }
-
     public URI getDefaultLogoutURI() {
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
@@ -258,12 +254,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isIdentityEnabled() {
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
-    }
-
-    public boolean isIPVNoSessionResponseEnabled() {
-        return System.getenv()
-                .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
-                .equals("true");
     }
 
     public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
