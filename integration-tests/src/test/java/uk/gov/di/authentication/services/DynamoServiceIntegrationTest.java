@@ -6,7 +6,14 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MFAMethodV2;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -241,7 +248,7 @@ class DynamoServiceIntegrationTest {
 
         assertThat(users.size(), equalTo(1));
 
-        dynamoService.deleteMFAmethodV2(TEST_EMAIL, 1); // I can't sort them by mfaIdentifier
+        dynamoService.deleteMFAmethodV2(TEST_EMAIL, 1);
 
         users = dynamoService.readMFAMethodsV2(TEST_EMAIL);
         assertThat(users.size(), equalTo(0));
@@ -267,9 +274,7 @@ class DynamoServiceIntegrationTest {
                 3,
                 "google");
         List<MFAMethodV2> users = dynamoService.readMFAMethodsV2(TEST_EMAIL);
-        assertThat(
-                users.size(),
-                equalTo(2));
+        assertThat(users.size(), equalTo(2));
     }
 
     @Test

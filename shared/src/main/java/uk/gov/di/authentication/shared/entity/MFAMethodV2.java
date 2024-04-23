@@ -3,7 +3,6 @@ package uk.gov.di.authentication.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
@@ -87,7 +86,6 @@ public class MFAMethodV2 {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_IDENTIFIER)
-    @DynamoDbSortKey()
     public int getMfaIdentifier() {
         return mfaIdentifier;
     }
