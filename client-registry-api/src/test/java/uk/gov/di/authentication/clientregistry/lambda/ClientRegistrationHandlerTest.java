@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -43,6 +44,7 @@ import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAudit
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
+import static uk.gov.di.orchestration.audit.TxmaAuditUser.user;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -57,6 +59,8 @@ class ClientRegistrationHandlerTest {
     private static final List<String> CONTACTS = List.of("joe.bloggs@test.com");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
     private static final boolean CONSENT_REQUIRED_FIXED_VALUE = false;
+    public static final TxmaAuditUser USER =
+            user().withIpAddress("").withTransactionId("request-id");
     private final String clientId = IdGenerator.generate();
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -219,8 +223,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     @Test
@@ -236,9 +239,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "", "request-id", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     @Test
@@ -254,9 +255,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_SCOPE.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "", "request-id", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     private static Stream<String> clientTypes() {
@@ -298,9 +297,7 @@ class ClientRegistrationHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_RECEIVED, "", "request-id", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED, "", USER);
 
         return response;
     }
