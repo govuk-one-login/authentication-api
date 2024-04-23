@@ -174,7 +174,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(false));
+        assertThat(startResponse.user().isAuthenticated(), equalTo(false));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
@@ -221,10 +221,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().getMfaMethodType(), equalTo(mfaMethodType));
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), true);
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(true));
+        assertThat(startResponse.user().getMfaMethodType(), equalTo(mfaMethodType));
+        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
+        verifyStandardUserInformationSetOnResponse(startResponse.user(), true);
+        assertThat(startResponse.user().isAuthenticated(), equalTo(true));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
@@ -267,11 +267,11 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertTrue(startResponse.getUser().isDocCheckingAppUser());
-        assertFalse(startResponse.getUser().isAuthenticated());
-        assertFalse(startResponse.getUser().isIdentityRequired());
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), false);
+        assertTrue(startResponse.user().isDocCheckingAppUser());
+        assertFalse(startResponse.user().isAuthenticated());
+        assertFalse(startResponse.user().isIdentityRequired());
+        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
+        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
 
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
@@ -305,9 +305,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redis.getSession(sessionId).isAuthenticated(), equalTo(false));
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(false));
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), false);
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, STATE);
+        assertThat(startResponse.user().isAuthenticated(), equalTo(false));
+        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
+        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
