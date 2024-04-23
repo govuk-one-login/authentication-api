@@ -197,7 +197,9 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        AuditService.MetadataPair.pair(
+                                "number_of_attempts_user_allowed_to_login", 5));
     }
 
     @Test

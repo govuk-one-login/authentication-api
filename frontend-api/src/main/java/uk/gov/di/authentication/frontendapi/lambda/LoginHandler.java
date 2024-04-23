@@ -173,7 +173,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userProfile.getPhoneNumber(),
                         persistentSessionId,
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
+                        pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
@@ -216,8 +217,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userProfile.getPhoneNumber(),
                             persistentSessionId,
                             pair("internalSubjectId", userProfile.getSubjectID()),
+                            pair("attemptNoFailedAt", incorrectPasswordCount),
                             pair(
-                                    "attemptNoFailedAt",
+                                    "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxPasswordRetries()));
 
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);

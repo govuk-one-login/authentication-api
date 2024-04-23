@@ -440,7 +440,10 @@ class LoginHandlerTest {
                         userProfile.getPhoneNumber(),
                         PERSISTENT_ID,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
+                        pair(
+                                "number_of_attempts_user_allowed_to_login",
+                                configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
     }
