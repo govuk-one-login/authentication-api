@@ -160,15 +160,7 @@ class StartHandlerTest {
 
         StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertThat(
-                response.client().getClientName(), equalTo(getClientStartInfo().getClientName()));
-        assertThat(response.client().getScopes(), equalTo(getClientStartInfo().getScopes()));
-        assertThat(
-                response.client().getServiceType(), equalTo(getClientStartInfo().getServiceType()));
-        assertThat(
-                response.client().getCookieConsentShared(),
-                equalTo(getClientStartInfo().getCookieConsentShared()));
-        assertThat(response.client().getRedirectUri(), equalTo(REDIRECT_URL));
+        assertThat(response.client(), equalTo(getClientStartInfo()));
         assertFalse(response.client().isOneLoginService());
         assertThat(response.user().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
         assertThat(
@@ -229,11 +221,11 @@ class StartHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertThat(response.client().getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(response.client().getScopes(), equalTo(DOC_APP_SCOPE.toStringList()));
-        assertThat(response.client().getServiceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertThat(response.client().getRedirectUri(), equalTo(REDIRECT_URL));
-        assertFalse(response.client().getCookieConsentShared());
+        assertThat(response.client().clientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(response.client().scopes(), equalTo(DOC_APP_SCOPE.toStringList()));
+        assertThat(response.client().serviceType(), equalTo(ServiceType.MANDATORY.toString()));
+        assertThat(response.client().redirectUri(), equalTo(REDIRECT_URL));
+        assertFalse(response.client().cookieConsentShared());
         assertTrue(response.user().isDocCheckingAppUser());
         assertFalse(response.user().isIdentityRequired());
         assertFalse(response.user().isUpliftRequired());

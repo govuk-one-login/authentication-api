@@ -354,12 +354,12 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void verifyStandardClientInformationSetOnResponse(
             ClientStartInfo clientStartInfo, Scope scope, State state) {
-        assertThat(clientStartInfo.getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(clientStartInfo.getServiceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertFalse(clientStartInfo.getCookieConsentShared());
-        assertThat(clientStartInfo.getScopes(), equalTo(scope.toStringList()));
-        assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
-        assertThat(clientStartInfo.getState().getValue(), equalTo(state.getValue()));
+        assertThat(clientStartInfo.clientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(clientStartInfo.serviceType(), equalTo(ServiceType.MANDATORY.toString()));
+        assertFalse(clientStartInfo.cookieConsentShared());
+        assertThat(clientStartInfo.scopes(), equalTo(scope.toStringList()));
+        assertThat(clientStartInfo.redirectUri(), equalTo(REDIRECT_URI));
+        assertThat(clientStartInfo.state().getValue(), equalTo(state.getValue()));
     }
 
     private void verifyStandardUserInformationSetOnResponse(

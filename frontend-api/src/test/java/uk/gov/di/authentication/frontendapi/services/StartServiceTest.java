@@ -491,17 +491,17 @@ class StartServiceTest {
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
-        assertThat(clientStartInfo.getCookieConsentShared(), equalTo(cookieConsentShared));
-        assertThat(clientStartInfo.getClientName(), equalTo(CLIENT_NAME));
-        assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
-        assertThat(clientStartInfo.getState().getValue(), equalTo(STATE.getValue()));
+        assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
+        assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
+        assertThat(clientStartInfo.redirectUri(), equalTo(REDIRECT_URI));
+        assertThat(clientStartInfo.state().getValue(), equalTo(STATE.getValue()));
         assertThat(clientStartInfo.isOneLoginService(), equalTo(oneLoginService));
 
         var expectedScopes = SCOPES;
         if (Objects.nonNull(signedJWT)) {
             expectedScopes = DOC_APP_SCOPES;
         }
-        assertThat(clientStartInfo.getScopes(), equalTo(expectedScopes.toStringList()));
+        assertThat(clientStartInfo.scopes(), equalTo(expectedScopes.toStringList()));
     }
 
     @Test

@@ -7,80 +7,12 @@ import com.nimbusds.oauth2.sdk.id.State;
 import java.net.URI;
 import java.util.List;
 
-public class ClientStartInfo {
-
-    @SerializedName("clientName")
-    @Expose
-    private String clientName;
-
-    @SerializedName("scopes")
-    @Expose
-    private List<String> scopes;
-
-    @SerializedName("serviceType")
-    @Expose
-    private String serviceType;
-
-    @SerializedName("cookieConsentShared")
-    @Expose
-    private boolean cookieConsentShared;
-
-    @SerializedName("redirectUri")
-    @Expose
-    private URI redirectUri;
-
-    @SerializedName("state")
-    @Expose
-    private State state;
-
-    @SerializedName("isOneLoginService")
-    @Expose
-    private boolean oneLoginService;
-
-    public ClientStartInfo() {}
-
-    public ClientStartInfo(
-            String clientName,
-            List<String> scopes,
-            String serviceType,
-            boolean cookieConsentShared,
-            URI redirectUri,
-            State state,
-            boolean oneLoginService) {
-        this.clientName = clientName;
-        this.scopes = scopes;
-        this.serviceType = serviceType;
-        this.cookieConsentShared = cookieConsentShared;
-        this.redirectUri = redirectUri;
-        this.state = state;
-        this.oneLoginService = oneLoginService;
-    }
-
-    public String getClientName() {
-        return clientName;
-    }
-
-    public List<String> getScopes() {
-        return scopes;
-    }
-
-    public String getServiceType() {
-        return serviceType;
-    }
-
-    public boolean getCookieConsentShared() {
-        return cookieConsentShared;
-    }
-
-    public URI getRedirectUri() {
-        return redirectUri;
-    }
-
-    public State getState() {
-        return state;
-    }
-
-    public boolean isOneLoginService() {
-        return oneLoginService;
-    }
-}
+public record ClientStartInfo(
+        @SerializedName("clientName") @Expose String clientName,
+        @SerializedName("scopes") @Expose List<String> scopes,
+        @SerializedName("serviceType") @Expose String serviceType,
+        @SerializedName("cookieConsentShared") @Expose boolean cookieConsentShared,
+        @SerializedName("redirectUri") @Expose URI redirectUri,
+        @SerializedName("state") @Expose State state,
+        @SerializedName("isOneLoginService") @Expose boolean isOneLoginService) {}
+;
