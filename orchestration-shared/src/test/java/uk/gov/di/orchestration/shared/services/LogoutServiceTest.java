@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
-import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -54,6 +54,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -101,6 +102,11 @@ public class LogoutServiceTest {
     private Optional<String> audience;
     private Session session;
     private LogoutService logoutService;
+    private final TxmaAuditUser user =
+            TxmaAuditUser.user()
+                    .withIpAddress(IP_ADDRESS)
+                    .withSessionId(SESSION_ID)
+                    .withPersistentSessionId(PERSISTENT_SESSION_ID);
 
     @BeforeEach
     void setup() throws JOSEException, ParseException {
@@ -155,17 +161,7 @@ public class LogoutServiceTest {
                         Optional.of(audience.get()),
                         Optional.of(SESSION_ID));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -182,17 +178,7 @@ public class LogoutServiceTest {
                         Optional.of(audience.get()),
                         Optional.of(SESSION_ID));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -210,17 +196,7 @@ public class LogoutServiceTest {
                         Optional.of(audience.get()),
                         Optional.of(SESSION_ID));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -239,17 +215,7 @@ public class LogoutServiceTest {
                         Optional.empty(),
                         Optional.of(SESSION_ID));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, user);
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertThat(response, hasStatus(302));
@@ -274,17 +240,7 @@ public class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService)
-                .submitAuditEvent(
-                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -305,17 +261,7 @@ public class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService)
-                .submitAuditEvent(
-                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 

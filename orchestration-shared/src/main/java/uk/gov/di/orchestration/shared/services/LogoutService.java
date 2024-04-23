@@ -6,19 +6,20 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
-import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
+import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 
 public class LogoutService {
 
@@ -146,16 +147,15 @@ public class LogoutService {
             LOG.error("Unable to generate logout response", e);
             throw new RuntimeException("Unable to build URI");
         }
-        auditService.submitAuditEvent(
-                LogoutAuditableEvent.LOG_OUT_SUCCESS,
-                clientId.orElse(AuditService.UNKNOWN),
-                AuditService.UNKNOWN,
-                sessionId.orElse(AuditService.UNKNOWN),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders()));
+
+        var user =
+                TxmaAuditUser.user()
+                        .withIpAddress(extractIpAddress(input))
+                        .withPersistentSessionId(
+                                extractPersistentIdFromCookieHeader(input.getHeaders()))
+                        .withSessionId(sessionId.orElse(null));
+
+        auditService.submitAuditEvent(LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), user);
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
