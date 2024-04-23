@@ -27,7 +27,7 @@ public class DynamoAccessTokenServiceIntegrationTest {
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
     AccessTokenService accessTokenService =
-            new AccessTokenService(ConfigurationService.getInstance(), true);
+            new AccessTokenService(ConfigurationService.getInstance());
 
     @Test
     void shouldRetrieveAccessTokenForKey() {
