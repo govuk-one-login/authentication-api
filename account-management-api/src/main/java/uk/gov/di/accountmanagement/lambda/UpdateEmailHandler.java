@@ -168,7 +168,10 @@ public class UpdateEmailHandler
                     AccountManagementAuditableEvent.UPDATE_EMAIL,
                     ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                     sessionId,
-                    input.getRequestContext().getAuthorizer().getOrDefault("clientId", AuditService.UNKNOWN).toString(),
+                    input.getRequestContext()
+                            .getAuthorizer()
+                            .getOrDefault("clientId", AuditService.UNKNOWN)
+                            .toString(),
                     internalCommonSubjectIdentifier.getValue(),
                     updateInfoRequest.getReplacementEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
