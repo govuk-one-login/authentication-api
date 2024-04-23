@@ -387,6 +387,20 @@ data "aws_iam_policy_document" "dynamo_authentication_callback_userinfo_write_po
       "${data.aws_dynamodb_table.authentication_callback_userinfo_table.arn}/index/*"
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.authentication_callback_userinfo_encryption_key_arn]
+  }
 }
 
 data "aws_iam_policy_document" "dynamo_authentication_callback_userinfo_read_policy_document" {
@@ -406,6 +420,20 @@ data "aws_iam_policy_document" "dynamo_authentication_callback_userinfo_read_pol
       data.aws_dynamodb_table.authentication_callback_userinfo_table.arn,
       "${data.aws_dynamodb_table.authentication_callback_userinfo_table.arn}/index/*",
     ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.authentication_callback_userinfo_encryption_key_arn]
   }
 }
 
