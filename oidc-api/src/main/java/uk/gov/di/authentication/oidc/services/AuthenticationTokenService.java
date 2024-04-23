@@ -94,6 +94,13 @@ public class AuthenticationTokenService {
                 if (count > 0) LOG.warn("Retrying Authentication token request");
                 count++;
                 tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+                if (!tokenResponse.indicatesSuccess()) {
+                    HTTPResponse response = tokenResponse.toHTTPResponse();
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from Authentication token endpoint on attempt %d: %s ",
+                                    response.getStatusCode(), count, response.getContent()));
+                }
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
             return tokenResponse;
         } catch (IOException e) {
@@ -116,6 +123,12 @@ public class AuthenticationTokenService {
                 if (count > 0) LOG.warn("Retrying Authentication userinfo request");
                 count++;
                 response = request.send();
+                if (!response.indicatesSuccess()) {
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from Authentication userinfo endpoint on attempt %d: %s ",
+                                    response.getStatusCode(), count, response.getContent()));
+                }
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulCredentialResponseException(
