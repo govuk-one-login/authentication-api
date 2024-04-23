@@ -1,7 +1,3 @@
-locals {
-  client_registry_kms_key_arn = data.terraform_remote_state.shared.outputs.client_registry_kms_key_arn
-}
-
 data "aws_dynamodb_table" "user_credentials_table" {
   name = "${var.environment}-user-credentials"
 }
@@ -39,6 +35,20 @@ data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
       "${data.aws_dynamodb_table.user_credentials_table.arn}/index/*",
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.user_profile_kms_key_arn]
+  }
 }
 
 data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
@@ -61,6 +71,20 @@ data "aws_iam_policy_document" "dynamo_user_read_policy_document" {
       "${data.aws_dynamodb_table.user_credentials_table.arn}/index/*",
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.user_profile_kms_key_arn]
+  }
 }
 
 data "aws_iam_policy_document" "dynamo_user_delete_policy_document" {
@@ -77,6 +101,20 @@ data "aws_iam_policy_document" "dynamo_user_delete_policy_document" {
       "${data.aws_dynamodb_table.user_profile_table.arn}/index/*",
       "${data.aws_dynamodb_table.user_credentials_table.arn}/index/*",
     ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.user_profile_kms_key_arn]
   }
 }
 
