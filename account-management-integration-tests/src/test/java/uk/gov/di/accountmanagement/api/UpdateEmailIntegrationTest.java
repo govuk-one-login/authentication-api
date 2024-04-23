@@ -35,6 +35,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final String CLIENT_ID = "some-client-id";
 
     @BeforeEach
     void setup() {
@@ -46,6 +47,10 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallUpdateEmailEndpointAndReturn204WhenUpdatingEmailIsSuccessful() {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+
+        Map<String, Object> requestParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
+
         var response =
                 makeRequest(
                         Optional.of(
@@ -54,7 +59,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubId));
+                        requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
         assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
@@ -99,6 +104,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
+        Map<String, Object> additionalParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
+
         var response =
                 makeRequest(
                         Optional.of(
@@ -107,7 +115,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubId));
+                        additionalParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
 

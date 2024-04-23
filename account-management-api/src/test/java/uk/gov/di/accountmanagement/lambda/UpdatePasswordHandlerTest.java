@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -63,6 +64,8 @@ class UpdatePasswordHandlerTest {
     private static final String INVALID_PASSWORD = "pwd";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final String SESSION_ID = "some-session-id";
+    private static final String CLIENT_ID = "some-client-id";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -107,9 +110,9 @@ class UpdatePasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                        SESSION_ID,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        CLIENT_ID,
                         expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
@@ -217,10 +220,16 @@ class UpdatePasswordHandlerTest {
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", principalId);
+        authorizerParams.put("clientId", CLIENT_ID);
         proxyRequestContext.setAuthorizer(authorizerParams);
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         event.setRequestContext(proxyRequestContext);
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_ID,
+                        ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
+                        SESSION_ID));
 
         return event;
     }

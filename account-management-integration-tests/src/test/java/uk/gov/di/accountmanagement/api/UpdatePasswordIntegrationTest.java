@@ -36,6 +36,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
     private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final String CLIENT_ID = "some-client-id";
 
     @BeforeEach
     void setup() {
@@ -48,13 +49,15 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId("password-1");
         var hashedOriginalPassword = userStore.getPasswordForUser(TEST_EMAIL);
 
+        Map<String, Object> requestParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
         var response =
                 makeRequest(
                         Optional.of(new UpdatePasswordRequest(TEST_EMAIL, "password-2")),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubId));
+                        requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
         assertThat(userStore.getPasswordForUser(TEST_EMAIL), not(is(hashedOriginalPassword)));
@@ -90,6 +93,9 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
     void shouldReturn400WhenNewPasswordIsInvalid() throws Exception {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId("password-1");
 
+        Map<String, Object> requestParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
+
         var response =
                 makeRequest(
                         Optional.of(
@@ -98,7 +104,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubId));
+                        requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1040)));
