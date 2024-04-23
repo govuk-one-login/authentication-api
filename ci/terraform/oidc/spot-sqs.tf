@@ -183,3 +183,40 @@ resource "aws_iam_policy" "spot_queue_encryption_policy" {
 
   policy = data.aws_iam_policy_document.spot_queue_encryption_policy.json
 }
+
+
+data "aws_iam_policy_document" "spot_queue_write_access_policy_document" {
+  version   = "2012-10-17"
+  policy_id = "${var.environment}-spot-queue-write-access-policy"
+
+  statement {
+    effect = "Allow"
+    sid    = "AllowWriteAccessToSpotQueue"
+    actions = [
+      "sqs:SendMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes"
+    ]
+    resources = [aws_sqs_queue.spot_request_queue.arn]
+  }
+
+  statement {
+    effect = "Allow"
+    sid    = "AllowAccessToKeyForEncryptingPayloads"
+    actions = [
+      "kms:GenerateDataKey",
+      "kms:Decrypt"
+    ]
+    resources = [
+      aws_kms_key.spot_request_sqs_key.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "spot_queue_write_access_policy" {
+  name_prefix = "spot-queue-write-access-"
+  path        = "/${var.environment}/"
+  description = "IAM Policy for write access to the SPOT request queue"
+
+  policy = data.aws_iam_policy_document.spot_queue_write_access_policy_document.json
+}
