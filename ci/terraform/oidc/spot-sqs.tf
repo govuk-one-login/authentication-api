@@ -185,26 +185,26 @@ resource "aws_iam_policy" "spot_queue_encryption_policy" {
 }
 
 
-data "aws_iam_policy_document" "spot_queue_read_access_policy_document" {
+data "aws_iam_policy_document" "spot_queue_write_access_policy_document" {
   version   = "2012-10-17"
-  policy_id = "${var.environment}-spot-queue-read-access-policy"
+  policy_id = "${var.environment}-spot-queue-write-access-policy"
 
   statement {
     effect = "Allow"
-    sid    = "AllowReadAccessToSpotQueue"
+    sid    = "AllowWriteAccessToSpotQueue"
     actions = [
-      "sqs:ReceiveMessage",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-      "sqs:ChangeMessageVisibility"
+      "sqs:SendMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes"
     ]
     resources = [aws_sqs_queue.spot_request_queue.arn]
   }
 
   statement {
     effect = "Allow"
-    sid    = "AllowAccessToKeyForDecryptingPayloads"
+    sid    = "AllowAccessToKeyForEncryptingPayloads"
     actions = [
+      "kms:GenerateDataKey",
       "kms:Decrypt"
     ]
     resources = [
@@ -213,10 +213,10 @@ data "aws_iam_policy_document" "spot_queue_read_access_policy_document" {
   }
 }
 
-resource "aws_iam_policy" "spot_queue_read_access_policy" {
-  name_prefix = "spot-queue-read-access-"
+resource "aws_iam_policy" "spot_queue_write_access_policy" {
+  name_prefix = "spot-queue-write-access-"
   path        = "/${var.environment}/"
-  description = "IAM Policy for read access to the SPOT request queue"
+  description = "IAM Policy for write access to the SPOT request queue"
 
-  policy = data.aws_iam_policy_document.back_channel_logout_queue_read_access_policy_document.json
+  policy = data.aws_iam_policy_document.spot_queue_write_access_policy_document.json
 }
