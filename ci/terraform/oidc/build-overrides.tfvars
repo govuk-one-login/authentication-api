@@ -32,9 +32,10 @@ dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
 EOT
 
 
-lockout_duration      = 90
-otp_code_ttl_duration = 120
-lockout_count_ttl     = 180
+lockout_duration                     = 90
+otp_code_ttl_duration                = 120
+lockout_count_ttl                    = 180
+incorrect_password_lockout_count_ttl = 360
 
 logging_endpoint_arns = [
   "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"

@@ -31,16 +31,17 @@ module "login" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT              = var.environment
-    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                = local.redis_key
-    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
-    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
-    INTERNAl_SECTOR_URI      = var.internal_sector_uri
-    LOCKOUT_DURATION         = var.lockout_duration
-    LOCKOUT_COUNT_TTL        = var.lockout_count_ttl
+    ENVIRONMENT                          = var.environment
+    TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                            = local.redis_key
+    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION             = var.terms_and_conditions
+    HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
+    INTERNAl_SECTOR_URI                  = var.internal_sector_uri
+    LOCKOUT_DURATION                     = var.lockout_duration
+    LOCKOUT_COUNT_TTL                    = var.lockout_count_ttl
+    INCORRECT_PASSWORD_LOCKOUT_COUNT_TTL = var.incorrect_password_lockout_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 
