@@ -28,6 +28,9 @@ AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
 -----END PUBLIC KEY-----
 EOT
 
+lockout_duration                     = 7200
+incorrect_password_lockout_count_ttl = 7200
+
 orch_client_id                     = "orchestrationAuth"
 orch_redirect_uri                  = "https://oidc.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
