@@ -17,6 +17,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -146,9 +147,12 @@ public class UpdatePhoneNumberHandler
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                    AuditService.UNKNOWN,
+                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                     sessionId,
-                    AuditService.UNKNOWN,
+                    input.getRequestContext()
+                            .getAuthorizer()
+                            .getOrDefault("clientId", AuditService.UNKNOWN)
+                            .toString(),
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

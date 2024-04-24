@@ -30,7 +30,7 @@ class ManuallyDeleteAccountHandlerTest {
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
-        when(accountDeletionService.removeAccount(any()))
+        when(accountDeletionService.removeAccount(any(), any()))
                 .thenReturn(mock(AccountDeletionService.DeletedAccountIdentifiers.class));
 
         // when
@@ -38,7 +38,7 @@ class ManuallyDeleteAccountHandlerTest {
 
         // then
         verify(authenticationService).getUserProfileByEmailMaybe(expectedEmail);
-        verify(accountDeletionService).removeAccount(userProfile);
+        verify(accountDeletionService).removeAccount(Optional.empty(), userProfile);
     }
 
     @Test
@@ -57,7 +57,8 @@ class ManuallyDeleteAccountHandlerTest {
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
-        when(accountDeletionService.removeAccount(any())).thenThrow(Json.JsonException.class);
+        when(accountDeletionService.removeAccount(any(), any()))
+                .thenThrow(Json.JsonException.class);
 
         // then
         assertThrows(

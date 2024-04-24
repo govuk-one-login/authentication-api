@@ -1,18 +1,25 @@
 package uk.gov.di.accountmanagement.services;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+
+import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
 public class AccountDeletionService {
     private static final Logger LOG = LogManager.getLogger(AccountDeletionService.class);
@@ -37,7 +44,8 @@ public class AccountDeletionService {
         this.dynamoDeleteService = dynamoDeleteService;
     }
 
-    public DeletedAccountIdentifiers removeAccount(UserProfile userProfile)
+    public DeletedAccountIdentifiers removeAccount(
+            Optional<APIGatewayProxyRequestEvent> input, UserProfile userProfile)
             throws Json.JsonException {
         var accountIdentifiers =
                 new DeletedAccountIdentifiers(
@@ -72,9 +80,23 @@ public class AccountDeletionService {
         try {
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
+                    input.map(
+                                    n ->
+                                            ClientSessionIdHelper.extractSessionIdFromHeaders(
+                                                    n.getHeaders()))
+                            .orElse(null),
+                    input.map(
+                                    n ->
+                                            RequestHeaderHelper.getHeaderValueOrElse(
+                                                    n.getHeaders(), SESSION_ID_HEADER, ""))
+                            .orElse(null),
+                    input.map(
+                                    n ->
+                                            n.getRequestContext()
+                                                    .getAuthorizer()
+                                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                                    .toString())
+                            .orElse(null),
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
