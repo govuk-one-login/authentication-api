@@ -63,8 +63,6 @@ public class DcmawUserInfoTest {
     RequestResponsePact validRequestReturnsValidUserInfo(PactDslWithProvider builder) {
         return builder.given("accessToken is a valid access token")
                 .given("dummy-doc-app-subject-id is a valid subject")
-                .given("dummyDcmawComponentId is a valid issuer")
-                .given("the current time is 2099-01-01 00:00:00")
                 .uponReceiving("Valid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
@@ -114,8 +112,6 @@ public class DcmawUserInfoTest {
     RequestResponsePact validRequestReturnsAccessDenied(PactDslWithProvider builder) {
         return builder.given("accessToken is a valid access token")
                 .given("invalid-subject-id is a invalid subject")
-                .given("dummyDcmawComponentId is a valid issuer")
-                .given("the current time is 2099-01-01 00:00:00")
                 .uponReceiving("Valid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
@@ -160,8 +156,6 @@ public class DcmawUserInfoTest {
     RequestResponsePact invalidAccessTokenReturnsError(PactDslWithProvider builder) {
         return builder.given("accessToken is a invalid access token")
                 .given("invalid-subject-id is a invalid subject")
-                .given("dummyDcmawComponentId is a valid issuer")
-                .given("the current time is 2099-01-01 00:00:00")
                 .uponReceiving("Valid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
