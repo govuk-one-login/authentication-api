@@ -31,6 +31,7 @@ class CodeStorageServiceTest {
     private static final String CODE = "123456";
     private static final String SUBJECT = "some-subject";
     private static final long CODE_EXPIRY_TIME = 900;
+    private static final long PW_CODE_EXPIRY_TIME = 900;
     private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private final RedisConnectionService redisConnectionService =
@@ -74,6 +75,8 @@ class CodeStorageServiceTest {
     @BeforeAll
     static void init() {
         when(configurationService.getLockoutCountTTL()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getIncorrectPasswordLockoutCountTTL())
+                .thenReturn(PW_CODE_EXPIRY_TIME);
     }
 
     @Test

@@ -208,6 +208,11 @@ variable "lockout_count_ttl" {
   default = 900
 }
 
+variable "incorrect_password_lockout_count_ttl" {
+  type    = number
+  default = 7200
+}
+
 variable "reduced_lockout_duration" {
   type    = number
   default = 900
@@ -234,6 +239,11 @@ variable "gov_uk_accounts_url" {
 }
 
 variable "shared_state_bucket" {
+  type    = string
+  default = "digital-identity-dev-tfstate"
+}
+
+variable "contra_state_bucket" {
   type    = string
   default = "digital-identity-dev-tfstate"
 }

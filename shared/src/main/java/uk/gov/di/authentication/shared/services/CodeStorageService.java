@@ -61,12 +61,15 @@ public class CodeStorageService {
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+        increaseCount(
+                email,
+                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX,
+                configurationService.getLockoutCountTTL());
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
         String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        increaseCount(email, prefix);
+        increaseCount(email, prefix, configurationService.getLockoutCountTTL());
     }
 
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
@@ -79,25 +82,33 @@ public class CodeStorageService {
     }
 
     public void increaseIncorrectPasswordCount(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+        increaseCount(
+                email,
+                MULTIPLE_INCORRECT_PASSWORDS_PREFIX,
+                configurationService.getIncorrectPasswordLockoutCountTTL());
     }
 
     public void increaseIncorrectEmailCount(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
+        increaseCount(
+                email,
+                MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX,
+                configurationService.getLockoutCountTTL());
     }
 
     public void increaseIncorrectPasswordCountReauthJourney(String email) {
-        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+        increaseCount(
+                email,
+                MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX,
+                configurationService.getLockoutCountTTL());
     }
 
-    private void increaseCount(String email, String prefix) {
+    private void increaseCount(String email, String prefix, long ttl) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
         Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
-            redisConnectionService.saveWithExpiry(
-                    key, String.valueOf(newCount), configurationService.getLockoutCountTTL());
+            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), ttl);
             LOG.info("count increased from: {} to: {}", count, newCount);
         } catch (Exception e) {
             throw new RuntimeException(e);
