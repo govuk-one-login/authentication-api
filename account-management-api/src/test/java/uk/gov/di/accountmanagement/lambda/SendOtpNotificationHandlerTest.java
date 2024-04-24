@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -17,9 +18,12 @@ import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -58,11 +62,16 @@ class SendOtpNotificationHandlerTest {
     private static final String TEST_TEST_USER_EMAIL_ADDRESS =
             "tester.joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_CLIENT_ID = "tester-client-id";
+    private static final String SESSION_ID = "some-client-session-id";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final String TEST_CLIENT_AND_USER_SIX_DIGIT_CODE = "654321";
     private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final long CODE_EXPIRY_TIME = 900;
-
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final Subject INTERNAL_SUBJECT = new Subject();
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
@@ -99,7 +108,8 @@ class SendOtpNotificationHandlerTest {
                 .thenReturn(true);
 
         eventContext = contextWithSourceIp("123.123.123.123");
-        Map<String, Object> authorizer = Map.of("clientId", TEST_CLIENT_ID);
+        Map<String, Object> authorizer =
+                Map.of("clientId", TEST_CLIENT_ID, "principalId", expectedCommonSubject);
         eventContext.setAuthorizer(authorizer);
     }
 
@@ -162,10 +172,10 @@ class SendOtpNotificationHandlerTest {
                 verify(auditService)
                         .submitAuditEvent(
                                 AccountManagementAuditableEvent.SEND_OTP,
+                                SESSION_ID,
                                 AuditService.UNKNOWN,
-                                AuditService.UNKNOWN,
-                                AuditService.UNKNOWN,
-                                AuditService.UNKNOWN,
+                                TEST_CLIENT_ID,
+                                expectedCommonSubject,
                                 TEST_EMAIL_ADDRESS,
                                 "123.123.123.123",
                                 null,
@@ -223,7 +233,7 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of());
+        event.setHeaders(Map.of(ClientSessionIdHelper.SESSION_ID_HEADER_NAME, SESSION_ID));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
@@ -244,10 +254,10 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
+                        SESSION_ID,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        TEST_CLIENT_ID,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
@@ -263,7 +273,12 @@ class SendOtpNotificationHandlerTest {
         String persistentIdValue = "some-persistent-session-id";
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        persistentIdValue,
+                        ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
+                        SESSION_ID));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
@@ -285,10 +300,10 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
+                        SESSION_ID,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        TEST_CLIENT_ID,
+                        expectedCommonSubject,
                         TEST_TEST_USER_EMAIL_ADDRESS,
                         "123.123.123.123",
                         null,
