@@ -4,6 +4,7 @@ import com.nimbusds.jose.JOSEException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.exceptions.InvalidEncodingException;
 
@@ -14,6 +15,7 @@ import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -147,20 +149,10 @@ class AuditServiceTest {
     @Test
     void TxmaHeaderShouldBeAddedToAuditEvent() throws JOSEException, InvalidEncodingException {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
 
         attachAuditField(TXMA_ENCODED_HEADER, TXMA_ENCODED_HEADER_VALUE);
-        auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                "request-id",
-                "session-id",
-                "client-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "07700900000",
-                "persistent-session-id",
-                pair("key", "value"),
-                pair("key2", "value2"));
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -175,5 +167,19 @@ class AuditServiceTest {
         assertThat(
                 deviceInformation,
                 hasFieldWithValue("encoded", equalTo(TXMA_ENCODED_HEADER_VALUE)));
+    }
+
+    @Test
+    void TxmaHeaderNotAddedWhenNotSet() throws JOSEException, InvalidEncodingException {
+        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
+
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        assertTrue(
+                asJson(txmaMessageCaptor.getValue())
+                        .getAsJsonObject()
+                        .get("restricted")
+                        .isJsonNull());
     }
 }

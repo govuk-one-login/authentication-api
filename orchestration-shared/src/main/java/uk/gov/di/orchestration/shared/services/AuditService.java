@@ -97,7 +97,8 @@ public class AuditService {
                                         .orElse("UNKNOWN"))
                         .withUser(user);
 
-        if (ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName()) != null) {
+        if (configurationService.isTxmaAuditEncodedEnabled()
+                && ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName()) != null) {
             txmaAuditEvent.addRestricted(
                     "device_information",
                     Map.of("encoded", ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName())));
