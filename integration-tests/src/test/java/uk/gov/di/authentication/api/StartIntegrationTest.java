@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -42,9 +43,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -104,13 +107,40 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
         assertThat(response, hasStatus(200));
 
-        StartResponse startResponse =
-                objectMapper.readValue(response.getBody(), StartResponse.class);
+        var user =
+                format(
+                        """
+                {
+                "consentRequired":false,
+                "upliftRequired":false,
+                "identityRequired":%b,
+                "authenticated":%b,
+                "cookieConsent":null,
+                "gaCrossDomainTrackingId":null,
+                "docCheckingAppUser":false,
+                "mfaMethodType":null}
+                """,
+                        identityRequired, isAuthenticated);
 
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), true);
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, state);
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(isAuthenticated));
-        assertThat(startResponse.getUser().isIdentityRequired(), equalTo(identityRequired));
+        var client =
+                format(
+                        """
+                {
+                "clientName":"test-client-name",
+                "scopes":["openid"],
+                "serviceType":"MANDATORY",
+                "cookieConsentShared":false,
+                "redirectUri":"http://localhost/redirect",
+                "state":"%s",
+                "isOneLoginService":false
+                }
+                """,
+                        state.getValue());
+
+        var expectedJson =
+                JsonParser.parseString(format("{\"user\": %s,\"client\": %s}", user, client));
+
+        assertThat(JsonParser.parseString(response.getBody()), is(equalTo(expectedJson)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
@@ -144,7 +174,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(false));
+        assertThat(startResponse.user().isAuthenticated(), equalTo(false));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
@@ -191,10 +221,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         StartResponse startResponse =
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().getMfaMethodType(), equalTo(mfaMethodType));
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), true);
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(true));
+        assertThat(startResponse.user().mfaMethodType(), equalTo(mfaMethodType));
+        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
+        verifyStandardUserInformationSetOnResponse(startResponse.user(), true);
+        assertThat(startResponse.user().isAuthenticated(), equalTo(true));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
@@ -237,11 +267,11 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertTrue(startResponse.getUser().isDocCheckingAppUser());
-        assertFalse(startResponse.getUser().isAuthenticated());
-        assertFalse(startResponse.getUser().isIdentityRequired());
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), false);
+        assertTrue(startResponse.user().isDocCheckingAppUser());
+        assertFalse(startResponse.user().isAuthenticated());
+        assertFalse(startResponse.user().isIdentityRequired());
+        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
+        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
 
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
@@ -275,9 +305,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redis.getSession(sessionId).isAuthenticated(), equalTo(false));
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
-        assertThat(startResponse.getUser().isAuthenticated(), equalTo(false));
-        verifyStandardUserInformationSetOnResponse(startResponse.getUser(), false);
-        verifyStandardClientInformationSetOnResponse(startResponse.getClient(), scope, STATE);
+        assertThat(startResponse.user().isAuthenticated(), equalTo(false));
+        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
+        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
@@ -324,20 +354,20 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void verifyStandardClientInformationSetOnResponse(
             ClientStartInfo clientStartInfo, Scope scope, State state) {
-        assertThat(clientStartInfo.getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(clientStartInfo.getServiceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertFalse(clientStartInfo.getCookieConsentShared());
-        assertThat(clientStartInfo.getScopes(), equalTo(scope.toStringList()));
-        assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
-        assertThat(clientStartInfo.getState().getValue(), equalTo(state.getValue()));
+        assertThat(clientStartInfo.clientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(clientStartInfo.serviceType(), equalTo(ServiceType.MANDATORY.toString()));
+        assertFalse(clientStartInfo.cookieConsentShared());
+        assertThat(clientStartInfo.scopes(), equalTo(scope.toStringList()));
+        assertThat(clientStartInfo.redirectUri(), equalTo(REDIRECT_URI));
+        assertThat(clientStartInfo.state().getValue(), equalTo(state.getValue()));
     }
 
     private void verifyStandardUserInformationSetOnResponse(
             UserStartInfo userStartInfo, Boolean consentRequired) {
         assertFalse(userStartInfo.isConsentRequired());
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
-        assertThat(userStartInfo.getCookieConsent(), equalTo(null));
-        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(userStartInfo.cookieConsent(), equalTo(null));
+        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(null));
     }
 
     private Map<String, String> standardHeadersWithSessionId(String sessionId) {

@@ -160,27 +160,14 @@ class StartHandlerTest {
 
         StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
+        assertThat(response.client(), equalTo(getClientStartInfo()));
+        assertFalse(response.client().isOneLoginService());
+        assertThat(response.user().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
         assertThat(
-                response.getClient().getClientName(),
-                equalTo(getClientStartInfo().getClientName()));
-        assertThat(response.getClient().getScopes(), equalTo(getClientStartInfo().getScopes()));
-        assertThat(
-                response.getClient().getServiceType(),
-                equalTo(getClientStartInfo().getServiceType()));
-        assertThat(
-                response.getClient().getCookieConsentShared(),
-                equalTo(getClientStartInfo().getCookieConsentShared()));
-        assertThat(response.getClient().getRedirectUri(), equalTo(REDIRECT_URL));
-        assertFalse(response.getClient().isOneLoginService());
-        assertThat(
-                response.getUser().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
-        assertThat(
-                response.getUser().isIdentityRequired(),
-                equalTo(userStartInfo.isIdentityRequired()));
-        assertThat(
-                response.getUser().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
-        assertThat(response.getUser().getCookieConsent(), equalTo(cookieConsentValue));
-        assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
+                response.user().isIdentityRequired(), equalTo(userStartInfo.isIdentityRequired()));
+        assertThat(response.user().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
+        assertThat(response.user().cookieConsent(), equalTo(cookieConsentValue));
+        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(gaTrackingId));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -234,19 +221,18 @@ class StartHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertThat(response.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(response.getClient().getScopes(), equalTo(DOC_APP_SCOPE.toStringList()));
-        assertThat(
-                response.getClient().getServiceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertThat(response.getClient().getRedirectUri(), equalTo(REDIRECT_URL));
-        assertFalse(response.getClient().getCookieConsentShared());
-        assertTrue(response.getUser().isDocCheckingAppUser());
-        assertFalse(response.getUser().isIdentityRequired());
-        assertFalse(response.getUser().isUpliftRequired());
-        assertFalse(response.getUser().isAuthenticated());
-        assertFalse(response.getUser().isConsentRequired());
-        assertThat(response.getUser().getCookieConsent(), equalTo(null));
-        assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(response.client().clientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(response.client().scopes(), equalTo(DOC_APP_SCOPE.toStringList()));
+        assertThat(response.client().serviceType(), equalTo(ServiceType.MANDATORY.toString()));
+        assertThat(response.client().redirectUri(), equalTo(REDIRECT_URL));
+        assertFalse(response.client().cookieConsentShared());
+        assertTrue(response.user().isDocCheckingAppUser());
+        assertFalse(response.user().isIdentityRequired());
+        assertFalse(response.user().isUpliftRequired());
+        assertFalse(response.user().isAuthenticated());
+        assertFalse(response.user().isConsentRequired());
+        assertThat(response.user().cookieConsent(), equalTo(null));
+        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(null));
         verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
@@ -291,7 +277,7 @@ class StartHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertFalse(response.getUser().isAuthenticated());
+        assertFalse(response.user().isAuthenticated());
 
         verify(auditService)
                 .submitAuditEvent(
@@ -335,7 +321,7 @@ class StartHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertTrue(response.getUser().isAuthenticated());
+        assertTrue(response.user().isAuthenticated());
     }
 
     @Test

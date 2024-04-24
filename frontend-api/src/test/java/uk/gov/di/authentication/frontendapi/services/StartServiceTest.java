@@ -198,8 +198,8 @@ class StartServiceTest {
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
         assertThat(userStartInfo.isConsentRequired(), equalTo(false));
-        assertThat(userStartInfo.getCookieConsent(), equalTo(cookieConsent));
-        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
+        assertThat(userStartInfo.cookieConsent(), equalTo(cookieConsent));
+        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(gaTrackingId));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
         assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
     }
@@ -244,8 +244,8 @@ class StartServiceTest {
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
         assertThat(userStartInfo.isConsentRequired(), equalTo(false));
-        assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
-        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
+        assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
+        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
     }
 
@@ -278,8 +278,8 @@ class StartServiceTest {
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
         assertThat(userStartInfo.isConsentRequired(), equalTo(false));
-        assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
-        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
+        assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
+        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
     }
 
@@ -462,10 +462,10 @@ class StartServiceTest {
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
         assertThat(userStartInfo.isConsentRequired(), equalTo(false));
-        assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
-        assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
+        assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
+        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
-        assertThat(userStartInfo.getMfaMethodType(), equalTo(expectedMfaMethodType));
+        assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
     }
 
     @ParameterizedTest
@@ -491,17 +491,17 @@ class StartServiceTest {
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
-        assertThat(clientStartInfo.getCookieConsentShared(), equalTo(cookieConsentShared));
-        assertThat(clientStartInfo.getClientName(), equalTo(CLIENT_NAME));
-        assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
-        assertThat(clientStartInfo.getState().getValue(), equalTo(STATE.getValue()));
+        assertThat(clientStartInfo.cookieConsentShared(), equalTo(cookieConsentShared));
+        assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
+        assertThat(clientStartInfo.redirectUri(), equalTo(REDIRECT_URI));
+        assertThat(clientStartInfo.state().getValue(), equalTo(STATE.getValue()));
         assertThat(clientStartInfo.isOneLoginService(), equalTo(oneLoginService));
 
         var expectedScopes = SCOPES;
         if (Objects.nonNull(signedJWT)) {
             expectedScopes = DOC_APP_SCOPES;
         }
-        assertThat(clientStartInfo.getScopes(), equalTo(expectedScopes.toStringList()));
+        assertThat(clientStartInfo.scopes(), equalTo(expectedScopes.toStringList()));
     }
 
     @Test
