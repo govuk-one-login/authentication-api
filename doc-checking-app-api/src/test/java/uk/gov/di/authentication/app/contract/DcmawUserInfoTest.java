@@ -92,7 +92,7 @@ public class DcmawUserInfoTest {
             providerName = "DcmawUserInfoProvider",
             pactMethod = "validRequestReturnsValidUserInfo",
             pactVersion = PactSpecVersion.V3)
-    void getIPVUserInfoSuccessResponse(MockServer mockServer)
+    void getDocAppUserInfoSuccessResponse(MockServer mockServer)
             throws UnsuccessfulCredentialResponseException,
                     ParseException,
                     java.text.ParseException {
@@ -111,7 +111,6 @@ public class DcmawUserInfoTest {
     @Pact(consumer = "OrchUserInfoConsumer")
     RequestResponsePact validRequestReturnsAccessDenied(PactDslWithProvider builder) {
         return builder.given("accessToken is a valid access token")
-                .given("invalid-subject-id is a invalid subject")
                 .uponReceiving("Valid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
@@ -155,7 +154,6 @@ public class DcmawUserInfoTest {
     @Pact(consumer = "OrchUserInfoConsumer")
     RequestResponsePact invalidAccessTokenReturnsError(PactDslWithProvider builder) {
         return builder.given("accessToken is a invalid access token")
-                .given("invalid-subject-id is a invalid subject")
                 .uponReceiving("Valid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
