@@ -19,6 +19,7 @@ import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -277,10 +278,16 @@ public class SendOtpNotificationHandler
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.SEND_OTP,
+                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                 AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
+                input.getRequestContext()
+                        .getAuthorizer()
+                        .getOrDefault("clientId", AuditService.UNKNOWN)
+                        .toString(),
+                input.getRequestContext()
+                        .getAuthorizer()
+                        .getOrDefault("principalId", AuditService.UNKNOWN)
+                        .toString(),
                 sendNotificationRequest.getEmail(),
                 IpAddressHelper.extractIpAddress(input),
                 sendNotificationRequest.getPhoneNumber(),
