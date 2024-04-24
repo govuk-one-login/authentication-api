@@ -605,6 +605,12 @@ variable "oidc_origin_domain_enabled" {
   description = "Feature flag to control the creation of DNS records for the origin.oidc domain"
 }
 
+variable "oidc_cloudfront_dns_enabled" {
+  type        = bool
+  default     = false
+  description = "Feature flag controlling the DNS cutover between API Gateway and Cloudfront for the OIDC API"
+}
+
 variable "txma_audit_encoded_enabled" {
   default     = false
   type        = bool
