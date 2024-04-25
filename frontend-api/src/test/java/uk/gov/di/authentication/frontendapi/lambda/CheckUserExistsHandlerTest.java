@@ -128,41 +128,6 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
-        usingValidSession();
-        var userProfile = generateUserProfile().withAccountVerified(1);
-        setupUserProfileAndClient(Optional.of(userProfile));
-        when(codeStorageService.getMfaCodeBlockTimeToLive(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                .thenReturn(15L);
-        when(codeStorageService.getMfaCodeBlockTimeToLive(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
-                .thenReturn(15L);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
-                .thenReturn(6);
-        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
-        var event = userExistsRequest(EMAIL_ADDRESS);
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(200));
-        assertTrue(
-                result.getBody()
-                        .contains(
-                                "\"lockoutInformation\":["
-                                        + "{\"lockType\":\"codeBlock\","
-                                        + "\"mfaMethodType\":\"AUTH_APP\","
-                                        + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"SIGN_IN\"},"
-                                        + "{\"lockType\":\"codeBlock\","
-                                        + "\"mfaMethodType\":\"AUTH_APP\","
-                                        + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
-    }
-
-    @Test
     void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
         var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
@@ -200,6 +165,42 @@ class CheckUserExistsHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
+    }
+
+
+    @Test
+    void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
+        usingValidSession();
+        var userProfile = generateUserProfile().withAccountVerified(1);
+        setupUserProfileAndClient(Optional.of(userProfile));
+        when(codeStorageService.getMfaCodeBlockTimeToLive(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                .thenReturn(15L);
+        when(codeStorageService.getMfaCodeBlockTimeToLive(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
+                .thenReturn(15L);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
+                .thenReturn(6);
+        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
+        var event = userExistsRequest(EMAIL_ADDRESS);
+
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(200));
+        assertTrue(
+                result.getBody()
+                        .contains(
+                                "\"lockoutInformation\":["
+                                        + "{\"lockType\":\"codeBlock\","
+                                        + "\"mfaMethodType\":\"AUTH_APP\","
+                                        + "\"lockTTL\":15,"
+                                        + "\"journeyType\":\"SIGN_IN\"},"
+                                        + "{\"lockType\":\"codeBlock\","
+                                        + "\"mfaMethodType\":\"AUTH_APP\","
+                                        + "\"lockTTL\":15,"
+                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
     }
 
     @Test
