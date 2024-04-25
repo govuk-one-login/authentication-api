@@ -19,6 +19,7 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.cloudwatch,
+            configurations.apache,
             project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api")
