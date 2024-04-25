@@ -605,12 +605,6 @@ variable "oidc_origin_domain_enabled" {
   description = "Feature flag to control the creation of DNS records for the origin.oidc domain"
 }
 
-variable "remove_ipv_callback_from_spot_queue_resource_policy" {
-  type        = bool
-  default     = false
-  description = "Feature flag to control the removal of read permissions to the IPV callback lambda through a resource policy"
-}
-
 variable "txma_audit_encoded_enabled" {
   default     = false
   type        = bool
