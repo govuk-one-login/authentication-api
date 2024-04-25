@@ -240,6 +240,25 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "orch_frontend_authorizer_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.orch_frontend_authorizer.function_name}"
+  tags              = local.default_tags
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "orch-frontend-authorizer-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.orch_frontend_authorizer_logs.name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
+
 resource "aws_api_gateway_stage" "endpoint_stage" {
   deployment_id = aws_api_gateway_deployment.deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_api.id
