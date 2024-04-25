@@ -123,7 +123,8 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = var.user_profile_table_cross_account_access_enabled ? aws_kms_key.user_profile_table_encryption_key.arn : null
   }
 
   point_in_time_recovery {
