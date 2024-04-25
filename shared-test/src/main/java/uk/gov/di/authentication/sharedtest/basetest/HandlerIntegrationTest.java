@@ -266,8 +266,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
     }
 
     protected HttpCookie buildSessionCookie(String sessionID, String clientSessionID) {

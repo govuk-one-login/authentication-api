@@ -111,7 +111,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 format(
                         """
                 {
-                "consentRequired":false,
                 "upliftRequired":false,
                 "identityRequired":%b,
                 "authenticated":%b,
@@ -223,7 +222,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().mfaMethodType(), equalTo(mfaMethodType));
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.user(), true);
+        verifyStandardUserInformationSetOnResponse(startResponse.user());
         assertThat(startResponse.user().isAuthenticated(), equalTo(true));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
@@ -271,7 +270,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertFalse(startResponse.user().isAuthenticated());
         assertFalse(startResponse.user().isIdentityRequired());
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
+        verifyStandardUserInformationSetOnResponse(startResponse.user());
 
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
@@ -306,7 +305,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
-        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
+        verifyStandardUserInformationSetOnResponse(startResponse.user());
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));

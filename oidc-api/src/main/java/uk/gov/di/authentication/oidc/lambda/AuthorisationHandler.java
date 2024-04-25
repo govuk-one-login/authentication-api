@@ -609,7 +609,6 @@ public class AuthorisationHandler
                         .claim("rp_state", authenticationRequest.getState().getValue())
                         .claim("client_name", client.getClientName())
                         .claim("cookie_consent_shared", client.isCookieConsentShared())
-                        .claim("consent_required", client.isConsentRequired())
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
