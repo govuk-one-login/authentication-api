@@ -695,7 +695,8 @@ resource "aws_api_gateway_method" "orch_frontend_proxy_method" {
   depends_on = [
     aws_api_gateway_resource.orch_frontend_resource_proxy
   ]
-  authorization = "NONE"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.orch_frontend_authorizer.id
 
   request_parameters = {
     "method.request.path.proxy" = true
