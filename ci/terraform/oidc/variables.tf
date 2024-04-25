@@ -501,6 +501,12 @@ variable "orch_openid_configuration_enabled" {
   default     = false
 }
 
+variable "orch_trustmark_enabled" {
+  description = "Flag to enable routing trustmark traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_doc_app_callback_enabled" {
   description = "Flag to enable routing doc app callback traffic to the orchestration account"
   type        = bool
@@ -508,6 +514,10 @@ variable "orch_doc_app_callback_enabled" {
 }
 
 variable "orch_openid_configuration_name" {
+  type    = string
+  default = ""
+}
+variable "orch_trustmark_name" {
   type    = string
   default = ""
 }
