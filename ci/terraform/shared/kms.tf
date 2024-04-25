@@ -429,12 +429,64 @@ resource "aws_kms_key" "orchestration_to_auth_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
+  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.orch_to_auth_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.orch_to_auth_signing_key_access_policy.json
+
   tags = local.default_tags
 }
 
 resource "aws_kms_alias" "orchestration_to_auth_signing_key_alias" {
   name          = "alias/${var.environment}-orch-signing-key-alias"
   target_key_id = aws_kms_key.orchestration_to_auth_signing_key.key_id
+}
+
+data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy_with_orch_access" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
+
+  statement {
+    sid    = "AllowOrchAccessToKmsOrchToAuthSigningKey-${var.environment}"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey",
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy" {
+  statement {
+    sid    = "DefaultAccessPolicy"
+    effect = "Allow"
+
+    actions = [
+      "kms:*"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+  }
 }
 
 # Authorization Code store Signing KMS key
