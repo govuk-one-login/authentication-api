@@ -146,7 +146,7 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.client_registry_kms_key_arn]
+    resources = [local.client_registry_encryption_key_arn]
   }
 }
 
