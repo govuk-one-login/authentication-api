@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -148,12 +149,19 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(200));
-            var checkUserExistsResponse =
-                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-            assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
-            assertEquals("321", checkUserExistsResponse.getPhoneNumberLastThree());
-            assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
-            assertTrue(checkUserExistsResponse.doesUserExist());
+            var expectedResponse =
+                    format(
+                            """
+                    {"email":%s,
+                    "doesUserExist":true,
+                    "mfaMethodType":"SMS",
+                    "phoneNumberLastThree":"321",
+                    "lockoutInformation":[]}
+                    """,
+                            EMAIL_ADDRESS);
+            assertEquals(
+                    JsonParser.parseString(result.getBody()),
+                    JsonParser.parseString(expectedResponse));
         }
 
         @Test
