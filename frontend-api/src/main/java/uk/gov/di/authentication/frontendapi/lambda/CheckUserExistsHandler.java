@@ -138,7 +138,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        persistentSessionId,
+                        pair(
+                                "number_of_attempts_user_allowed_to_login",
+                                configurationService.getMaxPasswordRetries()));
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
             }
