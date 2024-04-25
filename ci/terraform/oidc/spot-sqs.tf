@@ -27,49 +27,6 @@ resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
   tags = local.default_tags
 }
 
-
-data "aws_iam_policy_document" "spot_request_queue_policy_document_with_ipv_callback" {
-  statement {
-    sid    = "SendSQS"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = [module.ipv_callback_role.arn]
-    }
-
-    actions = [
-      "sqs:SendMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:GetQueueAttributes",
-    ]
-
-    resources = [
-      aws_sqs_queue.spot_request_queue.arn
-    ]
-  }
-  statement {
-    sid    = "AllowSpotAccountToReceive"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
-    }
-
-    actions = [
-      "sqs:ReceiveMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-    ]
-
-    resources = [
-      aws_sqs_queue.spot_request_queue.arn
-    ]
-  }
-}
-
 data "aws_iam_policy_document" "spot_request_queue_policy_document" {
   statement {
     sid    = "AllowSpotAccountToReceive"
@@ -99,7 +56,7 @@ resource "aws_sqs_queue_policy" "spot_request_queue_policy" {
   ]
 
   queue_url = aws_sqs_queue.spot_request_queue.id
-  policy    = var.remove_ipv_callback_from_spot_queue_resource_policy ? data.aws_iam_policy_document.spot_request_queue_policy_document.json : data.aws_iam_policy_document.spot_request_queue_policy_document_with_ipv_callback.json
+  policy    = data.aws_iam_policy_document.spot_request_queue_policy_document.json
 }
 
 data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
