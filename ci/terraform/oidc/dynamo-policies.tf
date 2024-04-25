@@ -1,7 +1,3 @@
-locals {
-  client_registry_kms_key_arn = data.terraform_remote_state.shared.outputs.client_registry_kms_key_arn
-}
-
 data "aws_dynamodb_table" "user_credentials_table" {
   name = "${var.environment}-user-credentials"
 }
@@ -140,7 +136,7 @@ data "aws_iam_policy_document" "dynamo_client_registration_write_policy_document
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.client_registry_kms_key_arn]
+    resources = [local.client_registry_encryption_key_arn]
   }
 }
 
@@ -172,7 +168,7 @@ data "aws_iam_policy_document" "dynamo_client_registration_read_policy_document"
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.client_registry_kms_key_arn]
+    resources = [local.client_registry_encryption_key_arn]
   }
 }
 
@@ -189,6 +185,20 @@ data "aws_iam_policy_document" "dynamo_identity_write_access_policy_document" {
       data.aws_dynamodb_table.identity_credentials_table.arn,
     ]
   }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.identity_credentials_encryption_key_arn]
+  }
 }
 
 data "aws_iam_policy_document" "dynamo_identity_delete_access_policy_document" {
@@ -202,6 +212,20 @@ data "aws_iam_policy_document" "dynamo_identity_delete_access_policy_document" {
     resources = [
       data.aws_dynamodb_table.identity_credentials_table.arn,
     ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.identity_credentials_encryption_key_arn]
   }
 }
 
@@ -220,6 +244,20 @@ data "aws_iam_policy_document" "dynamo_identity_read_access_policy_document" {
     resources = [
       data.aws_dynamodb_table.identity_credentials_table.arn,
     ]
+  }
+
+  statement {
+    sid    = "AllowAccessToKms"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    resources = [local.identity_credentials_encryption_key_arn]
   }
 }
 

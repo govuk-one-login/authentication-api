@@ -237,8 +237,12 @@ output "email_check_results_encryption_policy_arn" {
   value = aws_iam_policy.email_check_results_encryption_key_kms_policy.arn
 }
 
-output "client_registry_kms_key_arn" {
+output "client_registry_encryption_key_arn" {
   value = aws_kms_key.client_registry_table_encryption_key.arn
+}
+
+output "identity_credentials_encryption_key_arn" {
+  value = aws_kms_key.identity_credentials_table_encryption_key.arn
 }
 
 output "user_profile_kms_key_arn" {
