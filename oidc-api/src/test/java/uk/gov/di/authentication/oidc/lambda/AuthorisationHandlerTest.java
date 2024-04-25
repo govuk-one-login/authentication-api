@@ -199,7 +199,7 @@ class AuthorisationHandlerTest {
                             CLIENT_ID.getValue(), SUBJECT, "http://localhost-rp", EC_SIGNING_KEY)
                     .serialize();
     private static final String ID_TOKEN_AUDIENCE = getIdTokenAudience();
-
+    private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
     private AuthorisationHandler handler;
 
     @RegisterExtension
@@ -632,7 +632,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             assertThrows(
                     RuntimeException.class,
                     () -> makeHandlerRequest(event),
@@ -674,7 +673,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -712,7 +710,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -741,7 +738,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             RuntimeException expectedException =
                     assertThrows(
                             RuntimeException.class,
@@ -768,7 +764,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             RuntimeException expectedException =
                     assertThrows(
                             InvalidHttpMethodException.class,
@@ -828,7 +823,6 @@ class AuthorisationHandlerTest {
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             event.setHttpMethod("GET");
-
             makeHandlerRequest(event);
             verify(requestObjectAuthorizeValidator).validate(any());
         }
@@ -853,7 +847,6 @@ class AuthorisationHandlerTest {
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             event.setHttpMethod("GET");
-
             makeHandlerRequest(event);
             verify(requestObjectAuthorizeValidator).validate(any());
         }
@@ -877,7 +870,6 @@ class AuthorisationHandlerTest {
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             event.setHttpMethod("GET");
-
             var response = makeHandlerRequest(event);
 
             assertThat(response.getStatusCode(), equalTo(302));
@@ -913,7 +905,6 @@ class AuthorisationHandlerTest {
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             event.setHttpMethod("GET");
-
             var response = makeHandlerRequest(event);
 
             assertThat(response.getStatusCode(), equalTo(302));
@@ -949,7 +940,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1002,7 +992,6 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(302));
@@ -1527,7 +1516,7 @@ class AuthorisationHandlerTest {
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
+        event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
         var response = makeHandlerRequest(event);
 
         var expectedURI =
@@ -1647,6 +1636,7 @@ class AuthorisationHandlerTest {
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+        event.withHeaders(Map.of("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE));
         return event;
     }
 

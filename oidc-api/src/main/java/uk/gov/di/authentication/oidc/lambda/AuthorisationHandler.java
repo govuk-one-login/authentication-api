@@ -83,6 +83,7 @@ import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.getPrimaryLanguageFromUILocales;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -195,6 +196,7 @@ public class AuthorisationHandler
         var clientSessionId = clientSessionService.generateClientSessionId();
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
@@ -234,7 +236,6 @@ public class AuthorisationHandler
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
             authRequest = stripOutReauthenticateQueryParams(authRequest);
-
             String clientId = authRequest.getClientID().getValue();
             client =
                     clientService

@@ -611,6 +611,12 @@ variable "remove_ipv_callback_from_spot_queue_resource_policy" {
   description = "Feature flag to control the removal of read permissions to the IPV callback lambda through a resource policy"
 }
 
+variable "txma_audit_encoded_enabled" {
+  default     = false
+  type        = bool
+  description = "Whether the service should pass cloudfront header to txma"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

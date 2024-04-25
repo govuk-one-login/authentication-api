@@ -27,6 +27,8 @@ public class IntegrationTest {
     private static final String REDIS_PASSWORD = null;
     private static final boolean DOES_REDIS_USE_TLS = false;
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
+
+    private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
     protected static final String LOCAL_ENDPOINT_FORMAT =
             "http://localhost:45678/restapis/%s/local/_user_request_";
     protected static final String LOCAL_API_GATEWAY_ID =
@@ -200,6 +202,7 @@ public class IntegrationTest {
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
         cookie.ifPresent(c -> headers.put("Cookie", c.toString()));
+        headers.put("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE);
         return headers;
     }
 

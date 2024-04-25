@@ -22,5 +22,6 @@ orch_doc_app_callback_name                       = "staging-orch-be-deploy-DocAp
 back_channel_logout_cross_account_access_enabled = true
 kms_cross_account_access_enabled                 = true
 cmk_for_back_channel_logout_enabled              = true
+txma_audit_encoded_enabled                       = true
 
 remove_ipv_callback_from_spot_queue_resource_policy = true
