@@ -7,11 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
-import uk.gov.di.orchestration.shared.domain.AuditableEvent;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -21,6 +19,8 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.NoSuchElementException;
 
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -57,22 +57,26 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
             try {
                 ThreadContext.clearMap();
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
-                attachSessionIdToLogs(spotResponse.getLogIds().getSessionId());
-                attachLogFieldToLogs(
-                        PERSISTENT_SESSION_ID, spotResponse.getLogIds().getPersistentSessionId());
-                attachLogFieldToLogs(CLIENT_ID, spotResponse.getLogIds().getClientId());
-                attachLogFieldToLogs(
-                        CLIENT_SESSION_ID, spotResponse.getLogIds().getClientSessionId());
-                attachLogFieldToLogs(
-                        GOVUK_SIGNIN_JOURNEY_ID, spotResponse.getLogIds().getClientSessionId());
+                var logIds = spotResponse.getLogIds();
+
+                attachSessionIdToLogs(logIds.getSessionId());
+                attachLogFieldToLogs(PERSISTENT_SESSION_ID, logIds.getPersistentSessionId());
+                attachLogFieldToLogs(CLIENT_ID, logIds.getClientId());
+                attachLogFieldToLogs(CLIENT_SESSION_ID, logIds.getClientSessionId());
+                attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, logIds.getClientSessionId());
+
+                var user =
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(logIds.getClientSessionId())
+                                .withSessionId(logIds.getSessionId())
+                                .withPersistentSessionId(logIds.getPersistentSessionId());
 
                 if (spotResponse.getStatus().equals(SPOTStatus.ACCEPTED)) {
                     LOG.info(
                             "SPOTResponse Status is {}. Adding CoreIdentityJWT to Dynamo",
                             spotResponse.getStatus());
-                    submitAuditEvent(
-                            IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                            spotResponse.getLogIds());
+                    auditService.submitAuditEvent(
+                            IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, logIds.getClientId(), user);
                     dynamoIdentityService.addCoreIdentityJWT(
                             spotResponse.getSub(),
                             spotResponse.getClaims().values().stream()
@@ -85,9 +89,8 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             "SPOTResponse Status is {}. Rejection reason: {}. Deleting Identity Credential.",
                             spotResponse.getStatus(),
                             spotResponse.getReason());
-                    submitAuditEvent(
-                            IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                            spotResponse.getLogIds());
+                    auditService.submitAuditEvent(
+                            IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED, logIds.getClientId(), user);
                     dynamoIdentityService.deleteIdentityCredentials(spotResponse.getSub());
                     return null;
                 }
@@ -100,18 +103,5 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
             }
         }
         return null;
-    }
-
-    private void submitAuditEvent(AuditableEvent auditableEvent, LogIds logIds) {
-        auditService.submitAuditEvent(
-                auditableEvent,
-                logIds.getClientId(),
-                logIds.getClientSessionId(),
-                logIds.getSessionId(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                logIds.getPersistentSessionId());
     }
 }
