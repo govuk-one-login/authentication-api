@@ -153,8 +153,8 @@ public class DcmawUserInfoTest {
 
     @Pact(consumer = "OrchUserInfoConsumer")
     RequestResponsePact invalidAccessTokenReturnsError(PactDslWithProvider builder) {
-        return builder.given("accessToken is a invalid access token")
-                .uponReceiving("Valid access token")
+        return builder.given("accessToken is an invalid access token")
+                .uponReceiving("Invalid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
                 .matchHeader(
