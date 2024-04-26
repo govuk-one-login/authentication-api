@@ -9,7 +9,7 @@ module "openid_configuration_role" {
 module "openid_configuration_discovery" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
+  endpoint_name   = "openid-configuration"
   path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
   endpoint_method = ["GET"]
   environment     = var.environment
@@ -52,6 +52,7 @@ module "openid_configuration_discovery" {
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
-    module.openid_configuration_role
+    module.openid_configuration_role,
+
   ]
 }

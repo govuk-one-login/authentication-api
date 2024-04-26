@@ -177,6 +177,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.ipv-callback,
     module.ipv-capacity,
     module.doc-app-callback,
+    aws_api_gateway_integration.orch_openid_configuration_integration,
   ]
 }
 
@@ -742,7 +743,6 @@ resource "aws_api_gateway_resource" "orch_openid_configuration_resource" {
   parent_id   = aws_api_gateway_resource.wellknown_resource.id
   path_part   = "openid-configuration"
   depends_on = [
-    aws_api_gateway_resource.wellknown_resource,
     module.openid_configuration_discovery
   ]
 }
