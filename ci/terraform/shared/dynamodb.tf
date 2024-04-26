@@ -170,7 +170,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.client_registry_table_cross_account_access_enabled ? aws_kms_key.client_registry_table_encryption_key.arn : null
+    kms_key_arn = (var.client_registry_table_cross_account_access_enabled || length(var.sse_account_ids) > 0) ? aws_kms_key.client_registry_table_encryption_key.arn : null
   }
 
   lifecycle {
@@ -544,10 +544,39 @@ resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_
 }
 
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
-  count        = var.client_registry_table_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.client_registry_table.arn
-  policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
+  policy       = data.aws_iam_policy_document.client_registry_table_policy.json
 }
+
+locals {
+  client_registry_orch_cross_account_policy = var.client_registry_table_cross_account_access_enabled ? [data.aws_iam_policy_document.cross_account_table_resource_policy_document.json] : []
+  client_registry_sse_cross_account_policy  = length(var.sse_account_ids) == 0 ? [] : [data.aws_iam_policy_document.sse_client_registry_access.json]
+  client_registry_policy_documents          = concat(local.client_registry_orch_cross_account_policy, local.client_registry_sse_cross_account_policy)
+}
+
+
+data "aws_iam_policy_document" "client_registry_table_policy" {
+  source_policy_documents = local.client_registry_policy_documents
+}
+
+data "aws_iam_policy_document" "sse_client_registry_access" {
+  statement {
+    sid = "SSEReadOnlyAccess"
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = var.sse_account_ids
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
 
 resource "aws_dynamodb_resource_policy" "identity_credentials_table_policy" {
   count        = var.identity_credentials_cross_account_access_enabled ? 1 : 0
@@ -563,6 +592,7 @@ resource "aws_dynamodb_resource_policy" "user_profile_table_policy" {
 
 data "aws_iam_policy_document" "cross_account_table_resource_policy_document" {
   statement {
+    sid = "OrchestrationAccess"
     actions = [
       "dynamodb:BatchGetItem",
       "dynamodb:DescribeTable",

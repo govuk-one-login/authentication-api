@@ -7,3 +7,5 @@ orchestration_account_id             = "590183975515"
 orch_privatesub_cidr_blocks          = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
 kms_cross_account_access_enabled     = true
 doc_app_cross_account_access_enabled = true
+
+sse_account_ids = ["494650018671", "399055180839", "325730373996"]

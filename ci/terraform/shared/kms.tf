@@ -786,8 +786,38 @@ resource "aws_kms_key" "client_registry_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.client_registry_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy                   = data.aws_iam_policy_document.client_registry_key_policy.json
   tags                     = local.default_tags
+}
+
+locals {
+  client_registry_key_orch_cross_account_policy = var.client_registry_table_cross_account_access_enabled ? [data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json] : [data.aws_iam_policy_document.table_encryption_key_access_policy.json]
+  client_registry_key_sse_cross_account_policy  = length(var.sse_account_ids) == 0 ? [] : [data.aws_iam_policy_document.sse_client_registry_key_access.json]
+  client_registry_key_policy_documents          = concat(local.client_registry_key_orch_cross_account_policy, local.client_registry_key_sse_cross_account_policy)
+}
+
+data "aws_iam_policy_document" "sse_client_registry_key_access" {
+  statement {
+    sid = "SSEAccess"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:CreateGrant",
+      "kms:DescribeKey",
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = var.sse_account_ids
+      type        = "AWS"
+    }
+    resources = ["*"]
+  }
+}
+
+data "aws_iam_policy_document" "client_registry_key_policy" {
+  source_policy_documents = local.client_registry_key_policy_documents
 }
 
 resource "aws_kms_alias" "client_registry_table_encryption_key_alias" {
