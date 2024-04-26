@@ -177,6 +177,9 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.ipv-callback,
     module.ipv-capacity,
     module.doc-app-callback,
+    aws_api_gateway_integration.orch_openid_configuration_integration,
+    aws_api_gateway_integration.orch_trustmark_integration,
+    aws_api_gateway_integration.orch_doc_app_callback_integration
   ]
 }
 
@@ -777,6 +780,9 @@ resource "aws_api_gateway_resource" "orch_trustmark_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "trustmark"
+  depends_on = [
+    module.trustmarks
+  ]
 }
 
 resource "aws_api_gateway_method" "orch_trustmark_method" {
@@ -809,6 +815,9 @@ resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "doc-app-callback"
+  depends_on = [
+    module.doc-app-callback
+  ]
 }
 
 resource "aws_api_gateway_method" "orch_doc_app_callback_method" {
