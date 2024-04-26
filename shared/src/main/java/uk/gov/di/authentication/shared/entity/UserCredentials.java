@@ -17,6 +17,7 @@ public class UserCredentials {
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
     public static final String ATTRIBUTE_MFA_METHODS = "MfaMethods";
+    private static final String ATTRIBUTE_MFA_METHODS_V2 = "MfaMethodsV2";
     public static final String ATTRIBUTE_TEST_USER = "testUser";
 
     private String email;
@@ -26,6 +27,7 @@ public class UserCredentials {
     private String updated;
     private String migratedPassword;
     private List<MFAMethod> mfaMethods;
+    private List<MFAMethodV2> mfaMethodsV2;
     private int testUser;
 
     public UserCredentials() {}
@@ -137,6 +139,38 @@ public class UserCredentials {
             this.mfaMethods.removeIf(
                     t -> t.getMfaMethodType().equals(mfaMethod.getMfaMethodType()));
             this.mfaMethods.add(mfaMethod);
+        }
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_MFA_METHODS_V2)
+    public List<MFAMethodV2> getMfaMethodsV2() {
+        return mfaMethodsV2;
+    }
+
+    public UserCredentials withMfaMethodsV2(List<MFAMethodV2> mfaMethodsV2) {
+        this.mfaMethodsV2 = mfaMethodsV2;
+        return this;
+    }
+
+    public void setMfaMethodsV2(List<MFAMethodV2> mfaMethodsV2) {
+        this.mfaMethodsV2 = mfaMethodsV2;
+    }
+
+    public UserCredentials addMfaMethodV2(MFAMethodV2 mfaMethodV2) {
+        if (this.mfaMethodsV2 == null) {
+            this.mfaMethodsV2 = List.of(mfaMethodV2);
+        } else {
+            this.mfaMethodsV2.add(mfaMethodV2);
+        }
+        return this;
+    }
+
+    public UserCredentials deleteMfaMethodV2(int mfaIdentifier) {
+        if (this.mfaMethodsV2 == null) {
+            return this;
+        } else {
+            this.mfaMethodsV2.removeIf(t -> t.getMfaIdentifier() == (mfaIdentifier));
         }
         return this;
     }

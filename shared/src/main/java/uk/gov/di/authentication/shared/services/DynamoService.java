@@ -19,6 +19,8 @@ import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MFAMethodV2;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -32,6 +34,7 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -74,7 +77,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public boolean userExists(String email) {
         return dynamoUserProfileTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
                 != null;
     }
 
@@ -373,10 +376,10 @@ public class DynamoService implements AuthenticationService {
                                         .filter(
                                                 method ->
                                                         method.getMfaMethodType()
-                                                                        .equals(
-                                                                                MFAMethodType
-                                                                                        .AUTH_APP
-                                                                                        .getValue())
+                                                                .equals(
+                                                                        MFAMethodType
+                                                                                .AUTH_APP
+                                                                                .getValue())
                                                                 && method.isEnabled())
                                         .findFirst())
                 .ifPresent(
@@ -419,10 +422,10 @@ public class DynamoService implements AuthenticationService {
                                         .filter(
                                                 method ->
                                                         method.getMfaMethodType()
-                                                                        .equals(
-                                                                                MFAMethodType
-                                                                                        .AUTH_APP
-                                                                                        .getValue())
+                                                                .equals(
+                                                                        MFAMethodType
+                                                                                .AUTH_APP
+                                                                                .getValue())
                                                                 && method.isEnabled()
                                                                 && method.isMethodVerified())
                                         .findFirst())
@@ -470,6 +473,83 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .setMfaMethod(mfaMethod));
+    }
+
+    public void addMFAMethodV2(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            PriorityIdentifier priorityIdentifier,
+            int mfaIdentifier,
+            String endpoint) {
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        MFAMethodV2 mfaMethodV2 =
+                new MFAMethodV2(
+                        mfaIdentifier,
+                        priorityIdentifier,
+                        MFAMethodType.AUTH_APP.getValue(),
+                        endpoint,
+                        methodVerified,
+                        enabled,
+                        dateTime);
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .addMfaMethodV2(mfaMethodV2));
+    }
+
+    public void updateMFAmethodV2(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            PriorityIdentifier priorityIdentifier,
+            int mfaIdentifier,
+            String endpoint) {
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        MFAMethodV2 updatedMfaMethodV2 =
+                new MFAMethodV2(
+                        mfaIdentifier,
+                        priorityIdentifier,
+                        MFAMethodType.AUTH_APP.getValue(),
+                        endpoint,
+                        methodVerified,
+                        enabled,
+                        dateTime);
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withMfaMethodsV2(List.of(updatedMfaMethodV2)));
+    }
+
+    public void deleteMFAmethodV2(String email, int mfaIdentifier) {
+
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .deleteMfaMethodV2(mfaIdentifier));
+    }
+
+    public List<MFAMethodV2> readMFAMethodsV2(String email) {
+        var userItem =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
+        if (userItem != null && userItem.getMfaMethodsV2() != null) {
+            return userItem.getMfaMethodsV2();
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     @Override
