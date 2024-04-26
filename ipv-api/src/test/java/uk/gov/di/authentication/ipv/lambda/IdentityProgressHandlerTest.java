@@ -13,8 +13,10 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.approvaltests.Approvals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressResponse;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -70,6 +72,12 @@ public class IdentityProgressHandlerTest {
                                     PAIRWISE_SUBJECT.getValue()));
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final State STATE = new State("test-state");
+    private static final TxmaAuditUser USER =
+            TxmaAuditUser.user()
+                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                    .withSessionId(SESSION_ID)
+                    .withIpAddress("123.123.123.123")
+                    .withPersistentSessionId("unknown");
 
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -114,7 +122,7 @@ public class IdentityProgressHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(cloudwatchMetricsService, auditService);
     }
 
     @Test
@@ -150,6 +158,9 @@ public class IdentityProgressHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 IdentityProgressStatus.COMPLETED.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, CLIENT_ID, USER);
     }
 
     @Test
@@ -185,6 +196,9 @@ public class IdentityProgressHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 IdentityProgressStatus.PROCESSING.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, CLIENT_ID, USER);
     }
 
     @Test
@@ -217,6 +231,9 @@ public class IdentityProgressHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 IdentityProgressStatus.ERROR.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, CLIENT_ID, USER);
     }
 
     @Test
@@ -249,6 +266,9 @@ public class IdentityProgressHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 IdentityProgressStatus.NO_ENTRY.toString()));
+
+        verify(auditService)
+                .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, CLIENT_ID, USER);
     }
 
     @Test
