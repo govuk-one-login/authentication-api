@@ -8,10 +8,13 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "digital-identity-dev-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.build.account.gov.uk"
+
+# lockout config
 lockout_duration                     = 60
 reduced_lockout_duration             = 30
 incorrect_password_lockout_count_ttl = 60
-
+lockout_count_ttl                    = 60
+otp_code_ttl_duration                = 60
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
