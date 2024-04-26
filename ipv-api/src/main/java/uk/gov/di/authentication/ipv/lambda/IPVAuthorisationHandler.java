@@ -19,6 +19,7 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -186,16 +187,20 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                                     configurationService.getInternalSectorUri())
                             .getValue();
 
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(userContext.getSession().getSessionId())
+                            .withUserId(
+                                    userContext.getSession().getInternalCommonSubjectIdentifier())
+                            .withEmail(request.getEmail())
+                            .withIpAddress(IpAddressHelper.extractIpAddress(input))
+                            .withPersistentSessionId(persistentId);
+
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     rpClientID.orElse(AuditService.UNKNOWN),
-                    clientSessionId,
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    request.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    persistentId,
+                    user,
                     pair(
                             "clientLandingPageUrl",
                             userContext
