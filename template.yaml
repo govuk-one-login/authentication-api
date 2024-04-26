@@ -174,13 +174,13 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
-    DependsOn:
-      - OpenIdConfigurationFunctionLogGroup
     Properties:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
       ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -284,13 +284,13 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
-    DependsOn:
-      - TrustmarkFunctionLogGroup
     Properties:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
       ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref TrustmarkFunctionLogGroup
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -394,13 +394,13 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
-    DependsOn:
-      - BackChannelLogoutRequestFunctionLogGroup
     Properties:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
       ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref BackChannelLogoutRequestFunctionLogGroup
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -508,13 +508,13 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
-    DependsOn:
-      - DocAppCallbackFunctionLogGroup
     Properties:
       AutoPublishAlias: latest
       CodeUri: ./doc-checking-app-api
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
       ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref DocAppCallbackFunctionLogGroup
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
