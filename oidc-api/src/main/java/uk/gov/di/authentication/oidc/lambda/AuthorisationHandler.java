@@ -36,6 +36,7 @@ import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -198,16 +199,14 @@ public class AuthorisationHandler
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
 
+        var user =
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId);
+
         auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId);
+                OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, AuditService.UNKNOWN, user);
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Received authentication request");
@@ -250,7 +249,7 @@ public class AuthorisationHandler
                         "Redirect URI or ClientID is missing from auth request", e);
             }
             LOG.warn("Authentication request could not be parsed", e);
-            throwError(e.getErrorObject(), ipAddress, persistentSessionId, clientSessionId);
+            throwError(e.getErrorObject(), user);
             throw new AssertionError("Not reached");
         } catch (NullPointerException e) {
             LOG.warn(
@@ -300,10 +299,8 @@ public class AuthorisationHandler
                     authRequest.getState(),
                     authRequest.getResponseMode(),
                     authRequestError.get().errorObject(),
-                    ipAddress,
-                    persistentSessionId,
                     authRequest.getClientID().getValue(),
-                    clientSessionId);
+                    user);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
@@ -329,13 +326,7 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 authRequest.getClientID().getValue(),
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("rpSid", getRpSid(authRequest)),
                 pair("identityRequested", identityRequested),
                 pair("reauthRequested", reauthRequested));
@@ -356,19 +347,19 @@ public class AuthorisationHandler
                     authRequest,
                     client,
                     clientSessionId,
-                    ipAddress,
-                    persistentSessionId);
+                    persistentSessionId,
+                    user);
         }
         return handleAuthJourney(
                 session,
                 clientSession,
                 authRequest,
-                ipAddress,
                 persistentSessionId,
                 client,
                 clientSessionId,
                 reauthRequested,
-                vtrList);
+                vtrList,
+                user);
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {
@@ -412,8 +403,8 @@ public class AuthorisationHandler
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
             String clientSessionId,
-            String ipAddress,
-            String persistentSessionId) {
+            String persistentSessionId,
+            TxmaAuditUser user) {
 
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
@@ -464,13 +455,8 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                 client.getClientID(),
-                clientSessionId,
-                session.getSessionId(),
-                clientSession.getDocAppSubjectId().toString(),
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId);
+                user.withSessionId(session.getSessionId())
+                        .withUserId(clientSession.getDocAppSubjectId().getValue()));
 
         URI authorisationRequestUri = authorisationRequest.toURI();
         LOG.info(
@@ -494,12 +480,12 @@ public class AuthorisationHandler
             Optional<Session> existingSession,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
-            String ipAddress,
             String persistentSessionId,
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            List<VectorOfTrust> vtrList,
+            TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                         || authenticationRequest
@@ -510,10 +496,8 @@ public class AuthorisationHandler
                     authenticationRequest.getState(),
                     authenticationRequest.getResponseMode(),
                     OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
-                    ipAddress,
-                    persistentSessionId,
                     authenticationRequest.getClientID().getValue(),
-                    clientSessionId);
+                    user);
         }
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
@@ -528,16 +512,12 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
 
+        user = user.withSessionId(session.getSessionId());
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                session.getSessionId(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("client-name", client.getClientName()));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
@@ -551,22 +531,22 @@ public class AuthorisationHandler
                 session,
                 clientSessionId,
                 authenticationRequest,
-                ipAddress,
                 persistentSessionId,
                 client,
                 reauthRequested,
-                vtrList);
+                vtrList,
+                user);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
             Session session,
             String clientSessionId,
             AuthenticationRequest authenticationRequest,
-            String ipAddress,
             String persistentSessionId,
             ClientRegistry client,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            List<VectorOfTrust> vtrList,
+            TxmaAuditUser user) {
         LOG.info("Redirecting");
         String redirectURI;
         try {
@@ -613,10 +593,8 @@ public class AuthorisationHandler
                     authenticationRequest.getState(),
                     authenticationRequest.getResponseMode(),
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
-                    ipAddress,
-                    persistentSessionId,
                     authenticationRequest.getClientID().getValue(),
-                    clientSessionId);
+                    user);
         }
 
         var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
@@ -672,21 +650,13 @@ public class AuthorisationHandler
             State state,
             ResponseMode responseMode,
             ErrorObject errorObject,
-            String ipAddress,
-            String persistentSessionId,
             String clientId,
-            String clientSessionId) {
+            TxmaAuditUser user) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 clientId,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("description", errorObject.getDescription()));
 
         LOG.warn(
@@ -699,22 +669,12 @@ public class AuthorisationHandler
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
     }
 
-    private void throwError(
-            ErrorObject errorObject,
-            String ipAddress,
-            String persistentSessionId,
-            String clientSessionId) {
+    private void throwError(ErrorObject errorObject, TxmaAuditUser user) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("description", errorObject.getDescription()));
 
         LOG.warn("Throwing auth error: {} {}", errorObject.getCode(), errorObject.getDescription());

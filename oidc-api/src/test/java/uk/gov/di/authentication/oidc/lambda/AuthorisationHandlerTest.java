@@ -57,6 +57,7 @@ import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -200,6 +201,12 @@ class AuthorisationHandlerTest {
                     .serialize();
     private static final String ID_TOKEN_AUDIENCE = getIdTokenAudience();
     private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
+    private static final TxmaAuditUser BASE_AUDIT_USER =
+            TxmaAuditUser.user()
+                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                    .withIpAddress("123.123.123.123")
+                    .withPersistentSessionId(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
+
     private AuthorisationHandler handler;
 
     @RegisterExtension
@@ -280,13 +287,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -424,13 +425,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -469,13 +464,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -544,13 +533,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -591,13 +574,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(session.getSessionId()),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -641,13 +618,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             "",
-                            CLIENT_SESSION_ID,
-                            "",
-                            "",
-                            "",
-                            "123.123.123.123",
-                            "",
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER,
                             pair(
                                     "description",
                                     "Invalid request: Missing response_type parameter"));
@@ -684,13 +655,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            "",
-                            "",
-                            "",
-                            "123.123.123.123",
-                            "",
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER,
                             pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
         }
 
@@ -721,13 +686,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            "",
-                            "",
-                            "",
-                            "123.123.123.123",
-                            "",
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER,
                             pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
         }
 
@@ -792,13 +751,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             "",
-                            CLIENT_SESSION_ID,
-                            "",
-                            "",
-                            "",
-                            "123.123.123.123",
-                            "",
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER,
                             pair(
                                     "description",
                                     "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
@@ -964,13 +917,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -1014,13 +961,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME));
         }
 
@@ -1307,13 +1248,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            "",
-                            "",
-                            "",
-                            "123.123.123.123",
-                            "",
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(SESSION_ID),
                             pair("description", expectedErrorObject.getDescription()));
         }
 
@@ -1369,13 +1304,7 @@ class AuthorisationHandlerTest {
                     .submitAuditEvent(
                             AUTHORISATION_REQUEST_ERROR,
                             CLIENT_ID.getValue(),
-                            CLIENT_SESSION_ID,
-                            "",
-                            "",
-                            "",
-                            "123.123.123.123",
-                            "",
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            BASE_AUDIT_USER.withSessionId(SESSION_ID),
                             pair("description", expectedErrorObject.getDescription()));
         }
     }
@@ -1465,11 +1394,16 @@ class AuthorisationHandlerTest {
 
             verify(cloudwatchMetricsService).incrementCounter(eq("DocAppHandoff"), any());
 
-            verifyAuditEvents(
-                    List.of(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                            DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED),
-                    auditService);
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "", BASE_AUDIT_USER);
+            verify(auditService)
+                    .submitAuditEvent(
+                            DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER
+                                    .withSessionId(SESSION_ID)
+                                    .withUserId("test-subject-id"));
         }
     }
 
@@ -1531,13 +1465,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                        BASE_AUDIT_USER,
                         pair("description", errorObject.getDescription()));
     }
 
@@ -1564,13 +1492,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                        BASE_AUDIT_USER,
                         pair("description", expectedError.getDescription()));
     }
 
@@ -1579,15 +1501,7 @@ class AuthorisationHandlerTest {
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "123.123.123.123",
-                        "",
-                        EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
+                        OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, "", BASE_AUDIT_USER);
 
         LogEvent logEvent = logging.events().get(0);
 
@@ -1672,7 +1586,7 @@ class AuthorisationHandlerTest {
 
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
-                .withClientID(new ClientID().getValue())
+                .withClientID("test-id")
                 .withConsentRequired(IS_COOKIE_CONSENT_SHARED)
                 .withClientName(RP_CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
@@ -1729,17 +1643,7 @@ class AuthorisationHandlerTest {
     private static void verifyAuditEvents(
             List<AuditableEvent> auditEvents, AuditService auditService) {
         for (AuditableEvent event : auditEvents) {
-            verify(auditService)
-                    .submitAuditEvent(
-                            eq(event),
-                            any(),
-                            eq(CLIENT_SESSION_ID),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any());
+            verify(auditService).submitAuditEvent(eq(event), any(), eq(BASE_AUDIT_USER));
         }
     }
 
@@ -1777,13 +1681,7 @@ class AuthorisationHandlerTest {
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                        BASE_AUDIT_USER,
                         pair("rpSid", rpSid),
                         pair("identityRequested", identityRequested),
                         pair("reauthRequested", reauthRequested));
