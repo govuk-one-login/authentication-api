@@ -65,6 +65,7 @@ orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true
 kms_cross_account_access_enabled                 = true
 cmk_for_back_channel_logout_enabled              = true
+spot_request_queue_cross_account_access_enabled  = true
 
 oidc_origin_domain_enabled = true
 
