@@ -458,7 +458,7 @@ public class DynamoService implements AuthenticationService {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         MFAMethod mfaMethod =
                 new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(),
+                        mfaMethodType.getValue(),
                         credentialValue,
                         methodVerified,
                         enabled,
