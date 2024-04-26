@@ -107,7 +107,7 @@ public class AuditService {
         Arrays.stream(metadataPairs)
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
 
-        Optional.ofNullable(user.getPhone())
+        Optional.ofNullable(user.phone())
                 .filter(not(String::isBlank))
                 .flatMap(PhoneNumberHelper::maybeGetCountry)
                 .ifPresent(
