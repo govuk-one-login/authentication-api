@@ -220,7 +220,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userExists,
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
-                            lockoutInformation);
+                            lockoutInformation,
+                            userMfaDetail.isMfaMethodVerified());
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");

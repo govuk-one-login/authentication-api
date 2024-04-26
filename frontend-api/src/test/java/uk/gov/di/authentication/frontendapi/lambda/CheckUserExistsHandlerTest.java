@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.JsonParser;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -11,6 +12,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -127,79 +129,141 @@ class CheckUserExistsHandlerTest {
         reset(authenticationService);
     }
 
-    @Test
-    void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
-        usingValidSession();
-        var userProfile = generateUserProfile().withAccountVerified(1);
-        setupUserProfileAndClient(Optional.of(userProfile));
-        when(codeStorageService.getMfaCodeBlockTimeToLive(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
-                .thenReturn(15L);
-        when(codeStorageService.getMfaCodeBlockTimeToLive(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
-                .thenReturn(15L);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
-                .thenReturn(6);
-        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
-        var event = userExistsRequest(EMAIL_ADDRESS);
+    @Nested
+    class WhenUserExists {
+        @BeforeEach
+        void setup() {
+            usingValidSession();
+            var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
+            setupUserProfileAndClient(Optional.of(userProfile));
+        }
 
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(200));
-        assertTrue(
-                result.getBody()
-                        .contains(
-                                "\"lockoutInformation\":["
-                                        + "{\"lockType\":\"codeBlock\","
-                                        + "\"mfaMethodType\":\"AUTH_APP\","
-                                        + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"SIGN_IN\"},"
-                                        + "{\"lockType\":\"codeBlock\","
-                                        + "\"mfaMethodType\":\"AUTH_APP\","
-                                        + "\"lockTTL\":15,"
-                                        + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
-    }
+        @Test
+        void shouldReturn200WithRelevantMfaMethod() throws Json.JsonException {
+            MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
+            MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(
+                            new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
-    @Test
-    void shouldReturn200IfUserExists() throws Json.JsonException {
-        usingValidSession();
-        var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
-        setupUserProfileAndClient(Optional.of(userProfile));
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
-        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
-        MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
+            assertThat(result, hasStatus(200));
+            var expectedResponse =
+                    format(
+                            """
+                    {"email":%s,
+                    "doesUserExist":true,
+                    "mfaMethodType":"SMS",
+                    "mfaMethodVerified":true,
+                    "phoneNumberLastThree":"321",
+                    "lockoutInformation":[]}
+                    """,
+                            EMAIL_ADDRESS);
+            assertEquals(
+                    JsonParser.parseString(result.getBody()),
+                    JsonParser.parseString(expectedResponse));
+        }
 
-        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+        @Test
+        void shouldSubmitTheRelevantAuditEvent() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
-        assertThat(result, hasStatus(200));
-        var checkUserExistsResponse =
-                objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-        assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
-        assertEquals("321", checkUserExistsResponse.getPhoneNumberLastThree());
-        assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
-        assertTrue(checkUserExistsResponse.doesUserExist());
-        var expectedRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "sector-identifier", SALT.array());
-        var expectedInternalPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedInternalPairwiseId,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
+            assertThat(result, hasStatus(200));
+            var expectedRpPairwiseId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            SUBJECT.getValue(), "sector-identifier", SALT.array());
+            var expectedInternalPairwiseId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            CLIENT_ID,
+                            expectedInternalPairwiseId,
+                            EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PERSISTENT_SESSION_ID,
+                            AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
+        }
+
+        @Test
+        void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                    .thenReturn(15L);
+            when(codeStorageService.getMfaCodeBlockTimeToLive(
+                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
+                    .thenReturn(15L);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
+                    .thenReturn(6);
+            MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
+            var event = userExistsRequest(EMAIL_ADDRESS);
+
+            var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(200));
+            assertTrue(
+                    result.getBody()
+                            .contains(
+                                    "\"lockoutInformation\":["
+                                            + "{\"lockType\":\"codeBlock\","
+                                            + "\"mfaMethodType\":\"AUTH_APP\","
+                                            + "\"lockTTL\":15,"
+                                            + "\"journeyType\":\"SIGN_IN\"},"
+                                            + "{\"lockType\":\"codeBlock\","
+                                            + "\"mfaMethodType\":\"AUTH_APP\","
+                                            + "\"lockTTL\":15,"
+                                            + "\"journeyType\":\"PASSWORD_RESET_MFA\"}]"));
+        }
+
+        @Test
+        void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
+            setupUserProfileAndClient(Optional.of(generateUserProfile()));
+
+            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
+            assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
+        }
+
+        @Test
+        void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
+            when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
+            verify(sessionService, times(1)).save(any());
+            verify(auditService)
+                    .submitAuditEvent(
+                            ACCOUNT_TEMPORARILY_LOCKED,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            CLIENT_ID,
+                            AuditService.UNKNOWN,
+                            EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PERSISTENT_SESSION_ID,
+                            AuditService.MetadataPair.pair(
+                                    "number_of_attempts_user_allowed_to_login", 5));
+        }
     }
 
     @Test
@@ -227,25 +291,6 @@ class CheckUserExistsHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
-    }
-
-    @Test
-    void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
-        usingValidSession();
-        setupUserProfileAndClient(Optional.of(generateUserProfile()));
-
-        MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
-        MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
-
-        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
-
-        assertThat(result, hasStatus(200));
-        var checkUserExistsResponse =
-                objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-        assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
-        assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
     }
 
     @Test
@@ -293,33 +338,6 @@ class CheckUserExistsHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
-        usingValidSession();
-        setupUserProfileAndClient(Optional.of(generateUserProfile()));
-
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
-
-        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
-        verify(sessionService, times(1)).save(any());
-        verify(auditService)
-                .submitAuditEvent(
-                        ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
-                        AuditService.MetadataPair.pair(
-                                "number_of_attempts_user_allowed_to_login", 5));
     }
 
     private void usingValidSession() {
