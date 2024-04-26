@@ -77,7 +77,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public boolean userExists(String email) {
         return dynamoUserProfileTable.getItem(
-                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
                 != null;
     }
 
@@ -376,10 +376,10 @@ public class DynamoService implements AuthenticationService {
                                         .filter(
                                                 method ->
                                                         method.getMfaMethodType()
-                                                                .equals(
-                                                                        MFAMethodType
-                                                                                .AUTH_APP
-                                                                                .getValue())
+                                                                        .equals(
+                                                                                MFAMethodType
+                                                                                        .AUTH_APP
+                                                                                        .getValue())
                                                                 && method.isEnabled())
                                         .findFirst())
                 .ifPresent(
@@ -422,10 +422,10 @@ public class DynamoService implements AuthenticationService {
                                         .filter(
                                                 method ->
                                                         method.getMfaMethodType()
-                                                                .equals(
-                                                                        MFAMethodType
-                                                                                .AUTH_APP
-                                                                                .getValue())
+                                                                        .equals(
+                                                                                MFAMethodType
+                                                                                        .AUTH_APP
+                                                                                        .getValue())
                                                                 && method.isEnabled()
                                                                 && method.isMethodVerified())
                                         .findFirst())
