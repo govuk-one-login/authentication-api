@@ -63,7 +63,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(emailAddress, "password-1");
 
         if (MFAMethodType.SMS == mfaMethodType) {
-            userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, "credential");
+            userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");
             userStore.addVerifiedPhoneNumber(emailAddress, "+44987654321");
         } else {
             userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");

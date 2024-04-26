@@ -76,6 +76,8 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -277,7 +279,39 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn200WithCorrectMfaMethodVerifiedStatus() throws Json.JsonException {
+    void shouldReturn200WithCorrectMfaDetailsWhenAVerifiedMethodExists() throws Json.JsonException {
+        var userProfile = generateUserProfile(null);
+        var userCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(PASSWORD)
+                        .setMfaMethod(
+                                new MFAMethod()
+                                        .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                                        .withMethodVerified(true)
+                                        .withEnabled(true));
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        usingValidSession();
+
+        usingDefaultVectorOfTrust();
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.getMfaMethodType(), equalTo(AUTH_APP));
+        assertThat(response.isMfaMethodVerified(), equalTo(true));
+    }
+
+    @Test
+    void shouldReturn200WithCorrectMfaDetailsWhenNoVerifiedMethodExists()
+            throws Json.JsonException {
         var userProfile = generateUserProfile(null);
         var userCredentials =
                 new UserCredentials()
@@ -303,15 +337,8 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getMfaMethodType(), equalTo(SMS));
-        assertThat(response.isMfaMethodVerified(), equalTo(true));
-
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-        verifyNoInteractions(cloudwatchMetricsService);
-
-        verifySessionIsSaved();
+        assertThat(response.getMfaMethodType(), equalTo(NONE));
+        assertThat(response.isMfaMethodVerified(), equalTo(false));
     }
 
     @ParameterizedTest
