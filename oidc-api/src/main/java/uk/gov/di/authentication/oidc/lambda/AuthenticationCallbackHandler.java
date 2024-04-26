@@ -14,6 +14,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.claims.PersonClaims;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -62,6 +63,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
@@ -81,6 +83,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -306,20 +309,22 @@ public class AuthenticationCallbackHandler
                                 clientSession,
                                 userSession);
 
+                user =
+                        user.withUserId(userInfo.getSubject().getValue())
+                                .withEmail(
+                                        Optional.of(userSession)
+                                                .map(Session::getEmailAddress)
+                                                .orElse(UNKNOWN))
+                                .withPhone(
+                                        Optional.of(userInfo)
+                                                .map(PersonClaims::getPhoneNumber)
+                                                .orElse(UNKNOWN))
+                                .withIpAddress(IpAddressHelper.extractIpAddress(input));
+
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        userInfo.getSubject().getValue(),
-                        Objects.isNull(userSession.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : userSession.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Objects.isNull(userInfo.getPhoneNumber())
-                                ? AuditService.UNKNOWN
-                                : userInfo.getPhoneNumber(),
-                        persistentSessionId,
+                        user,
                         pair("new_account", newAccount),
                         pair("test_user", isTestJourney));
 
@@ -332,11 +337,11 @@ public class AuthenticationCallbackHandler
                                 clientId,
                                 userInfo.getSubject().getValue(),
                                 Objects.isNull(userSession.getEmailAddress())
-                                        ? AuditService.UNKNOWN
+                                        ? UNKNOWN
                                         : userSession.getEmailAddress(),
                                 IpAddressHelper.extractIpAddress(input),
                                 Objects.isNull(userInfo.getPhoneNumber())
-                                        ? AuditService.UNKNOWN
+                                        ? UNKNOWN
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
@@ -417,18 +422,8 @@ public class AuthenticationCallbackHandler
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        userInfo.getSubject().getValue(),
-                        Objects.isNull(userSession.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : userSession.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Objects.isNull(userInfo.getPhoneNumber())
-                                ? AuditService.UNKNOWN
-                                : userInfo.getPhoneNumber(),
-                        persistentSessionId,
-                        pair("internalSubjectId", AuditService.UNKNOWN),
+                        user,
+                        pair("internalSubjectId", UNKNOWN),
                         pair("isNewAccount", newAccount),
                         pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
                         pair("nonce", authenticationRequest.getNonce()),
