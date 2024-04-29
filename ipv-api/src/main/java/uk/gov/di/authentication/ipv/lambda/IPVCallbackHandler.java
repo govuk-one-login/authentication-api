@@ -21,6 +21,7 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -235,6 +236,15 @@ public class IPVCallbackHandler
                             dynamoService.getOrGenerateSalt(userProfile));
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(internalPairwiseSubjectId)
+                            .withEmail(session.getEmailAddress())
+                            .withPhone(userProfile.getPhoneNumber())
+                            .withPersistentSessionId(persistentId);
+
             var auditContext =
                     new AuditContext(
                             clientSessionId,
@@ -270,15 +280,7 @@ public class IPVCallbackHandler
             }
 
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+                    IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             var tokenResponse =
                     segmentedFunctionCall(
@@ -291,28 +293,12 @@ public class IPVCallbackHandler
                         "IPV TokenResponse was not successful: {}",
                         tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
-                        IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        internalPairwiseSubjectId,
-                        userProfile.getEmail(),
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        persistentId);
+                        IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
                 return RedirectService.redirectToFrontendErrorPage(
                         configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+                    IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
 
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
@@ -326,15 +312,7 @@ public class IPVCallbackHandler
                                             .getBearerAccessToken()));
 
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+                    IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId, user);
             var vtrList = clientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
@@ -421,16 +399,7 @@ public class IPVCallbackHandler
                     userIdentityUserInfo,
                     clientId);
 
-            auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+            auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
             segmentedFunctionCall(
                     "saveIdentityClaims",
                     () ->

@@ -40,6 +40,7 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -950,13 +951,13 @@ class IPVCallbackHandlerTest {
                 .submitAuditEvent(
                         auditableEvent,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_SESSION_ID);
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withSessionId(SESSION_ID)
+                                .withUserId(expectedCommonSubject)
+                                .withEmail(TEST_EMAIL_ADDRESS)
+                                .withPhone(userProfile.getPhoneNumber())
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID));
     }
 
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(
