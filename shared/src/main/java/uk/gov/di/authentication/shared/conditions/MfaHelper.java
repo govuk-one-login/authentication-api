@@ -44,10 +44,9 @@ public class MfaHelper {
             String phoneNumber,
             boolean isPhoneNumberVerified) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
-        var mfaMethodVerified = isPhoneNumberVerified;
-
+        var mfaMethodVerified = false;
+        var mfaMethodType = MFAMethodType.NONE;
         var mfaMethod = getPrimaryMFAMethod(userCredentials);
-        var mfaMethodType = MFAMethodType.SMS;
         if (mfaMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             mfaMethodVerified = true;
             mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());

@@ -76,6 +76,8 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -303,8 +305,8 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getMfaMethodType(), equalTo(SMS));
-        assertThat(response.isMfaMethodVerified(), equalTo(true));
+        assertThat(response.getMfaMethodType(), equalTo(NONE));
+        assertThat(response.isMfaMethodVerified(), equalTo(false));
 
         assertAuditServiceCalledWith(
                 FrontendAuditableEvent.LOG_IN_SUCCESS,
