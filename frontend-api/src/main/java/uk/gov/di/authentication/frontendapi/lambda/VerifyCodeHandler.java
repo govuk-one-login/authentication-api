@@ -231,7 +231,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("MFACodeEntered", codeRequest.code()),
                         pair("journey-type", String.valueOf(journeyType))
                     };
-            clearAccountRecoveryBlockIfPresent(userContext, input);
+            clearAccountRecoveryBlockIfPresent(session, userContext, input);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,
@@ -241,20 +241,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     true);
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.CODE_VERIFIED,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                metadataPairs);
+        submitAuditEvent(
+                session, input, userContext, FrontendAuditableEvent.CODE_VERIFIED, metadataPairs);
     }
 
     private void processBlockedCodeSession(
@@ -304,6 +292,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
                 break;
         }
+        submitAuditEvent(session, input, userContext, auditableEvent, metadataPairs);
+    }
+
+    private void submitAuditEvent(
+            Session session,
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            AuditableEvent auditableEvent,
+            AuditService.MetadataPair... metadataPairs) {
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
@@ -336,27 +333,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private void clearAccountRecoveryBlockIfPresent(
-            UserContext userContext, APIGatewayProxyRequestEvent input) {
+            Session session, UserContext userContext, APIGatewayProxyRequestEvent input) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        userContext.getSession().getInternalCommonSubjectIdentifier());
+                        session.getInternalCommonSubjectIdentifier());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    userContext.getSession().getInternalCommonSubjectIdentifier());
-            auditService.submitAuditEvent(
+                    session.getInternalCommonSubjectIdentifier());
+            submitAuditEvent(
+                    session,
+                    input,
+                    userContext,
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    userContext.getSession().getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("mfa-type", MFAMethodType.SMS.getValue()));
         }
     }
