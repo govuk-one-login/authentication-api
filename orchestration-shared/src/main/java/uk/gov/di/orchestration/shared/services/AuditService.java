@@ -44,42 +44,18 @@ public class AuditService {
     }
 
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
-        submitAuditEvent(
-                event,
-                auditContext.clientId(),
-                auditContext.clientSessionId(),
-                auditContext.sessionId(),
-                auditContext.subjectId(),
-                auditContext.email(),
-                auditContext.ipAddress(),
-                auditContext.phoneNumber(),
-                auditContext.persistentSessionId(),
-                auditContext.metadataPairs());
-    }
-
-    public void submitAuditEvent(
-            AuditableEvent event,
-            String clientId,
-            String clientSessionId,
-            String sessionId,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
-            MetadataPair... metadataPairs) {
 
         var user =
                 TxmaAuditUser.user()
-                        .withUserId(subjectId)
-                        .withPhone(phoneNumber)
-                        .withEmail(email)
-                        .withIpAddress(ipAddress)
-                        .withSessionId(sessionId)
-                        .withPersistentSessionId(persistentSessionId)
-                        .withGovukSigninJourneyId(clientSessionId);
+                        .withUserId(auditContext.subjectId())
+                        .withPhone(auditContext.phoneNumber())
+                        .withEmail(auditContext.email())
+                        .withIpAddress(auditContext.ipAddress())
+                        .withSessionId(auditContext.sessionId())
+                        .withPersistentSessionId(auditContext.persistentSessionId())
+                        .withGovukSigninJourneyId(auditContext.clientSessionId());
 
-        submitAuditEvent(event, clientId, user, metadataPairs);
+        submitAuditEvent(event, auditContext.clientId(), user, auditContext.metadataPairs());
     }
 
     public void submitAuditEvent(
