@@ -21,7 +21,7 @@ data "aws_iam_policy_document" "pending_email_check_queue_subscription_policy_do
 }
 
 resource "aws_sqs_queue_policy" "pending_email_check_queue_subscription" {
+  description = "IAM Policy for consuming the pending email queue"
   queue_url = aws_sqs_queue.pending_email_check_queue.id
-
   policy = data.aws_iam_policy_document.pending_email_check_queue_subscription_policy_document.json
 }

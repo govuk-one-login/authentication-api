@@ -1,14 +1,14 @@
 ### Permissions for Lambda to access SQS (including decrpyting messages)
-resource "aws_iam_policy" "email_check_queue_policy" {
+resource "aws_iam_policy" "email_check_results_queue_policy" {
   depends_on = [
-    data.aws_iam_policy_document.email_check_result_queue_policy_document,
+    data.aws_iam_policy_document.email_check_results_queue_policy_document,
   ]
 
-  name   = "${var.environment}-email-check-queue"
-  policy = data.aws_iam_policy_document.email_check_result_queue_policy_document.json
+  name   = "${var.environment}-email-check-results-queue"
+  policy = data.aws_iam_policy_document.email_check_results_queue_policy_document.json
 }
 
-data "aws_iam_policy_document" "email_check_result_queue_policy_document" {
+data "aws_iam_policy_document" "email_check_results_queue_policy_document" {
   statement {
     sid    = "ReceiveSQS"
     effect = "Allow"
