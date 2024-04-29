@@ -251,14 +251,12 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     private void logAisResponse(
             AccountInterventionsInboundResponse accountInterventionsInboundResponse) {
-        if (configurationService.isAisDetailedLoggingEnabled()) {
-            LOG.info(
-                    "AIS Response: blocked: {} suspended: {} resetPassword: {} reproveIdentity: {}",
-                    accountInterventionsInboundResponse.state().blocked(),
-                    accountInterventionsInboundResponse.state().suspended(),
-                    accountInterventionsInboundResponse.state().resetPassword(),
-                    accountInterventionsInboundResponse.state().reproveIdentity());
-        }
+        LOG.info(
+                "AIS Response: blocked: {} suspended: {} resetPassword: {} reproveIdentity: {}",
+                accountInterventionsInboundResponse.state().blocked(),
+                accountInterventionsInboundResponse.state().suspended(),
+                accountInterventionsInboundResponse.state().resetPassword(),
+                accountInterventionsInboundResponse.state().reproveIdentity());
     }
 
     private AccountInterventionsResponse noAccountInterventions() {
