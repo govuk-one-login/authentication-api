@@ -114,7 +114,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
-            var notificationType = codeRequest.getNotificationType();
+            var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
@@ -135,7 +135,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             notificationType,
                             journeyType,
                             code,
-                            codeRequest.getCode(),
+                            codeRequest.code(),
                             codeStorageService,
                             session.getEmailAddress(),
                             configurationService.getCodeMaxRetries());
@@ -173,7 +173,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
                         entry(RESET_PASSWORD_WITH_CODE, ErrorResponse.ERROR_1039),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
-                .get(codeRequest.getNotificationType());
+                .get(codeRequest.notificationType());
     }
 
     private boolean isCodeBlockedForSession(Session session, String codeBlockedKeyPrefix) {
@@ -200,9 +200,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             JourneyType journeyType) {
-        var notificationType = codeRequest.getNotificationType();
+        var notificationType = codeRequest.notificationType();
         var accountRecoveryJourney =
-                codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+                codeRequest.notificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         int loginFailureCount = session.getRetryCount();
         var metadataPairs =
                 new AuditService.MetadataPair[] {
@@ -229,7 +229,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", accountRecoveryJourney),
                         pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.getCode()),
+                        pair("MFACodeEntered", codeRequest.code()),
                         pair("journey-type", String.valueOf(journeyType))
                     };
             clearAccountRecoveryBlockIfPresent(userContext, input);
@@ -265,7 +265,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             JourneyType journeyType) {
-        var notificationType = codeRequest.getNotificationType();
+        var notificationType = codeRequest.notificationType();
         var accountRecoveryJourney = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
@@ -283,7 +283,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", accountRecoveryJourney),
                         pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.getCode()),
+                        pair("MFACodeEntered", codeRequest.code()),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
                         pair("journey-type", String.valueOf(journeyType))
                     };
@@ -365,8 +365,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private JourneyType getJourneyType(
             VerifyCodeRequest codeRequest, NotificationType notificationType) {
         JourneyType journeyType;
-        if (codeRequest.getJourneyType() != null) {
-            journeyType = codeRequest.getJourneyType();
+        if (codeRequest.journeyType() != null) {
+            journeyType = codeRequest.journeyType();
         } else {
             journeyType =
                     switch (notificationType) {
