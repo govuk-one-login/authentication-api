@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.Optional;
+
 public class ManuallyDeleteAccountHandler implements RequestHandler<String, String> {
     private final AuthenticationService authenticationService;
     private final AccountDeletionService accountDeletionService;
@@ -52,7 +54,8 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
                         .orElseThrow(() -> new RuntimeException("User not found with given email"));
 
         try {
-            var userIdentifiers = accountDeletionService.removeAccount(userProfile);
+            var userIdentifiers =
+                    accountDeletionService.removeAccount(Optional.empty(), userProfile);
             return userIdentifiers.toString();
         } catch (Json.JsonException e) {
             throw new RuntimeException(e);

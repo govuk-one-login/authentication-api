@@ -130,7 +130,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userContext.getSession().getSessionId(),
                         clientId,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId);

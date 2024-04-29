@@ -18,7 +18,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,8 +43,6 @@ class RemoveAccountHandlerTest {
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
-    private final Json objectMapper = SerializationService.getInstance();
-
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
@@ -88,7 +85,7 @@ class RemoveAccountHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(accountDeletionService).removeAccount(userProfile);
+        verify(accountDeletionService).removeAccount(Optional.of(event), userProfile);
     }
 
     @Test

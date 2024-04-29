@@ -601,7 +601,7 @@ class LoginHandlerTest {
                         session.getSessionId(),
                         "",
                         "",
-                        "",
+                        EMAIL,
                         "123.123.123.123",
                         "",
                         PERSISTENT_ID);

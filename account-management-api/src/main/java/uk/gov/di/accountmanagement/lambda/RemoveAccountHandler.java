@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -115,7 +116,7 @@ public class RemoveAccountHandler
 
             authoriseRequest(input, userProfile);
 
-            accountDeletionService.removeAccount(userProfile);
+            accountDeletionService.removeAccount(Optional.of(input), userProfile);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {

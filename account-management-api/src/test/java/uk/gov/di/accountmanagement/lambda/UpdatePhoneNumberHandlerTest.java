@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -55,6 +56,7 @@ class UpdatePhoneNumberHandlerTest {
     private static final String OLD_PHONE_NUMBER = "09876543219";
     private static final String OTP = "123456";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private final String expectedCommonSubject =
@@ -104,7 +106,7 @@ class UpdatePhoneNumberHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                        AuditService.UNKNOWN,
+                        CLIENT_SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         expectedCommonSubject,
@@ -201,7 +203,12 @@ class UpdatePhoneNumberHandlerTest {
         proxyRequestContext.setAuthorizer(authorizerParams);
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         event.setRequestContext(proxyRequestContext);
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_ID,
+                        ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
+                        CLIENT_SESSION_ID));
 
         return event;
     }
