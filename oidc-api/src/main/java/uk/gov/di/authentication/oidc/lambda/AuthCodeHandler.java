@@ -18,6 +18,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -40,6 +41,7 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
@@ -214,15 +216,17 @@ public class AuthCodeHandler
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTH_CODE_ISSUED,
                     clientID.getValue(),
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalCommonPairwiseSubjectId,
-                    Objects.isNull(session.getEmailAddress())
-                            ? AuditService.UNKNOWN
-                            : session.getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(internalCommonPairwiseSubjectId)
+                            .withEmail(
+                                    Optional.ofNullable(session.getEmailAddress())
+                                            .orElse(AuditService.UNKNOWN))
+                            .withIpAddress(IpAddressHelper.extractIpAddress(input))
+                            .withPersistentSessionId(
+                                    PersistentIdHelper.extractPersistentIdFromHeaders(
+                                            input.getHeaders())),
                     pair("internalSubjectId", subjectId),
                     pair("isNewAccount", session.isNewAccount()),
                     pair("rpPairwiseId", rpPairwiseId),
