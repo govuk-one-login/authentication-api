@@ -323,18 +323,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
         LOG.info("Using TestClient with NotificationType {}", notificationType);
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-            case RESET_PASSWORD_WITH_CODE:
-                return configurationService.getTestClientVerifyEmailOTP();
-            case MFA_SMS:
-                return configurationService.getTestClientVerifyPhoneNumberOTP();
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL,
+                    VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                    RESET_PASSWORD_WITH_CODE -> configurationService.getTestClientVerifyEmailOTP();
+            case MFA_SMS -> configurationService.getTestClientVerifyPhoneNumberOTP();
+            default -> {
                 LOG.error(
                         "Invalid NotificationType: {} configured for TestClient", notificationType);
                 throw new RuntimeException("Invalid NotificationType for use with TestClient");
-        }
+            }
+        };
     }
 
     private void clearAccountRecoveryBlockIfPresent(
@@ -369,20 +368,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (codeRequest.getJourneyType() != null) {
             journeyType = codeRequest.getJourneyType();
         } else {
-            switch (notificationType) {
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                    journeyType = JourneyType.ACCOUNT_RECOVERY;
-                    break;
-                case MFA_SMS:
-                    journeyType = JourneyType.SIGN_IN;
-                    break;
-                case RESET_PASSWORD_WITH_CODE:
-                    journeyType = JourneyType.PASSWORD_RESET;
-                    break;
-                default:
-                    journeyType = JourneyType.REGISTRATION;
-                    break;
-            }
+            journeyType =
+                    switch (notificationType) {
+                        case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> JourneyType.ACCOUNT_RECOVERY;
+                        case MFA_SMS -> JourneyType.SIGN_IN;
+                        case RESET_PASSWORD_WITH_CODE -> JourneyType.PASSWORD_RESET;
+                        default -> JourneyType.REGISTRATION;
+                    };
         }
         return journeyType;
     }
