@@ -186,12 +186,6 @@ variable "authentication_callback_userinfo_table_cross_account_access_enabled" {
   description = "Whether the service should allow cross-account access to the authentication callback userinfo table"
 }
 
-variable "back_channel_logout_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by orchestration to the back channel logout queue"
-}
-
 variable "client_registry_table_cross_account_access_enabled" {
   default     = false
   type        = bool
