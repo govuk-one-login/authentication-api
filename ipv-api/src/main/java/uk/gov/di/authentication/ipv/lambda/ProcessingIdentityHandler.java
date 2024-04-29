@@ -38,6 +38,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
@@ -103,6 +104,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             ProcessingIdentityRequest request,
             UserContext userContext) {
         LOG.info("ProcessingIdentity request received");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             UserProfile userProfile = userContext.getUserProfile().orElseThrow();
             ClientRegistry client = userContext.getClient().orElseThrow();
