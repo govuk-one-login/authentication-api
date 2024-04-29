@@ -46,6 +46,7 @@ import java.util.Objects;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -137,6 +138,7 @@ public class DocAppCallbackHandler
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Request received to DocAppCallbackHandler");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             var sessionCookiesIds =
                     cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
