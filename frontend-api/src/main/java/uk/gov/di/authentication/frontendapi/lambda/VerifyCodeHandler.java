@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -289,21 +288,21 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
         }
         AuditableEvent auditableEvent;
-        if (List.of(
-                        ErrorResponse.ERROR_1027,
-                        ErrorResponse.ERROR_1033,
-                        ErrorResponse.ERROR_1039,
-                        ErrorResponse.ERROR_1048)
-                .contains(errorResponse)) {
-            if (errorResponse.equals(ErrorResponse.ERROR_1027)
-                    || errorResponse.equals(ErrorResponse.ERROR_1048)
-                    || errorResponse.equals(ErrorResponse.ERROR_1039)) {
+        switch (errorResponse) {
+            case ERROR_1027:
+            case ERROR_1039:
+            case ERROR_1048:
                 blockCodeForSession(session, codeBlockedKeyPrefix);
-            }
-            resetIncorrectMfaCodeAttemptsCount(session);
-            auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
-        } else {
-            auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
+                resetIncorrectMfaCodeAttemptsCount(session);
+                auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+                break;
+            case ERROR_1033:
+                resetIncorrectMfaCodeAttemptsCount(session);
+                auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+                break;
+            default:
+                auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
+                break;
         }
         auditService.submitAuditEvent(
                 auditableEvent,
