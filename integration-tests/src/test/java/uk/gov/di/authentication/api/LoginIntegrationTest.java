@@ -40,6 +40,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -129,7 +130,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 loginResponse.getLatestTermsAndConditionsAccepted(),
                 equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
 
-        assertThat(loginResponse.getMfaMethodType(), equalTo(mfaMethodType));
+        var expectedMfaType =
+                (mfaMethodType.equals(SMS) && !mfaMethodVerified) ? NONE : mfaMethodType;
+        assertThat(loginResponse.getMfaMethodType(), equalTo(expectedMfaType));
         assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
         assertTrue(
                 Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
