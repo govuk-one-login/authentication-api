@@ -27,6 +27,7 @@ import java.text.ParseException;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -89,6 +90,7 @@ public class LogoutHandler
 
     public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) {
         LOG.info("Logout request received");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         Optional<Session> sessionFromSessionCookie =
                 segmentedFunctionCall(
                         "getSessionFromSessionCookie",
