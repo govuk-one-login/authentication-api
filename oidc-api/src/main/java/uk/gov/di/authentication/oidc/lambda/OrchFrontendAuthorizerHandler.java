@@ -19,18 +19,14 @@ public class OrchFrontendAuthorizerHandler
 
     private final ConfigurationService configurationService;
 
+    // IPs below taken from GDS Office and VPN Public IP Addresses:
+    // https://sites.google.com/a/digital.cabinet-office.gov.uk/gds/working-at-gds/gds-internal-it/gds-internal-it-network-public-ip-addresses
     private final String[] validIps = {
         "217.196.229.77/32",
         "217.196.229.79/32",
         "217.196.229.80/31",
         "51.149.8.0/25",
         "51.149.8.128/29",
-        "213.86.153.211/32",
-        "213.86.153.212/31",
-        "213.86.153.214/32",
-        "213.86.153.235/32",
-        "213.86.153.236/31",
-        "213.86.153.231/32",
         "3.9.227.33/32",
         "18.132.149.145/32"
     };
