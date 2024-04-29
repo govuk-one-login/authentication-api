@@ -64,6 +64,7 @@ resource "aws_lambda_event_source_mapping" "spot_response_lambda_sqs_mapping" {
   count            = var.spot_enabled ? 1 : 0
   event_source_arn = aws_ssm_parameter.spot_response_queue_arn.value
   function_name    = aws_lambda_function.spot_response_lambda.arn
+  batch_size       = 1
 
   depends_on = [
     aws_lambda_function.spot_response_lambda,
