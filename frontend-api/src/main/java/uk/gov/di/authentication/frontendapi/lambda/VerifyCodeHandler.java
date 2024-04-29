@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -114,7 +113,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
-            var notificationType = codeRequest.getNotificationType();
+            var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
@@ -135,7 +134,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             notificationType,
                             journeyType,
                             code,
-                            codeRequest.getCode(),
+                            codeRequest.code(),
                             codeStorageService,
                             session.getEmailAddress(),
                             configurationService.getCodeMaxRetries());
@@ -173,7 +172,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
                         entry(RESET_PASSWORD_WITH_CODE, ErrorResponse.ERROR_1039),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
-                .get(codeRequest.getNotificationType());
+                .get(codeRequest.notificationType());
     }
 
     private boolean isCodeBlockedForSession(Session session, String codeBlockedKeyPrefix) {
@@ -200,9 +199,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             JourneyType journeyType) {
-        var notificationType = codeRequest.getNotificationType();
+        var notificationType = codeRequest.notificationType();
         var accountRecoveryJourney =
-                codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+                codeRequest.notificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         int loginFailureCount = session.getRetryCount();
         var metadataPairs =
                 new AuditService.MetadataPair[] {
@@ -229,10 +228,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", accountRecoveryJourney),
                         pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.getCode()),
+                        pair("MFACodeEntered", codeRequest.code()),
                         pair("journey-type", String.valueOf(journeyType))
                     };
-            clearAccountRecoveryBlockIfPresent(userContext, input);
+            clearAccountRecoveryBlockIfPresent(session, userContext, input);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,
@@ -242,20 +241,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     true);
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.CODE_VERIFIED,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                metadataPairs);
+        submitAuditEvent(
+                session, input, userContext, FrontendAuditableEvent.CODE_VERIFIED, metadataPairs);
     }
 
     private void processBlockedCodeSession(
@@ -265,7 +252,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             JourneyType journeyType) {
-        var notificationType = codeRequest.getNotificationType();
+        var notificationType = codeRequest.notificationType();
         var accountRecoveryJourney = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
@@ -283,28 +270,37 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", accountRecoveryJourney),
                         pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.getCode()),
+                        pair("MFACodeEntered", codeRequest.code()),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
                         pair("journey-type", String.valueOf(journeyType))
                     };
         }
         AuditableEvent auditableEvent;
-        if (List.of(
-                        ErrorResponse.ERROR_1027,
-                        ErrorResponse.ERROR_1033,
-                        ErrorResponse.ERROR_1039,
-                        ErrorResponse.ERROR_1048)
-                .contains(errorResponse)) {
-            if (errorResponse.equals(ErrorResponse.ERROR_1027)
-                    || errorResponse.equals(ErrorResponse.ERROR_1048)
-                    || errorResponse.equals(ErrorResponse.ERROR_1039)) {
+        switch (errorResponse) {
+            case ERROR_1027:
+            case ERROR_1039:
+            case ERROR_1048:
                 blockCodeForSession(session, codeBlockedKeyPrefix);
-            }
-            resetIncorrectMfaCodeAttemptsCount(session);
-            auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
-        } else {
-            auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
+                resetIncorrectMfaCodeAttemptsCount(session);
+                auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+                break;
+            case ERROR_1033:
+                resetIncorrectMfaCodeAttemptsCount(session);
+                auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+                break;
+            default:
+                auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
+                break;
         }
+        submitAuditEvent(session, input, userContext, auditableEvent, metadataPairs);
+    }
+
+    private void submitAuditEvent(
+            Session session,
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            AuditableEvent auditableEvent,
+            AuditService.MetadataPair... metadataPairs) {
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
@@ -323,42 +319,33 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
         LOG.info("Using TestClient with NotificationType {}", notificationType);
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-            case RESET_PASSWORD_WITH_CODE:
-                return configurationService.getTestClientVerifyEmailOTP();
-            case MFA_SMS:
-                return configurationService.getTestClientVerifyPhoneNumberOTP();
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL,
+                    VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                    RESET_PASSWORD_WITH_CODE -> configurationService.getTestClientVerifyEmailOTP();
+            case MFA_SMS -> configurationService.getTestClientVerifyPhoneNumberOTP();
+            default -> {
                 LOG.error(
                         "Invalid NotificationType: {} configured for TestClient", notificationType);
                 throw new RuntimeException("Invalid NotificationType for use with TestClient");
-        }
+            }
+        };
     }
 
     private void clearAccountRecoveryBlockIfPresent(
-            UserContext userContext, APIGatewayProxyRequestEvent input) {
+            Session session, UserContext userContext, APIGatewayProxyRequestEvent input) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        userContext.getSession().getInternalCommonSubjectIdentifier());
+                        session.getInternalCommonSubjectIdentifier());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    userContext.getSession().getInternalCommonSubjectIdentifier());
-            auditService.submitAuditEvent(
+                    session.getInternalCommonSubjectIdentifier());
+            submitAuditEvent(
+                    session,
+                    input,
+                    userContext,
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    userContext.getSession().getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("mfa-type", MFAMethodType.SMS.getValue()));
         }
     }
@@ -366,23 +353,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private JourneyType getJourneyType(
             VerifyCodeRequest codeRequest, NotificationType notificationType) {
         JourneyType journeyType;
-        if (codeRequest.getJourneyType() != null) {
-            journeyType = codeRequest.getJourneyType();
+        if (codeRequest.journeyType() != null) {
+            journeyType = codeRequest.journeyType();
         } else {
-            switch (notificationType) {
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                    journeyType = JourneyType.ACCOUNT_RECOVERY;
-                    break;
-                case MFA_SMS:
-                    journeyType = JourneyType.SIGN_IN;
-                    break;
-                case RESET_PASSWORD_WITH_CODE:
-                    journeyType = JourneyType.PASSWORD_RESET;
-                    break;
-                default:
-                    journeyType = JourneyType.REGISTRATION;
-                    break;
-            }
+            journeyType =
+                    switch (notificationType) {
+                        case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> JourneyType.ACCOUNT_RECOVERY;
+                        case MFA_SMS -> JourneyType.SIGN_IN;
+                        case RESET_PASSWORD_WITH_CODE -> JourneyType.PASSWORD_RESET;
+                        default -> JourneyType.REGISTRATION;
+                    };
         }
         return journeyType;
     }

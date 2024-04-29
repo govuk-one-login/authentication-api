@@ -6,45 +6,11 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.validation.Required;
 
-public class VerifyCodeRequest {
-
-    public VerifyCodeRequest() {}
-
+public record VerifyCodeRequest(
+        @SerializedName("notificationType") @Expose @Required NotificationType notificationType,
+        @SerializedName("code") @Expose @Required String code,
+        @SerializedName("journeyType") @Expose JourneyType journeyType) {
     public VerifyCodeRequest(NotificationType notificationType, String code) {
-        this.notificationType = notificationType;
-        this.code = code;
-    }
-
-    public VerifyCodeRequest(
-            NotificationType notificationType, String code, JourneyType journeyType) {
-        this.notificationType = notificationType;
-        this.code = code;
-        this.journeyType = journeyType;
-    }
-
-    @SerializedName("notificationType")
-    @Expose
-    @Required
-    private NotificationType notificationType;
-
-    @SerializedName("code")
-    @Expose
-    @Required
-    private String code;
-
-    @SerializedName("journeyType")
-    @Expose
-    protected JourneyType journeyType;
-
-    public NotificationType getNotificationType() {
-        return notificationType;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public JourneyType getJourneyType() {
-        return journeyType;
+        this(notificationType, code, null);
     }
 }

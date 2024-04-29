@@ -188,7 +188,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
-                        codeRequest.getNotificationType(), JourneyType.REGISTRATION);
+                        codeRequest.notificationType(), JourneyType.REGISTRATION);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
@@ -238,7 +238,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
-                        codeRequest.getNotificationType(), JourneyType.ACCOUNT_RECOVERY);
+                        codeRequest.notificationType(), JourneyType.ACCOUNT_RECOVERY);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
@@ -264,7 +264,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
-                        codeRequest.getNotificationType(), JourneyType.PASSWORD_RESET);
+                        codeRequest.notificationType(), JourneyType.PASSWORD_RESET);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
@@ -294,7 +294,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 makeRequest(
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
         var codeRequestType =
-                CodeRequestType.getCodeRequestType(codeRequest.getNotificationType(), journeyType);
+                CodeRequestType.getCodeRequestType(codeRequest.notificationType(), journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
