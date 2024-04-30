@@ -415,11 +415,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         }
 
         @Override
-        public String getDocAppCriDataEndpoint() {
-            return "/userinfo/v2";
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

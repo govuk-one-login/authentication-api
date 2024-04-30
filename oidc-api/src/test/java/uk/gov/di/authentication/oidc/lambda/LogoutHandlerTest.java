@@ -67,7 +67,7 @@ class LogoutHandlerTest {
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
@@ -109,7 +109,7 @@ class LogoutHandlerTest {
                         cloudwatchMetricsService,
                         logoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(logoutService.generateErrorLogoutResponse(any(), any(), any(), any()))

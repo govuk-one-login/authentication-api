@@ -579,7 +579,7 @@ public class AuthorisationHandler
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var rpSectorIdentifierHost =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        client, configurationService.getInternalSectorUri());
+                        client, configurationService.getInternalSectorURI().toString());
         var state = new State();
         orchestrationAuthorizationService.storeState(session.getSessionId(), state);
         String reauthenticateClaim;
@@ -619,7 +619,7 @@ public class AuthorisationHandler
                         .claim("confidence", confidence)
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
-                        .claim("redirect_uri", configurationService.getOrchestrationRedirectUri())
+                        .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthenticateClaim);
 
         var claimsSetRequest =
@@ -757,14 +757,14 @@ public class AuthorisationHandler
                         session.getSessionId() + "." + clientSessionId,
                         configurationService.getSessionCookieMaxAge(),
                         configurationService.getSessionCookieAttributes(),
-                        configurationService.getDomainName()));
+                        configurationService.getDomainName().toString()));
         cookies.add(
                 CookieHelper.buildCookieString(
                         CookieHelper.PERSISTENT_COOKIE_NAME,
                         persistentSessionId,
                         configurationService.getPersistentCookieMaxAge(),
                         configurationService.getSessionCookieAttributes(),
-                        configurationService.getDomainName()));
+                        configurationService.getDomainName().toString()));
 
         getPrimaryLanguageFromUILocales(authRequest, configurationService)
                 .ifPresent(

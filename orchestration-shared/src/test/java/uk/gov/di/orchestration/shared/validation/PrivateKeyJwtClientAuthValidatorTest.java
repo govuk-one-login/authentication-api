@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
+import java.net.URI;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -42,7 +43,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private static final String OIDC_BASE_URL = "https://example.com";
+    private static final URI OIDC_BASE_URL = URI.create("https://example.com");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private PrivateKeyJwtClientAuthValidator privateKeyJwtClientAuthValidator;

@@ -12,6 +12,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,14 +26,14 @@ class TrustMarkHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Context context = mock(Context.class);
-    private static final String BASE_URL = "https://example.com";
+    private static final URI BASE_URL = URI.create("https://example.com");
     private TrustMarkHandler handler;
     private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
         handler = new TrustMarkHandler(configurationService);
-        Optional<String> baseUrl = Optional.of(BASE_URL);
+        var baseUrl = Optional.of(BASE_URL);
         when(configurationService.getOidcApiBaseURL()).thenReturn(baseUrl);
     }
 
@@ -40,8 +41,8 @@ class TrustMarkHandlerTest {
     void shouldReturn200WhenRequestIsSuccessful() throws Json.JsonException {
         TrustMarkResponse trustMarkResponse =
                 new TrustMarkResponse(
-                        configurationService.getOidcApiBaseURL().orElseThrow(),
-                        configurationService.getOidcApiBaseURL().orElseThrow(),
+                        configurationService.getOidcApiBaseURL().map(URI::toString).orElseThrow(),
+                        configurationService.getOidcApiBaseURL().map(URI::toString).orElseThrow(),
                         List.of(
                                 CredentialTrustLevel.LOW_LEVEL.getValue(),
                                 CredentialTrustLevel.MEDIUM_LEVEL.getValue()),

@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,8 +79,8 @@ public class IPVCallbackHelper {
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueUri(),
-                        configurationService.getSqsEndpointUri());
+                        configurationService.getSpotQueueURI().toString(),
+                        configurationService.getSqsEndpointURI().map(URI::toString));
         this.authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
     }
@@ -145,9 +146,10 @@ public class IPVCallbackHelper {
                     .getValue()
                     .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
                 var trustmarkURL =
-                        buildURI(
-                                        configurationService.getOidcApiBaseURL().orElseThrow(),
-                                        "/trustmark")
+                        configurationService
+                                .getOidcApiBaseURL()
+                                .map(uri -> buildURI(uri, "trustmark"))
+                                .orElseThrow()
                                 .toString();
                 if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
                     LOG.warn("VTM does not contain expected trustmark URL");
@@ -251,11 +253,10 @@ public class IPVCallbackHelper {
                                         .toJSONObject()
                                         .get(IdentityClaims.CORE_IDENTITY.getValue()))
                         .withVtm(
-                                buildURI(
-                                                configurationService
-                                                        .getOidcApiBaseURL()
-                                                        .orElseThrow(),
-                                                "/trustmark")
+                                configurationService
+                                        .getOidcApiBaseURL()
+                                        .map(uri -> buildURI(uri, "trustmark"))
+                                        .orElseThrow()
                                         .toString());
 
         var spotRequest =

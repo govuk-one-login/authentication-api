@@ -71,7 +71,7 @@ public class IpvTokenTest {
     void setUp() {
         ipvTokenService = new IPVTokenService(configService, kmsConnectionService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
-        when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
+        when(configService.getIPVAudience()).thenReturn(IPV_URI);
         when(configService.getIPVTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockKmsReturn());
     }

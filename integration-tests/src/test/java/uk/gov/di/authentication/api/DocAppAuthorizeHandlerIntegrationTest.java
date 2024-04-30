@@ -182,7 +182,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         }
 
         @Override
-        public URI getDocAppJwksUri() {
+        public URI getDocAppJwksURI() {
             try {
                 return new URIBuilder()
                         .setHost("localhost")
