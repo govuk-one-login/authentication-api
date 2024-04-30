@@ -45,7 +45,7 @@ jobs:
       - name: Upload pacts to broker on push to main
         if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' }}
         env:
-          CONSUMER_APP_VERSION: ${{ github.event.push.after }}
+          CONSUMER_APP_VERSION: ${{ github.sha }}
         run: ./gradlew pactPublish
 
 #      - name: Verify pacts
