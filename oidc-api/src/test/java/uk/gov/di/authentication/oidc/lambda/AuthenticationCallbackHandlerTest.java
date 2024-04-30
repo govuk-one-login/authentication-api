@@ -45,6 +45,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.eq;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticationCallbackHandlerTest {
@@ -128,6 +129,7 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getSubject()).thenReturn(PAIRWISE_SUBJECT_ID);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
+        when(USER_INFO.getPhoneNumber()).thenReturn("1234");
     }
 
     @BeforeEach
@@ -199,26 +201,30 @@ class AuthenticationCallbackHandlerTest {
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTHENTICATION_COMPLETE),
                         eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        eq(
+                                TxmaAuditUser.user()
+                                        .withSessionId(SESSION_ID)
+                                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                        .withIpAddress("123.123.123.123")
+                                        .withUserId(PAIRWISE_SUBJECT_ID.getValue())
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhone("1234")),
                         eq(pair("new_account", true)),
                         eq(pair("test_user", false)));
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
                         eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        eq(
+                                TxmaAuditUser.user()
+                                        .withSessionId(SESSION_ID)
+                                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                        .withIpAddress("123.123.123.123")
+                                        .withUserId(PAIRWISE_SUBJECT_ID.getValue())
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhone("1234")),
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
                         eq(pair("isNewAccount", true)),
                         eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
@@ -599,6 +605,7 @@ class AuthenticationCallbackHandlerTest {
 
     private static void setValidHeadersAndQueryParameters(APIGatewayProxyRequestEvent event) {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE_ORCH_TO_AUTH.getValue());
         responseHeaders.put("state", STATE.getValue());

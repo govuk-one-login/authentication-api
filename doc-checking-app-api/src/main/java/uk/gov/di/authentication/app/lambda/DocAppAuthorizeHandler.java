@@ -12,11 +12,9 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
-import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
-import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
@@ -35,16 +33,19 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
 public class DocAppAuthorizeHandler
@@ -142,8 +143,7 @@ public class DocAppAuthorizeHandler
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             attachLogFieldToLogs(
-                    PERSISTENT_SESSION_ID,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
             var clientRegistry =
                     clientSession.getAuthRequestParams().get("client_id").stream()
                             .findFirst()
@@ -168,16 +168,18 @@ public class DocAppAuthorizeHandler
             var authorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(session.getSessionId(), state);
             noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(clientSession.getDocAppSubjectId().getValue())
+                            .withIpAddress(extractIpAddress(input))
+                            .withPersistentSessionId(
+                                    extractPersistentIdFromHeaders(input.getHeaders()));
+
             auditService.submitAuditEvent(
-                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
-                    clientRegistry.getClientID(),
-                    clientSessionId,
-                    session.getSessionId(),
-                    clientSession.getDocAppSubjectId().toString(),
-                    AuditService.UNKNOWN,
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    DOC_APP_AUTHORISATION_REQUESTED, clientRegistry.getClientID(), user);
             LOG.info(
                     "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
                     authorisationRequest.toURI().toString());

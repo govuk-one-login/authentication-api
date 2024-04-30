@@ -15,6 +15,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
@@ -94,13 +95,7 @@ class UserInfoHandlerTest {
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
                         "client-id",
-                        AuditService.UNKNOWN,
-                        "",
-                        AUDIT_SUBJECT_ID.getValue(),
-                        "",
-                        "",
-                        "",
-                        "");
+                        TxmaAuditUser.user().withUserId(AUDIT_SUBJECT_ID.getValue()));
     }
 
     @Test
@@ -123,13 +118,7 @@ class UserInfoHandlerTest {
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
                         "client-id",
-                        AuditService.UNKNOWN,
-                        "",
-                        AUDIT_SUBJECT_ID.getValue(),
-                        "",
-                        "",
-                        "",
-                        "",
+                        TxmaAuditUser.user().withUserId(AUDIT_SUBJECT_ID.getValue()),
                         AuditService.MetadataPair.pair("return-code", RETURN_CODE));
     }
 

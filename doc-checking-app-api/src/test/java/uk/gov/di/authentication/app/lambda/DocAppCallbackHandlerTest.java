@@ -30,6 +30,7 @@ import org.mockito.Mockito;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -69,6 +70,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -105,6 +107,11 @@ class DocAppCallbackHandlerTest {
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
+    public static final TxmaAuditUser BASE_AUDIT_USER =
+            TxmaAuditUser.user()
+                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                    .withSessionId(SESSION_ID)
+                    .withUserId(PAIRWISE_SUBJECT_ID.getValue());
     private static final State STATE = new State();
 
     private static final State RP_STATE = new State();
@@ -182,13 +189,7 @@ class DocAppCallbackHandlerTest {
                 .submitAuditEvent(
                         DocAppAuditableEvent.AUTH_CODE_ISSUED,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        BASE_AUDIT_USER.withIpAddress("123.123.123.123"),
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", session.isNewAccount()),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
@@ -431,13 +432,9 @@ class DocAppCallbackHandlerTest {
                 .submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        AuditService.UNKNOWN,
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withUserId(PAIRWISE_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "DocAppCallback",
@@ -545,7 +542,8 @@ class DocAppCallbackHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
-        return handler.handleRequest(event, context);
+        return handler.handleRequest(
+                event.withRequestContext(contextWithSourceIp("123.123.123.123")), context);
     }
 
     private static String buildCookieString() {
@@ -578,15 +576,6 @@ class DocAppCallbackHandlerTest {
 
     private void verifyAuditServiceEvent(DocAppAuditableEvent docAppAuditableEvent) {
         verify(auditService)
-                .submitAuditEvent(
-                        docAppAuditableEvent,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                .submitAuditEvent(docAppAuditableEvent, CLIENT_ID.getValue(), BASE_AUDIT_USER);
     }
 }

@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -289,17 +290,18 @@ class AuthCodeHandlerTest {
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), "rp-sector-uri", SALT);
+
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withSessionId(SESSION_ID)
+                                .withUserId(expectedCommonSubject)
+                                .withEmail(EMAIL)
+                                .withIpAddress("123.123.123.123")
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", SUBJECT.getValue()),
                         pair("isNewAccount", AccountState.NEW),
                         pair("rpPairwiseId", expectedRpPairwiseId),
@@ -398,13 +400,13 @@ class AuthCodeHandlerTest {
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        DOC_APP_SUBJECT_ID,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withSessionId(SESSION_ID)
+                                .withUserId(DOC_APP_SUBJECT_ID)
+                                .withEmail("")
+                                .withIpAddress("123.123.123.123")
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", AccountState.UNKNOWN),
                         pair("rpPairwiseId", AuditService.UNKNOWN),

@@ -14,6 +14,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
@@ -143,13 +144,7 @@ public class UserInfoHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
                 accessTokenInfo.getClientID(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                subjectForAudit,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
+                TxmaAuditUser.user().withUserId(subjectForAudit),
                 metadataPairs);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());

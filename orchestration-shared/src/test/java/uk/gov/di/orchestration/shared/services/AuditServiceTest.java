@@ -56,16 +56,17 @@ class AuditServiceTest {
     void shouldLogAuditEvent() {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
-        auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id");
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId("subject-id")
+                        .withPhone("phone-number")
+                        .withEmail("email")
+                        .withIpAddress("ip-address")
+                        .withSessionId("session-id")
+                        .withPersistentSessionId("persistent-session-id")
+                        .withGovukSigninJourneyId("request-id");
+
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", user);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -93,18 +94,18 @@ class AuditServiceTest {
     void shouldLogAuditEventWithMetadataPairsAttached() {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId("subject-id")
+                        .withPhone("phone-number")
+                        .withEmail("email")
+                        .withIpAddress("ip-address")
+                        .withSessionId("session-id")
+                        .withPersistentSessionId("persistent-session-id")
+                        .withGovukSigninJourneyId("request-id");
+
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id",
-                pair("key", "value"),
-                pair("key2", "value2"));
+                TEST_EVENT_ONE, "client-id", user, pair("key", "value"), pair("key2", "value2"));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
@@ -122,18 +123,18 @@ class AuditServiceTest {
     void shouldAddCountryCodeExtensionToPhoneNumberEvents() {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId("subject-id")
+                        .withPhone("07700900000")
+                        .withEmail("email")
+                        .withIpAddress("ip-address")
+                        .withSessionId("session-id")
+                        .withPersistentSessionId("persistent-session-id")
+                        .withGovukSigninJourneyId("request-id");
+
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "07700900000",
-                "persistent-session-id",
-                pair("key", "value"),
-                pair("key2", "value2"));
+                TEST_EVENT_ONE, "client-id", user, pair("key", "value"), pair("key2", "value2"));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -170,7 +171,7 @@ class AuditServiceTest {
     }
 
     @Test
-    void TxmaHeaderNotAddedWhenNotSet() throws JOSEException, InvalidEncodingException {
+    void TxmaHeaderNotAddedWhenNotSet() {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
         when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
 

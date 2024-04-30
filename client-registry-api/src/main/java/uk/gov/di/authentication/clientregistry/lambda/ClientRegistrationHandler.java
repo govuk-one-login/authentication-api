@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -27,6 +28,7 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 
 public class ClientRegistrationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -67,16 +69,12 @@ public class ClientRegistrationHandler
     public APIGatewayProxyResponseEvent clientRegistrationRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         String ipAddress = IpAddressHelper.extractIpAddress(input);
-        auditService.submitAuditEvent(
-                REGISTER_CLIENT_REQUEST_RECEIVED,
-                AuditService.UNKNOWN,
-                context.getAwsRequestId(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+
+        var user =
+                TxmaAuditUser.user()
+                        .withTransactionId(context.getAwsRequestId())
+                        .withIpAddress(ipAddress);
+        auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED, UNKNOWN, user);
 
         try {
             LOG.info("Client registration request received");
@@ -89,16 +87,7 @@ public class ClientRegistrationHandler
                         "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
                         errorResponse.get().getCode(),
                         errorResponse.get().getDescription());
-                auditService.submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR,
-                        AuditService.UNKNOWN,
-                        context.getAwsRequestId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        ipAddress,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, UNKNOWN, user);
 
                 return generateApiGatewayProxyResponse(
                         400, errorResponse.get().toJSONObject().toJSONString());
@@ -148,16 +137,7 @@ public class ClientRegistrationHandler
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException e) {
             LOG.warn("Invalid Client registration request. Missing parameters from request");
-            auditService.submitAuditEvent(
-                    REGISTER_CLIENT_REQUEST_ERROR,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    ipAddress,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN);
+            auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, UNKNOWN, user);
 
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());

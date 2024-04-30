@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 
@@ -15,7 +15,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED;
 
 class SPOTResponseHandlerTest {
 
@@ -27,7 +28,14 @@ class SPOTResponseHandlerTest {
     private static final String REQUEST_ID = "request-id";
     private static final String SESSION_ID = "a-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-id";
+    private static final String CLIENT_SESSION_ID = "known-client-session-id";
+
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final TxmaAuditUser USER =
+            TxmaAuditUser.user()
+                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                    .withSessionId(SESSION_ID)
+                    .withPersistentSessionId(PERSISTENT_SESSION_ID);
 
     @BeforeEach
     void setup() {
@@ -58,15 +66,7 @@ class SPOTResponseHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED, CLIENT_ID.getValue(), USER);
     }
 
     @Test
@@ -97,15 +97,7 @@ class SPOTResponseHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED, CLIENT_ID.getValue(), USER);
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {

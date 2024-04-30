@@ -35,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -219,13 +220,13 @@ public class InitiateIPVAuthorisationServiceTest {
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                         CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL_ADDRESS,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withSessionId(SESSION_ID)
+                                .withUserId(expectedCommonSubject)
+                                .withEmail(EMAIL_ADDRESS)
+                                .withIpAddress(IP_ADDRESS)
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("clientLandingPageUrl", LANDING_PAGE_URL),
                         pair("rpPairwiseId", RP_PAIRWISE_ID));
         verify(cloudwatchMetricsService)

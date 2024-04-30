@@ -31,6 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -158,13 +159,12 @@ class DocAppAuthorizeHandlerTest {
                 .submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                         CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        DOC_APP_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withSessionId(SESSION_ID)
+                                .withUserId(DOC_APP_SUBJECT_ID.getValue())
+                                .withIpAddress("123.123.123.123")
+                                .withPersistentSessionId(PERSISTENT_SESSION_ID));
         verify(cloudwatchMetricsService)
                 .incrementCounter("DocAppHandoff", Map.of("Environment", ENVIRONMENT));
     }

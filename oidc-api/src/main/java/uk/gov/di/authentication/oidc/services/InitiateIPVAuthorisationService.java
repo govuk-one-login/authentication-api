@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -111,13 +112,13 @@ public class InitiateIPVAuthorisationService {
         auditService.submitAuditEvent(
                 IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                 rpClientID,
-                clientSessionId,
-                session.getSessionId(),
-                session.getInternalCommonSubjectIdentifier(),
-                userInfo.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                persistentSessionCookieId,
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(session.getSessionId())
+                        .withUserId(session.getInternalCommonSubjectIdentifier())
+                        .withEmail(userInfo.getEmailAddress())
+                        .withIpAddress(IpAddressHelper.extractIpAddress(input))
+                        .withPersistentSessionId(persistentSessionCookieId),
                 pair("clientLandingPageUrl", client.getLandingPageUrl()),
                 pair("rpPairwiseId", rpPairwiseId));
 

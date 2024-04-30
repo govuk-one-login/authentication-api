@@ -15,6 +15,7 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -122,13 +123,9 @@ public class IPVCallbackHelper {
         auditService.submitAuditEvent(
                 IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                sessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(sessionId));
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -200,15 +197,15 @@ public class IPVCallbackHelper {
         auditService.submitAuditEvent(
                 IPVAuditableEvent.AUTH_CODE_ISSUED,
                 authRequest.getClientID().getValue(),
-                clientSessionId,
-                session.getSessionId(),
-                internalPairwiseSubjectId,
-                Objects.isNull(session.getEmailAddress())
-                        ? AuditService.UNKNOWN
-                        : session.getEmailAddress(),
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(session.getSessionId())
+                        .withUserId(internalPairwiseSubjectId)
+                        .withEmail(
+                                Optional.ofNullable(session.getEmailAddress())
+                                        .orElse(AuditService.UNKNOWN))
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId),
                 pair("internalSubjectId", subjectId),
                 pair("isNewAccount", session.isNewAccount()),
                 pair("rpPairwiseId", rpPairwiseSubject.getValue()),

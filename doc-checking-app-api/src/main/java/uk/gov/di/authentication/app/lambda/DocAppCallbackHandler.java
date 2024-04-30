@@ -18,6 +18,7 @@ import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -140,6 +141,7 @@ public class DocAppCallbackHandler
         try {
             var sessionCookiesIds =
                     cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+
             if (Objects.isNull(sessionCookiesIds)) {
                 LOG.warn("No session cookie present. Attempt to find session using state");
                 var noSessionEntity =
@@ -153,9 +155,13 @@ public class DocAppCallbackHandler
                         authRequest,
                         noSessionEntity.getErrorObject(),
                         true,
-                        noSessionEntity.getClientSessionId(),
-                        AuditService.UNKNOWN,
-                        noSessionEntity.getClientSession().getDocAppSubjectId().getValue());
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(noSessionEntity.getClientSessionId())
+                                .withUserId(
+                                        noSessionEntity
+                                                .getClientSession()
+                                                .getDocAppSubjectId()
+                                                .getValue()));
             }
             var session =
                     sessionService
@@ -193,26 +199,19 @@ public class DocAppCallbackHandler
                     authorisationService.validateResponse(
                             input.getQueryStringParameters(), session.getSessionId());
 
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(clientSession.getDocAppSubjectId().getValue());
+
             if (errorObject.isPresent()) {
                 return generateAuthenticationErrorResponse(
-                        authenticationRequest,
-                        errorObject.get(),
-                        false,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue());
+                        authenticationRequest, errorObject.get(), false, user);
             }
 
             auditService.submitAuditEvent(
-                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    clientSession.getDocAppSubjectId().getValue(),
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN);
+                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             var tokenRequest =
                     tokenService.constructTokenRequest(
@@ -223,13 +222,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        user);
             } else {
                 LOG.error(
                         "Doc App TokenResponse was not successful: {}",
@@ -238,13 +231,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        user);
                 return RedirectService.redirectToFrontendErrorPage(
                         configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
@@ -270,13 +257,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        user);
                 LOG.info("Adding DocAppCredential to dynamo");
                 dynamoDocAppService.addDocAppCredential(
                         clientSession.getDocAppSubjectId().getValue(), credential);
@@ -306,13 +287,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         AUTH_CODE_ISSUED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        user.withIpAddress(IpAddressHelper.extractIpAddress(input)),
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", session.isNewAccount()),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
@@ -331,21 +306,13 @@ public class DocAppCallbackHandler
                             authenticationRequest,
                             new ErrorObject(OAuth2Error.ACCESS_DENIED_CODE, "Not found"),
                             false,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientSession.getDocAppSubjectId().getValue());
+                            user);
                 } else {
                     incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
                     auditService.submitAuditEvent(
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                             clientId,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientSession.getDocAppSubjectId().getValue(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN);
+                            user);
                     LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
                     return RedirectService.redirectToFrontendErrorPage(
                             configurationService.getLoginURI().toString(),
@@ -367,9 +334,7 @@ public class DocAppCallbackHandler
             AuthenticationRequest authenticationRequest,
             ErrorObject errorObject,
             boolean noSessionErrorResponse,
-            String clientSessionId,
-            String sessionId,
-            String docAppSubjectId) {
+            TxmaAuditUser user) {
         LOG.warn(
                 "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}. No Session Error: {}",
                 errorObject.getCode(),
@@ -379,13 +344,7 @@ public class DocAppCallbackHandler
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                sessionId,
-                docAppSubjectId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                user);
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
@@ -51,6 +52,7 @@ class UpdateClientConfigHandlerTest {
     private static final List<String> SCOPES = singletonList("openid");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
     private static final Json objectMapper = SerializationService.getInstance();
+    private static final TxmaAuditUser USER = TxmaAuditUser.user().withIpAddress("");
 
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -112,8 +114,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "", "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     @Test
@@ -125,8 +126,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "", "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     @Test
@@ -140,9 +140,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, USER);
     }
 
     @Test
@@ -163,9 +161,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, USER);
     }
 
     @Test
@@ -183,9 +179,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_SCOPE.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, USER);
     }
 
     private ClientRegistry createClientRegistry() {
@@ -206,8 +200,7 @@ class UpdateClientConfigHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED, "", "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED, "", USER);
 
         return response;
     }
