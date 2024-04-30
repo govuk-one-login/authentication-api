@@ -39,7 +39,13 @@ jobs:
         run: ./gradlew pactConsumerTests
 
       - name: Upload pacts to broker
-        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
+        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' && github.event_name != 'push' }}
+        run: ./gradlew pactPublish
+
+      - name: Upload pacts to broker on push to main
+        if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' }}
+        env:
+          CONSUMER_APP_VERSION: ${{ github.event.push.after }}
         run: ./gradlew pactPublish
 
 #      - name: Verify pacts
