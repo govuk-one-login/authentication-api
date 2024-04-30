@@ -7,13 +7,16 @@ import org.apache.commons.net.util.SubnetUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.orchestration.shared.entity.AuthPolicy;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class OrchFrontendAuthorizerHandler
-        implements RequestHandler<APIGatewayProxyRequestEvent, AuthPolicy> {
+        implements RequestHandler<APIGatewayProxyRequestEvent, Map<String, Object>> {
 
     private static final Logger LOG = LogManager.getLogger(OrchFrontendAuthorizerHandler.class);
 
@@ -43,35 +46,35 @@ public class OrchFrontendAuthorizerHandler
     }
 
     @Override
-    public AuthPolicy handleRequest(APIGatewayProxyRequestEvent event, Context context) {
+    public Map<String, Object> handleRequest(APIGatewayProxyRequestEvent event, Context context) {
         ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> orchFrontendAuthorizerHandler(event, context));
     }
 
-    public AuthPolicy orchFrontendAuthorizerHandler(
+    public Map<String, Object> orchFrontendAuthorizerHandler(
             APIGatewayProxyRequestEvent event, Context context) {
         LOG.info("Received event in OrchFrontendAuthorizerHandler");
 
-        String principalId = context.getAwsRequestId();
         String environment = configurationService.getEnvironment();
         String ipAddress = event.getRequestContext().getIdentity().getSourceIp();
-        if (environment.equals("production")
-                || environment.equals("integration")
-                || isIp4InCidrs(ipAddress, validIps)) {
-            return new AuthPolicy(
-                    principalId,
-                    AuthPolicy.PolicyDocument.getAllowOnePolicy(
-                            configurationService.getAwsRegion(),
-                            event.getRequestContext().getAccountId(),
-                            event.getRequestContext().getApiId(),
-                            event.getRequestContext().getStage(),
-                            AuthPolicy.HttpMethod.ALL,
-                            "orch-frontend/*"),
-                    event.getRequestContext().getAuthorizer());
+
+        boolean allowIp =
+                environment.equals("production")
+                        || environment.equals("integration")
+                        || isIp4InCidrs(ipAddress);
+
+        if (!allowIp) {
+            throw new RuntimeException("Unauthorized");
         }
-        throw new RuntimeException("Unauthorized");
+
+        return generatePolicy(
+                context.getAwsRequestId(),
+                configurationService.getAwsRegion(),
+                event.getRequestContext().getAccountId(),
+                event.getRequestContext().getApiId(),
+                event.getRequestContext().getStage());
     }
 
     private boolean isIp4InCidrs(String ip) {
@@ -81,5 +84,27 @@ public class OrchFrontendAuthorizerHandler
             }
         }
         return false;
+    }
+
+    private Map<String, Object> generatePolicy(
+            String principalId, String region, String accountId, String apiId, String stage) {
+        Map<String, Object> policyDocument = new HashMap<>();
+        policyDocument.put("Version", "2012-10-17");
+
+        Map<String, Object> statement = new HashMap<>();
+        statement.put("Action", "execute-api:Invoke");
+        statement.put("Effect", "Allow");
+        statement.put(
+                "Resource",
+                String.format(
+                        "arn:aws:execute-api:%s:%s:%s/%s/%s/%s",
+                        region, accountId, apiId, stage, "*", "orch-frontend/*"));
+        policyDocument.put("Statement", statement);
+
+        Map<String, Object> policy = new HashMap<>();
+        policy.put("principalId", principalId);
+        policy.put("policyDocument", policyDocument);
+
+        return policy;
     }
 }
