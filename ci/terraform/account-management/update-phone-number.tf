@@ -61,3 +61,13 @@ module "update_phone_number" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 }
+
+module "codedeploy_update_phone_no" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update-phone-number"
+  environment          = var.environment
+  lambda_function_name = module.update_phone_number.lambda_function_name
+  lambda_version       = module.update_phone_number.lambda_version
+  lambda_alias_name    = module.update_phone_number.lambda_alias_name
+  lambda_alias_version = module.update_phone_number.lambda_alias_version
+}

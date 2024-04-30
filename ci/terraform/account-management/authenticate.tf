@@ -59,3 +59,14 @@ module "authenticate" {
 
   use_localstack = var.use_localstack
 }
+
+
+module "codedeploy_authenticate" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "authenticate"
+  environment          = var.environment
+  lambda_function_name = module.authenticate.lambda_function_name
+  lambda_version       = module.authenticate.lambda_version
+  lambda_alias_name    = module.authenticate.lambda_alias_name
+  lambda_alias_version = module.authenticate.lambda_alias_version
+}

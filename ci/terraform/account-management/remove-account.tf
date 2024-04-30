@@ -62,3 +62,13 @@ module "delete_account" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
 }
+
+module "codedeploy_delete_account" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "delete-account"
+  environment          = var.environment
+  lambda_function_name = module.delete_account.lambda_function_name
+  lambda_version       = module.delete_account.lambda_version
+  lambda_alias_name    = module.delete_account.lambda_alias_name
+  lambda_alias_version = module.delete_account.lambda_alias_version
+}
