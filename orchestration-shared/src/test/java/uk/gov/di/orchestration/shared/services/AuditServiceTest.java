@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -42,7 +43,8 @@ class AuditServiceTest {
 
     @BeforeEach
     void beforeEach() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url/"));
+        when(configurationService.getOidcApiBaseURL())
+                .thenReturn(Optional.of(URI.create("oidc-base-url/")));
     }
 
     @Test

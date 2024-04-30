@@ -90,7 +90,7 @@ public class AuditService {
                         .withComponentId(
                                 configurationService
                                         .getOidcApiBaseURL()
-                                        .map(url -> StringUtils.removeEnd(url, "/"))
+                                        .map(url -> StringUtils.removeEnd(url.toString(), "/"))
                                         .orElse("UNKNOWN"))
                         .withUser(user);
 

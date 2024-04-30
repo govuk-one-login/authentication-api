@@ -30,8 +30,16 @@ public class ConstructUriHelper {
         }
     }
 
+    public static URI buildURI(URI baseUrl, String path, Map<String, String> queryParams) {
+        return buildURI(baseUrl.toString(), path, queryParams);
+    }
+
     public static URI buildURI(String baseUrl, String path) {
         return buildURI(baseUrl, path, null);
+    }
+
+    public static URI buildURI(URI baseUrl, String path) {
+        return buildURI(baseUrl.toString(), path, null);
     }
 
     public static URI buildURI(String baseUrl) {

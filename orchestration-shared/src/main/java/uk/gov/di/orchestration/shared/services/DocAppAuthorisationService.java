@@ -241,7 +241,7 @@ public class DocAppAuthorisationService {
             LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
             var encryptionJWK =
                     jwksService.retrieveJwkFromURLWithKeyId(
-                            configurationService.getDocAppJwksUri().toURL(),
+                            configurationService.getDocAppJwksURI().toURL(),
                             configurationService.getDocAppEncryptionKeyID());
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {

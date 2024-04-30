@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
 import java.time.Clock;
@@ -25,6 +24,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -44,71 +44,89 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private String notifyCallbackBearerToken;
     protected SystemService systemService;
 
-    public ConfigurationService() {}
+    private Map<String, String> env;
+
+    public ConfigurationService() {
+        this(System.getenv());
+    }
+
+    protected ConfigurationService(Map<String, String> env) {
+        this.env = env;
+    }
 
     protected ConfigurationService(SsmClient ssmClient) {
+        this();
         this.ssmClient = ssmClient;
     }
 
-    public void setSystemService(SystemService systemService) {
+    protected ConfigurationService(SystemService systemService) {
+        this();
         this.systemService = systemService;
+    }
+
+    private boolean getFlagOrFalse(String envVar) {
+        return env.containsKey(envVar) ? Boolean.parseBoolean(env.get(envVar)) : false;
+    }
+
+    private URI getURIOrEmpty(String envVar) {
+        return getURIOrDefault(envVar, "");
+    }
+
+    private URI getURIOrDefault(String envVar, String defaultUri) {
+        return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
+    }
+
+    private URI getURIOrThrow(String envVar) {
+        return getOptionalURI(envVar).orElseThrow();
+    }
+
+    private Optional<URI> getOptionalURI(String envVar) {
+        return env.containsKey(envVar)
+                ? Optional.of(URI.create(env.get(envVar)))
+                : Optional.empty();
     }
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
     public long getAccessTokenExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
+        return Long.parseLong(env.getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
     }
 
     public boolean isAccountInterventionServiceActionEnabled() {
         return isAccountInterventionServiceCallEnabled()
-                && System.getenv()
-                        .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", "false")
-                        .equals("true");
+                && getFlagOrFalse("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED");
     }
 
     public boolean isAccountInterventionServiceCallEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", "false")
-                .equals("true");
+        return getFlagOrFalse("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED");
     }
 
     public boolean abortOnAccountInterventionsErrorResponse() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", "false")
-                .equals("true");
+        return getFlagOrFalse("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR");
     }
 
     public URI getAccountInterventionServiceURI() {
-        return URI.create(System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", ""));
+        return getURIOrEmpty("ACCOUNT_INTERVENTION_SERVICE_URI");
     }
 
     public long getAccountInterventionServiceCallTimeout() {
         return Long.parseLong(
-                System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
+                env.getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
     }
 
     public String getAccountInterventionsErrorMetricName() {
-        return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
+        return env.getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }
 
     public URI getAccountStatusBlockedURI() {
-        return URI.create(
-                System.getenv()
-                        .getOrDefault(
-                                "ACCOUNT_STATUS_BLOCKED_URI",
-                                getFrontendBaseUrl() + "unavailable-permanent"));
+        return buildURI(getFrontendBaseURL(), "unavailable-permanent");
     }
 
     public URI getAccountStatusSuspendedURI() {
-        return URI.create(
-                System.getenv()
-                        .getOrDefault(
-                                "ACCOUNT_STATUS_SUSPENDED_URI",
-                                getFrontendBaseUrl() + "unavailable-temporary"));
+        return buildURI(getFrontendBaseURL(), "unavailable-temporary");
     }
 
     public long getAuthCodeExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
+        return Long.parseLong(env.getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
     public List<String> getBulkUserEmailIncludedTermsAndConditions() {
@@ -125,74 +143,60 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Clock.systemDefaultZone();
     }
 
-    public String getBulkEmailLoaderLambdaName() {
-        return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
-    }
-
     public URI getAuthenticationAuthCallbackURI() {
-        return URI.create(
-                System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
+        return getURIOrEmpty("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI");
     }
 
     public URI getAuthenticationBackendURI() {
-        return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+        return getURIOrEmpty("AUTHENTICATION_BACKEND_URI");
     }
 
     public URI getCredentialStoreURI() {
-        return URI.create(
-                System.getenv()
-                        .getOrDefault(
-                                "CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk"));
+        return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
     }
 
     public boolean isCustomDocAppClaimEnabled() {
-        return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
+        return getFlagOrFalse("CUSTOM_DOC_APP_CLAIM_ENABLED");
     }
 
     public URI getDefaultLogoutURI() {
-        return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
+        return getURIOrEmpty("DEFAULT_LOGOUT_URI");
     }
 
     public URI getDocAppAuthorisationURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
+        return getURIOrEmpty("DOC_APP_AUTHORISATION_URI");
     }
 
     public URI getDocAppBackendURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
+        return getURIOrEmpty("DOC_APP_BACKEND_URI");
     }
 
     public URI getDocAppAuthorisationCallbackURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CALLBACK_URI", ""));
+        return getURIOrEmpty("DOC_APP_AUTHORISATION_CALLBACK_URI");
     }
 
     public String getDocAppAuthorisationClientId() {
-        return System.getenv().getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
+        return env.getOrDefault("DOC_APP_AUTHORISATION_CLIENT_ID", "");
     }
 
     public String getDocAppEncryptionKeyID() {
-        return System.getenv().getOrDefault("DOC_APP_ENCRYPTION_KEY_ID", "");
+        return env.getOrDefault("DOC_APP_ENCRYPTION_KEY_ID", "");
     }
 
-    public URI getDocAppJwksUri() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_JWKS_URL", ""));
+    public URI getDocAppJwksURI() {
+        return getURIOrEmpty("DOC_APP_JWKS_URL");
     }
 
     public String getDocAppTokenSigningKeyAlias() {
-        return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getDocAppCriDataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_ENDPOINT");
+        return env.get("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
     }
 
     public String getDocAppCriV2DataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_V2_ENDPOINT");
+        return env.get("DOC_APP_CRI_DATA_V2_ENDPOINT");
     }
 
     public boolean isDocAppNewAudClaimEnabled() {
-        return System.getenv()
-                .getOrDefault("DOC_APP_NEW_AUD_CLAIM_ENABLED", "false")
-                .equals("true");
+        return getFlagOrFalse("DOC_APP_NEW_AUD_CLAIM_ENABLED");
     }
 
     public Audience getDocAppAudClaim() {
@@ -200,27 +204,31 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public URI getDocAppDomain() {
-        return URI.create(System.getenv("DOC_APP_DOMAIN"));
+        return getURIOrThrow("DOC_APP_DOMAIN");
     }
 
     public String getDomainName() {
-        return System.getenv("DOMAIN_NAME");
+        return env.get("DOMAIN_NAME");
     }
 
     public Optional<String> getDynamoArnPrefix() {
-        return Optional.ofNullable(System.getenv("DYNAMO_ARN_PREFIX"));
+        return Optional.ofNullable(env.get("DYNAMO_ARN_PREFIX"));
     }
 
-    public Optional<String> getDynamoEndpointUri() {
-        return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
+    public Optional<URI> getDynamoEndpointURI() {
+        return getOptionalURI("DYNAMO_ENDPOINT");
     }
 
-    public String getSpotQueueUri() {
-        return System.getenv("SPOT_QUEUE_URL");
+    public URI getSpotQueueURI() {
+        return getURIOrEmpty("SPOT_QUEUE_URL");
     }
 
-    public String getFrontendBaseUrl() {
-        return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
+    public URI getFrontendBaseURL() {
+        return getURIOrEmpty("FRONTEND_BASE_URL");
+    }
+
+    public URI getOrchestrationRedirectURI() {
+        return getURIOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
@@ -238,10 +246,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
             LOG.error(message);
             throw new SSMParameterNotFoundException(message, e);
         }
-    }
-
-    public String getOrchestrationRedirectUri() {
-        return System.getenv().getOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
     public String getOrchestrationClientId() {
@@ -262,29 +266,24 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
-        return supportedLanguage.equals(SupportedLanguage.EN)
-                || supportedLanguage.equals(SupportedLanguage.CY);
-    }
-
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
 
     public URI getIPVAuthorisationURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_URI", ""));
+        return getURIOrEmpty("IPV_AUTHORISATION_URI");
     }
 
     public URI getIPVBackendURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_BACKEND_URI", ""));
+        return getURIOrEmpty("IPV_BACKEND_URI");
     }
 
-    public String getIPVAudience() {
-        return System.getenv().getOrDefault("IPV_AUDIENCE", "");
+    public URI getIPVAudience() {
+        return getURIOrEmpty("IPV_AUDIENCE");
     }
 
     public URI getIPVAuthorisationCallbackURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_CALLBACK_URI", ""));
+        return getURIOrEmpty("IPV_AUTHORISATION_CALLBACK_URI");
     }
 
     public String getIPVAuthorisationClientId() {
@@ -307,12 +306,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getInternalSectorUri() {
-        return System.getenv("INTERNAl_SECTOR_URI");
+    public URI getInternalSectorURI() {
+        return getURIOrThrow("INTERNAl_SECTOR_URI");
     }
 
     public URI getLoginURI() {
-        return URI.create(System.getenv("LOGIN_URI"));
+        return getURIOrThrow("LOGIN_URI");
     }
 
     public String getNotifyCallbackBearerToken() {
@@ -338,8 +337,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
     }
 
-    public Optional<String> getOidcApiBaseURL() {
-        return Optional.ofNullable(System.getenv("OIDC_API_BASE_URL"));
+    public Optional<URI> getOidcApiBaseURL() {
+        return getOptionalURI("OIDC_API_BASE_URL");
     }
 
     public String getRedisHost() {
@@ -388,11 +387,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
-    public String getStorageTokenClaimName() {
-        return System.getenv()
-                .getOrDefault(
-                        "STORAGE_TOKEN_CLAIM_NAME",
-                        "https://vocab.account.gov.uk/v1/storageAccessToken");
+    public URI getStorageTokenClaimName() {
+        return getURIOrDefault(
+                "STORAGE_TOKEN_CLAIM_NAME", "https://vocab.account.gov.uk/v1/storageAccessToken");
     }
 
     public boolean sendStorageTokenToIpvEnabled() {
@@ -401,12 +398,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public Optional<String> getSqsEndpointUri() {
-        return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
+    public Optional<URI> getSqsEndpointURI() {
+        return getOptionalURI("SQS_ENDPOINT");
     }
 
     public boolean isTestClientsEnabled() {
-        return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
+        return getFlagOrFalse("TEST_CLIENTS_ENABLED");
     }
 
     public String getExternalTokenSigningKeyAlias() {
@@ -491,8 +488,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("REDIS_KEY");
     }
 
-    public String getBackChannelLogoutQueueUri() {
-        return System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI");
+    public URI getBackChannelLogoutQueueUri() {
+        return getURIOrEmpty("BACK_CHANNEL_LOGOUT_QUEUE_URI");
     }
 
     public String getNotifyTemplateId(String templateName) {

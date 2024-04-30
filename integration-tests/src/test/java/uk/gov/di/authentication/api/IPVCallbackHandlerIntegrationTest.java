@@ -567,14 +567,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         }
 
         @Override
-        public String getIPVAudience() {
+        public URI getIPVAudience() {
             try {
                 return new URIBuilder()
                         .setHost("localhost")
                         .setPort(ipvStubExtension.getHttpPort())
                         .setScheme("http")
-                        .build()
-                        .toString();
+                        .build();
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
@@ -603,6 +602,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         @Override
         public boolean isIPVNoSessionResponseEnabled() {
             return true;
+        }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
         }
     }
 }

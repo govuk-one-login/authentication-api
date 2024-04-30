@@ -122,6 +122,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                     buildURI(
                                                     configurationService
                                                             .getOidcApiBaseURL()
+                                                            .map(URI::toString)
                                                             .orElseThrow(),
                                                     "/authorize")
                                             .toString())) {
