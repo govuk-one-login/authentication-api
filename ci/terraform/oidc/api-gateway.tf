@@ -113,6 +113,8 @@ data "aws_region" "current" {
 
 locals {
   api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.environment}/_user_request_" : "https://${local.oidc_api_fqdn}/"
+
+  cloudfront_origin_cloaking_header_name = "origin-cloaking-secret"
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -352,6 +354,49 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       rate_based_statement {
         limit              = var.environment == "staging" ? 600000 : 3600
         aggregate_key_type = "IP"
+        scope_down_statement {
+          and_statement {
+            statement {
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    field_to_match {
+                      single_header {
+                        name = local.cloudfront_origin_cloaking_header_name
+                      }
+                    }
+                    positional_constraint = "EXACTLY"
+                    search_string         = var.oidc_origin_cloaking_header
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+
+            statement {
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    field_to_match {
+                      single_header {
+                        name = local.cloudfront_origin_cloaking_header_name
+                      }
+                    }
+                    positional_constraint = "EXACTLY"
+                    search_string         = var.previous_oidc_origin_cloaking_header
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
     visibility_config {

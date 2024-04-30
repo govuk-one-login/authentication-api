@@ -617,6 +617,16 @@ variable "txma_audit_encoded_enabled" {
   description = "Whether the service should pass cloudfront header to txma"
 }
 
+variable "oidc_origin_cloaking_header" {
+  type        = string
+  description = "Secret header to prove the origin request comes via cloudfront. Set using secrets manager and the read secrets script."
+}
+
+variable "previous_oidc_origin_cloaking_header" {
+  type        = string
+  description = "Used in rotation of the origin cloaking header. Set using secrets manager and the read secrets script."
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
