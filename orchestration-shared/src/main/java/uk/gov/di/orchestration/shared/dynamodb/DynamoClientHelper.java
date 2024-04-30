@@ -6,8 +6,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
-import java.net.URI;
-
 public class DynamoClientHelper {
 
     public static DynamoDbClient createDynamoClient(ConfigurationService configurationService) {
@@ -17,8 +15,7 @@ public class DynamoClientHelper {
                         .region(Region.of(configurationService.getAwsRegion()));
         configurationService
                 .getDynamoEndpointURI()
-                .ifPresent(
-                        endpoint -> dynamoDbClientBuilder.endpointOverride(URI.create(endpoint)));
+                .ifPresent(endpoint -> dynamoDbClientBuilder.endpointOverride(endpoint));
         return dynamoDbClientBuilder.build();
     }
 

@@ -80,7 +80,7 @@ public class LogoutServiceTest {
     private static MockedStatic<ClientSubjectHelper> clientSubjectHelper;
 
     private static final State STATE = new State();
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
@@ -94,8 +94,8 @@ public class LogoutServiceTest {
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
 
-    private static final String OIDC_API_BASE_URL = "https://oidc.test.account.gov.uk/";
-    private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
+    private static final URI OIDC_API_BASE_URL = URI.create("https://oidc.test.account.gov.uk/");
+    private static final URI FRONTEND_BASE_URL = URI.create("https://signin.test.account.gov.uk/");
 
     private static final String ENVIRONMENT = "test";
 
@@ -309,13 +309,19 @@ public class LogoutServiceTest {
 
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id-1")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id-1")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI.toString()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id-2")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id-2")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI.toString()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
-                        argThat(withClientId("client-id-3")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+                        argThat(withClientId("client-id-3")),
+                        eq(EMAIL),
+                        eq(INTERNAL_SECTOR_URI.toString()));
 
         verify(clientSessionService).deleteStoredClientSession("client-session-id-1");
         verify(clientSessionService).deleteStoredClientSession("client-session-id-2");

@@ -132,7 +132,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var pairwiseSubject =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userContext.getUserProfile().orElseThrow(),
-                            configurationService.getInternalSectorURI(),
+                            configurationService.getInternalSectorURI().toString(),
                             authenticationService);
             var state = new State();
             var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
@@ -184,7 +184,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                                                             new ClientNotFoundException(
                                                                     userContext.getSession())),
                                     authenticationService,
-                                    configurationService.getInternalSectorURI())
+                                    configurationService.getInternalSectorURI().toString())
                             .getValue();
 
             var user =

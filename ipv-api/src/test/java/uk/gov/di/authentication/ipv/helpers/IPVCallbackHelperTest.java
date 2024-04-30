@@ -87,8 +87,8 @@ class IPVCallbackHelperTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
 
-    private static final String OIDC_BASE_URL = "https://base-url.com";
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";

@@ -92,7 +92,7 @@ class IPVTokenServiceTest {
         when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
-        when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
+        when(configService.getIPVAudience()).thenReturn(IPV_URI);
     }
 
     @Test

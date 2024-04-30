@@ -994,6 +994,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         public boolean abortOnAccountInterventionsErrorResponse() {
             return this.abortOnAisErrorResponse;
         }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
+        }
     }
 
     private void setUpClientSession() throws Json.JsonException {

@@ -69,7 +69,7 @@ public class UserInfoService {
                             accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
             return ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
-                            configurationService.getInternalSectorURI(),
+                            configurationService.getInternalSectorURI().toString(),
                             authenticationService)
                     .getValue();
         }
@@ -219,7 +219,7 @@ public class UserInfoService {
                                 () -> new ClientNotFoundException(accessTokenInfo.getClientID()));
         var sectorID =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        client, configurationService.getInternalSectorURI());
+                        client, configurationService.getInternalSectorURI().toString());
         var commonSubjectID = accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId();
         return ClientSubjectHelper.calculateWalletSubjectIdentifier(sectorID, commonSubjectID);
     }

@@ -113,11 +113,11 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userProfile,
                             client,
                             authenticationService,
-                            configurationService.getInternalSectorURI());
+                            configurationService.getInternalSectorURI().toString());
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
+                            URI.create(configurationService.getInternalSectorURI().toString()),
                             authenticationService.getOrGenerateSalt(userProfile));
             int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
             LOG.info(

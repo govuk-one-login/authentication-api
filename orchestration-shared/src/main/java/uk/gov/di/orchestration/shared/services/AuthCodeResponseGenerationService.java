@@ -111,7 +111,7 @@ public class AuthCodeResponseGenerationService {
                         userProfile,
                         client,
                         dynamoService,
-                        configurationService.getInternalSectorURI())
+                        configurationService.F().toString())
                 .getValue();
     }
 

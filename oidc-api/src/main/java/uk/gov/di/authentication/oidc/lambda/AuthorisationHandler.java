@@ -576,7 +576,7 @@ public class AuthorisationHandler
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var rpSectorIdentifierHost =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        client, configurationService.getInternalSectorURI());
+                        client, configurationService.getInternalSectorURI().toString());
         var state = new State();
         orchestrationAuthorizationService.storeState(session.getSessionId(), state);
         String reauthenticateClaim;
@@ -753,14 +753,14 @@ public class AuthorisationHandler
                         session.getSessionId() + "." + clientSessionId,
                         configurationService.getSessionCookieMaxAge(),
                         configurationService.getSessionCookieAttributes(),
-                        configurationService.getDomainName()));
+                        configurationService.getDomainName().toString()));
         cookies.add(
                 CookieHelper.buildCookieString(
                         CookieHelper.PERSISTENT_COOKIE_NAME,
                         persistentSessionId,
                         configurationService.getPersistentCookieMaxAge(),
                         configurationService.getSessionCookieAttributes(),
-                        configurationService.getDomainName()));
+                        configurationService.getDomainName().toString()));
 
         getPrimaryLanguageFromUILocales(authRequest, configurationService)
                 .ifPresent(

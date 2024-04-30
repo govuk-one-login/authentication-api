@@ -383,11 +383,11 @@ public class TokenHandler
                             userProfile,
                             clientRegistry,
                             dynamoService,
-                            configurationService.getInternalSectorURI());
+                            configurationService.getInternalSectorURI().toString());
             Subject internalPairwiseSubject =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
-                            configurationService.getInternalSectorURI(),
+                            configurationService.getInternalSectorURI().toString(),
                             dynamoService);
             tokenResponse =
                     segmentedFunctionCall(

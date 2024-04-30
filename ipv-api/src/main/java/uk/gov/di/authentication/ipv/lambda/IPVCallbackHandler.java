@@ -229,12 +229,12 @@ public class IPVCallbackHandler
                             userProfile,
                             clientRegistry,
                             dynamoService,
-                            configurationService.getInternalSectorURI());
+                            configurationService.getInternalSectorURI().toString());
 
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorURI()),
+                            URI.create(configurationService.getInternalSectorURI().toString()),
                             dynamoService.getOrGenerateSalt(userProfile));
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
@@ -395,7 +395,7 @@ public class IPVCallbackHandler
             ipvCallbackHelper.queueSPOTRequest(
                     logIds,
                     getSectorIdentifierForClient(
-                            clientRegistry, configurationService.getInternalSectorURI()),
+                            clientRegistry, configurationService.getInternalSectorURI().toString()),
                     userProfile,
                     rpPairwiseSubject,
                     userIdentityUserInfo,

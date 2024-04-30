@@ -8,6 +8,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.exceptions.InvalidEncodingException;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -49,7 +50,8 @@ class AuditServiceTest {
 
     @BeforeEach
     void beforeEach() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url/"));
+        when(configurationService.getOidcApiBaseURL())
+                .thenReturn(Optional.of(URI.create("oidc-base-url/")));
     }
 
     @Test

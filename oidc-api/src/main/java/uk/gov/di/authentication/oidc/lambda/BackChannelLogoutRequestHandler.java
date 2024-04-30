@@ -102,7 +102,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
                 .audience(inputEvent.getClientId())
                 .subject(inputEvent.getSubjectId())
                 .expirationTime(clock.nowPlus(2, ChronoUnit.MINUTES))
-                .issuer(instance.getOidcApiBaseURL().orElseThrow())
+                .issuer(instance.getOidcApiBaseURL().orElseThrow().toString())
                 .issueTime(clock.now())
                 .claim(
                         "events",

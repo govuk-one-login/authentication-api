@@ -148,7 +148,8 @@ public class InitiateIPVAuthorisationService {
             AccessToken storageToken = tokenService.generateStorageToken(internalPairwiseSubject);
 
             claimsSetRequest.add(
-                    new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
+                    new ClaimsSetRequest.Entry(
+                                    configurationService.getStorageTokenClaimName().toString())
                             .withValues(List.of(storageToken.getValue())));
         }
 

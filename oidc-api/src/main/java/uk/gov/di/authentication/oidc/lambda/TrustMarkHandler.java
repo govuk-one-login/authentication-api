@@ -13,6 +13,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
@@ -55,8 +56,8 @@ public class TrustMarkHandler
 
     private TrustMarkResponse createTrustMarkResponse() {
         return new TrustMarkResponse(
-                configurationService.getOidcApiBaseURL().orElseThrow(),
-                configurationService.getOidcApiBaseURL().orElseThrow(),
+                configurationService.getOidcApiBaseURL().map(URI::toString).orElseThrow(),
+                configurationService.getOidcApiBaseURL().map(URI::toString).orElseThrow(),
                 Arrays.asList(
                         CredentialTrustLevel.LOW_LEVEL.getValue(),
                         CredentialTrustLevel.MEDIUM_LEVEL.getValue()),

@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
 import java.time.Clock;
@@ -25,6 +24,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -46,12 +46,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     private final Map<String, String> env;
 
-    protected ConfigurationService(Map<String, String> env) {
-        this.env = env;
-    }
-
     public ConfigurationService() {
         this(System.getenv());
+    }
+
+    protected ConfigurationService(Map<String, String> env) {
+        this.env = env;
     }
 
     protected ConfigurationService(SsmClient ssmClient) {
@@ -145,10 +145,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Clock.systemDefaultZone();
     }
 
-    public String getBulkEmailLoaderLambdaName() {
-        return env.getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
-    }
-
     public URI getAuthenticationAuthCallbackURI() {
         return getURIOrEmpty("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI");
     }
@@ -225,16 +221,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(env.get("DYNAMO_ARN_PREFIX"));
     }
 
-    public Optional<String> getDynamoEndpointURI() {
-        return Optional.ofNullable(env.get("DYNAMO_ENDPOINT"));
+    public Optional<URI> getDynamoEndpointURI() {
+        return getOptionalURI("DYNAMO_ENDPOINT");
     }
 
-    public String getSpotQueueURI() {
-        return env.get("SPOT_QUEUE_URL");
+    public URI getSpotQueueURI() {
+        return getURIOrEmpty("SPOT_QUEUE_URL");
     }
 
-    public String getFrontendBaseURL() {
-        return env.getOrDefault("FRONTEND_BASE_URL", "");
+    public URI getFrontendBaseURL() {
+        return getURIOrEmpty("FRONTEND_BASE_URL");
     }
 
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
@@ -254,8 +250,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getOrchestrationRedirectURI() {
-        return env.getOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
+    public URI getOrchestrationRedirectURI() {
+        return getURIOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
     public String getOrchestrationClientId() {
@@ -274,11 +270,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("IPV_NO_SESSION_RESPONSE_ENABLED");
     }
 
-    public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
-        return supportedLanguage.equals(SupportedLanguage.EN)
-                || supportedLanguage.equals(SupportedLanguage.CY);
-    }
-
     public long getIDTokenExpiry() {
         return Long.parseLong(env.getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
@@ -291,8 +282,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrEmpty("IPV_BACKEND_URI");
     }
 
-    public String getIPVAudience() {
-        return env.getOrDefault("IPV_AUDIENCE", "");
+    public URI getIPVAudience() {
+        return getURIOrEmpty("IPV_AUDIENCE");
     }
 
     public URI getIPVAuthorisationCallbackURI() {
@@ -319,8 +310,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getInternalSectorURI() {
-        return env.get("INTERNAl_SECTOR_URI");
+    public URI getInternalSectorURI() {
+        return getURIOrThrow("INTERNAl_SECTOR_URI");
     }
 
     public URI getLoginURI() {
@@ -350,8 +341,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
     }
 
-    public Optional<String> getOidcApiBaseURL() {
-        return Optional.ofNullable(env.get("OIDC_API_BASE_URL"));
+    public Optional<URI> getOidcApiBaseURL() {
+        return getOptionalURI("OIDC_API_BASE_URL");
     }
 
     public String getRedisHost() {
@@ -398,8 +389,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(env.getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
-    public String getStorageTokenClaimName() {
-        return env.getOrDefault(
+    public URI getStorageTokenClaimName() {
+        return getURIOrDefault(
                 "STORAGE_TOKEN_CLAIM_NAME", "https://vocab.account.gov.uk/v1/storageAccessToken");
     }
 
@@ -407,8 +398,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("SEND_STORAGE_TOKEN_TO_IPV_ENABLED");
     }
 
-    public Optional<String> getSqsEndpointURI() {
-        return Optional.ofNullable(env.get("SQS_ENDPOINT"));
+    public Optional<URI> getSqsEndpointURI() {
+        return getOptionalURI("SQS_ENDPOINT");
     }
 
     public boolean isTestClientsEnabled() {
@@ -497,8 +488,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return env.get("REDIS_KEY");
     }
 
-    public String getBackChannelLogoutQueueURI() {
-        return env.get("BACK_CHANNEL_LOGOUT_QUEUE_URI");
+    public URI getBackChannelLogoutQueueUri() {
+        return getURIOrEmpty("BACK_CHANNEL_LOGOUT_QUEUE_URI");
     }
 
     public String getNotifyTemplateId(String templateName) {

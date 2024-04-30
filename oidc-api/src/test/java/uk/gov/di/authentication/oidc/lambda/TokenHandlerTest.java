@@ -107,7 +107,7 @@ public class TokenHandlerTest {
     private static final String RP_SECTOR_URI = "https://test.com";
     private static final String RP_SECTOR_HOST = "test.com";
 
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject RP_PAIRWISE_SUBJECT =
@@ -155,7 +155,8 @@ public class TokenHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URI));
+        when(configurationService.getOidcApiBaseURL())
+                .thenReturn(Optional.of(URI.create(BASE_URI)));
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();

@@ -162,6 +162,8 @@ class AuthorisationHandlerTest {
     private static final String EXPECTED_LANGUAGE_COOKIE_STRING =
             "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
+    private static final URI INTERNAL_SECTORD_URI =
+            URI.create("https://https://identity.example.gov.uk");
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
@@ -221,6 +223,7 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
+        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTORD_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());

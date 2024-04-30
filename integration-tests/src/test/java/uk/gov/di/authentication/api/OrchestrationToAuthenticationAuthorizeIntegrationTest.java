@@ -18,7 +18,6 @@ import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -57,7 +56,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String AUTH_INTERNAL_CLIENT_ID = "authentication-orch-client-id";
     private static final String RP_SECTOR_URI = "https://rp-sector-uri.com";
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
-    private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
+    private static final URI ORCHESTRATION_REDIRECT_URI =
+            URI.create("https://orchestration/redirect");
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
@@ -292,7 +292,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 equalTo(ServiceType.MANDATORY.toString()));
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("redirect_uri"),
-                equalTo(ORCHESTRATION_REDIRECT_URI));
+                equalTo(ORCHESTRATION_REDIRECT_URI.toString()));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("rp_client_id"), equalTo(CLIENT_ID));
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("rp_sector_host"),
@@ -354,24 +354,23 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         }
 
         @Override
-        public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
-            return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
-                    || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
-        }
-
-        @Override
         public String getOrchestrationClientId() {
             return AUTH_INTERNAL_CLIENT_ID;
         }
 
         @Override
-        public String getOrchestrationRedirectURI() {
+        public URI getOrchestrationRedirectURI() {
             return ORCHESTRATION_REDIRECT_URI;
         }
 
         @Override
         public boolean isIdentityEnabled() {
             return true;
+        }
+
+        @Override
+        public String getAwsRegion() {
+            return super.getAwsRegion();
         }
     }
 }

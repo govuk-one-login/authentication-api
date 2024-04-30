@@ -83,12 +83,10 @@ class ProcessingIdentityHandlerTest {
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final String PAIRWISE_SUBJECT =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT_ID,
-                    URI.create(INTERNAL_SECTOR_URI),
-                    SdkBytes.fromByteBuffer(SALT).asByteArray());
+                    SUBJECT_ID, INTERNAL_SECTOR_URI, SdkBytes.fromByteBuffer(SALT).asByteArray());
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final String ENVIRONMENT = "test-environment";

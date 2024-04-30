@@ -123,7 +123,7 @@ class AuthCodeHandlerTest {
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final Subject SUBJECT = new Subject();
     private static final String DOC_APP_SUBJECT_ID = "docAppSubjectId";
     private static final ClientID CLIENT_ID = new ClientID();

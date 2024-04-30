@@ -131,8 +131,8 @@ class IPVCallbackHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
-    private static final String OIDC_BASE_URL = "https://base-url.com";
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -332,7 +332,9 @@ class IPVCallbackHandlerTest {
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
         var expectedInternalPairwiseSubjectId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorURI(), dynamoService)
+                                userProfile,
+                                configService.getInternalSectorURI().toString(),
+                                dynamoService)
                         .getValue();
         verify(accountInterventionService)
                 .getAccountIntervention(
@@ -532,7 +534,7 @@ class IPVCallbackHandlerTest {
         assertEquals(expectedRedirectURI.toString(), response.getHeaders().get("Location"));
         var expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry, dynamoService, INTERNAL_SECTOR_URI);
+                        userProfile, clientRegistry, dynamoService, INTERNAL_SECTOR_URI.toString());
         verify(ipvCallbackHelper)
                 .queueSPOTRequest(
                         any(),
@@ -676,7 +678,9 @@ class IPVCallbackHandlerTest {
 
         var expectedInternalPairwiseSubjectId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorURI(), dynamoService)
+                                userProfile,
+                                configService.getInternalSectorURI().toString(),
+                                dynamoService)
                         .getValue();
 
         assertThat(response, hasStatus(302));
