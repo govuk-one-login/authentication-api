@@ -17,9 +17,9 @@ on:
       - reopened
       - ready_for_review
       - synchronize
-  push:
-    branches:
-      - main
+  merge_group:
+    # merge main
+    branches: [ main ]
 
 jobs:
   contract-testing:
