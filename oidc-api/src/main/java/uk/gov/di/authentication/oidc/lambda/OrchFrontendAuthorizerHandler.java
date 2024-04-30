@@ -31,6 +31,9 @@ public class OrchFrontendAuthorizerHandler
         "18.132.149.145/32"
     };
 
+    private final SubnetUtils[] subnetUtils =
+            Arrays.stream(validIps).map(SubnetUtils::new).toArray(SubnetUtils[]::new);
+
     public OrchFrontendAuthorizerHandler() {
         this.configurationService = new ConfigurationService();
     }
@@ -71,10 +74,9 @@ public class OrchFrontendAuthorizerHandler
         throw new RuntimeException("Unauthorized");
     }
 
-    private boolean isIp4InCidrs(String ip, String[] cidrs) {
-        for (String cidr : cidrs) {
-            SubnetUtils utils = new SubnetUtils(cidr);
-            if (utils.getInfo().isInRange(ip)) {
+    private boolean isIp4InCidrs(String ip) {
+        for (SubnetUtils util : subnetUtils) {
+            if (util.getInfo().isInRange(ip)) {
                 return true;
             }
         }
