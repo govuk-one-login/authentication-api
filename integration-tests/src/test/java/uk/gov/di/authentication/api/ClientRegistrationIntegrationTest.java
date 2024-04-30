@@ -10,8 +10,10 @@ import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,9 +35,12 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
     private static final String VALID_PUBLIC_CERT =
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
 
+    private static final ConfigurationService CONFIGURATION_SERVICE =
+            new ClientRegistrationIntegrationTest.TestConfigurationService();
+
     @BeforeEach
     void setup() {
-        handler = new ClientRegistrationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new ClientRegistrationHandler(CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
@@ -95,5 +100,28 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(clientResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
+    }
+
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
+
+        public TestConfigurationService() {
+            super(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
+        }
     }
 }

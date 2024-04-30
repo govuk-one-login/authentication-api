@@ -24,6 +24,7 @@ import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
@@ -52,10 +53,12 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String REDIRECT_URL = "https://rp-build.build.stubs.account.gov.uk/";
     public static final String SESSION_ID = "session-id";
     public static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final ConfigurationService CONFIGURATION_SERVICE =
+            new LogoutIntegrationTest.TestConfigurationService();
 
     @BeforeEach
     void setup() {
-        handler = new LogoutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new LogoutHandler(CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
@@ -272,5 +275,28 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 .state(state)
                 .nonce(nonce)
                 .build();
+    }
+
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
+
+        public TestConfigurationService() {
+            super(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
+        }
     }
 }

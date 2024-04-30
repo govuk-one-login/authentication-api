@@ -145,7 +145,7 @@ class DocAppCallbackHandlerTest {
                         cloudwatchMetricsService,
                         noSessionOrchestrationService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
-        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(URI.create(OIDC_BASE_URL)));
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();

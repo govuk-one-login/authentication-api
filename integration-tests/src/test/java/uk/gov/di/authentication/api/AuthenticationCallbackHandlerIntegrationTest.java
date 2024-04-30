@@ -994,6 +994,21 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         public boolean abortOnAccountInterventionsErrorResponse() {
             return this.abortOnAisErrorResponse;
         }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
+        }
+
+        @Override
+        public URI getIPVAudience() {
+            return URI.create("ipv-audience");
+        }
+
+        @Override
+        public URI getIPVAuthorisationCallbackURI() {
+            return URI.create("ipv-authorisation-callback-uri");
+        }
     }
 
     private void setUpClientSession() throws Json.JsonException {

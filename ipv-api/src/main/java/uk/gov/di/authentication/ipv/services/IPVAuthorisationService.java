@@ -167,7 +167,7 @@ public class IPVAuthorisationService {
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())
-                        .audience(configurationService.getIPVAudience())
+                        .audience(configurationService.getIPVAudience().toString())
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())
                         .issueTime(nowClock.now())

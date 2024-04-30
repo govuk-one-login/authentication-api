@@ -8,7 +8,6 @@ import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 
-import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -73,8 +72,7 @@ class ConfigurationServiceTest {
         when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
                 .thenReturn("1.1,1.3,1.5");
 
-        ConfigurationService configurationService = new ConfigurationService();
-        configurationService.setSystemService(systemService);
+        ConfigurationService configurationService = new ConfigurationService(systemService);
 
         assertEquals(
                 List.of("1.1", "1.3", "1.5"),
@@ -86,8 +84,7 @@ class ConfigurationServiceTest {
         when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
                 .thenReturn("");
 
-        ConfigurationService configurationService = new ConfigurationService();
-        configurationService.setSystemService(systemService);
+        ConfigurationService configurationService = new ConfigurationService(systemService);
 
         assertEquals(
                 Collections.EMPTY_LIST,
@@ -110,16 +107,6 @@ class ConfigurationServiceTest {
         assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
         assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
         verify(mock, times(1)).getParameter(request);
-    }
-
-    @Test
-    void shouldHandleMissingAISUrl() {
-        when(systemService.getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", "")).thenReturn("");
-
-        ConfigurationService configurationService = new ConfigurationService();
-        configurationService.setSystemService(systemService);
-
-        assertEquals(configurationService.getAccountInterventionServiceURI(), URI.create(""));
     }
 
     private GetParameterRequest parameterRequest(String name) {

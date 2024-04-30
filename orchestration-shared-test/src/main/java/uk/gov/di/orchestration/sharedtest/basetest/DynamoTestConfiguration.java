@@ -2,6 +2,7 @@ package uk.gov.di.orchestration.sharedtest.basetest;
 
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.util.Optional;
 
 public class DynamoTestConfiguration extends ConfigurationService {
@@ -27,7 +28,7 @@ public class DynamoTestConfiguration extends ConfigurationService {
     }
 
     @Override
-    public Optional<String> getDynamoEndpointUri() {
-        return Optional.of(dynamoDbUri);
+    public Optional<URI> getDynamoEndpointURI() {
+        return Optional.of(URI.create(dynamoDbUri));
     }
 }

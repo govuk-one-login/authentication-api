@@ -19,6 +19,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 
@@ -54,10 +55,12 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     public static final State STATE = new State();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private static final ConfigurationService CONFIGURATION_SERVICE =
+            new ProcessingIdentityIntegrationTest.TestConfigurationService();
 
     @BeforeEach
     void setup() {
-        handler = new ProcessingIdentityHandler(TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE);
+        handler = new ProcessingIdentityHandler(CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 
@@ -224,5 +227,33 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     private byte[] setupUser() {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password-1", INTERNAL_SUBJECT);
         return userStore.addSalt(TEST_EMAIL_ADDRESS);
+    }
+
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
+
+        public TestConfigurationService() {
+            super(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
+        }
+
+        @Override
+        public URI getAccountInterventionServiceURI() {
+            return URI.create("account-interventions-service-uri");
+        }
     }
 }

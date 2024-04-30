@@ -264,8 +264,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(
-                        TEST_CONFIGURATION_SERVICE.getDocAppAuthorisationCallbackURI().toString()));
+                startsWith(configurationService.getDocAppAuthorisationCallbackURI().toString()));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 containsString("error=access_denied&error_description=Not+found&state="));
@@ -412,11 +411,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public URI getDocAppAuthorisationCallbackURI() {
             return URI.create("http://localhost/redirect");
-        }
-
-        @Override
-        public String getDocAppCriDataEndpoint() {
-            return "/userinfo/v2";
         }
 
         @Override

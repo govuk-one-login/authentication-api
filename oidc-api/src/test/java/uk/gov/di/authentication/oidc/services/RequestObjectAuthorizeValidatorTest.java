@@ -55,7 +55,7 @@ class RequestObjectAuthorizeValidatorTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final ClientID CLIENT_ID = new ClientID("test-id");
-    private static final String OIDC_BASE_URI = "https://localhost";
+    private static final URI OIDC_BASE_URI = URI.create("https://localhost");
     private static final String AUDIENCE = "https://localhost/authorize";
     private RequestObjectAuthorizeValidator service;
 

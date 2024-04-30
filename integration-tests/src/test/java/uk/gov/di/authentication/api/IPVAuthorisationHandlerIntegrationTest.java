@@ -46,9 +46,10 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String PERSISTENT_SESSION_ID = "some-persistent-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
     private static final String CLIENT_NAME = "some-client-name";
+    private static final URI IPV_AUDIENCE = URI.create("ipv-audience");
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final String INTERNAl_SECTOR_URI = "https://ipv/redirect";
+    private static final URI INTERNAl_SECTOR_URI = URI.create("https://ipv/redirect");
 
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
@@ -195,7 +196,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Override
-        public String getInternalSectorUri() {
+        public URI getInternalSectorURI() {
             return INTERNAl_SECTOR_URI;
         }
 
@@ -207,6 +208,11 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public URI getIPVAudience() {
+            return IPV_AUDIENCE;
         }
     }
 }

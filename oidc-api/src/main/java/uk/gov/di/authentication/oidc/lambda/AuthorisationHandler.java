@@ -576,7 +576,7 @@ public class AuthorisationHandler
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var rpSectorIdentifierHost =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        client, configurationService.getInternalSectorUri());
+                        client, configurationService.getInternalSectorURI().toString());
         var state = new State();
         orchestrationAuthorizationService.storeState(session.getSessionId(), state);
         String reauthenticateClaim;
@@ -615,7 +615,7 @@ public class AuthorisationHandler
                         .claim("confidence", confidence)
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
-                        .claim("redirect_uri", configurationService.getOrchestrationRedirectUri())
+                        .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthenticateClaim);
 
         var claimsSetRequest =

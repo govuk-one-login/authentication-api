@@ -225,7 +225,8 @@ public class TokenService {
             String journeyId) {
 
         LOG.info("Generating IdToken");
-        URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
+        URI trustMarkUri =
+                buildURI(configService.getOidcApiBaseURL().map(URI::toString).get(), "/trustmark");
         Date expiryDate = NowHelper.nowPlus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
@@ -264,11 +265,11 @@ public class TokenService {
         List<String> aud =
                 List.of(
                         configService.getCredentialStoreURI().toString(),
-                        configService.getIPVAudience());
+                        configService.getIPVAudience().toString());
 
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
-                        .issuer(configService.getOidcApiBaseURL().get())
+                        .issuer(configService.getOidcApiBaseURL().map(URI::toString).get())
                         .audience(aud)
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
@@ -302,7 +303,7 @@ public class TokenService {
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
-                        .issuer(configService.getOidcApiBaseURL().get())
+                        .issuer(configService.getOidcApiBaseURL().map(URI::toString).get())
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
@@ -358,7 +359,7 @@ public class TokenService {
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
-                        .issuer(configService.getOidcApiBaseURL().get())
+                        .issuer(configService.getOidcApiBaseURL().map(URI::toString).get())
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)

@@ -36,8 +36,6 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
@@ -76,13 +74,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     protected final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
-                    ipvStub,
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
-                    externalTokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue);
+                    ipvStub, externalTokenSigner, ipvPrivateKeyJwtSigner, spotQueue);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -537,9 +529,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         public TestConfigurationService(
                 IPVStubExtension ipvStub,
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue) {
@@ -567,14 +556,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         }
 
         @Override
-        public String getIPVAudience() {
+        public URI getIPVAudience() {
             try {
                 return new URIBuilder()
                         .setHost("localhost")
                         .setPort(ipvStubExtension.getHttpPort())
                         .setScheme("http")
-                        .build()
-                        .toString();
+                        .build();
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
@@ -603,6 +591,16 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         @Override
         public boolean isIPVNoSessionResponseEnabled() {
             return true;
+        }
+
+        @Override
+        public URI getBackChannelLogoutQueueUri() {
+            return URI.create("back-channel-logout-queue-uri");
+        }
+
+        @Override
+        public URI getAccountInterventionServiceURI() {
+            return URI.create("account-interventions-service-uri");
         }
     }
 }

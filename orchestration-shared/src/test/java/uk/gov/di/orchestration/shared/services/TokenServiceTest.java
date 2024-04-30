@@ -107,8 +107,9 @@ class TokenServiceTest {
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String STORAGE_TOKEN_PREFIX =
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
-    private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
-    private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
+    private static final URI CREDENTIAL_STORE_URI =
+            URI.create("https://credential-store.account.gov.uk");
+    private static final URI IPV_AUDIENCE = URI.create("https://identity.test.account.gov.uk");
 
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -117,7 +118,8 @@ class TokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URL));
+        when(configurationService.getOidcApiBaseURL())
+                .thenReturn(Optional.of(URI.create(BASE_URL)));
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
@@ -180,8 +182,7 @@ class TokenServiceTest {
 
     @Test
     void shouldGenerateWellFormedStorageToken() throws JOSEException {
-        when(configurationService.getCredentialStoreURI())
-                .thenReturn(URI.create(CREDENTIAL_STORE_URI));
+        when(configurationService.getCredentialStoreURI()).thenReturn(CREDENTIAL_STORE_URI);
         when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
         createSignedStorageToken();
 

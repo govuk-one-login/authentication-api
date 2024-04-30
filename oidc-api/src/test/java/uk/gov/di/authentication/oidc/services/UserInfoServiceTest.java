@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -74,7 +75,7 @@ class UserInfoServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject("test-subject");
     private static final String JOURNEY_ID = "client-session-id";
@@ -120,7 +121,7 @@ class UserInfoServiceTest {
                         cloudwatchMetricsService,
                         configurationService,
                         userInfoStorageService);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn("test");
     }
 

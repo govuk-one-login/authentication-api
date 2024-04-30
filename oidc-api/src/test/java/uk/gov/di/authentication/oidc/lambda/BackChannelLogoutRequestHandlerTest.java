@@ -72,7 +72,7 @@ class BackChannelLogoutRequestHandlerTest {
         when(jwt.serialize()).thenReturn("serialized-payload");
 
         when(configuration.getOidcApiBaseURL())
-                .thenReturn(Optional.of("https://base-url.account.gov.uk"));
+                .thenReturn(Optional.of(URI.create("https://base-url.account.gov.uk")));
         when(tokenService.generateSignedJwtUsingExternalKey(
                         any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
@@ -86,7 +86,7 @@ class BackChannelLogoutRequestHandlerTest {
     @Test
     void shouldCreateClaimsForBackChannelLogoutMessage() throws ParseException {
         when(configuration.getOidcApiBaseURL())
-                .thenReturn(Optional.of("https://base-url.account.gov.uk"));
+                .thenReturn(Optional.of(URI.create("https://base-url.account.gov.uk")));
 
         var jwt =
                 handler.generateClaims(
