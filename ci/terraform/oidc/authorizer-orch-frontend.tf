@@ -1,7 +1,7 @@
 module "orch_frontend_authorizer_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "orch-frontend-authorizer-role"
+  role_name   = "orch-fe-authorizer-role"
   vpc_arn     = local.authentication_vpc_arn
 }
 
@@ -16,7 +16,7 @@ locals {
 }
 
 resource "aws_lambda_function" "orch_frontend_authorizer" {
-  function_name = "${var.environment}-orch-frontend-authorizer-lambda"
+  function_name = "${var.environment}-orch-fe-authorizer-lambda"
   role          = module.orch_frontend_authorizer_role.arn
   handler       = "uk.gov.di.authentication.oidc.lambda.OrchFrontendAuthorizerHandler::handleRequest"
   runtime       = "java17"
@@ -47,7 +47,7 @@ resource "aws_lambda_function" "orch_frontend_authorizer" {
 }
 
 resource "aws_iam_role" "orch_frontend_authorizer_invocation_role" {
-  name = "${var.environment}-orch-frontend-authorizer-invocation"
+  name = "${var.environment}-orch-fe-authorizer-invocation"
   path = "/"
 
   assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
@@ -75,7 +75,7 @@ EOF
 }
 
 resource "aws_api_gateway_authorizer" "orch_frontend_authorizer" {
-  name                             = "${var.environment}-orch-frontend-authorizer"
+  name                             = "${var.environment}-orch-fe-authorizer"
   rest_api_id                      = aws_api_gateway_rest_api.di_authentication_api.id
   authorizer_uri                   = aws_lambda_alias.orch_frontend_authorizer_alias.invoke_arn
   authorizer_credentials           = aws_iam_role.orch_frontend_authorizer_invocation_role.arn
@@ -85,7 +85,7 @@ resource "aws_api_gateway_authorizer" "orch_frontend_authorizer" {
 }
 
 resource "aws_lambda_alias" "orch_frontend_authorizer_alias" {
-  name             = "${var.environment}-orch-frontend-authorizer-alias-lambda-active"
+  name             = "${var.environment}-orch-fe-authorizer-alias-lambda-active"
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.orch_frontend_authorizer.arn
   function_version = aws_lambda_function.orch_frontend_authorizer.version
