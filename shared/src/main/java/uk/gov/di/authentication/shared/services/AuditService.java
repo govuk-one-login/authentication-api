@@ -42,6 +42,30 @@ public class AuditService {
     public void submitAuditEvent(
             AuditableEvent event,
             String clientId,
+            TxmaAuditUser user,
+            MetadataPair... metadataPairs) {
+        var txmaAuditEvent =
+                auditEventWithTime(event, () -> Date.from(clock.instant()))
+                        .withClientId(clientId)
+                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
+                        .withUser(user);
+
+        Arrays.stream(metadataPairs)
+                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+
+        Optional.ofNullable(user.getPhone())
+                .filter(not(String::isBlank))
+                .flatMap(PhoneNumberHelper::maybeGetCountry)
+                .ifPresent(
+                        country ->
+                                txmaAuditEvent.addExtension("phone_number_country_code", country));
+
+        txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
+            String clientId,
             String clientSessionId,
             String sessionId,
             String subjectId,
@@ -61,23 +85,7 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId)
                         .withGovukSigninJourneyId(clientSessionId);
 
-        var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
-                        .withClientId(clientId)
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
-                        .withUser(user);
-
-        Arrays.stream(metadataPairs)
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
-
-        Optional.ofNullable(phoneNumber)
-                .filter(not(String::isBlank))
-                .flatMap(PhoneNumberHelper::maybeGetCountry)
-                .ifPresent(
-                        country ->
-                                txmaAuditEvent.addExtension("phone_number_country_code", country));
-
-        txmaQueueClient.send(txmaAuditEvent.serialize());
+        submitAuditEvent(event, clientId, user, metadataPairs);
     }
 
     public static class MetadataPair {

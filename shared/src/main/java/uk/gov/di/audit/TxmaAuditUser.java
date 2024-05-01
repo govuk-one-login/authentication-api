@@ -56,4 +56,8 @@ public class TxmaAuditUser {
         this.govukSigninJourneyId = govukSigninJourneyId;
         return this;
     }
+
+    public String getPhone() {
+        return phone;
+    }
 }
