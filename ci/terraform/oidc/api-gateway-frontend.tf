@@ -336,7 +336,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
 
   logging_filter {
-    default_behavior = "DROP"
+    default_behavior = "KEEP"
 
     filter {
       behavior = "KEEP"

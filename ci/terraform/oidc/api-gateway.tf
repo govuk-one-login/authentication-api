@@ -640,7 +640,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api"
   log_destination_configs = [aws_cloudwatch_log_group.oidc_waf_logs[count.index].arn]
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
   logging_filter {
-    default_behavior = "DROP"
+    default_behavior = "KEEP"
 
     filter {
       behavior = "KEEP"
