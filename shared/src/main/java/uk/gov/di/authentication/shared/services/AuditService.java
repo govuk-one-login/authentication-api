@@ -64,7 +64,7 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
+                        .withComponentId("AUTH")
                         .withUser(user);
 
         Arrays.stream(metadataPairs)

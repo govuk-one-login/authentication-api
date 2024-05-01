@@ -28,6 +28,7 @@ module "update_password" {
     EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    OIDC_API_BASE_URL    = local.oidc_api_base_url
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler::handleRequest"
 

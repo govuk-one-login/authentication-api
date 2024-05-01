@@ -44,6 +44,7 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
       EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
       TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
       INTERNAl_SECTOR_URI  = var.internal_sector_uri
+      OIDC_API_BASE_URL    = local.oidc_api_base_url
     }
   }
 
