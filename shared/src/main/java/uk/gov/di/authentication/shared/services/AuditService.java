@@ -21,6 +21,7 @@ public class AuditService {
     private final Clock clock;
     private final ConfigurationService configurationService;
     private final AwsSqsClient txmaQueueClient;
+    private final String COMPONENT_ID = "AUTH";
 
     public AuditService(
             Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
@@ -47,7 +48,7 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
+                        .withComponentId(COMPONENT_ID)
                         .withUser(user);
 
         Arrays.stream(metadataPairs)

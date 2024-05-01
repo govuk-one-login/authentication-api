@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -8,13 +7,11 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
@@ -40,11 +37,6 @@ class AuditServiceTest {
         }
     }
 
-    @BeforeEach
-    void beforeEach() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url"));
-    }
-
     @Test
     void shouldLogAuditEvent() {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
@@ -67,7 +59,7 @@ class AuditServiceTest {
         assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
         assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
         assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
-        assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("oidc-base-url")));
+        assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("AUTH")));
 
         var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
 
