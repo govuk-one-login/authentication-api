@@ -12,6 +12,7 @@ public class TxmaAuditUser {
     @Expose private String sessionId;
     @Expose private String persistentSessionId;
     @Expose private String govukSigninJourneyId;
+    @Expose private String componentId;
 
     public static TxmaAuditUser user() {
         return new TxmaAuditUser();
@@ -54,6 +55,11 @@ public class TxmaAuditUser {
 
     public TxmaAuditUser withGovukSigninJourneyId(String govukSigninJourneyId) {
         this.govukSigninJourneyId = govukSigninJourneyId;
+        return this;
+    }
+
+    public TxmaAuditUser withComponentId(String componentId) {
+        this.componentId = componentId;
         return this;
     }
 }
