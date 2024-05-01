@@ -67,7 +67,11 @@ public class LogoutService {
             AccountIntervention intervention) {
         destroySessions(session);
         return generateAccountInterventionLogoutResponse(
-                input, clientId, session.getSessionId(), intervention);
+                input,
+                clientId,
+                session.getSessionId(),
+                intervention,
+                session.getInternalCommonSubjectIdentifier());
     }
 
     public void destroySessions(Session session) {
@@ -97,7 +101,8 @@ public class LogoutService {
             ErrorObject errorObject,
             APIGatewayProxyRequestEvent input,
             Optional<String> clientId,
-            Optional<String> sessionId) {
+            Optional<String> sessionId,
+            Optional<String> subjectId) {
         LOG.info(
                 "Generating Logout Error Response with code: {} and description: {}",
                 errorObject.getCode(),
@@ -108,14 +113,16 @@ public class LogoutService {
                 Optional.of(errorObject),
                 input,
                 clientId,
-                sessionId);
+                sessionId,
+                subjectId);
     }
 
     public APIGatewayProxyResponseEvent generateDefaultLogoutResponse(
             Optional<String> state,
             APIGatewayProxyRequestEvent input,
             Optional<String> clientId,
-            Optional<String> sessionId) {
+            Optional<String> sessionId,
+            Optional<String> subjectId) {
         LOG.info("Generating default Logout Response");
         sessionId.ifPresent(t -> cloudwatchMetricsService.incrementLogout(clientId));
         return generateLogoutResponse(
@@ -124,7 +131,8 @@ public class LogoutService {
                 Optional.empty(),
                 input,
                 clientId,
-                sessionId);
+                sessionId,
+                subjectId);
     }
 
     public APIGatewayProxyResponseEvent generateLogoutResponse(
@@ -133,7 +141,8 @@ public class LogoutService {
             Optional<ErrorObject> errorObject,
             APIGatewayProxyRequestEvent input,
             Optional<String> clientId,
-            Optional<String> sessionId) {
+            Optional<String> sessionId,
+            Optional<String> subjectId) {
         LOG.info("Generating Logout Response using URI: {}", logoutUri);
         URIBuilder uriBuilder = new URIBuilder(logoutUri);
         state.ifPresent(s -> uriBuilder.addParameter("state", s));
@@ -153,7 +162,8 @@ public class LogoutService {
                         .withIpAddress(extractIpAddress(input))
                         .withPersistentSessionId(
                                 extractPersistentIdFromCookieHeader(input.getHeaders()))
-                        .withSessionId(sessionId.orElse(null));
+                        .withSessionId(sessionId.orElse(null))
+                        .withUserId(subjectId.orElse(null));
 
         auditService.submitAuditEvent(LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), user);
 
@@ -165,7 +175,8 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             String sessionId,
-            AccountIntervention intervention) {
+            AccountIntervention intervention,
+            String subjectId) {
         URI redirectURI;
         if (intervention.getBlocked()) {
             redirectURI = configurationService.getAccountStatusBlockedURI();
@@ -184,6 +195,7 @@ public class LogoutService {
                 Optional.empty(),
                 input,
                 Optional.of(clientId),
-                Optional.of(sessionId));
+                Optional.of(sessionId),
+                Optional.ofNullable(subjectId));
     }
 }

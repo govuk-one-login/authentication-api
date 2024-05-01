@@ -102,11 +102,18 @@ public class LogoutServiceTest {
     private Optional<String> audience;
     private Session session;
     private LogoutService logoutService;
-    private final TxmaAuditUser user =
+    private final TxmaAuditUser auditUser =
             TxmaAuditUser.user()
                     .withIpAddress(IP_ADDRESS)
                     .withSessionId(SESSION_ID)
-                    .withPersistentSessionId(PERSISTENT_SESSION_ID);
+                    .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                    .withUserId(SUBJECT.getValue());
+    private final TxmaAuditUser auditUserWhenNoCookie =
+            TxmaAuditUser.user()
+                    .withIpAddress(IP_ADDRESS)
+                    .withSessionId(SESSION_ID)
+                    .withPersistentSessionId(null)
+                    .withUserId(null);
 
     @BeforeEach
     void setup() throws JOSEException, ParseException {
@@ -141,7 +148,10 @@ public class LogoutServiceTest {
         SignedJWT idToken = SignedJWT.parse(signedIDToken.serialize());
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
 
-        session = generateSession().setEmailAddress(EMAIL);
+        session =
+                generateSession()
+                        .setEmailAddress(EMAIL)
+                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
     }
 
     @AfterEach
@@ -159,9 +169,10 @@ public class LogoutServiceTest {
                         Optional.empty(),
                         event,
                         Optional.of(audience.get()),
-                        Optional.of(SESSION_ID));
+                        Optional.of(SESSION_ID),
+                        Optional.of(SUBJECT.getValue()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -176,9 +187,10 @@ public class LogoutServiceTest {
                         Optional.empty(),
                         event,
                         Optional.of(audience.get()),
-                        Optional.of(SESSION_ID));
+                        Optional.of(SESSION_ID),
+                        Optional.of(SUBJECT.getValue()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -194,9 +206,10 @@ public class LogoutServiceTest {
                         Optional.of(STATE.getValue()),
                         event,
                         Optional.of(audience.get()),
-                        Optional.of(SESSION_ID));
+                        Optional.of(SESSION_ID),
+                        Optional.of(SUBJECT.getValue()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -213,9 +226,10 @@ public class LogoutServiceTest {
                         new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
                         event,
                         Optional.empty(),
-                        Optional.of(SESSION_ID));
+                        Optional.of(SESSION_ID),
+                        Optional.of(SUBJECT.getValue()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUser);
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertThat(response, hasStatus(302));
@@ -240,7 +254,7 @@ public class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -261,7 +275,7 @@ public class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -288,10 +302,13 @@ public class LogoutServiceTest {
                 Optional.empty(),
                 input,
                 Optional.empty(),
-                Optional.of(SESSION_ID));
+                Optional.of(SESSION_ID),
+                Optional.empty());
 
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
         verifyNoInteractions(cloudwatchMetricsService);
+        verify(auditService)
+                .submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUserWhenNoCookie);
     }
 
     @Test

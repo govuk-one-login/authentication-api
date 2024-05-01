@@ -97,6 +97,13 @@ public class LogoutHandler
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
         attachSessionToLogsIfExists(sessionFromSessionCookie, input.getHeaders());
 
+        Optional<String> subjectId = Optional.empty();
+        if (sessionFromSessionCookie.isPresent()) {
+            subjectId =
+                    Optional.ofNullable(
+                            sessionFromSessionCookie.get().getInternalCommonSubjectIdentifier());
+        }
+
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
@@ -104,7 +111,8 @@ public class LogoutHandler
                     Optional.empty(),
                     input,
                     Optional.empty(),
-                    getSessionAndDestroyIfExists(sessionFromSessionCookie));
+                    getSessionAndDestroyIfExists(sessionFromSessionCookie),
+                    subjectId);
         }
         Optional<String> state = Optional.ofNullable(queryStringParameters.get("state"));
 
@@ -115,7 +123,8 @@ public class LogoutHandler
                     state,
                     input,
                     Optional.empty(),
-                    getSessionAndDestroyIfExists(sessionFromSessionCookie));
+                    getSessionAndDestroyIfExists(sessionFromSessionCookie),
+                    subjectId);
         }
 
         LOG.info("ID token hint is present");
@@ -131,7 +140,8 @@ public class LogoutHandler
                             OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
                     input,
                     Optional.empty(),
-                    Optional.empty());
+                    Optional.empty(),
+                    subjectId);
         }
 
         Optional<String> audience;
@@ -145,7 +155,8 @@ public class LogoutHandler
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"),
                     input,
                     Optional.empty(),
-                    Optional.empty());
+                    Optional.empty(),
+                    subjectId);
         }
 
         if (audience.isEmpty()) {
@@ -153,7 +164,8 @@ public class LogoutHandler
                     Optional.empty(),
                     input,
                     Optional.empty(),
-                    getSessionAndDestroyIfExists(sessionFromSessionCookie));
+                    getSessionAndDestroyIfExists(sessionFromSessionCookie),
+                    subjectId);
         }
         final String clientID = audience.get();
 
@@ -167,7 +179,8 @@ public class LogoutHandler
                     new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
                     input,
                     Optional.of(clientID),
-                    getSessionAndDestroyIfExists(sessionFromSessionCookie));
+                    getSessionAndDestroyIfExists(sessionFromSessionCookie),
+                    subjectId);
         }
 
         Optional<String> postLogoutRedirectUri =
@@ -179,7 +192,8 @@ public class LogoutHandler
                     state,
                     input,
                     Optional.of(clientID),
-                    getSessionAndDestroyIfExists(sessionFromSessionCookie));
+                    getSessionAndDestroyIfExists(sessionFromSessionCookie),
+                    subjectId);
         }
 
         if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUri, clientRegistry)) {
@@ -190,7 +204,8 @@ public class LogoutHandler
                             "client registry does not contain post_logout_redirect_uri"),
                     input,
                     Optional.of(clientID),
-                    getSessionAndDestroyIfExists(sessionFromSessionCookie));
+                    getSessionAndDestroyIfExists(sessionFromSessionCookie),
+                    subjectId);
         }
 
         if (sessionFromSessionCookie.isPresent()) {
@@ -214,6 +229,7 @@ public class LogoutHandler
                                     Optional.empty(),
                                     input,
                                     Optional.of(clientID),
+                                    Optional.empty(),
                                     Optional.empty()));
         }
     }
@@ -277,6 +293,7 @@ public class LogoutHandler
                 Optional.empty(),
                 input,
                 Optional.of(clientID),
-                Optional.of(session.getSessionId()));
+                Optional.of(session.getSessionId()),
+                Optional.ofNullable(session.getInternalCommonSubjectIdentifier()));
     }
 }
