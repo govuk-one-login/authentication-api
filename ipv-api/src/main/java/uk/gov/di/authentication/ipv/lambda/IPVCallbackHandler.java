@@ -58,6 +58,7 @@ import java.util.Objects;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -154,6 +155,7 @@ public class IPVCallbackHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Request received to IPVCallbackHandler");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             if (!configurationService.isIdentityEnabled()) {
                 throw new IpvCallbackException("Identity is not enabled");
