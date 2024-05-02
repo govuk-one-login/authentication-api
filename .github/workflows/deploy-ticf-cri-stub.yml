@@ -1,9 +1,12 @@
 name: Deploy TICF CRI Stub
 
 env:
-  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
+  # GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
+  # DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
+  # ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
+  GHA_ROLE: arn:aws:iam::653994557586:role/dev-auth-deploy-pipeline-GitHubActionsRole-QrtGginNnjDD
   DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
+  ARTIFACT_BUCKET: arn:aws:s3:::dev-auth-deploy-pipeline-githubartifactsourcebuck-ssdefc91xjh6
 
 on:
   workflow_run:
