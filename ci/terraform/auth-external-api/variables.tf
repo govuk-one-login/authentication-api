@@ -110,6 +110,12 @@ variable "orch_to_auth_public_signing_key" {
   description = "A hardcoded value for the public key corresponding to the KMS created in the OIDC module. It is used to validate the signature of a client_assertion JWT (orch<->auth token endpoint)"
 }
 
+variable "orch_api_vpc_endpoint_id" {
+  default     = ""
+  type        = string
+  description = "The ID of the Execute API Gateway vpc endpoint in the orchestration account"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

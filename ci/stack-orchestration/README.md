@@ -18,7 +18,7 @@ terminal, run `aws configure sso` and enter the start URL and region from AWS on
 profile that you can set as an environment variable, by running `export AWS_PROFILE=<profile>`.
 
 After this you can then run the below, replacing `<environment>`with one
-of `sandpit`, `build`, `stage`, `int`, `prod`:
+of `dev`, `build`, `stage`, `int`, `prod`:
 
 ```shell
 ./provision_all.sh <environment>
