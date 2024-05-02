@@ -386,6 +386,23 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        AuditService.UNKNOWN,
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID,
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        PHONE_NUMBER,
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("attemptNoFailedAt", 5),
+                        pair(
+                                "number_of_attempts_user_allowed_to_login",
+                                configurationService.getMaxPasswordRetries()));
     }
 
     @ParameterizedTest
