@@ -65,13 +65,17 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
+
+        var auditUser =
+                TxmaAuditUser.user()
+                        .withIpAddress(extractIpAddress(input))
+                        .withPersistentSessionId(
+                                extractPersistentIdFromCookieHeader(input.getHeaders()))
+                        .withSessionId(session.getSessionId())
+                        .withUserId(session.getInternalCommonSubjectIdentifier());
+
         destroySessions(session);
-        return generateAccountInterventionLogoutResponse(
-                input,
-                clientId,
-                session.getSessionId(),
-                intervention,
-                session.getInternalCommonSubjectIdentifier());
+        return generateAccountInterventionLogoutResponse(auditUser, clientId, intervention);
     }
 
     public void destroySessions(Session session) {
@@ -99,10 +103,8 @@ public class LogoutService {
     public APIGatewayProxyResponseEvent generateErrorLogoutResponse(
             Optional<String> state,
             ErrorObject errorObject,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId,
-            Optional<String> subjectId) {
+            TxmaAuditUser auditUser,
+            Optional<String> clientId) {
         LOG.info(
                 "Generating Logout Error Response with code: {} and description: {}",
                 errorObject.getCode(),
@@ -111,38 +113,30 @@ public class LogoutService {
                 configurationService.getDefaultLogoutURI(),
                 state,
                 Optional.of(errorObject),
-                input,
-                clientId,
-                sessionId,
-                subjectId);
+                auditUser,
+                clientId);
     }
 
     public APIGatewayProxyResponseEvent generateDefaultLogoutResponse(
-            Optional<String> state,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId,
-            Optional<String> subjectId) {
+            Optional<String> state, TxmaAuditUser auditUser, Optional<String> clientId) {
         LOG.info("Generating default Logout Response");
-        sessionId.ifPresent(t -> cloudwatchMetricsService.incrementLogout(clientId));
+        if (auditUser.sessionId() != null) {
+            cloudwatchMetricsService.incrementLogout(clientId);
+        }
         return generateLogoutResponse(
                 configurationService.getDefaultLogoutURI(),
                 state,
                 Optional.empty(),
-                input,
-                clientId,
-                sessionId,
-                subjectId);
+                auditUser,
+                clientId);
     }
 
     public APIGatewayProxyResponseEvent generateLogoutResponse(
             URI logoutUri,
             Optional<String> state,
             Optional<ErrorObject> errorObject,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId,
-            Optional<String> subjectId) {
+            TxmaAuditUser auditUser,
+            Optional<String> clientId) {
         LOG.info("Generating Logout Response using URI: {}", logoutUri);
         URIBuilder uriBuilder = new URIBuilder(logoutUri);
         state.ifPresent(s -> uriBuilder.addParameter("state", s));
@@ -157,26 +151,15 @@ public class LogoutService {
             throw new RuntimeException("Unable to build URI");
         }
 
-        var user =
-                TxmaAuditUser.user()
-                        .withIpAddress(extractIpAddress(input))
-                        .withPersistentSessionId(
-                                extractPersistentIdFromCookieHeader(input.getHeaders()))
-                        .withSessionId(sessionId.orElse(null))
-                        .withUserId(subjectId.orElse(null));
-
-        auditService.submitAuditEvent(LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), user);
+        auditService.submitAuditEvent(
+                LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
     }
 
     private APIGatewayProxyResponseEvent generateAccountInterventionLogoutResponse(
-            APIGatewayProxyRequestEvent input,
-            String clientId,
-            String sessionId,
-            AccountIntervention intervention,
-            String subjectId) {
+            TxmaAuditUser auditUser, String clientId, AccountIntervention intervention) {
         URI redirectURI;
         if (intervention.getBlocked()) {
             redirectURI = configurationService.getAccountStatusBlockedURI();
@@ -190,12 +173,6 @@ public class LogoutService {
 
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
         return generateLogoutResponse(
-                redirectURI,
-                Optional.empty(),
-                Optional.empty(),
-                input,
-                Optional.of(clientId),
-                Optional.of(sessionId),
-                Optional.ofNullable(subjectId));
+                redirectURI, Optional.empty(), Optional.empty(), auditUser, Optional.of(clientId));
     }
 }

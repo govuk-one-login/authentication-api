@@ -167,10 +167,8 @@ public class LogoutServiceTest {
                         CLIENT_LOGOUT_URI,
                         Optional.of(STATE.getValue()),
                         Optional.empty(),
-                        event,
-                        Optional.of(audience.get()),
-                        Optional.of(SESSION_ID),
-                        Optional.of(SUBJECT.getValue()));
+                        auditUser,
+                        Optional.of(audience.get()));
 
         verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
 
@@ -184,11 +182,7 @@ public class LogoutServiceTest {
     void successfullyReturnsDefaultLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.generateDefaultLogoutResponse(
-                        Optional.empty(),
-                        event,
-                        Optional.of(audience.get()),
-                        Optional.of(SESSION_ID),
-                        Optional.of(SUBJECT.getValue()));
+                        Optional.empty(), auditUser, Optional.of(audience.get()));
 
         verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
@@ -203,11 +197,7 @@ public class LogoutServiceTest {
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.generateDefaultLogoutResponse(
-                        Optional.of(STATE.getValue()),
-                        event,
-                        Optional.of(audience.get()),
-                        Optional.of(SESSION_ID),
-                        Optional.of(SUBJECT.getValue()));
+                        Optional.of(STATE.getValue()), auditUser, Optional.of(audience.get()));
 
         verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
@@ -224,10 +214,8 @@ public class LogoutServiceTest {
                 logoutService.generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
-                        event,
-                        Optional.empty(),
-                        Optional.of(SESSION_ID),
-                        Optional.of(SUBJECT.getValue()));
+                        auditUser,
+                        Optional.empty());
 
         verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUser);
         verifyNoInteractions(cloudwatchMetricsService);
@@ -300,9 +288,7 @@ public class LogoutServiceTest {
                 CLIENT_LOGOUT_URI,
                 Optional.of(STATE.getValue()),
                 Optional.empty(),
-                input,
-                Optional.empty(),
-                Optional.of(SESSION_ID),
+                auditUserWhenNoCookie,
                 Optional.empty());
 
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
