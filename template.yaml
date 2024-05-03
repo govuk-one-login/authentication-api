@@ -393,7 +393,8 @@ Resources:
   BackChannelLogoutRequestFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
+    # checkov:skip=CKV_AWS_117: Lambda needs open egress so isn't in VPC
+    IgnoreGlobals: [VpcConfig]
     Properties:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
