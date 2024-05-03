@@ -645,6 +645,7 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
+      FunctionName: !Sub ${Environment}-TokenFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
@@ -663,9 +664,13 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
-          INTERNAL_SECTOR_URI: !Sub
+          INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
         Statement:
           - Sid: AllowIdTokenSigningKms
