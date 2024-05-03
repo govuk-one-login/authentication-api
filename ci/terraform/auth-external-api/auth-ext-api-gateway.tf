@@ -1,3 +1,8 @@
+locals {
+  orch_api_vpc_endpoint = var.orch_api_vpc_endpoint_id != "" ? [var.orch_api_vpc_endpoint_id] : []
+  api_vpc_endpoints     = concat(local.orch_api_vpc_endpoint, [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id])
+}
+
 data "aws_vpc" "auth_shared_vpc" {
   filter {
     name   = "tag:Name"
@@ -19,40 +24,47 @@ resource "aws_api_gateway_rest_api" "di_auth_ext_api" {
   name = "${var.environment}-di-auth-ext-api"
 
   tags   = local.default_tags
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ]
-        },
-        {
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ],
-            "Condition" : {
-                "StringNotEquals": {
-                    "aws:SourceVpce": "${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}"
-                }
-            }
-        }
-    ]
-}
-EOF
+  policy = data.aws_iam_policy_document.di_auth_ext_api_policy_document.json
+
   endpoint_configuration {
     types            = ["PRIVATE"]
-    vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
+    vpc_endpoint_ids = local.api_vpc_endpoints
   }
+
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+data "aws_iam_policy_document" "di_auth_ext_api_policy_document" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      identifiers = ["*"]
+      type        = "*"
+    }
+
+    actions   = ["execute-api:Invoke"]
+    resources = ["execute-api:/*"]
+  }
+
+  statement {
+    effect = "Deny"
+
+    principals {
+      identifiers = ["*"]
+      type        = "*"
+    }
+
+    actions   = ["execute-api:Invoke"]
+    resources = ["execute-api:/*"]
+
+    condition {
+      test     = "StringNotEquals"
+      values   = local.api_vpc_endpoints
+      variable = "aws:SourceVpce"
+    }
   }
 }
 
