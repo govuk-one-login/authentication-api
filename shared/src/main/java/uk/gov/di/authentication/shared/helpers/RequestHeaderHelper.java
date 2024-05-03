@@ -13,32 +13,7 @@ public final class RequestHeaderHelper {
 
     public static boolean headersContainValidHeader(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
-        if (headers == null || headers.isEmpty()) {
-            LOG.warn("All headers are missing or empty when looking for header {}", headerName);
-            return false;
-        } else if (!matchLowerCase && headers.containsKey(headerName)) {
-            LOG.trace("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
-            return true;
-        } else if (matchLowerCase
-                && (headers.containsKey(headerName)
-                        && headers.containsKey(headerName.toLowerCase()))) {
-            LOG.warn(
-                    "Found both headers {} and lowercase version, matchLowerCase={}",
-                    headerName,
-                    matchLowerCase);
-            return false;
-        } else if (matchLowerCase
-                && (headers.containsKey(headerName)
-                        || headers.containsKey(headerName.toLowerCase()))) {
-            LOG.trace(
-                    "Found header {} lowercase version, matchLowerCase={}",
-                    headerName,
-                    matchLowerCase);
-            return true;
-        } else {
-            LOG.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
-            return false;
-        }
+        return getHeaderValueFromHeaders(headers, headerName, matchLowerCase) != null;
     }
 
     public static String getHeaderValueFromHeaders(
