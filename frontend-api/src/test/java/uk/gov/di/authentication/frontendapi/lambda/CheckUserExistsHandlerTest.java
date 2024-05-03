@@ -155,7 +155,6 @@ class CheckUserExistsHandlerTest {
                     {"email":%s,
                     "doesUserExist":true,
                     "mfaMethodType":"SMS",
-                    "mfaMethodVerified":true,
                     "phoneNumberLastThree":"321",
                     "lockoutInformation":[]}
                     """,
