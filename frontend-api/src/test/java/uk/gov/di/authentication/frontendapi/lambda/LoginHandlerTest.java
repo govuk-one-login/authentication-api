@@ -109,8 +109,6 @@ class LoginHandlerTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final AuditService.MetadataPair incorrectPasswordCountPair =
-            pair("incorrectPasswordCount", 0);
     private static final Json objectMapper = SerializationService.getInstance();
     private static final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
@@ -411,9 +409,7 @@ class LoginHandlerTest {
                         auditUserWithAllUserInfo,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
-                        pair(
-                                "number_of_attempts_user_allowed_to_login",
-                                maxRetriesAllowed));
+                        pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
     }
 
     @ParameterizedTest
@@ -424,7 +420,8 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(maxRetriesAllowed - 1);
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
+                .thenReturn(maxRetriesAllowed - 1);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
@@ -435,6 +432,24 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        AuditService.UNKNOWN,
+                        auditUserWithAllUserInfo,
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("incorrectPasswordCount", maxRetriesAllowed),
+                        pair("attemptNoFailedAt", maxRetriesAllowed));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        AuditService.UNKNOWN,
+                        auditUserWithAllUserInfo,
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("attemptNoFailedAt", maxRetriesAllowed),
+                        pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
     }
@@ -515,7 +530,7 @@ class LoginHandlerTest {
                         "",
                         auditUserWithAllUserInfo,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        incorrectPasswordCountPair,
+                        pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", 6));
 
         assertThat(result, hasStatus(401));

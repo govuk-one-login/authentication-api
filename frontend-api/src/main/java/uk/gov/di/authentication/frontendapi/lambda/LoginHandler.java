@@ -188,14 +188,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 } else {
                     codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
                 }
+                var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         clientId,
                         auditUser,
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair(
-                                "incorrectPasswordCount",
-                                codeStorageService.getIncorrectPasswordCount(request.getEmail())),
+                        pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
                 if (incorrectPasswordCount + 1 >= configurationService.getMaxPasswordRetries()) {
@@ -206,7 +205,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             clientId,
                             auditUser,
                             pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair("attemptNoFailedAt", incorrectPasswordCount + 1),
+                            pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
                             pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxPasswordRetries()));
