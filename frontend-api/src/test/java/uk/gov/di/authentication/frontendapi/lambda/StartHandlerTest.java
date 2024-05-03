@@ -172,9 +172,9 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "123.123.123.123",
@@ -238,9 +238,9 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "123.123.123.123",
@@ -282,9 +282,9 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "123.123.123.123",

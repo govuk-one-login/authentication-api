@@ -102,9 +102,9 @@ class AccountRecoveryHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
                         internalCommonSubjectId,
                         EMAIL,
                         "123.123.123.123",
@@ -135,9 +135,9 @@ class AccountRecoveryHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
                         internalCommonSubjectId,
                         EMAIL,
                         "123.123.123.123",

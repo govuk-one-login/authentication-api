@@ -192,9 +192,9 @@ class AccountDeletionServiceTest {
         verify(auditService)
                 .submitAuditEvent(
                         eq(DELETE_ACCOUNT),
+                        eq(TEST_CLIENT_ID),
                         eq(TEST_CLIENT_SESSION_ID),
                         eq(AuditService.UNKNOWN),
-                        eq(TEST_CLIENT_ID),
                         anyString(),
                         eq(expectedEmail),
                         eq(AuditService.UNKNOWN),
@@ -209,7 +209,16 @@ class AccountDeletionServiceTest {
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         doThrow(new RuntimeException())
                 .when(auditService)
-                .submitAuditEvent(any(), any(), any(), any(), any(), any(), any(), any(), any());
+                .submitAuditEvent(
+                        any(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString());
 
         // then
         assertDoesNotThrow(() -> underTest.removeAccount(Optional.of(input), userProfile));

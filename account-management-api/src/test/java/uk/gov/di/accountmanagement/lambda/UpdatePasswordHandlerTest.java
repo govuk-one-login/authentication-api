@@ -110,9 +110,9 @@ class UpdatePasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                        CLIENT_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        CLIENT_ID,
                         expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",

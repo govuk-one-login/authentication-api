@@ -174,9 +174,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -223,9 +223,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -263,9 +263,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -339,9 +339,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         "wrong.email@gov.uk",
                         "123.123.123.123",
@@ -373,9 +373,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -485,9 +485,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -527,9 +527,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -570,9 +570,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -612,9 +612,9 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",

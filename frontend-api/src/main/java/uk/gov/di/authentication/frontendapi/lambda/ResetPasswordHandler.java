@@ -185,12 +185,12 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             if (request.isForcedPasswordReset()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
                         internalCommonSubjectId.getValue(),
                         userCredentials.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -202,12 +202,12 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     internalCommonSubjectId.getValue(),
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
@@ -264,12 +264,12 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     internalCommonSubjectId.getValue(), true);
             auditService.submitAuditEvent(
                     ACCOUNT_RECOVERY_BLOCK_ADDED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     internalCommonSubjectId.getValue(),
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

@@ -161,9 +161,9 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID.getValue(),
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
@@ -202,9 +202,9 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_CONSENT_UPDATED,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID.getValue(),
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
@@ -236,8 +236,8 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
-                        CLIENT_SESSION_ID,
                         "",
+                        CLIENT_SESSION_ID,
                         "",
                         "",
                         "",
@@ -277,8 +277,8 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_RECEIVED,
-                        CLIENT_SESSION_ID,
                         "",
+                        CLIENT_SESSION_ID,
                         "",
                         "",
                         "",

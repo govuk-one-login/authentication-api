@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
@@ -148,6 +149,26 @@ class LoginHandlerTest {
                     "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
                     PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
 
+    private final TxmaAuditUser auditUserWithAllUserInfo =
+            new TxmaAuditUser()
+                    .withUserId(expectedCommonSubject)
+                    .withEmail(EMAIL)
+                    .withPhone(PHONE_NUMBER)
+                    .withPersistentSessionId(PERSISTENT_ID)
+                    .withSessionId(session.getSessionId())
+                    .withIpAddress("123.123.123.123")
+                    .withGovukSigninJourneyId(CLIENT_SESSION_ID);
+
+    private final TxmaAuditUser auditUserWithoutUserInfo =
+            new TxmaAuditUser()
+                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                    .withSessionId(session.getSessionId())
+                    .withUserId(AuditService.UNKNOWN)
+                    .withEmail(EMAIL)
+                    .withPhone(AuditService.UNKNOWN)
+                    .withIpAddress("123.123.123.123")
+                    .withPersistentSessionId(PERSISTENT_ID);
+
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
 
@@ -207,9 +228,13 @@ class LoginHandlerTest {
                 equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_ID.getValue(),
+                        auditUserWithAllUserInfo,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -238,9 +263,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verifySessionIsSaved();
@@ -267,10 +289,6 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
-
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
@@ -306,9 +324,6 @@ class LoginHandlerTest {
         assertThat(response.getMfaMethodType(), equalTo(SMS));
         assertThat(response.isMfaMethodVerified(), equalTo(true));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verifySessionIsSaved();
@@ -386,6 +401,17 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        AuditService.UNKNOWN,
+                        auditUserWithAllUserInfo,
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("attemptNoFailedAt", 5),
+                        pair(
+                                "number_of_attempts_user_allowed_to_login",
+                                configurationService.getMaxPasswordRetries()));
     }
 
     @ParameterizedTest
@@ -431,14 +457,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
                         "",
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        auditUserWithAllUserInfo,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -489,14 +509,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
                         "",
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_ID,
+                        auditUserWithAllUserInfo,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
                         pair("attemptNoFailedAt", 6));
@@ -596,15 +610,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        "",
-                        EMAIL,
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_ID);
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL, "", auditUserWithoutUserInfo);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
@@ -632,10 +638,6 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
@@ -728,22 +730,6 @@ class LoginHandlerTest {
         event.setHeaders(headers);
         event.setBody(body);
         return event;
-    }
-
-    private void assertAuditServiceCalledWith(
-            FrontendAuditableEvent auditableEvent, AuditService.MetadataPair... metadataPairs) {
-        verify(auditService)
-                .submitAuditEvent(
-                        auditableEvent,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PERSISTENT_ID,
-                        metadataPairs);
     }
 
     private void verifySessionIsSaved() {

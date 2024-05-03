@@ -303,12 +303,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditService.MetadataPair... metadataPairs) {
         auditService.submitAuditEvent(
                 auditableEvent,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
                 userContext
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
+                userContext.getClientSessionId(),
+                session.getSessionId(),
                 session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),

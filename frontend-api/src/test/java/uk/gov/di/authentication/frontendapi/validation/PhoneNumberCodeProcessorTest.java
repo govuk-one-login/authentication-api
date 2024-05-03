@@ -218,9 +218,9 @@ class PhoneNumberCodeProcessorTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,
@@ -247,9 +247,9 @@ class PhoneNumberCodeProcessorTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,

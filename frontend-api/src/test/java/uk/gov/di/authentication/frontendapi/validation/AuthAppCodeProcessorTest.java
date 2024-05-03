@@ -195,9 +195,9 @@ class AuthAppCodeProcessorTest {
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,
@@ -224,9 +224,9 @@ class AuthAppCodeProcessorTest {
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,
@@ -250,9 +250,9 @@ class AuthAppCodeProcessorTest {
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,

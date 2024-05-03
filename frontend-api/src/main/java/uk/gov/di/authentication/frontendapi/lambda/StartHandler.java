@@ -177,9 +177,9 @@ public class StartHandler
             }
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.START_INFO_FOUND,
+                    userContext.getClient().get().getClientID(),
                     clientSessionId,
                     session.getSessionId(),
-                    userContext.getClient().get().getClientID(),
                     internalCommonSubjectIdentifier,
                     userContext
                             .getUserProfile()

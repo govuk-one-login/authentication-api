@@ -125,9 +125,9 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
@@ -157,9 +157,9 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
@@ -190,9 +190,9 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
@@ -246,9 +246,9 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,

@@ -79,8 +79,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public void onRequestReceived(String clientSessionId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_RECEIVED,
-                clientSessionId,
                 AuditService.UNKNOWN,
+                clientSessionId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -93,8 +93,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public void onRequestValidationError(String clientSessionId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
-                clientSessionId,
                 AuditService.UNKNOWN,
+                clientSessionId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -224,9 +224,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         }
         auditService.submitAuditEvent(
                 auditableEvent,
+                auditableClientId,
                 userContext.getClientSessionId(),
                 session.getSessionId(),
-                auditableClientId,
                 session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 ipAddress,
@@ -281,9 +281,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             String subjectId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
+                clientId,
                 clientSessionId,
                 sessionId,
-                clientId,
                 subjectId,
                 email,
                 AuditService.UNKNOWN,

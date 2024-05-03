@@ -228,9 +228,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -271,9 +271,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -314,9 +314,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         testSession.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         email,
                         "123.123.123.123",
@@ -355,9 +355,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         testSession.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         email,
                         "123.123.123.123",
@@ -387,9 +387,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -466,9 +466,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -503,9 +503,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -522,9 +522,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -555,9 +555,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -588,9 +588,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -630,9 +630,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -672,9 +672,9 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",

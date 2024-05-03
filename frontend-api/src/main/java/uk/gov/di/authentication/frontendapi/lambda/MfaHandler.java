@@ -146,12 +146,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
@@ -167,12 +167,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 LOG.warn("Email does not match Email in Request");
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
@@ -188,12 +188,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
@@ -243,12 +243,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     email,
                     IpAddressHelper.extractIpAddress(input),

@@ -106,8 +106,8 @@ class UpdatePhoneNumberHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                        CLIENT_SESSION_ID,
                         AuditService.UNKNOWN,
+                        CLIENT_SESSION_ID,
                         AuditService.UNKNOWN,
                         expectedCommonSubject,
                         userProfile.getEmail(),

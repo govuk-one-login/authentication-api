@@ -70,12 +70,12 @@ public abstract class MfaCodeProcessor {
             boolean accountRecovery) {
         auditService.submitAuditEvent(
                 auditableEvent,
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
                 userContext
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
+                userContext.getClientSessionId(),
+                userContext.getSession().getSessionId(),
                 userContext.getSession().getInternalCommonSubjectIdentifier(),
                 emailAddress,
                 ipAddress,
@@ -96,12 +96,12 @@ public abstract class MfaCodeProcessor {
                     userContext.getSession().getInternalCommonSubjectIdentifier());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     emailAddress,
                     ipAddress,
