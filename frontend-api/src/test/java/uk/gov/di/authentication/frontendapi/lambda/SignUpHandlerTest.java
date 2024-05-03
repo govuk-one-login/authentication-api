@@ -182,9 +182,9 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID.getValue(),
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -272,9 +272,9 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "joe.bloggs@test.com",
                         "123.123.123.123",

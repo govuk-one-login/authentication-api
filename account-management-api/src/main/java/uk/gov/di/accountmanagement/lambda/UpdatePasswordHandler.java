@@ -169,12 +169,12 @@ public class UpdatePasswordHandler
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
                     input.getRequestContext()
                             .getAuthorizer()
                             .getOrDefault("clientId", AuditService.UNKNOWN)
                             .toString(),
+                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                    sessionId,
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

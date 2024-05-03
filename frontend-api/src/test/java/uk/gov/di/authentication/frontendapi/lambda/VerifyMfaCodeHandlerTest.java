@@ -732,9 +732,9 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         event,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",

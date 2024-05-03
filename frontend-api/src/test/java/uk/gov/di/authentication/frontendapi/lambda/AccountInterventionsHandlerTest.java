@@ -320,9 +320,9 @@ public class AccountInterventionsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         expectedEvent,
+                        TEST_CLIENT_ID,
                         TEST_CLIENT_SESSION_ID,
                         TEST_SESSION_ID,
-                        TEST_CLIENT_ID,
                         TEST_INTERNAL_SUBJECT_ID,
                         TEST_EMAIL_ADDRESS,
                         TEST_IP_ADDRESS,

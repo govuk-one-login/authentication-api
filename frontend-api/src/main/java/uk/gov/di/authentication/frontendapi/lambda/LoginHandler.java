@@ -126,9 +126,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        clientId,
                         userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
-                        clientId,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -164,9 +164,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        clientId,
                         userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
-                        clientId,
                         internalCommonSubjectIdentifier.getValue(),
                         userProfile.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -189,9 +189,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 }
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        clientId,
                         userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
-                        clientId,
                         internalCommonSubjectIdentifier.getValue(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -208,9 +208,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                            clientId,
                             userContext.getClientSessionId(),
                             userContext.getSession().getSessionId(),
-                            clientId,
                             internalCommonSubjectIdentifier.getValue(),
                             userProfile.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
@@ -281,9 +281,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
+                    clientId,
                     userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
-                    clientId,
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

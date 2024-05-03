@@ -102,12 +102,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         } catch (AccountLockedException e) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     AuditService.UNKNOWN,
                     request.email(),
                     IpAddressHelper.extractIpAddress(input),
@@ -142,12 +142,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     AuditService.UNKNOWN,
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
@@ -177,12 +177,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         }
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
                 userContext
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
+                userContext.getClientSessionId(),
+                userContext.getSession().getSessionId(),
                 AuditService.UNKNOWN,
                 email,
                 IpAddressHelper.extractIpAddress(input),

@@ -390,9 +390,9 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        CLIENT_SESSION_ID,
                         AuditService.UNKNOWN,
                         session.getSessionId(),
-                        CLIENT_SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -448,9 +448,9 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
@@ -506,9 +506,9 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -614,9 +614,9 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        "",
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        "",
                         "",
                         EMAIL,
                         "123.123.123.123",
@@ -752,9 +752,9 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         auditableEvent,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID.getValue(),
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",

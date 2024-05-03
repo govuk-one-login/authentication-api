@@ -172,9 +172,9 @@ class SendOtpNotificationHandlerTest {
                 verify(auditService)
                         .submitAuditEvent(
                                 AccountManagementAuditableEvent.SEND_OTP,
+                                TEST_CLIENT_ID,
                                 SESSION_ID,
                                 AuditService.UNKNOWN,
-                                TEST_CLIENT_ID,
                                 expectedCommonSubject,
                                 TEST_EMAIL_ADDRESS,
                                 "123.123.123.123",
@@ -254,9 +254,9 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
+                        TEST_CLIENT_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -300,9 +300,9 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
+                        TEST_CLIENT_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         TEST_TEST_USER_EMAIL_ADDRESS,
                         "123.123.123.123",

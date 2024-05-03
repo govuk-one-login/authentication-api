@@ -105,9 +105,9 @@ class UpdateEmailHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_EMAIL,
+                        CLIENT_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        CLIENT_ID,
                         expectedCommonSubject,
                         NEW_EMAIL_ADDRESS,
                         "123.123.123.123",

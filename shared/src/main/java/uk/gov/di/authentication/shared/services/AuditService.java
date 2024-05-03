@@ -41,9 +41,9 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event,
+            String clientId,
             String clientSessionId,
             String sessionId,
-            String clientId,
             String subjectId,
             String email,
             String ipAddress,

@@ -51,9 +51,9 @@ class AuditServiceTest {
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
+                "client-id",
                 "request-id",
                 "session-id",
-                "client-id",
                 "subject-id",
                 "email",
                 "ip-address",
@@ -87,9 +87,9 @@ class AuditServiceTest {
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
+                "client-id",
                 "request-id",
                 "session-id",
-                "client-id",
                 "subject-id",
                 "email",
                 "ip-address",
@@ -116,9 +116,9 @@ class AuditServiceTest {
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
+                "client-id",
                 "request-id",
                 "session-id",
-                "client-id",
                 "subject-id",
                 "email",
                 "ip-address",

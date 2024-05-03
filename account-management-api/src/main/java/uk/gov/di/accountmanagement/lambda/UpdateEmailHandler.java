@@ -166,12 +166,12 @@ public class UpdateEmailHandler
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_EMAIL,
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
                     input.getRequestContext()
                             .getAuthorizer()
                             .getOrDefault("clientId", AuditService.UNKNOWN)
                             .toString(),
+                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                    sessionId,
                     internalCommonSubjectIdentifier.getValue(),
                     updateInfoRequest.getReplacementEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),

@@ -125,12 +125,12 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
                             : PASSWORD_RESET_REQUESTED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

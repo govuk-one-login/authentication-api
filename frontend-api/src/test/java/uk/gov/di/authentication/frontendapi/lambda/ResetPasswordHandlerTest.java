@@ -162,9 +162,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -192,9 +192,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -223,9 +223,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -234,9 +234,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -265,9 +265,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -293,9 +293,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -362,9 +362,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -408,9 +408,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
@@ -419,9 +419,9 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",

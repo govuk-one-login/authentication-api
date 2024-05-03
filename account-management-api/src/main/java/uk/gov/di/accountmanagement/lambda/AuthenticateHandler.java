@@ -75,8 +75,8 @@ public class AuthenticateHandler
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
                         AuditService.UNKNOWN,
-                        sessionId,
                         AuditService.UNKNOWN,
+                        sessionId,
                         AuditService.UNKNOWN,
                         loginRequest.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -91,8 +91,8 @@ public class AuthenticateHandler
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
                         AuditService.UNKNOWN,
-                        sessionId,
                         AuditService.UNKNOWN,
+                        sessionId,
                         AuditService.UNKNOWN,
                         loginRequest.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -105,8 +105,8 @@ public class AuthenticateHandler
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
                     AuditService.UNKNOWN,
-                    sessionId,
                     AuditService.UNKNOWN,
+                    sessionId,
                     AuditService.UNKNOWN,
                     loginRequest.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
@@ -118,8 +118,8 @@ public class AuthenticateHandler
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
                     AuditService.UNKNOWN,
-                    sessionId,
                     AuditService.UNKNOWN,
+                    sessionId,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     IpAddressHelper.extractIpAddress(input),

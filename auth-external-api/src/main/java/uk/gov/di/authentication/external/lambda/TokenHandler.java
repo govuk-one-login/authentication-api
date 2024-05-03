@@ -172,9 +172,9 @@ public class TokenHandler
 
             auditService.submitAuditEvent(
                     AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
                     Optional.ofNullable(requestBody.get("client_id")).orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
                     Optional.ofNullable(internalPairwiseId).orElse(AuditService.UNKNOWN),
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,

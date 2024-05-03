@@ -250,9 +250,9 @@ class SendNotificationHandlerTest {
                                 notificationType.equals(VERIFY_EMAIL)
                                         ? EMAIL_CODE_SENT
                                         : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                                CLIENT_ID,
                                 CLIENT_SESSION_ID,
                                 session.getSessionId(),
-                                CLIENT_ID,
                                 expectedCommonSubject,
                                 TEST_EMAIL_ADDRESS,
                                 "123.123.123.123",
@@ -320,9 +320,9 @@ class SendNotificationHandlerTest {
                         notificationType.equals(VERIFY_EMAIL)
                                 ? EMAIL_CODE_SENT
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -366,9 +366,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_CODE_SENT,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -410,9 +410,9 @@ class SendNotificationHandlerTest {
                         notificationType.equals(VERIFY_EMAIL)
                                 ? EMAIL_CODE_SENT_FOR_TEST_CLIENT
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        TEST_CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -585,9 +585,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_CODE_SENT,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -716,9 +716,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -757,9 +757,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -799,9 +799,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -830,9 +830,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -863,9 +863,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -898,9 +898,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -929,9 +929,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -962,9 +962,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -993,9 +993,9 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",

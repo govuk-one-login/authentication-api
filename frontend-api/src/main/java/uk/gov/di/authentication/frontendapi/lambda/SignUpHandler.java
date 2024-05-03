@@ -106,12 +106,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -155,12 +155,12 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     internalCommonSubjectIdentifier.getValue(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

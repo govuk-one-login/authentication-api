@@ -232,9 +232,9 @@ class TokenHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
                         CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         internalPairwiseId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

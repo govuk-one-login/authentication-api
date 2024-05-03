@@ -105,12 +105,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             if (errorResponse.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
@@ -131,9 +131,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        userContext.getClientId(),
                         userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
-                        userContext.getClientId(),
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
@@ -183,12 +183,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     internalPairwiseId,
                     emailAddress,
                     IpAddressHelper.extractIpAddress(input),

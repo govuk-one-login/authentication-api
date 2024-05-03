@@ -278,12 +278,12 @@ public class SendOtpNotificationHandler
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.SEND_OTP,
-                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                AuditService.UNKNOWN,
                 input.getRequestContext()
                         .getAuthorizer()
                         .getOrDefault("clientId", AuditService.UNKNOWN)
                         .toString(),
+                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                AuditService.UNKNOWN,
                 input.getRequestContext()
                         .getAuthorizer()
                         .getOrDefault("principalId", AuditService.UNKNOWN)

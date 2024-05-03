@@ -92,9 +92,9 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                             : ACCOUNT_RECOVERY_NOT_PERMITTED;
             auditService.submitAuditEvent(
                     auditableEvent,
+                    userContext.getClientId(),
                     userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
-                    userContext.getClientId(),
                     commonSubjectId.getValue(),
                     userContext
                             .getUserProfile()

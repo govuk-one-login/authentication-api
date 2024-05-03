@@ -181,9 +181,9 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                            CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID,
                             expectedInternalPairwiseId,
                             EMAIL_ADDRESS,
                             "123.123.123.123",
@@ -253,9 +253,9 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             ACCOUNT_TEMPORARILY_LOCKED,
+                            CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
-                            CLIENT_ID,
                             AuditService.UNKNOWN,
                             EMAIL_ADDRESS,
                             "123.123.123.123",
@@ -282,9 +282,9 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
+                        CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         "123.123.123.123",
@@ -330,9 +330,9 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
+                        AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "joe.bloggs",
                         "123.123.123.123",

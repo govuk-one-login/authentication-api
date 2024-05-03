@@ -82,6 +82,13 @@ public class AccountDeletionService {
                     AccountManagementAuditableEvent.DELETE_ACCOUNT,
                     input.map(
                                     n ->
+                                            n.getRequestContext()
+                                                    .getAuthorizer()
+                                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                                    .toString())
+                            .orElse(null),
+                    input.map(
+                                    n ->
                                             ClientSessionIdHelper.extractSessionIdFromHeaders(
                                                     n.getHeaders()))
                             .orElse(null),
@@ -89,13 +96,6 @@ public class AccountDeletionService {
                                     n ->
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
-                            .orElse(null),
-                    input.map(
-                                    n ->
-                                            n.getRequestContext()
-                                                    .getAuthorizer()
-                                                    .getOrDefault("clientId", AuditService.UNKNOWN)
-                                                    .toString())
                             .orElse(null),
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
