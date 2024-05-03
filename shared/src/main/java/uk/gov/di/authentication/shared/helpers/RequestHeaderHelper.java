@@ -12,11 +12,6 @@ public final class RequestHeaderHelper {
 
     private RequestHeaderHelper() {}
 
-    public static boolean headersContainValidHeader(
-            Map<String, String> headers, String headerName, boolean matchLowerCase) {
-        return getOptionalHeaderValueFromHeaders(headers, headerName, matchLowerCase).isPresent();
-    }
-
     public static String getHeaderValueFromHeaders(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
         return getOptionalHeaderValueFromHeaders(headers, headerName, matchLowerCase).orElse(null);
