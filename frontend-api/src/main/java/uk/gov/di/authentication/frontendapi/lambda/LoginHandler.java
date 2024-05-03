@@ -144,6 +144,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             UserProfile userProfile = userProfileMaybe.get();
             UserCredentials userCredentials = userContext.getUserCredentials().get();
+            auditUser.withPhone(userProfile.getPhoneNumber());
+
             var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
             attachLogFieldToLogs(
                     JOURNEY_TYPE,
@@ -166,8 +168,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has exceeded max password retries");
-
-                auditUser.withPhone(userProfile.getPhoneNumber());
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -200,8 +200,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 if (incorrectPasswordCount + 1 >= configurationService.getMaxPasswordRetries()) {
                     LOG.info("User has now exceeded max password retries");
-
-                    auditUser.withPhone(userProfile.getPhoneNumber());
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -269,8 +267,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     "User has successfully logged in with MFAType: {}. MFAVerified: {}",
                     userMfaDetail.getMfaMethodType().getValue(),
                     userMfaDetail.isMfaMethodVerified());
-
-            auditUser.withPhone(userProfile.getPhoneNumber());
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,

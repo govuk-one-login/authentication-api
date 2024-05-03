@@ -506,21 +506,11 @@ class LoginHandlerTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        TxmaAuditUser user =
-                new TxmaAuditUser()
-                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
-                        .withSessionId(session.getSessionId())
-                        .withUserId(expectedCommonSubject)
-                        .withEmail(EMAIL)
-                        .withPhone(AuditService.UNKNOWN)
-                        .withIpAddress("123.123.123.123")
-                        .withPersistentSessionId(PERSISTENT_ID);
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         "",
-                        user,
+                        auditUserWithAllUserInfo,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
                         pair("attemptNoFailedAt", 6));
@@ -740,22 +730,6 @@ class LoginHandlerTest {
         event.setHeaders(headers);
         event.setBody(body);
         return event;
-    }
-
-    private void assertAuditServiceCalledWith(
-            FrontendAuditableEvent auditableEvent, AuditService.MetadataPair... metadataPairs) {
-        verify(auditService)
-                .submitAuditEvent(
-                        auditableEvent,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PERSISTENT_ID,
-                        metadataPairs);
     }
 
     private void verifySessionIsSaved() {
