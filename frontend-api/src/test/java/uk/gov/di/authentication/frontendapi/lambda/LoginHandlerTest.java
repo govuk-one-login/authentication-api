@@ -383,12 +383,14 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts(
+    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries(
             MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
+
+        var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
@@ -408,20 +410,21 @@ class LoginHandlerTest {
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("attemptNoFailedAt", 5),
+                        pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
-                                configurationService.getMaxPasswordRetries()));
+                                maxRetriesAllowed));
     }
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttemptsForReauthJourney(
+    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetriesForReauthJourney(
             MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(5);
+        var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(maxRetriesAllowed - 1);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();

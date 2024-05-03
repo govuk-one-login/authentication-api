@@ -206,7 +206,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             clientId,
                             auditUser,
                             pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair("attemptNoFailedAt", incorrectPasswordCount),
+                            pair("attemptNoFailedAt", incorrectPasswordCount + 1),
                             pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxPasswordRetries()));
