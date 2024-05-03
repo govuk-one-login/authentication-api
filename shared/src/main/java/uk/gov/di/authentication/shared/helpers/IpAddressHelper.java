@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import java.util.Optional;
 
 import static java.util.Collections.emptyMap;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class IpAddressHelper {
 
@@ -21,14 +22,13 @@ public class IpAddressHelper {
                         .map(APIGatewayProxyRequestEvent::getHeaders)
                         .orElse(emptyMap());
 
-        if (headers.containsKey("X-Forwarded-For")) {
-            return headers.get("X-Forwarded-For").split(",")[0].trim();
-        }
-
-        return Optional.ofNullable(input)
-                .map(APIGatewayProxyRequestEvent::getRequestContext)
-                .map(ProxyRequestContext::getIdentity)
-                .map(RequestIdentity::getSourceIp)
-                .orElse(AuditService.UNKNOWN);
+        return getOptionalHeaderValueFromHeaders(headers, "X-Forwarded-For", true)
+                .map(forwardedValue -> forwardedValue.split(",")[0].trim())
+                .orElse(
+                        Optional.ofNullable(input)
+                                .map(APIGatewayProxyRequestEvent::getRequestContext)
+                                .map(ProxyRequestContext::getIdentity)
+                                .map(RequestIdentity::getSourceIp)
+                                .orElse(AuditService.UNKNOWN));
     }
 }
