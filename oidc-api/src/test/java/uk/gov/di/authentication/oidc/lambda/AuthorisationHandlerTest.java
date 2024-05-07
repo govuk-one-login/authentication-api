@@ -101,6 +101,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1092,6 +1093,43 @@ class AuthorisationHandlerTest {
             assertThat(
                     argument.getValue().getStringClaim("reauthenticate"),
                     equalTo(SUBJECT.getValue()));
+        }
+
+        @Test
+        void shouldAddPublicSubjectIdClaimIfAmScopePresent() throws ParseException {
+            Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+
+            var expectedClaim = "{\"userinfo\":{\"public_subject_id\":null}}";
+            var actualClaim = argument.getValue().getStringClaim("claim");
+            assertThat(actualClaim, is(equalTo(expectedClaim)));
+        }
+
+        @Test
+        void shouldAddLegacySubjectIdClaimIfGovUkAccountScopePresent() throws ParseException {
+            Map<String, String> requestParams =
+                    buildRequestParams(Map.of("scope", "openid govuk-account"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+
+            var expectedClaim = "{\"userinfo\":{\"legacy_subject_id\":null}}";
+            var actualClaim = argument.getValue().getStringClaim("claim");
+            assertThat(actualClaim, is(equalTo(expectedClaim)));
         }
 
         private static Stream<Prompt.Type> prompts() {
