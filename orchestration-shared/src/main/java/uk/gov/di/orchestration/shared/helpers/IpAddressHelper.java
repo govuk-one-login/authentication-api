@@ -8,6 +8,8 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import java.util.Optional;
 
 import static java.util.Collections.emptyMap;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
 public class IpAddressHelper {
 
@@ -17,8 +19,8 @@ public class IpAddressHelper {
                         .map(APIGatewayProxyRequestEvent::getHeaders)
                         .orElse(emptyMap());
 
-        if (headers.containsKey("X-Forwarded-For")) {
-            return headers.get("X-Forwarded-For").split(",")[0].trim();
+        if (headersContainValidHeader(headers, "X-Forwarded-For", true)) {
+            return getHeaderValueFromHeaders(headers, "X-Forwarded-For", true).split(",")[0].trim();
         }
 
         return Optional.ofNullable(input)
