@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
@@ -121,6 +122,15 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             userContext, configurationService);
             int passwordResetCounter = userContext.getSession().getPasswordResetCount();
             var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
+            var passwordResetTypePair =
+                    request.isWithinForcedPasswordResetJourney()
+                            ? pair(
+                                    "passwordResetType",
+                                    PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET)
+                            : pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
+
+            LOG.info("passwordResetType: {}", passwordResetTypePair);
+
             auditService.submitAuditEvent(
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
@@ -136,7 +146,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     IpAddressHelper.extractIpAddress(input),
                     authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    passwordResetCounterPair);
+                    passwordResetCounterPair,
+                    passwordResetTypePair);
 
             return validatePasswordResetCount(request.getEmail(), userContext)
                     .map(t -> generateApiGatewayProxyErrorResponse(400, t))

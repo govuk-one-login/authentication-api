@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -63,9 +64,20 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -88,6 +100,8 @@ class ResetPasswordRequestHandlerTest {
     private static final String PHONE_NUMBER = "01234567890";
     private static final AuditService.MetadataPair PASSWORD_RESET_COUNTER =
             pair("passwordResetCounter", 0);
+    private static final AuditService.MetadataPair PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD =
+            pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -251,7 +265,8 @@ class ResetPasswordRequestHandlerTest {
                             "123.123.123.123",
                             PHONE_NUMBER,
                             PERSISTENT_ID,
-                            PASSWORD_RESET_COUNTER);
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
 
         @Test
@@ -303,7 +318,8 @@ class ResetPasswordRequestHandlerTest {
                             "123.123.123.123",
                             PHONE_NUMBER,
                             PERSISTENT_ID,
-                            PASSWORD_RESET_COUNTER);
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
 
         @Test
