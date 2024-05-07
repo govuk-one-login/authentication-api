@@ -10,6 +10,7 @@ import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
@@ -261,17 +262,26 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             isPhoneNumberVerified);
 
             boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
+            var pairs = new AuditService.MetadataPair[] {};
+            if (isPasswordChangeRequired) {
+                pairs =
+                        new AuditService.MetadataPair[] {
+                            pair("internalSubjectId", userProfile.getSubjectID()),
+                            pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD)
+                        };
+            } else {
+                pairs =
+                        new AuditService.MetadataPair[] {
+                            pair("internalSubjectId", userProfile.getSubjectID())
+                        };
+            }
 
             LOG.info(
                     "User has successfully logged in with MFAType: {}. MFAVerified: {}",
                     userMfaDetail.getMfaMethodType().getValue(),
                     userMfaDetail.isMfaMethodVerified());
 
-            auditService.submitAuditEvent(
-                    LOG_IN_SUCCESS,
-                    clientId,
-                    auditUser,
-                    pair("internalSubjectId", userProfile.getSubjectID()));
+            auditService.submitAuditEvent(LOG_IN_SUCCESS, clientId, auditUser, pairs);
 
             if (!userMfaDetail.isMfaRequired()) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(
