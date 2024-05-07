@@ -20,10 +20,6 @@ public class CheckUserExistsResponse {
     @Expose
     private MFAMethodType mfaMethodType;
 
-    @SerializedName("mfaMethodVerified")
-    @Expose
-    private Boolean mfaMethodVerified;
-
     @SerializedName("phoneNumberLastThree")
     @Expose
     private String phoneNumberLastThree;
@@ -57,14 +53,12 @@ public class CheckUserExistsResponse {
             boolean doesUserExist,
             MFAMethodType mfaMethodType,
             String phoneNumberLastThree,
-            List<LockoutInformation> lockoutInformation,
-            boolean mfaMethodVerified) {
+            List<LockoutInformation> lockoutInformation) {
         this.email = email;
         this.doesUserExist = doesUserExist;
         this.mfaMethodType = mfaMethodType;
         this.phoneNumberLastThree = phoneNumberLastThree;
         this.lockoutInformation = lockoutInformation;
-        this.mfaMethodVerified = mfaMethodVerified;
     }
 
     public String getEmail() {
@@ -77,10 +71,6 @@ public class CheckUserExistsResponse {
 
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
-    }
-
-    public Boolean getMfaMethodVerified() {
-        return mfaMethodVerified;
     }
 
     public String getPhoneNumberLastThree() {
