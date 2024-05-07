@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Map;
+import java.util.Optional;
 
 public final class RequestHeaderHelper {
 
@@ -11,52 +12,26 @@ public final class RequestHeaderHelper {
 
     private RequestHeaderHelper() {}
 
-    public static boolean headersContainValidHeader(
-            Map<String, String> headers, String headerName, boolean matchLowerCase) {
-        if (headers == null || headers.isEmpty()) {
-            LOG.warn("All headers are missing or empty when looking for header {}", headerName);
-            return false;
-        } else if (!matchLowerCase && headers.containsKey(headerName)) {
-            LOG.trace("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
-            return true;
-        } else if (matchLowerCase
-                && (headers.containsKey(headerName)
-                        && headers.containsKey(headerName.toLowerCase()))) {
-            LOG.warn(
-                    "Found both headers {} and lowercase version, matchLowerCase={}",
-                    headerName,
-                    matchLowerCase);
-            return false;
-        } else if (matchLowerCase
-                && (headers.containsKey(headerName)
-                        || headers.containsKey(headerName.toLowerCase()))) {
-            LOG.trace(
-                    "Found header {} lowercase version, matchLowerCase={}",
-                    headerName,
-                    matchLowerCase);
-            return true;
-        } else {
-            LOG.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
-            return false;
-        }
-    }
-
     public static String getHeaderValueFromHeaders(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
+        return getOptionalHeaderValueFromHeaders(headers, headerName, matchLowerCase).orElse(null);
+    }
+
+    public static Optional<String> getOptionalHeaderValueFromHeaders(
+            Map<String, String> headers, String headerName, boolean matchLowerCase) {
         if (headers == null || headers.isEmpty()) {
-            return null;
+            return Optional.empty();
         } else if (headers.containsKey(headerName)) {
-            return headers.get(headerName);
+            return Optional.of(headers.get(headerName));
         } else if (matchLowerCase && headers.containsKey(headerName.toLowerCase())) {
-            return headers.get(headerName.toLowerCase());
+            return Optional.of(headers.get(headerName.toLowerCase()));
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 
     public static String getHeaderValueOrElse(
             Map<String, String> headers, String headerName, String orElse) {
-        String headerValue = getHeaderValueFromHeaders(headers, headerName, false);
-        return headerValue != null ? headerValue : orElse;
+        return getOptionalHeaderValueFromHeaders(headers, headerName, false).orElse(orElse);
     }
 }

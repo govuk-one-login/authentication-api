@@ -21,14 +21,14 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -78,10 +78,15 @@ public class UserInfoHandler
     public APIGatewayProxyResponseEvent userInfoRequestHandler(APIGatewayProxyRequestEvent input) {
         ThreadContext.clearMap();
         LOG.info("Request received to the UserInfoHandler");
-        if (!headersContainValidHeader(
-                input.getHeaders(),
-                AUTHORIZATION_HEADER,
-                configurationService.getHeadersCaseInsensitive())) {
+        Map<String, String> headers = input.getHeaders();
+
+        Optional<String> authorisationHeader =
+                getOptionalHeaderValueFromHeaders(
+                        headers,
+                        AUTHORIZATION_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+
+        if (authorisationHeader.isEmpty()) {
             LOG.warn("AccessToken is missing from request");
             return generateApiGatewayProxyResponse(
                     401,
@@ -94,13 +99,10 @@ public class UserInfoHandler
         AccessToken accessToken;
         AccessTokenStore accessTokenStore;
         try {
-            String authorizationHeader =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            AUTHORIZATION_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+
             accessToken =
-                    accessTokenService.getAccessTokenFromAuthorizationHeader(authorizationHeader);
+                    accessTokenService.getAccessTokenFromAuthorizationHeader(
+                            authorisationHeader.get());
 
             accessTokenStore =
                     accessTokenService
