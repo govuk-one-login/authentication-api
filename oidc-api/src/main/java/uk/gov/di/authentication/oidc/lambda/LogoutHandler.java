@@ -100,14 +100,8 @@ public class LogoutHandler
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
         attachSessionToLogsIfExists(sessionFromSessionCookie, input.getHeaders());
 
-        Optional<String> subjectId = Optional.empty();
-        Optional<String> sessionId = Optional.empty();
-        if (sessionFromSessionCookie.isPresent()) {
-            subjectId =
-                    Optional.ofNullable(
-                            sessionFromSessionCookie.get().getInternalCommonSubjectIdentifier());
-            sessionId = Optional.ofNullable(sessionFromSessionCookie.get().getSessionId());
-        }
+        var subjectId = sessionFromSessionCookie.map(Session::getInternalCommonSubjectIdentifier);
+        var sessionId = sessionFromSessionCookie.map(Session::getSessionId);
 
         var auditUser =
                 TxmaAuditUser.user()
