@@ -25,7 +25,8 @@ dependencies {
             configurations.xray,
             configurations.cloudwatch,
             configurations.gson,
-            configurations.apache
+            configurations.apache,
+            "org.apache.httpcomponents.core5:httpcore5:5.2"
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
