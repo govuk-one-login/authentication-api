@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.apache.logging.log4j.ThreadContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
@@ -14,6 +15,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper.AuditField;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -60,6 +62,7 @@ class UpdateEmailHandlerTest {
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String CLIENT_ID = "some-client-id";
     private static final String SESSION_ID = "some-session-id";
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String OTP = "123456";
     private static final Subject INTERNAL_SUBJECT = new Subject();
@@ -114,6 +117,9 @@ class UpdateEmailHandlerTest {
                         userProfile.getPhoneNumber(),
                         PERSISTENT_ID,
                         AuditService.MetadataPair.pair("ReplacedEmail", EXISTING_EMAIL_ADDRESS));
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -138,6 +144,9 @@ class UpdateEmailHandlerTest {
         assertThat(expectedException.getMessage(), equalTo("Invalid Principal in request"));
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -154,6 +163,9 @@ class UpdateEmailHandlerTest {
         verifyNoInteractions(auditService);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -166,6 +178,8 @@ class UpdateEmailHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
         event.setBody(format("{\"existingEmailAddress\": \"%s\"}", EXISTING_EMAIL_ADDRESS));
+        event.setHeaders(
+                Map.of(AuditField.TXMA_ENCODED_HEADER.getHeaderName(), TXMA_ENCODED_HEADER_VALUE));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -173,6 +187,9 @@ class UpdateEmailHandlerTest {
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -188,6 +205,9 @@ class UpdateEmailHandlerTest {
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -203,6 +223,9 @@ class UpdateEmailHandlerTest {
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -220,6 +243,9 @@ class UpdateEmailHandlerTest {
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -232,6 +258,9 @@ class UpdateEmailHandlerTest {
 
         assertEquals(updateEmailRequest.getExistingEmailAddress(), EXISTING_EMAIL_ADDRESS);
         assertEquals(updateEmailRequest.getReplacementEmailAddress(), NEW_EMAIL_ADDRESS);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(
@@ -254,7 +283,9 @@ class UpdateEmailHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        SESSION_ID));
+                        SESSION_ID,
+                        AuditField.TXMA_ENCODED_HEADER.getHeaderName(),
+                        TXMA_ENCODED_HEADER_VALUE));
 
         return event;
     }

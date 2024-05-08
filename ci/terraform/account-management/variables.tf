@@ -224,6 +224,12 @@ variable "support_email_check_enabled" {
   description = "Feature flag which toggles the Experian email check on and off"
 }
 
+variable "txma_audit_encoded_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles submitting additional Txma headers for audit"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

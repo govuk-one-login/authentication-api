@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -7,12 +9,14 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
+import static uk.gov.di.authentication.shared.helpers.AuditHelper.AuditField.TXMA_ENCODED_HEADER;
 
 public class AuditService {
 
@@ -40,6 +44,20 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri());
     }
 
+    public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
+        submitAuditEvent(
+                event,
+                auditContext.getClientSessionId(),
+                auditContext.getSessionId(),
+                auditContext.getClientId(),
+                auditContext.getSubjectId(),
+                auditContext.getEmail(),
+                auditContext.getIpAddress(),
+                auditContext.getPhoneNumber(),
+                auditContext.getPersistentSessionId(),
+                auditContext.getMetadataPairs());
+    }
+
     public void submitAuditEvent(
             AuditableEvent event,
             String clientId,
@@ -50,6 +68,13 @@ public class AuditService {
                         .withClientId(clientId)
                         .withComponentId(COMPONENT_ID)
                         .withUser(user);
+
+        if (configurationService.isTxmaAuditEncodedEnabled()
+                && ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName()) != null) {
+            txmaAuditEvent.addRestricted(
+                    "device_information",
+                    Map.of("encoded", ThreadContext.get(TXMA_ENCODED_HEADER.getFieldName())));
+        }
 
         Arrays.stream(metadataPairs)
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
@@ -66,9 +91,9 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event,
-            String clientId,
             String clientSessionId,
             String sessionId,
+            String clientId,
             String subjectId,
             String email,
             String ipAddress,

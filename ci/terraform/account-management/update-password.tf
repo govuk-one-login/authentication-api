@@ -22,12 +22,13 @@ module "update_password" {
   path_part       = "update-password"
   endpoint_method = ["POST"]
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    ENVIRONMENT                = var.environment
+    DYNAMO_ENDPOINT            = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT        = var.use_localstack ? var.localstack_endpoint : null
+    EMAIL_QUEUE_URL            = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL       = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI        = var.internal_sector_uri
+    TXMA_AUDIT_ENCODED_ENABLED = var.txma_audit_encoded_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler::handleRequest"
 

@@ -19,12 +19,13 @@ module "authenticate" {
   path_part       = "authenticate"
   endpoint_method = ["POST"]
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
-    REDIS_KEY            = local.redis_key
+    ENVIRONMENT                = var.environment
+    DYNAMO_ENDPOINT            = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    INTERNAl_SECTOR_URI        = var.internal_sector_uri
+    LOCALSTACK_ENDPOINT        = var.use_localstack ? var.localstack_endpoint : null
+    TXMA_AUDIT_QUEUE_URL       = module.account_management_txma_audit.queue_url
+    REDIS_KEY                  = local.redis_key
+    TXMA_AUDIT_ENCODED_ENABLED = var.txma_audit_encoded_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest"
 

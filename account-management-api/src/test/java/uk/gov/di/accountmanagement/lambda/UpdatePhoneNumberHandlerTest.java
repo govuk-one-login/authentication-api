@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.apache.logging.log4j.ThreadContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
@@ -13,6 +14,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper.AuditField;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -31,6 +33,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -57,6 +60,7 @@ class UpdatePhoneNumberHandlerTest {
     private static final String OTP = "123456";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private final String expectedCommonSubject =
@@ -114,6 +118,9 @@ class UpdatePhoneNumberHandlerTest {
                         "123.123.123.123",
                         NEW_PHONE_NUMBER,
                         PERSISTENT_ID);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -139,6 +146,9 @@ class UpdatePhoneNumberHandlerTest {
         assertThat(expectedException.getMessage(), equalTo("Invalid Principal in request"));
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -151,12 +161,17 @@ class UpdatePhoneNumberHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
         event.setBody(format("{\"email\": \"%s\"}", EMAIL_ADDRESS));
+        event.setHeaders(
+                Map.of(AuditField.TXMA_ENCODED_HEADER.getHeaderName(), TXMA_ENCODED_HEADER_VALUE));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(auditService);
         verifyNoInteractions(sqsClient);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -172,6 +187,9 @@ class UpdatePhoneNumberHandlerTest {
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     @Test
@@ -188,6 +206,9 @@ class UpdatePhoneNumberHandlerTest {
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
+        assertEquals(
+                ThreadContext.get(AuditField.TXMA_ENCODED_HEADER.getFieldName()),
+                TXMA_ENCODED_HEADER_VALUE);
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(String principalId) {
@@ -208,7 +229,9 @@ class UpdatePhoneNumberHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        CLIENT_SESSION_ID));
+                        CLIENT_SESSION_ID,
+                        AuditField.TXMA_ENCODED_HEADER.getHeaderName(),
+                        TXMA_ENCODED_HEADER_VALUE));
 
         return event;
     }

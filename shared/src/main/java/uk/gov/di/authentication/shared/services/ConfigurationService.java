@@ -647,4 +647,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getAccountInterventionsErrorMetricName() {
         return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }
+
+    public boolean isTxmaAuditEncodedEnabled() {
+        return System.getenv().getOrDefault("TXMA_AUDIT_ENCODED_ENABLED", "false").equals("true");
+    }
 }

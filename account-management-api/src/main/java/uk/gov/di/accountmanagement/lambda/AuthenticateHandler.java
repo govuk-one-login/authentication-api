@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
@@ -65,23 +67,27 @@ public class AuthenticateHandler
         String sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
         attachSessionIdToLogs(sessionId);
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         LOG.info("Request received to the AuthenticateHandler");
-
-        try {
-            AuthenticateRequest loginRequest =
-                    objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
-            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
-            if (!userHasAccount) {
-                auditService.submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+        var auditContext =
+                new AuditContext(
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         sessionId,
                         AuditService.UNKNOWN,
-                        loginRequest.getEmail(),
+                        AuditService.UNKNOWN,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        try {
+            AuthenticateRequest loginRequest =
+                    objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
+            auditContext.setEmail(loginRequest.getEmail());
+            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+            if (!userHasAccount) {
+                auditService.submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext);
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
             boolean hasValidCredentials =
@@ -90,41 +96,19 @@ public class AuthenticateHandler
             if (!hasValidCredentials) {
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        sessionId,
-                        AuditService.UNKNOWN,
-                        loginRequest.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        auditContext);
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
 
             auditService.submitAuditEvent(
-                    AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    sessionId,
-                    AuditService.UNKNOWN,
-                    loginRequest.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    sessionId,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    auditContext);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

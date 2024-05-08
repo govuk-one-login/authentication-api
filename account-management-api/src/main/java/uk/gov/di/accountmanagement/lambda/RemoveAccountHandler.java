@@ -31,6 +31,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
@@ -101,6 +102,7 @@ public class RemoveAccountHandler
                     RequestHeaderHelper.getHeaderValueOrElse(
                             input.getHeaders(), SESSION_ID_HEADER, "");
             attachSessionIdToLogs(sessionId);
+            attachTxmaAuditFieldFromHeaders(input.getHeaders());
             LOG.info("RemoveAccountHandler received request");
             RemoveAccountRequest removeAccountRequest =
                     objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
