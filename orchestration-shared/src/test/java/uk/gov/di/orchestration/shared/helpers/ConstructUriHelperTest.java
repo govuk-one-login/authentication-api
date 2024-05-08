@@ -16,11 +16,11 @@ class ConstructUriHelperTest {
 
     @Test
     void shouldBuildUriWhenOnlyBaseUrlIsPresent() {
-        var baseUrl = "https://GOV.UK";
+        var baseUrl = "https://GOV.UK/";
 
         var uri = ConstructUriHelper.buildURI(baseUrl);
 
-        assertThat(uri.toString(), equalTo("https://GOV.UK/"));
+        assertThat(uri.toString(), equalTo("https://GOV.UK"));
     }
 
     private static Stream<Arguments> validVectorValues() {
@@ -74,6 +74,6 @@ class ConstructUriHelperTest {
 
         var uri = ConstructUriHelper.buildURI(baseUrl, null, queryParams);
 
-        assertThat(uri.toString(), equalTo("https://GOV.UK/?referer=emailConfirmationEmail"));
+        assertThat(uri.toString(), equalTo("https://GOV.UK?referer=emailConfirmationEmail"));
     }
 }
