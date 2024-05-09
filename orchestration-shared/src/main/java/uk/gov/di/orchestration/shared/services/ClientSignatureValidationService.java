@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
@@ -33,10 +34,10 @@ public class ClientSignatureValidationService {
 
     private static final String TOKEN_PATH = "token";
 
-    private final ConfigurationService configurationService;
+    private final OidcAPI oidcAPI;
 
-    public ClientSignatureValidationService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
+    public ClientSignatureValidationService(OidcAPI oidcApi) {
+        this.oidcAPI = oidcApi;
     }
 
     public void validate(SignedJWT signedJWT, ClientRegistry client)
@@ -87,6 +88,6 @@ public class ClientSignatureValidationService {
     }
 
     private URI getTokenURI() {
-        return buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), TOKEN_PATH);
+        return buildURI(oidcAPI.baseURI(), TOKEN_PATH);
     }
 }

@@ -18,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -100,11 +101,12 @@ public class TokenHandler
 
     public TokenHandler(ConfigurationService configurationService) {
         var kms = new KmsConnectionService(configurationService);
+        var oidcApi = new OidcAPI(configurationService);
 
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms);
+                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService =
                 new AuthorisationCodeService(
@@ -117,16 +119,17 @@ public class TokenHandler
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
+                        new ClientSignatureValidationService(oidcApi));
     }
 
     public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
         var kms = new KmsConnectionService(configurationService);
+        var oidcApi = new OidcAPI(configurationService);
 
         this.configurationService = configurationService;
         this.redisConnectionService = redis;
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms);
+                new TokenService(configurationService, this.redisConnectionService, kms, oidcApi);
         this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService =
                 new AuthorisationCodeService(
@@ -139,7 +142,7 @@ public class TokenHandler
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
+                        new ClientSignatureValidationService(oidcApi));
     }
 
     public TokenHandler() {

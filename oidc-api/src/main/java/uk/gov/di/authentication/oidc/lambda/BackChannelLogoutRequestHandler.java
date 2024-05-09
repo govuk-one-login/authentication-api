@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
@@ -33,24 +34,30 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFiel
 public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent, Object> {
 
     private static final Logger LOG = LogManager.getLogger(BackChannelLogoutRequestHandler.class);
-    private final ConfigurationService instance;
+    private final OidcAPI oidcApi;
     private final HttpRequestService httpRequestService;
     private final TokenService tokenService;
     private final NowClock clock;
 
     public BackChannelLogoutRequestHandler() {
-        this.instance = ConfigurationService.getInstance();
+        var configurationService = ConfigurationService.getInstance();
+        this.oidcApi = new OidcAPI(configurationService);
         this.httpRequestService = new HttpRequestService();
-        this.tokenService = new TokenService(instance, null, new KmsConnectionService(instance));
+        this.tokenService =
+                new TokenService(
+                        configurationService,
+                        null,
+                        new KmsConnectionService(configurationService),
+                        oidcApi);
         this.clock = new NowClock(Clock.systemUTC());
     }
 
     public BackChannelLogoutRequestHandler(
-            ConfigurationService configurationService,
+            OidcAPI oidcApi,
             HttpRequestService httpRequestService,
             TokenService tokenService,
             NowClock clock) {
-        this.instance = configurationService;
+        this.oidcApi = oidcApi;
         this.httpRequestService = httpRequestService;
         this.tokenService = tokenService;
         this.clock = clock;
@@ -102,7 +109,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
                 .audience(inputEvent.getClientId())
                 .subject(inputEvent.getSubjectId())
                 .expirationTime(clock.nowPlus(2, ChronoUnit.MINUTES))
-                .issuer(instance.getOidcApiBaseURL().orElseThrow())
+                .issuer(oidcApi.baseURI().toString())
                 .issueTime(clock.now())
                 .claim(
                         "events",
