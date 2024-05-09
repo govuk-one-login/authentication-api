@@ -88,7 +88,9 @@ class AuditServiceTest {
                 "phone-number",
                 "persistent-session-id",
                 pair("key", "value"),
-                pair("key2", "value2"));
+                pair("key2", "value2"),
+                pair("restrictedKey1", "restrictedValue1", true),
+                pair("restrictedKey2", "restrictedValue2", true));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
@@ -100,6 +102,11 @@ class AuditServiceTest {
 
         assertThat(extensions, hasFieldWithValue("key", equalTo("value")));
         assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
+
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+
+        assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
+        assertThat(restricted, hasFieldWithValue("restrictedKey2", equalTo("restrictedValue2")));
     }
 
     @Test

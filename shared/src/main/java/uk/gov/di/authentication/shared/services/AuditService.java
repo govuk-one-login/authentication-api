@@ -52,7 +52,14 @@ public class AuditService {
                         .withUser(user);
 
         Arrays.stream(metadataPairs)
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+                .forEach(
+                        pair -> {
+                            if (pair.isRestricted()) {
+                                txmaAuditEvent.addRestricted(pair.getKey(), pair.getValue());
+                            } else {
+                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
+                            }
+                        });
 
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
@@ -92,14 +99,24 @@ public class AuditService {
     public static class MetadataPair {
         private final String key;
         private final Object value;
+        private final Boolean restricted;
 
         private MetadataPair(String key, Object value) {
+            this(key, value, false);
+        }
+
+        private MetadataPair(String key, Object value, Boolean restricted) {
             this.key = key;
             this.value = value;
+            this.restricted = restricted;
         }
 
         public static MetadataPair pair(String key, Object value) {
-            return new MetadataPair(key, value);
+            return new MetadataPair(key, value, false);
+        }
+
+        public static MetadataPair pair(String key, Object value, Boolean restricted) {
+            return new MetadataPair(key, value, restricted);
         }
 
         public String getKey() {
@@ -108,6 +125,10 @@ public class AuditService {
 
         public Object getValue() {
             return value;
+        }
+
+        public Boolean isRestricted() {
+            return restricted;
         }
 
         @Override
@@ -120,12 +141,14 @@ public class AuditService {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             MetadataPair that = (MetadataPair) o;
-            return Objects.equals(key, that.key) && Objects.equals(value, that.value);
+            return Objects.equals(key, that.key)
+                    && Objects.equals(value, that.value)
+                    && Objects.equals(restricted, that.restricted);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(key, value);
+            return Objects.hash(key, value, restricted);
         }
     }
 
