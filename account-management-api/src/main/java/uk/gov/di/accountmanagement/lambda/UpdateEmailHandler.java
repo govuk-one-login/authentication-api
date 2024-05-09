@@ -178,7 +178,7 @@ public class UpdateEmailHandler
                     userProfile.getPhoneNumber(),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     AuditService.MetadataPair.pair(
-                            "ReplacedEmail", updateInfoRequest.getExistingEmailAddress()));
+                            "ReplacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();
