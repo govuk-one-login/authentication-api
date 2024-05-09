@@ -25,6 +25,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -43,21 +44,24 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.CREDENTIAL_JWT;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 
 public class DocAppCriService {
 
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsService;
+    private final DocAppCriAPI docAppCriApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
     private static final Logger LOG = LogManager.getLogger(DocAppCriService.class);
 
     public DocAppCriService(
-            ConfigurationService configurationService, KmsConnectionService kmsService) {
+            ConfigurationService configurationService,
+            KmsConnectionService kmsService,
+            DocAppCriAPI docAppCriApi) {
         this.configurationService = configurationService;
         this.kmsService = kmsService;
+        this.docAppCriApi = docAppCriApi;
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
@@ -66,8 +70,7 @@ public class DocAppCriService {
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
                         configurationService.getDocAppAuthorisationCallbackURI());
-        var backendURI = configurationService.getDocAppBackendURI();
-        var tokenURI = buildURI(backendURI.toString(), "token");
+        var tokenURI = docAppCriApi.tokenURI();
         var audience =
                 configurationService.isDocAppNewAudClaimEnabled()
                         ? configurationService.getDocAppAudClaim()
