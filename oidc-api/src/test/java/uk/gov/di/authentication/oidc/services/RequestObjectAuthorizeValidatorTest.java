@@ -33,6 +33,8 @@ import java.util.Optional;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -200,7 +202,6 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("scope", SCOPE)
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
-                        .claim("state", new State())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -212,6 +213,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(
                 requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -235,6 +237,7 @@ class RequestObjectAuthorizeValidatorTest {
                 requestObjectError.get().errorObject(),
                 equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -268,6 +271,7 @@ class RequestObjectAuthorizeValidatorTest {
                 requestObjectError.get().errorObject(),
                 equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -290,6 +294,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(
                 requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -311,6 +316,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -339,6 +345,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -364,6 +371,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -385,6 +393,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -407,6 +416,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -429,6 +439,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(
                 requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -452,6 +463,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -474,6 +486,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -520,6 +533,7 @@ class RequestObjectAuthorizeValidatorTest {
                 requestObjectError.get().errorObject().getDescription(),
                 equalTo("Request is missing state parameter"));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertNull(requestObjectError.get().state());
     }
 
     @Test
@@ -544,6 +558,7 @@ class RequestObjectAuthorizeValidatorTest {
                 requestObjectError.get().errorObject().getDescription(),
                 equalTo("Request is missing nonce parameter"));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     @Test
@@ -566,6 +581,7 @@ class RequestObjectAuthorizeValidatorTest {
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertEquals(STATE, requestObjectError.get().state());
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {

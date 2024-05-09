@@ -632,7 +632,8 @@ class AuthorisationHandlerTest {
                             Optional.of(
                                     new AuthRequestError(
                                             OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"))));
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
 
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("GET");
@@ -641,7 +642,8 @@ class AuthorisationHandlerTest {
                             "client_id", "test-id",
                             "redirect_uri", "http://localhost:8080",
                             "scope", "email,openid,profile,non-existent-scope",
-                            "response_type", "code"));
+                            "response_type", "code",
+                            "state", "test-state"));
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -649,7 +651,7 @@ class AuthorisationHandlerTest {
 
             assertThat(response, hasStatus(302));
             assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
                     response.getHeaders().get(ResponseHeaders.LOCATION));
 
             verify(auditService)
@@ -667,11 +669,12 @@ class AuthorisationHandlerTest {
                             Optional.of(
                                     new AuthRequestError(
                                             OAuth2Error.INVALID_SCOPE,
-                                            URI.create("http://localhost:8080"))));
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
 
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setBody(
-                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code");
+                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code&state=test-state");
             event.setHttpMethod("POST");
             event.setRequestContext(
                     new ProxyRequestContext()
@@ -680,7 +683,7 @@ class AuthorisationHandlerTest {
 
             assertThat(response, hasStatus(302));
             assertEquals(
-                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
                     response.getHeaders().get(ResponseHeaders.LOCATION));
 
             verify(auditService)
@@ -964,6 +967,70 @@ class AuthorisationHandlerTest {
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(SESSION_ID),
                             pair("client-name", RP_CLIENT_NAME));
+        }
+
+        @Test
+        void shouldRedirectToRPWhenRequestObjectIsNotValid() throws JOSEException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setHttpMethod("GET");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+        }
+
+        @Test
+        void shouldRedirectToRPWhenPostRequestObjectIsNotValid() throws JOSEException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"),
+                                            new State("test-state"))));
+            var event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("POST");
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            event.setBody(
+                    String.format(
+                            "client_id=%s&scope=openid&response_type=code&request=%s",
+                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
+                            URLEncoder.encode(
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
+                                    Charset.defaultCharset())));
+
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
         }
 
         @Test
@@ -1476,7 +1543,7 @@ class AuthorisationHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(
-                                        errorObject, URI.create("http://localhost:8080"))));
+                                        errorObject, URI.create("http://localhost:8080"), null)));
         var event = new APIGatewayProxyRequestEvent();
         event.setHttpMethod("GET");
         event.setQueryStringParameters(
