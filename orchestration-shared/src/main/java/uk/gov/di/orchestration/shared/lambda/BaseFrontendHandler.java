@@ -51,7 +51,6 @@ public abstract class BaseFrontendHandler<T>
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
-    protected boolean loadUserCredentials = false;
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -68,24 +67,6 @@ public abstract class BaseFrontendHandler<T>
         this.authenticationService = authenticationService;
     }
 
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientSessionService clientSessionService,
-            ClientService clientService,
-            AuthenticationService authenticationService,
-            boolean loadUserCredentials) {
-        this(
-                clazz,
-                configurationService,
-                sessionService,
-                clientSessionService,
-                clientService,
-                authenticationService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
@@ -93,14 +74,6 @@ public abstract class BaseFrontendHandler<T>
         this.clientSessionService = new ClientSessionService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            boolean loadUserCredentials) {
-        this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
     }
 
     @Override
@@ -189,15 +162,6 @@ public abstract class BaseFrontendHandler<T>
                                                                 .toLowerCase(Locale.ROOT)))
                                         .withUserAuthenticated(false);
                         });
-
-        if (loadUserCredentials) {
-            session.map(Session::getEmailAddress)
-                    .map(authenticationService::getUserCredentialsFromEmail)
-                    .ifPresent(
-                            userCredentials ->
-                                    userContextBuilder.withUserCredentials(
-                                            Optional.of(userCredentials)));
-        }
 
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
 
