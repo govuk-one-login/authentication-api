@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -38,6 +39,20 @@ public class AuditService {
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
                         configurationService.getLocalstackEndpointUri());
+    }
+
+    public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
+        submitAuditEvent(
+                event,
+                auditContext.getClientId(),
+                auditContext.getClientSessionId(),
+                auditContext.getSessionId(),
+                auditContext.getSubjectId(),
+                auditContext.getEmail(),
+                auditContext.getIpAddress(),
+                auditContext.getPhoneNumber(),
+                auditContext.getPersistentSessionId(),
+                auditContext.getMetadataPairs());
     }
 
     public void submitAuditEvent(

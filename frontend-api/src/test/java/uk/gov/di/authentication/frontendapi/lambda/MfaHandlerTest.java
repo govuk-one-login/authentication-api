@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -174,16 +175,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        persistentId,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                PHONE_NUMBER,
+                                persistentId,
+                                pair("journey-type", JourneyType.SIGN_IN),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test
@@ -223,16 +225,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        persistentId,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                PHONE_NUMBER,
+                                persistentId,
+                                pair("journey-type", JourneyType.SIGN_IN),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test
@@ -263,16 +266,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                PHONE_NUMBER,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", JourneyType.SIGN_IN),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test
@@ -339,16 +343,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        "wrong.email@gov.uk",
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                "wrong.email@gov.uk",
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", JourneyType.SIGN_IN),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test
@@ -373,16 +378,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", JourneyType.SIGN_IN),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test
@@ -485,16 +491,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", journeyType),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @ParameterizedTest
@@ -527,16 +534,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", journeyType),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @ParameterizedTest
@@ -570,16 +578,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", journeyType),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test
@@ -612,16 +621,17 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        new AuditContext(
+                                TEST_CLIENT_ID,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                PHONE_NUMBER,
+                                PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                                pair("journey-type", JourneyType.SIGN_IN),
+                                pair("mfa-type", MFAMethodType.SMS.getValue())));
     }
 
     @Test

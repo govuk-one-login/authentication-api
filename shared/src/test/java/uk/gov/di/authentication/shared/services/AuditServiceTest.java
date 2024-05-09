@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
@@ -43,14 +44,15 @@ class AuditServiceTest {
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id");
+                new AuditContext(
+                        "client-id",
+                        "request-id",
+                        "session-id",
+                        "subject-id",
+                        "email",
+                        "ip-address",
+                        "phone-number",
+                        "persistent-session-id"));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 

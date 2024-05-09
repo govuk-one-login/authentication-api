@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -143,22 +144,25 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
             Optional<ErrorResponse> codeRequestValid =
                     validateCodeRequestAttempts(email, journeyType, userContext);
+
+            AuditContext auditContext =
+                    new AuditContext(
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getClientID)
+                                    .orElse(AuditService.UNKNOWN),
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            email,
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            persistentSessionId,
+                            pair("journey-type", journeyType),
+                            pair("mfa-type", MFAMethodType.SMS.getValue()));
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        email,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
@@ -166,20 +170,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (!userContext.getSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        email,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -187,20 +178,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        email,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
+                        FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
@@ -241,21 +219,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT;
             }
-            auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    email,
-                    IpAddressHelper.extractIpAddress(input),
-                    phoneNumber,
-                    persistentSessionId,
-                    pair("journey-type", journeyType),
-                    pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+            auditContext.setPhoneNumber(phoneNumber);
+            auditService.submitAuditEvent(auditableEvent, auditContext);
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
