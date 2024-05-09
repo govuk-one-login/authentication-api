@@ -299,7 +299,7 @@ public class IntegrationTest {
 
         @Override
         public URI getFrontendBaseURL() {
-            return URI.create("http://localhost:3000/reset-password?code=");
+            return URI.create("http://localhost:3000/");
         }
 
         @Override

@@ -211,10 +211,9 @@ public class LogoutHandler
             return segmentedFunctionCall(
                     "logoutWhenSessionDoesNotExist",
                     () ->
-                            logoutService.generateLogoutResponse(
+                            logoutService.generateCustomLogoutResponse(
                                     URI.create(postLogoutRedirectUri.get()),
                                     state,
-                                    Optional.empty(),
                                     auditUser,
                                     Optional.of(clientID)));
         }
@@ -273,7 +272,10 @@ public class LogoutHandler
 
         segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
         cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
-        return logoutService.generateLogoutResponse(
-                URI.create(uri), state, Optional.empty(), auditUser, Optional.of(clientID));
+        return logoutService.generateCustomLogoutResponse(
+                URI.create(uri),
+                state,
+                auditUser,
+                Optional.of(clientID));
     }
 }

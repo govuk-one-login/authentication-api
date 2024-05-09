@@ -28,6 +28,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.FrontEndPages;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -103,7 +104,7 @@ public class AuthenticationCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final CookieHelper cookieHelper;
     private final LogoutService logoutService;
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
+    private final FrontEndPages frontEndPages;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -142,6 +143,7 @@ public class AuthenticationCallbackHandler
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
+        this.frontEndPages = new FrontEndPages(configurationService);
     }
 
     public AuthenticationCallbackHandler(
@@ -158,7 +160,8 @@ public class AuthenticationCallbackHandler
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
             AccountInterventionService accountInterventionService,
-            LogoutService logoutService) {
+            LogoutService logoutService,
+            FrontEndPages frontEndPages) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -173,6 +176,7 @@ public class AuthenticationCallbackHandler
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
         this.accountInterventionService = accountInterventionService;
         this.logoutService = logoutService;
+        this.frontEndPages = frontEndPages;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -255,8 +259,7 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
             }
 
             try {
@@ -441,17 +444,14 @@ public class AuthenticationCallbackHandler
                 LOG.error(
                         "Orchestration to Authentication userinfo request was not successful: {}",
                         e.getMessage());
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
             }
         } catch (AuthenticationCallbackException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
         }
     }
 

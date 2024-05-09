@@ -78,6 +78,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -187,7 +188,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -213,7 +214,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
 
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -243,7 +246,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(2));
         assertThat(
@@ -283,7 +288,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(3));
         assertThat(
@@ -325,7 +332,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -376,7 +385,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -408,7 +419,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -445,7 +458,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         var cookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
         assertThat(
@@ -575,7 +590,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
 
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -615,7 +632,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(
                 getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -654,7 +671,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(URI.create(redirectUri).getQuery(), containsString("prompt=login"));
 
         assertTxmaAuditEventsReceived(
@@ -695,7 +714,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -735,7 +756,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
         String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -916,7 +939,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(TEST_CONFIGURATION_SERVICE.getLoginURI().toString() + "/error"));
+                equalTo(
+                        buildURI(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(), "error")
+                                .toString()));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
     }

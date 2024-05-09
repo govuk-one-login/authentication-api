@@ -57,7 +57,7 @@ public class UriMatcher<T> extends TypeSafeDiagnosingMatcher<URI> {
                 equalTo(expected));
     }
 
-    public static UriMatcher<Map<? extends String, ? extends String>> redirectQueryParameters(
+    public static UriMatcher<Map<? extends String, ? extends String>> queryParameters(
             Matcher<Map<? extends String, ? extends String>> expected) {
         return new UriMatcher<>(
                 "uri query parameters", uri -> parseQueryString(uri.getRawQuery()), expected);

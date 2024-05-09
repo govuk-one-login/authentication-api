@@ -208,7 +208,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -235,7 +235,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -294,7 +294,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(

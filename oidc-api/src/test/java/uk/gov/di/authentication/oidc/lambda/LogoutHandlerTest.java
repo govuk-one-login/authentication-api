@@ -108,9 +108,10 @@ class LogoutHandlerTest {
                         tokenValidationService,
                         cloudwatchMetricsService,
                         logoutService);
-        when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any()))
+        when(logoutService.generateCustomLogoutResponse(any(), any(), any(), any()))
+                .thenReturn(new APIGatewayProxyResponseEvent());
+        when(logoutService.generateDefaultLogoutResponse(any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(logoutService.generateErrorLogoutResponse(any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
@@ -161,12 +162,12 @@ class LogoutHandlerTest {
 
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
-                    .generateLogoutResponse(
+                    .generateCustomLogoutResponse(
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.toString()),
-                            Optional.empty(),
                             getAuditUser(event),
                             audience);
+
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
@@ -189,12 +190,12 @@ class LogoutHandlerTest {
 
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
-                    .generateLogoutResponse(
+                    .generateCustomLogoutResponse(
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.toString()),
-                            Optional.empty(),
                             getAuditUser(event),
                             audience);
+
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
@@ -228,12 +229,12 @@ class LogoutHandlerTest {
 
             verify(logoutService, times(0)).destroySessions(session);
             verify(logoutService)
-                    .generateLogoutResponse(
+                    .generateCustomLogoutResponse(
                             CLIENT_LOGOUT_URI,
-                            Optional.of(STATE.getValue()),
-                            Optional.empty(),
+                            Optional.of(STATE.toString()),
                             getAuditUserWhenNoCookie(event),
                             audience);
+
             verifyNoInteractions(cloudwatchMetricsService);
         }
     }

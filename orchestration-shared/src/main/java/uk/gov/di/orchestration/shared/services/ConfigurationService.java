@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -117,14 +116,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return env.getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }
 
-    public URI getAccountStatusBlockedURI() {
-        return buildURI(getFrontendBaseURL(), "unavailable-permanent");
-    }
-
-    public URI getAccountStatusSuspendedURI() {
-        return buildURI(getFrontendBaseURL(), "unavailable-temporary");
-    }
-
     public long getAuthCodeExpiry() {
         return Long.parseLong(env.getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
@@ -157,10 +148,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isCustomDocAppClaimEnabled() {
         return getFlagOrFalse("CUSTOM_DOC_APP_CLAIM_ENABLED");
-    }
-
-    public URI getDefaultLogoutURI() {
-        return getURIOrEmpty("DEFAULT_LOGOUT_URI");
     }
 
     public URI getDocAppAuthorisationURI() {
@@ -308,10 +295,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getInternalSectorURI() {
         return getURIOrThrow("INTERNAl_SECTOR_URI");
-    }
-
-    public URI getLoginURI() {
-        return getURIOrThrow("LOGIN_URI");
     }
 
     public String getNotifyCallbackBearerToken() {

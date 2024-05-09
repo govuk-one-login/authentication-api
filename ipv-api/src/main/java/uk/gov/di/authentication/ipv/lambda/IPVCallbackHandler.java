@@ -22,6 +22,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.FrontEndPages;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -84,11 +85,8 @@ public class IPVCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final IPVCallbackHelper ipvCallbackHelper;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final FrontEndPages frontEndPages;
     protected final Json objectMapper = SerializationService.getInstance();
-    private static final String REDIRECT_PATH = "ipv-callback";
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
-    private static final String ERROR_PAGE_REDIRECT_PATH_NO_SESSION =
-            "ipv-callback-session-expiry-error";
     private final CookieHelper cookieHelper;
 
     public IPVCallbackHandler() {
@@ -108,7 +106,8 @@ public class IPVCallbackHandler
             AccountInterventionService accountInterventionService,
             CookieHelper cookieHelper,
             NoSessionOrchestrationService noSessionOrchestrationService,
-            IPVCallbackHelper ipvCallbackHelper) {
+            IPVCallbackHelper ipvCallbackHelper,
+            FrontEndPages frontEndPages) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -122,6 +121,7 @@ public class IPVCallbackHandler
         this.cookieHelper = cookieHelper;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
+        this.frontEndPages = frontEndPages;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -148,6 +148,7 @@ public class IPVCallbackHandler
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
+        this.frontEndPages = new FrontEndPages(configurationService);
     }
 
     @Override
@@ -296,8 +297,7 @@ public class IPVCallbackHandler
                         tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
             }
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
@@ -407,29 +407,22 @@ public class IPVCallbackHandler
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
                                     rpPairwiseSubject, userIdentityUserInfo));
-            var redirectURI =
-                    ConstructUriHelper.buildURI(
-                            configurationService.getLoginURI().toString(), REDIRECT_PATH);
+            var redirectURI = frontEndPages.ipvCallbackURI();
             LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(),
-                    ERROR_PAGE_REDIRECT_PATH_NO_SESSION);
+            return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorIpvCallbackURI());
         } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
         } catch (UserNotFoundException e) {
             LOG.error(e.getMessage());
             throw new RuntimeException(e);

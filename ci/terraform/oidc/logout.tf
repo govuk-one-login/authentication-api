@@ -27,7 +27,6 @@ module "logout" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DEFAULT_LOGOUT_URI                   = "https://${local.frontend_fqdn}/signed-out"
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
     LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                            = local.redis_key

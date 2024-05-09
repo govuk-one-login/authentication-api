@@ -3,10 +3,10 @@ package uk.gov.di.orchestration.shared.services;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.FrontEndPages;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -15,12 +15,13 @@ import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -37,6 +38,8 @@ public class LogoutService {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final BackChannelLogoutService backChannelLogoutService;
     private final DynamoService dynamoService;
+    private final FrontEndPages frontEndPages;
+    private static final String STATE_PARAMETER_KEY = "state";
 
     public LogoutService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
@@ -47,6 +50,7 @@ public class LogoutService {
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
+        this.frontEndPages = new FrontEndPages(configurationService);
     }
 
     public LogoutService(
@@ -57,7 +61,8 @@ public class LogoutService {
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             BackChannelLogoutService backChannelLogoutService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            FrontEndPages frontEndPages) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
@@ -66,6 +71,7 @@ public class LogoutService {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.backChannelLogoutService = backChannelLogoutService;
         this.dynamoService = dynamoService;
+        this.frontEndPages = frontEndPages;
     }
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
@@ -120,9 +126,8 @@ public class LogoutService {
                 errorObject.getCode(),
                 errorObject.getDescription());
         return generateLogoutResponse(
-                configurationService.getDefaultLogoutURI(),
+                frontEndPages.logoutURI(Optional.of(errorObject)),
                 state,
-                Optional.of(errorObject),
                 auditUser,
                 clientId);
     }
@@ -134,54 +139,54 @@ public class LogoutService {
             cloudwatchMetricsService.incrementLogout(clientId);
         }
         return generateLogoutResponse(
-                configurationService.getDefaultLogoutURI(),
+                frontEndPages.logoutURI(Optional.empty()),
                 state,
-                Optional.empty(),
                 auditUser,
                 clientId);
     }
 
-    public APIGatewayProxyResponseEvent generateLogoutResponse(
+    public APIGatewayProxyResponseEvent generateCustomLogoutResponse(
             URI logoutUri,
             Optional<String> state,
-            Optional<ErrorObject> errorObject,
             TxmaAuditUser auditUser,
             Optional<String> clientId) {
         LOG.info("Generating Logout Response using URI: {}", logoutUri);
-        URIBuilder uriBuilder = new URIBuilder(logoutUri);
-        state.ifPresent(s -> uriBuilder.addParameter("state", s));
-        errorObject.ifPresent(e -> uriBuilder.addParameter("error_code", e.getCode()));
-        errorObject.ifPresent(
-                e -> uriBuilder.addParameter("error_description", e.getDescription()));
-        URI uri;
-        try {
-            uri = uriBuilder.build();
-        } catch (URISyntaxException e) {
-            LOG.error("Unable to generate logout response", e);
-            throw new RuntimeException("Unable to build URI");
-        }
+        return generateLogoutResponse(logoutUri, state, auditUser, clientId);
+    }
+
+    private APIGatewayProxyResponseEvent generateLogoutResponse(
+            URI logoutUri,
+            Optional<String> state,
+            TxmaAuditUser auditUser,
+            Optional<String> clientId) {
+        var queryParameters = new HashMap<String, String>();
+        state.ifPresent(s -> queryParameters.put(STATE_PARAMETER_KEY, s));
+        logoutUri = buildURI(logoutUri, queryParameters);
 
         sendAuditEvent(clientId, auditUser);
         return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
+                302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
 
     private APIGatewayProxyResponseEvent generateAccountInterventionLogoutResponse(
             TxmaAuditUser auditUser, String clientId, AccountIntervention intervention) {
         URI redirectURI;
         if (intervention.getBlocked()) {
-            redirectURI = configurationService.getAccountStatusBlockedURI();
+            redirectURI = frontEndPages.accountBlockedURI();
             LOG.info("Generating Account Intervention blocked logout response");
         } else if (intervention.getSuspended()) {
-            redirectURI = configurationService.getAccountStatusSuspendedURI();
+            redirectURI = frontEndPages.accountSuspendedURI();
             LOG.info("Generating Account Intervention suspended logout response");
         } else {
             throw new RuntimeException("Account status must be blocked or suspended");
         }
 
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
-        return generateLogoutResponse(
-                redirectURI, Optional.empty(), Optional.empty(), auditUser, Optional.of(clientId));
+            return generateCustomLogoutResponse(
+                    redirectURI,
+                    Optional.empty(),
+                    auditUser,
+                    Optional.of(clientId));
     }
 
     public Optional<String> getRpPairwiseId(String subject, String clientId) {
@@ -201,7 +206,7 @@ public class LogoutService {
                                     userProfile,
                                     client.get(),
                                     dynamoService,
-                                    configurationService.getInternalSectorUri())
+                                    configurationService.getInternalSectorURI().toString())
                             .getValue());
         } catch (Exception e) {
             LOG.warn("Exception caught while getting RP pairwise ID for audit event");

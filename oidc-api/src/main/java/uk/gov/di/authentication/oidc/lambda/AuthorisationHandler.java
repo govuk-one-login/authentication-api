@@ -23,7 +23,6 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -37,6 +36,7 @@ import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.FrontEndPages;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -68,7 +68,6 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -104,7 +103,6 @@ public class AuthorisationHandler
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
     public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -116,9 +114,9 @@ public class AuthorisationHandler
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DocAppAuthorisationService docAppAuthorisationService;
-
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final TokenValidationService tokenValidationService;
+    private final FrontEndPages frontEndPages;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -132,7 +130,8 @@ public class AuthorisationHandler
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
-            TokenValidationService tokenValidationService) {
+            TokenValidationService tokenValidationService,
+            FrontEndPages frontEndPages) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -145,6 +144,7 @@ public class AuthorisationHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.tokenValidationService = tokenValidationService;
+        this.frontEndPages = frontEndPages;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -171,6 +171,7 @@ public class AuthorisationHandler
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
+        this.frontEndPages = new FrontEndPages(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -281,8 +282,7 @@ public class AuthorisationHandler
                         null);
             } else {
                 LOG.warn("Redirect URI not found in client registry");
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(frontEndPages.errorURI());
             }
         }
         if (authRequest.getRequestObject() == null) {
@@ -548,29 +548,22 @@ public class AuthorisationHandler
             List<VectorOfTrust> vtrList,
             TxmaAuditUser user) {
         LOG.info("Redirecting");
-        String redirectURI;
-        try {
-            var redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
 
-            redirectUriBuilder.setPath("authorize");
-
-            if (Objects.nonNull(authenticationRequest.getPrompt())
-                    && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
-                redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
-            }
-
-            List<String> optionalGaTrackingParameter =
-                    authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
-            if (Objects.nonNull(optionalGaTrackingParameter)
-                    && !optionalGaTrackingParameter.isEmpty()) {
-                redirectUriBuilder.addParameter(
-                        GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY, optionalGaTrackingParameter.get(0));
-            }
-
-            redirectURI = redirectUriBuilder.build().toString();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Error constructing redirect URI", e);
+        Optional<Prompt.Type> prompt = Optional.empty();
+        if (Objects.nonNull(authenticationRequest.getPrompt())
+                && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
+            prompt = Optional.of(Prompt.Type.LOGIN);
         }
+
+        Optional<String> googleAnalytics = Optional.empty();
+        List<String> optionalGaTrackingParameter =
+                authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
+        if (Objects.nonNull(optionalGaTrackingParameter)
+                && !optionalGaTrackingParameter.isEmpty()) {
+            googleAnalytics = Optional.of(optionalGaTrackingParameter.get(0));
+        }
+
+        var redirectURI = frontEndPages.authorizeURI(prompt, googleAnalytics).toString();
 
         List<String> cookies =
                 handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
@@ -601,7 +594,7 @@ public class AuthorisationHandler
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
-                        .audience(configurationService.getLoginURI().toString())
+                        .audience(frontEndPages.baseURI().toString())
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .notBeforeTime(NowHelper.now())

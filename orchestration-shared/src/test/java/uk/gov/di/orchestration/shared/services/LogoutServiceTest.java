@@ -13,13 +13,13 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.FrontEndPages;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -39,12 +39,15 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,8 +61,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParameters;
 
 public class LogoutServiceTest {
 
@@ -76,6 +83,7 @@ public class LogoutServiceTest {
             mock(CloudwatchMetricsService.class);
     private final BackChannelLogoutService backChannelLogoutService =
             mock(BackChannelLogoutService.class);
+    private final FrontEndPages frontEndPages = mock(FrontEndPages.class);
 
     private static MockedStatic<IpAddressHelper> ipAddressHelper;
     private static MockedStatic<PersistentIdHelper> persistentIdHelper;
@@ -89,17 +97,21 @@ public class LogoutServiceTest {
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final String PERSISTENT_SESSION_ID =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
-    private static final URI DEFAULT_LOGOUT_URI =
-            URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
-    private static final URI AI_LOGOUT_URI =
-            URI.create("https://oidc.sandpit.account.gov.uk/orch-frontend/not-available");
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
 
     private static final URI OIDC_API_BASE_URL = URI.create("https://oidc.test.account.gov.uk/");
     private static final URI FRONTEND_BASE_URL = URI.create("https://signin.test.account.gov.uk/");
+    private static final URI DEFAULT_LOGOUT_URI =
+            URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
+    private static final URI ACCOUNT_BLOCKED_URI =
+            URI.create(
+                    "https://di-authentication-frontend.london.cloudapps.digital/unavailable-permanent");
+    private static final URI ACCOUNT_SUSPENDED_URI =
+            URI.create(
+                    "https://di-authentication-frontend.london.cloudapps.digital/unavailable-temporary");
 
     private static final String ENVIRONMENT = "test";
 
@@ -131,14 +143,24 @@ public class LogoutServiceTest {
         when(IpAddressHelper.extractIpAddress(any())).thenReturn(IP_ADDRESS);
         when(PersistentIdHelper.extractPersistentIdFromCookieHeader(event.getHeaders()))
                 .thenReturn(PERSISTENT_SESSION_ID);
-
-        when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
+        when(frontEndPages.accountBlockedURI()).thenReturn(ACCOUNT_BLOCKED_URI);
+        when(frontEndPages.accountSuspendedURI()).thenReturn(ACCOUNT_SUSPENDED_URI);
+        when(frontEndPages.logoutURI(any()))
+                .thenAnswer(
+                        i -> {
+                            var error = (Optional<ErrorObject>) i.getArgument(0);
+                            var queryParameters = new HashMap<String, String>();
+                            error.ifPresent(
+                                    e -> {
+                                        queryParameters.put("error_code", e.getCode());
+                                        queryParameters.put(
+                                                "error_description", e.getDescription());
+                                    });
+                            return buildURI(DEFAULT_LOGOUT_URI, null, queryParameters);
+                        });
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(configurationService.getFrontendBaseURL()).thenReturn(FRONTEND_BASE_URL);
-        when(configurationService.getAccountStatusBlockedURI()).thenCallRealMethod();
-        when(configurationService.getAccountStatusSuspendedURI()).thenCallRealMethod();
         logoutService =
                 new LogoutService(
                         configurationService,
@@ -148,7 +170,8 @@ public class LogoutServiceTest {
                         auditService,
                         cloudwatchMetricsService,
                         backChannelLogoutService,
-                        dynamoService);
+                        dynamoService,
+                        frontEndPages);
 
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -174,10 +197,9 @@ public class LogoutServiceTest {
     @Test
     void successfullyReturnsClientLogoutResponse() {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateLogoutResponse(
+                logoutService.generateCustomLogoutResponse(
                         CLIENT_LOGOUT_URI,
                         Optional.of(STATE.getValue()),
-                        Optional.empty(),
                         auditUser,
                         Optional.of(audience.get()));
 
@@ -234,13 +256,16 @@ public class LogoutServiceTest {
         assertThat(response, hasStatus(302));
         ErrorObject errorObject =
                 new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
         assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
+                response,
+                isRedirectTo(
+                        allOf(
+                                baseUri(DEFAULT_LOGOUT_URI),
+                                queryParameters(hasEntry("error_code", errorObject.getCode())),
+                                queryParameters(
+                                        hasEntry(
+                                                "error_description",
+                                                errorObject.getDescription())))));
     }
 
     @Test
@@ -260,7 +285,7 @@ public class LogoutServiceTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(FRONTEND_BASE_URL + "unavailable-permanent"));
+                equalTo(ACCOUNT_BLOCKED_URI.toString()));
     }
 
     @Test
@@ -281,7 +306,7 @@ public class LogoutServiceTest {
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(FRONTEND_BASE_URL + "unavailable-temporary"));
+                equalTo(ACCOUNT_SUSPENDED_URI.toString()));
     }
 
     @Test
@@ -295,10 +320,9 @@ public class LogoutServiceTest {
                         STATE.toString()));
         input.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
-        logoutService.generateLogoutResponse(
+        logoutService.generateCustomLogoutResponse(
                 CLIENT_LOGOUT_URI,
                 Optional.of(STATE.getValue()),
-                Optional.empty(),
                 auditUserWhenNoCookie,
                 Optional.empty());
 
@@ -361,10 +385,9 @@ public class LogoutServiceTest {
         when(dynamoService.getUserProfileFromSubject(any())).thenReturn(USER_PROFILE);
         when(ClientSubjectHelper.getSubject(any(), any(), any(), any())).thenReturn(rpSubject);
 
-        logoutService.generateLogoutResponse(
+        logoutService.generateCustomLogoutResponse(
                 CLIENT_LOGOUT_URI,
                 Optional.of(STATE.getValue()),
-                Optional.empty(),
                 auditUser,
                 Optional.of(audience.get()));
 
