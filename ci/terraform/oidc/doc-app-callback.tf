@@ -29,7 +29,7 @@ module "doc-app-callback" {
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID    = var.doc_app_authorisation_client_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS    = local.doc_app_auth_key_alias_name
-    DOC_APP_BACKEND_URI                = var.doc_app_backend_uri
+    DOC_APP_CRI_BASE_URI                = var.doc_app_backend_uri
     DOC_APP_CRI_DATA_ENDPOINT          = var.doc_app_cri_data_endpoint
     DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
     DOC_APP_CRI_DATA_V2_ENDPOINT       = var.doc_app_cri_data_v2_endpoint

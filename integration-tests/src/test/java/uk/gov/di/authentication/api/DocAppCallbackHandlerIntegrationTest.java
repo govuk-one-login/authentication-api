@@ -392,7 +392,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         }
 
         @Override
-        public URI getDocAppBackendURI() {
+        public URI getDocAppCriBaseURI() {
             try {
                 return new URIBuilder()
                         .setHost("localhost")

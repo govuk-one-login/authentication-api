@@ -167,8 +167,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrEmpty("DOC_APP_AUTHORISATION_URI");
     }
 
-    public URI getDocAppBackendURI() {
-        return getURIOrEmpty("DOC_APP_BACKEND_URI");
+    public URI getDocAppCriBaseURI() {
+        return getURIOrEmpty("DOC_APP_CRI_BASE_URI");
     }
 
     public URI getDocAppAuthorisationCallbackURI() {

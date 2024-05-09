@@ -19,6 +19,7 @@ import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -48,7 +49,6 @@ import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -73,6 +73,7 @@ public class DocAppCallbackHandler
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final CookieHelper cookieHelper;
+    private final DocAppCriAPI docAppBackendApi;
     protected final Json objectMapper = SerializationService.getInstance();
 
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
@@ -92,7 +93,8 @@ public class DocAppCallbackHandler
             AuthorisationCodeService authorisationCodeService,
             CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            DocAppCriAPI docAppBackendApi) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -104,10 +106,12 @@ public class DocAppCallbackHandler
         this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.docAppBackendApi = docAppBackendApi;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
+        var docAppBackendApi = new DocAppCriAPI(configurationService);
         this.configurationService = configurationService;
         this.authorisationService =
                 new DocAppAuthorisationService(
@@ -115,7 +119,8 @@ public class DocAppCallbackHandler
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
-        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
+        this.tokenService =
+                new DocAppCriService(configurationService, kmsConnectionService, docAppBackendApi);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -125,6 +130,7 @@ public class DocAppCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
+        this.docAppBackendApi = new DocAppCriAPI(configurationService);
     }
 
     @Override
@@ -239,12 +245,7 @@ public class DocAppCallbackHandler
             }
 
             try {
-                var criDataEndpoint = configurationService.getDocAppCriV2DataEndpoint();
-
-                var criDataURI =
-                        buildURI(
-                                configurationService.getDocAppBackendURI().toString(),
-                                criDataEndpoint);
+                var criDataURI = docAppBackendApi.criDataURI();
 
                 var request = new HTTPRequest(POST, criDataURI);
                 request.setAuthorization(
