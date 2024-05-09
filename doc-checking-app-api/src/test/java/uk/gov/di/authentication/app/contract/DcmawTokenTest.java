@@ -22,6 +22,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.*;
 import uk.gov.di.authentication.app.services.DocAppCriService;
+import uk.gov.di.orchestration.shared.api.DocAppBackendAPI;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
@@ -70,7 +71,9 @@ public class DcmawTokenTest {
 
     @BeforeEach
     void setup() {
-        docAppCriService = new DocAppCriService(configService, kmsConnectionService);
+        docAppCriService =
+                new DocAppCriService(
+                        configService, kmsConnectionService, new DocAppBackendAPI(configService));
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getDocAppTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configService.isDocAppNewAudClaimEnabled()).thenReturn(true);
