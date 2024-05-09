@@ -87,13 +87,10 @@ public class LogoutServiceTest {
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
-    private static final URI AI_LOGOUT_URI =
-            URI.create("https://oidc.sandpit.account.gov.uk/orch-frontend/not-available");
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
 
-    private static final URI OIDC_API_BASE_URL = URI.create("https://oidc.test.account.gov.uk/");
     private static final URI FRONTEND_BASE_URL = URI.create("https://signin.test.account.gov.uk/");
 
     private static final String ENVIRONMENT = "test";
@@ -118,7 +115,6 @@ public class LogoutServiceTest {
 
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configurationService.getFrontendBaseURL()).thenReturn(FRONTEND_BASE_URL);
         when(configurationService.getAccountStatusBlockedURI()).thenCallRealMethod();

@@ -16,6 +16,7 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -48,7 +49,6 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
@@ -65,6 +65,7 @@ public class IPVCallbackHelper {
     private final DynamoService dynamoService;
     private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
+    private final OidcAPI oidcAPI;
 
     public IPVCallbackHelper(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
@@ -83,6 +84,7 @@ public class IPVCallbackHelper {
                         configurationService.getSqsEndpointURI().map(URI::toString));
         this.authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
+        this.oidcAPI = new OidcAPI(configurationService);
     }
 
     public IPVCallbackHelper(
@@ -96,7 +98,8 @@ public class IPVCallbackHelper {
             DynamoService dynamoService,
             SerializationService objectMapper,
             SessionService sessionService,
-            AwsSqsClient sqsClient) {
+            AwsSqsClient sqsClient,
+            OidcAPI oidcApi) {
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
@@ -108,6 +111,7 @@ public class IPVCallbackHelper {
         this.objectMapper = objectMapper;
         this.sessionService = sessionService;
         this.sqsClient = sqsClient;
+        this.oidcAPI = oidcApi;
     }
 
     public APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
@@ -145,12 +149,7 @@ public class IPVCallbackHelper {
             if (vtr.getLevelOfConfidence()
                     .getValue()
                     .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
-                var trustmarkURL =
-                        configurationService
-                                .getOidcApiBaseURL()
-                                .map(uri -> buildURI(uri, "trustmark"))
-                                .orElseThrow()
-                                .toString();
+                var trustmarkURL = oidcAPI.trustmarkURI().toString();
                 if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
                     LOG.warn("VTM does not contain expected trustmark URL");
                     throw new IpvCallbackException("IPV trustmark is invalid");
@@ -252,12 +251,7 @@ public class IPVCallbackHelper {
                                 userIdentityUserInfo
                                         .toJSONObject()
                                         .get(IdentityClaims.CORE_IDENTITY.getValue()))
-                        .withVtm(
-                                configurationService
-                                        .getOidcApiBaseURL()
-                                        .map(uri -> buildURI(uri, "trustmark"))
-                                        .orElseThrow()
-                                        .toString());
+                        .withVtm(oidcAPI.trustmarkURI().toString());
 
         var spotRequest =
                 new SPOTRequest(

@@ -263,7 +263,6 @@ class IPVCallbackHandlerTest {
                         noSessionOrchestrationService,
                         ipvCallbackHelper);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
-        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);

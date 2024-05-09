@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -39,25 +40,30 @@ import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.util.Collections.emptyList;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
+
+    private final OidcAPI oidcApi;
+
     private static final Json objectMapper = SerializationService.getInstance();
 
     public RequestObjectAuthorizeValidator(
             DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
-            IPVCapacityService ipvCapacityService) {
+            IPVCapacityService ipvCapacityService,
+            OidcAPI oidcApi) {
         super(configurationService, dynamoClientService, ipvCapacityService);
+        this.oidcApi = oidcApi;
     }
 
     public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
-        super(
-                configurationService,
+        this(
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService));
+                configurationService,
+                new IPVCapacityService(configurationService),
+                new OidcAPI(configurationService));
     }
 
     @Override
@@ -116,16 +122,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST);
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
-                    || !jwtClaimsSet
-                            .getAudience()
-                            .contains(
-                                    buildURI(
-                                                    configurationService
-                                                            .getOidcApiBaseURL()
-                                                            .map(URI::toString)
-                                                            .orElseThrow(),
-                                                    "/authorize")
-                                            .toString())) {
+                    || !jwtClaimsSet.getAudience().contains(oidcApi.authorizeURI().toString())) {
                 LOG.error("Invalid or missing audience");
                 return errorResponse(redirectURI, OAuth2Error.ACCESS_DENIED);
             }

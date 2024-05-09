@@ -159,8 +159,6 @@ public class TokenHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getOidcApiBaseURL())
-                .thenReturn(Optional.of(URI.create(BASE_URI)));
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();

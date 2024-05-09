@@ -337,8 +337,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
     }
 
-    public Optional<URI> getOidcApiBaseURL() {
-        return getOptionalURI("OIDC_API_BASE_URL");
+    public URI getOidcApiBaseURL() {
+        return getURIOrThrow("OIDC_API_BASE_URL");
     }
 
     public String getRedisHost() {

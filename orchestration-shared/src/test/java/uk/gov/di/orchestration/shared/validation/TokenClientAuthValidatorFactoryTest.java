@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -21,11 +22,12 @@ import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequ
 class TokenClientAuthValidatorFactoryTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final OidcAPI oidcAPI = new OidcAPI(configurationService);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Secret CLIENT_SECRET = new Secret();
     private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory =
-            new TokenClientAuthValidatorFactory(configurationService, dynamoClientService);
+            new TokenClientAuthValidatorFactory(oidcAPI, dynamoClientService);
 
     @Test
     void shouldReturnPrivateKeyJwtClientAuthValidator() throws JOSEException {
