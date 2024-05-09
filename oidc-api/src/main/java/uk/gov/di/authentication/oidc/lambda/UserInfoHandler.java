@@ -144,7 +144,10 @@ public class UserInfoHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
                 accessTokenInfo.getClientID(),
-                TxmaAuditUser.user().withUserId(subjectForAudit),
+                TxmaAuditUser.user()
+                        .withUserId(subjectForAudit)
+                        .withGovukSigninJourneyId(
+                                accessTokenInfo.getAccessTokenStore().getJourneyId()),
                 metadataPairs);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
