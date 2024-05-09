@@ -1,9 +1,9 @@
 package uk.gov.di.orchestration.shared.services;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.helpers.PhoneNumberHelper;
 
@@ -23,24 +23,30 @@ public class AuditService {
     public static final String UNKNOWN = "";
 
     private final Clock clock;
-    private final ConfigurationService configurationService;
+    private final OidcAPI oidcApi;
     private final AwsSqsClient txmaQueueClient;
+    private final ConfigurationService configurationService;
 
     public AuditService(
-            Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
+            ConfigurationService configurationService,
+            Clock clock,
+            OidcAPI oidcApi,
+            AwsSqsClient txmaQueueClient) {
         this.clock = clock;
-        this.configurationService = configurationService;
+        this.oidcApi = oidcApi;
         this.txmaQueueClient = txmaQueueClient;
+        this.configurationService = configurationService;
     }
 
     public AuditService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
+        this.oidcApi = new OidcAPI(configurationService);
         this.clock = Clock.systemUTC();
         this.txmaQueueClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
                         configurationService.getLocalstackEndpointUri());
+        this.configurationService = configurationService;
     }
 
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
@@ -66,11 +72,7 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId(
-                                configurationService
-                                        .getOidcApiBaseURL()
-                                        .map(url -> StringUtils.removeEnd(url.toString(), "/"))
-                                        .orElse("UNKNOWN"))
+                        .withComponentId(oidcApi.baseURI().toString())
                         .withUser(user);
 
         if (configurationService.isTxmaAuditEncodedEnabled()

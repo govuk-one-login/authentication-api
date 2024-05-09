@@ -26,6 +26,7 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -86,8 +87,9 @@ class IPVCallbackHelperTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private final OidcAPI oidcAPI = mock(OidcAPI.class);
 
-    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
+    private static final URI OIDC_TRUSTMARK_URI = URI.create("https://base-url.com/trustmark");
     private static final URI INTERNAL_SECTOR_URI = URI.create("https://test.account.gov.uk");
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final String SESSION_ID = "a-session-id";
@@ -121,14 +123,14 @@ class IPVCallbackHelperTest {
                             Map.of(
                                     "sub", "sub-val",
                                     "vot", "P0",
-                                    "vtm", OIDC_BASE_URL + "/trustmark")));
+                                    "vtm", OIDC_TRUSTMARK_URI.toString())));
     private static final UserInfo p2VotUserIdentityUserInfo =
             new UserInfo(
                     new JSONObject(
                             Map.of(
                                     "sub", "sub-val",
                                     "vot", "P2",
-                                    "vtm", OIDC_BASE_URL + "/trustmark",
+                                    "vtm", OIDC_TRUSTMARK_URI.toString(),
                                     "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
                                     "https://vocab.account.gov.uk/v1/passport", "passport")));
 
@@ -158,7 +160,8 @@ class IPVCallbackHelperTest {
                         dynamoService,
                         SerializationService.getInstance(),
                         sessionService,
-                        sqsClient);
+                        sqsClient,
+                        oidcAPI);
         when(accountInterventionService.getAccountIntervention(INTERNAL_PAIRWISE_ID, auditContext))
                 .thenReturn(
                         new AccountIntervention(
@@ -171,7 +174,7 @@ class IPVCallbackHelperTest {
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         anyString(), anyString(), any(ClientSession.class)))
                 .thenReturn(AUTH_CODE);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+        when(oidcAPI.trustmarkURI()).thenReturn(OIDC_TRUSTMARK_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
     }
 
@@ -219,7 +222,7 @@ class IPVCallbackHelperTest {
         var missingVotUserIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
-                                Map.of("sub", "sub-val", "vtm", OIDC_BASE_URL + "/trustmark")));
+                                Map.of("sub", "sub-val", "vtm", OIDC_TRUSTMARK_URI.toString())));
 
         var response =
                 helper.validateUserIdentityResponse(
@@ -294,7 +297,8 @@ class IPVCallbackHelperTest {
                         dynamoService,
                         objectMapper,
                         sessionService,
-                        sqsClient);
+                        sqsClient,
+                        oidcAPI);
         when(objectMapper.writeValueAsString(any())).thenThrow(new JsonException("json-exception"));
 
         var exception =
@@ -345,7 +349,7 @@ class IPVCallbackHelperTest {
                                 Map.of(
                                         "sub", "sub-val",
                                         "vot", "P2",
-                                        "vtm", OIDC_BASE_URL + "/trustmark",
+                                        "vtm", OIDC_TRUSTMARK_URI.toString(),
                                         "https://vocab.account.gov.uk/v1/passport", "passport")));
         helper.saveIdentityClaimsToDynamo(RP_PAIRWISE_SUBJECT, userInfo);
 
@@ -374,7 +378,7 @@ class IPVCallbackHelperTest {
                                     {
                                         put("sub", "sub-val");
                                         put("vot", "P2");
-                                        put("vtm", OIDC_BASE_URL + "/trustmark");
+                                        put("vtm", OIDC_TRUSTMARK_URI.toString());
                                         put("https://vocab.account.gov.uk/v1/coreIdentity", null);
                                         put("https://vocab.account.gov.uk/v1/passport", "passport");
                                     }

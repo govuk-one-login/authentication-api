@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -37,22 +38,22 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
 class PrivateKeyJwtClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private static final URI OIDC_BASE_URL = URI.create("https://example.com");
+    private OidcAPI oidcAPI = mock(OidcAPI.class);
+    private static final URI OIDC_TOKEN_URL = URI.create("https://example.com/token");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private PrivateKeyJwtClientAuthValidator privateKeyJwtClientAuthValidator;
 
     @BeforeEach
     void setUp() {
+        when(oidcAPI.tokenURI()).thenReturn(OIDC_TOKEN_URL);
         privateKeyJwtClientAuthValidator =
-                new PrivateKeyJwtClientAuthValidator(dynamoClientService, configurationService);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+                new PrivateKeyJwtClientAuthValidator(dynamoClientService, oidcAPI);
     }
 
     private static Stream<JWSAlgorithm> supportedAlgorithms() {
@@ -209,9 +210,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
 
     private String generateSerialisedPrivateKeyJWT(JWSAlgorithm algorithm, long expiryTime)
             throws JOSEException {
-        var claimsSet =
-                new JWTAuthenticationClaimsSet(
-                        CLIENT_ID, new Audience(buildURI(OIDC_BASE_URL, "token")));
+        var claimsSet = new JWTAuthenticationClaimsSet(CLIENT_ID, new Audience(OIDC_TOKEN_URL));
         claimsSet.getExpirationTime().setTime(expiryTime);
         var privateKeyJWT =
                 new PrivateKeyJWT(claimsSet, algorithm, RSA_KEY_PAIR.getPrivate(), null, null);

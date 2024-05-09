@@ -2,7 +2,7 @@ package uk.gov.di.orchestration.shared.validation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Map;
@@ -10,13 +10,13 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class TokenClientAuthValidatorFactory {
-    private final ConfigurationService configurationService;
+    private final OidcAPI oidcApi;
     private final DynamoClientService dynamoClientService;
     private static final Logger LOG = LogManager.getLogger(TokenClientAuthValidatorFactory.class);
 
     public TokenClientAuthValidatorFactory(
-            ConfigurationService configurationService, DynamoClientService dynamoClientService) {
-        this.configurationService = configurationService;
+            OidcAPI oidcApi, DynamoClientService dynamoClientService) {
+        this.oidcApi = oidcApi;
         this.dynamoClientService = dynamoClientService;
     }
 
@@ -28,9 +28,7 @@ public class TokenClientAuthValidatorFactory {
                 && requestBody.containsKey("client_assertion_type")) {
             LOG.info("Client auth method is: private_key_jwt");
             checkAssertionType(requestBody);
-            return Optional.of(
-                    new PrivateKeyJwtClientAuthValidator(
-                            dynamoClientService, configurationService));
+            return Optional.of(new PrivateKeyJwtClientAuthValidator(dynamoClientService, oidcApi));
         }
 
         if (requestBody.containsKey("client_secret") && requestBody.containsKey("client_id")) {

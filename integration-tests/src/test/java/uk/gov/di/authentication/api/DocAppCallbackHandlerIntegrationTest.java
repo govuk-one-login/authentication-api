@@ -423,10 +423,5 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         public boolean isCustomDocAppClaimEnabled() {
             return true;
         }
-
-        @Override
-        public String getDocAppCriV2DataEndpoint() {
-            return "/userinfo/v2";
-        }
     }
 }

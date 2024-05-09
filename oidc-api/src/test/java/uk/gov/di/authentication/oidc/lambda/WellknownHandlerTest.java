@@ -9,16 +9,15 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.approvaltests.Approvals;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,6 +27,7 @@ class WellknownHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() {
@@ -61,27 +61,20 @@ class WellknownHandlerTest {
         Approvals.verify(result.getBody());
     }
 
-    @Test
-    void shouldThrowExceptionWhenBaseUrlIsMissing() {
-        when(configService.getOidcApiBaseURL()).thenReturn(Optional.empty());
-
-        var expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> new WellknownHandler(configService),
-                        "Expected to throw exception");
-
-        assertThat(
-                expectedException.getMessage(),
-                equalTo("java.util.NoSuchElementException: No value present"));
-    }
-
     private APIGatewayProxyResponseEvent getWellKnown() {
-        when(configService.getOidcApiBaseURL())
-                .thenReturn(Optional.of(URI.create("http://localhost:8080")));
+        when(oidcApi.baseURI()).thenReturn(URI.create("http://localhost:8080"));
+        when(oidcApi.tokenURI()).thenReturn(URI.create("http://localhost:8080/token"));
+        when(oidcApi.trustmarkURI()).thenReturn(URI.create("http://localhost:8080/trustmark"));
+        when(oidcApi.authorizeURI()).thenReturn(URI.create("http://localhost:8080/authorize"));
+        when(oidcApi.logoutURI()).thenReturn(URI.create("http://localhost:8080/logout"));
+        when(oidcApi.userInfoURI()).thenReturn(URI.create("http://localhost:8080/userinfo"));
+        when(oidcApi.registerationURI())
+                .thenReturn(URI.create("http://localhost:8080/connect/register"));
+        when(oidcApi.wellKnownURI())
+                .thenReturn(URI.create("http://localhost:8080/.well-known/jwks.json"));
         when(configService.getFrontendBaseURL()).thenReturn(URI.create("http://localhost:8081"));
 
-        WellknownHandler handler = new WellknownHandler(configService);
+        WellknownHandler handler = new WellknownHandler(oidcApi, configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         return handler.handleRequest(event, context);
     }
