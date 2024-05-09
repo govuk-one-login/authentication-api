@@ -23,7 +23,11 @@ public class IpAddressHelper {
                         .map(APIGatewayProxyRequestEvent::getHeaders)
                         .orElse(emptyMap());
 
-        if (headersContainValidHeader(headers, "X-Forwarded-For", true)) {
+        if (headersContainValidHeader(headers, "CloudFront-Viewer-Address", true)) {
+            return getHeaderValueFromHeaders(headers, "CloudFront-Viewer-Address", true)
+                    .split(":")[0]
+                    .trim();
+        } else if (headersContainValidHeader(headers, "X-Forwarded-For", true)) {
             return getHeaderValueFromHeaders(headers, "X-Forwarded-For", true).split(",")[0].trim();
         }
 

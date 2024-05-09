@@ -15,6 +15,41 @@ import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAd
 class IpAddressHelperTest {
 
     @Test
+    void shouldPreferCloudfrontViewerOverXForwarded() {
+        var request = new APIGatewayProxyRequestEvent();
+
+        request.setHeaders(
+                Map.of(
+                        "X-Forwarded-For",
+                        "234.234.234.234, 123.123.123.123, 111.111.111.111",
+                        "CloudFront-Viewer-Address",
+                        "222.222.222.222:222"));
+        request.setRequestContext(stubContextWithSourceIp());
+
+        assertThat(extractIpAddress(request), is("222.222.222.222"));
+    }
+
+    @Test
+    void shouldRetrieveCloudfrontViewerCaseInsensitively() {
+        var request = new APIGatewayProxyRequestEvent();
+
+        request.setHeaders(Map.of("cloudfront-viewer-address", "222.222.222.222:222"));
+        request.setRequestContext(stubContextWithSourceIp());
+
+        assertThat(extractIpAddress(request), is("222.222.222.222"));
+    }
+
+    @Test
+    void shouldAcceptCloudfrontViewerWithoutSourcePort() {
+        var request = new APIGatewayProxyRequestEvent();
+
+        request.setHeaders(Map.of("CloudFront-Viewer-Address", "222.222.222.222"));
+        request.setRequestContext(stubContextWithSourceIp());
+
+        assertThat(extractIpAddress(request), is("222.222.222.222"));
+    }
+
+    @Test
     void shouldPreferFirstXForwardedForHeader() {
         var request = new APIGatewayProxyRequestEvent();
 
