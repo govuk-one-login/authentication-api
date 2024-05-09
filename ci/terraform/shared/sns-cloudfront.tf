@@ -1,5 +1,6 @@
 resource "aws_sns_topic" "cloudfront_alerts" {
-  name = "${var.environment}-cloudfront-alerts"
+  provider = "aws.cloudfront"
+  name     = "${var.environment}-oidc-cloudfront-alerts"
   # checkov:skip=CKV_AWS_26:No encryption needed on alerts topic
 }
 
@@ -31,7 +32,8 @@ data "aws_iam_policy_document" "cloudfront_alerts" {
 }
 
 resource "aws_sns_topic_policy" "cloudfront_alerts" {
-  arn = aws_sns_topic.cloudfront_alerts.arn
+  provider = "aws.cloudfront"
+  arn      = aws_sns_topic.cloudfront_alerts.arn
 
   policy = data.aws_iam_policy_document.cloudfront_alerts.json
 }

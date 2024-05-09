@@ -51,22 +51,20 @@ fi
 
 loginAws "$ENVIRONMENT"
 
-TEMPLATE_URL="https://template-storage-templatebucket-1upzyw6v9cs42.s3.amazonaws.com/certificate/template.yaml"
+TEMPLATE_URL="https://template-storage-templatebucket-1upzyw6v9cs42.s3.amazonaws.com/cloudfront-monitoring-alarm/template.yaml"
 
 if [[ $# == 2 ]] && [[ $2 == "--create" ]]; then
   aws cloudformation create-stack \
       --region us-east-1 \
       --enable-termination-protection \
-      --stack-name="$ENVIRONMENT-oidc-cloudfront-tls" \
-      --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+      --stack-name="$ENVIRONMENT-oidc-cloudfront-monitoring" \
       --template-url ${TEMPLATE_URL} \
       --parameters="$(jq '. | tojson' -r "${PARAMETERS_FILE}")" \
       --tags="$(jq '. | tojson' -r "${TAGS_FILE}")"
 else
     aws cloudformation update-stack \
         --region us-east-1 \
-        --stack-name="$ENVIRONMENT-oidc-cloudfront-tls" \
-        --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+        --stack-name="$ENVIRONMENT-oidc-cloudfront-monitoring" \
         --template-url ${TEMPLATE_URL} \
         --parameters="$(jq '. | tojson' -r "${PARAMETERS_FILE}")" \
         --tags="$(jq '. | tojson' -r "${TAGS_FILE}")"
