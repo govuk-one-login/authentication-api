@@ -25,7 +25,7 @@ public class IpAddressHelper {
 
         var maybeIpAddressFromHeaders =
                 getOptionalHeaderValueFromHeaders(headers, IP_HEADER_NAME, true)
-                        .map(forwardedValue -> forwardedValue.split(",")[0].trim());
+                        .map(IpAddressHelper::getFirstValueFromHeaderString);
 
         return maybeIpAddressFromHeaders.orElseGet(
                 () -> {
@@ -37,5 +37,9 @@ public class IpAddressHelper {
                             .map(RequestIdentity::getSourceIp)
                             .orElse(AuditService.UNKNOWN);
                 });
+    }
+
+    private static String getFirstValueFromHeaderString(String headerString) {
+        return headerString.split(",")[0].trim();
     }
 }
