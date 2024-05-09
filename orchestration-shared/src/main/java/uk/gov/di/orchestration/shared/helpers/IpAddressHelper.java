@@ -3,6 +3,8 @@ package uk.gov.di.orchestration.shared.helpers;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.services.AuditService;
 
 import java.util.Optional;
@@ -13,6 +15,8 @@ import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headers
 
 public class IpAddressHelper {
 
+    private static final Logger LOG = LogManager.getLogger(IpAddressHelper.class);
+
     public static String extractIpAddress(APIGatewayProxyRequestEvent input) {
         var headers =
                 Optional.ofNullable(input)
@@ -22,6 +26,9 @@ public class IpAddressHelper {
         if (headersContainValidHeader(headers, "X-Forwarded-For", true)) {
             return getHeaderValueFromHeaders(headers, "X-Forwarded-For", true).split(",")[0].trim();
         }
+
+        LOG.warn(
+                "No IP address present in x-forwarded-for header, attempting to retrieve from request context");
 
         return Optional.ofNullable(input)
                 .map(APIGatewayProxyRequestEvent::getRequestContext)
