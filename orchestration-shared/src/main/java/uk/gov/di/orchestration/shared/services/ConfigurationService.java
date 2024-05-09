@@ -300,8 +300,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return notifyCallbackBearerToken;
     }
 
-    public Optional<String> getOidcApiBaseURL() {
-        return Optional.ofNullable(System.getenv("OIDC_API_BASE_URL"));
+    public URI getOidcApiBaseURL() {
+        return getURIOrThrow("OIDC_API_BASE_URL");
     }
 
     public String getRedisHost() {

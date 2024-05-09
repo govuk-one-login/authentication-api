@@ -33,6 +33,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -51,7 +52,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
@@ -60,6 +60,7 @@ public class TokenService {
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final OidcAPI oidcApi;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -72,10 +73,12 @@ public class TokenService {
     public TokenService(
             ConfigurationService configService,
             RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            KmsConnectionService kmsConnectionService,
+            OidcAPI oidcApi) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.oidcApi = oidcApi;
     }
 
     public OIDCTokenResponse generateTokenResponse(
@@ -225,11 +228,11 @@ public class TokenService {
             String journeyId) {
 
         LOG.info("Generating IdToken");
-        URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
+        URI trustMarkUri = oidcApi.trustmarkURI();
         Date expiryDate = NowHelper.nowPlus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
-                        new Issuer(configService.getOidcApiBaseURL().get()),
+                        new Issuer(oidcApi.baseURI().toString()),
                         subject,
                         List.of(new Audience(clientId)),
                         expiryDate,
@@ -268,7 +271,7 @@ public class TokenService {
 
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
-                        .issuer(configService.getOidcApiBaseURL().get())
+                        .issuer(oidcApi.baseURI().toString())
                         .audience(aud)
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
@@ -303,7 +306,7 @@ public class TokenService {
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
-                        .issuer(configService.getOidcApiBaseURL().get())
+                        .issuer(oidcApi.baseURI().toString())
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
@@ -359,7 +362,7 @@ public class TokenService {
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
-                        .issuer(configService.getOidcApiBaseURL().get())
+                        .issuer(oidcApi.baseURI().toString())
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)

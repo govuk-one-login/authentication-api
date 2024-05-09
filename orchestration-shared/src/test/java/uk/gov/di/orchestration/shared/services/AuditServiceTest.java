@@ -5,13 +5,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.exceptions.InvalidEncodingException;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -35,6 +36,7 @@ class AuditServiceTest {
 
     private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private final ArgumentCaptor<String> txmaMessageCaptor = ArgumentCaptor.forClass(String.class);
@@ -49,12 +51,13 @@ class AuditServiceTest {
 
     @BeforeEach
     void beforeEach() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url/"));
+        when(oidcApi.baseURI()).thenReturn(URI.create("oidc-base-url"));
     }
 
     @Test
     void shouldLogAuditEvent() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        var auditService =
+                new AuditService(configurationService, FIXED_CLOCK, oidcApi, awsSqsClient);
 
         var user =
                 TxmaAuditUser.user()
@@ -75,7 +78,6 @@ class AuditServiceTest {
         assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
         assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
         assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
-        // component_id shouldn't include trailing slash
         assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("oidc-base-url")));
 
         var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
@@ -92,7 +94,8 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        var auditService =
+                new AuditService(configurationService, FIXED_CLOCK, oidcApi, awsSqsClient);
 
         var user =
                 TxmaAuditUser.user()
@@ -121,7 +124,8 @@ class AuditServiceTest {
 
     @Test
     void shouldAddCountryCodeExtensionToPhoneNumberEvents() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        var auditService =
+                new AuditService(configurationService, FIXED_CLOCK, oidcApi, awsSqsClient);
 
         var user =
                 TxmaAuditUser.user()
@@ -149,7 +153,8 @@ class AuditServiceTest {
 
     @Test
     void TxmaHeaderShouldBeAddedToAuditEvent() throws JOSEException, InvalidEncodingException {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        var auditService =
+                new AuditService(configurationService, FIXED_CLOCK, oidcApi, awsSqsClient);
         when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
 
         attachAuditField(TXMA_ENCODED_HEADER, TXMA_ENCODED_HEADER_VALUE);
@@ -172,7 +177,8 @@ class AuditServiceTest {
 
     @Test
     void TxmaHeaderNotAddedWhenNotSet() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        var auditService =
+                new AuditService(configurationService, FIXED_CLOCK, oidcApi, awsSqsClient);
         when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
 
         auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
