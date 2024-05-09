@@ -83,6 +83,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].method_trigger_value : null,
       local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].integration_trigger_value : null,
       local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].method_trigger_value : null,
+      local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].integration_trigger_value : null,
+      local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].method_trigger_value : null,
       local.account_modifiers_encryption_policy_arn,
     ]))
   }
@@ -207,6 +209,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.doc-app-authorize,
     module.orch_auth_code,
     module.check_reauth_user,
+    module.check_email_fraud_block,
     aws_api_gateway_deployment.deployment,
   ]
 }
