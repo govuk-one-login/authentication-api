@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,8 +77,9 @@ class WellknownHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent getWellKnown() {
-        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
-        when(configService.getFrontendBaseUrl()).thenReturn("http://localhost:8081");
+        when(configService.getOidcApiBaseURL())
+                .thenReturn(Optional.of(URI.create("http://localhost:8080")));
+        when(configService.getFrontendBaseURL()).thenReturn(URI.create("http://localhost:8081"));
 
         WellknownHandler handler = new WellknownHandler(configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

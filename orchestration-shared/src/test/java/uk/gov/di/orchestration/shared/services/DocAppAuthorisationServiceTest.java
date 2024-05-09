@@ -93,7 +93,7 @@ class DocAppAuthorisationServiceTest {
 
     @BeforeEach
     void setUp() throws Json.JsonException, MalformedURLException {
-        when(configurationService.getDocAppJwksUri()).thenReturn(JWKS_URL);
+        when(configurationService.getDocAppJwksURI()).thenReturn(JWKS_URL);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));

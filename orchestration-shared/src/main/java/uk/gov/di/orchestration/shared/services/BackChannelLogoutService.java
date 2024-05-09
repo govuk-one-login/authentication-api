@@ -5,6 +5,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 
+import java.net.URI;
+
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSubject;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -20,8 +22,8 @@ public class BackChannelLogoutService {
         this(
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getBackChannelLogoutQueueUri(),
-                        configurationService.getSqsEndpointUri()),
+                        configurationService.getBackChannelLogoutQueueUri().toString(),
+                        configurationService.getSqsEndpointURI().map(URI::toString)),
                 new DynamoService(configurationService));
     }
 

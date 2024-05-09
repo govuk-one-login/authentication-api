@@ -96,7 +96,7 @@ class IPVAuthorisationServiceTest {
         when(configurationService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configurationService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configurationService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
-        when(configurationService.getIPVAudience()).thenReturn(IPV_URI.toString());
+        when(configurationService.getIPVAudience()).thenReturn(IPV_URI);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         var certpem =

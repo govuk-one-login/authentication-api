@@ -100,7 +100,7 @@ public class WellknownHandler
             oidcMetadata.setCustomParameter(
                     "trustmarks", buildURI(baseUrl, "/trustmark").toString());
 
-            var frontendUrl = configService.getFrontendBaseUrl();
+            var frontendUrl = configService.getFrontendBaseURL();
             oidcMetadata.setPolicyURI(buildURI(frontendUrl, "privacy-notice"));
             oidcMetadata.setTermsOfServiceURI(buildURI(frontendUrl, "terms-and-conditions"));
 

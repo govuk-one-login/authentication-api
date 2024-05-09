@@ -73,7 +73,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String CLIENT_ID = "test-client-id";
     private static final List<String> LEVELS_OF_CONFIDENCE = List.of("P0", "P2");
-    private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
+    private static final URI INTERNAL_SECTOR_URI = URI.create("https://ipv.account.gov.uk");
     private static final String SESSION_ID = "a-session-id";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
@@ -134,13 +134,13 @@ public class InitiateIPVAuthorisationServiceTest {
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
 
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
-        when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(configService.sendStorageTokenToIpvEnabled()).thenReturn(true);
         when(configService.getStorageTokenClaimName())
-                .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
+                .thenReturn(URI.create("https://vocab.account.gov.uk/v1/storageAccessToken"));
         AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
         when(tokenService.generateStorageToken(any())).thenReturn(storageToken);
     }
