@@ -112,7 +112,8 @@ subprojects {
         apache "commons-codec:commons-codec:1.16.1",
                 "org.apache.httpcomponents:httpclient:4.5.14",
                 "org.apache.commons:commons-collections4:4.1",
-                "commons-net:commons-net:3.10.0"
+                "commons-net:commons-net:3.10.0",
+                "org.apache.httpcomponents.core5:httpcore5:5.2"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
