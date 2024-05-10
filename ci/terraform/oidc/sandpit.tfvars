@@ -56,9 +56,9 @@ support_email_check_enabled = true
 
 
 orch_openid_configuration_enabled = true
-orch_openid_configuration_name    = "dev-orch-be-deploy-OpenIdConfigurationFunction-zDwyaSCWAbmi"
+orch_openid_configuration_name    = "dev-OpenIdConfigurationFunction"
 orch_doc_app_callback_enabled     = true
-orch_doc_app_callback_name        = "dev-orch-be-deploy-DocAppCallbackFunction-RVJSUW5JaiRv"
+orch_doc_app_callback_name        = "dev-DocAppCallbackFunction"
 
 
 orch_account_id                                  = "816047645251"
