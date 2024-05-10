@@ -199,7 +199,8 @@ class AccountDeletionServiceTest {
                         eq(expectedEmail),
                         eq(AuditService.UNKNOWN),
                         eq(expectedPhoneNumber),
-                        eq(AuditService.UNKNOWN));
+                        eq(AuditService.UNKNOWN),
+                        eq(AuditService.RestrictedSection.empty));
     }
 
     @Test
@@ -218,7 +219,8 @@ class AccountDeletionServiceTest {
                         anyString(),
                         anyString(),
                         anyString(),
-                        anyString());
+                        anyString(),
+                        any());
 
         // then
         assertDoesNotThrow(() -> underTest.removeAccount(Optional.of(input), userProfile));

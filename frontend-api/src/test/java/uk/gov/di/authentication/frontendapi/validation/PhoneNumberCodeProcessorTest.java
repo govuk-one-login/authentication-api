@@ -226,6 +226,7 @@ class PhoneNumberCodeProcessorTest {
                         IP_ADDRESS,
                         PHONE_NUMBER,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false));
     }
@@ -255,6 +256,7 @@ class PhoneNumberCodeProcessorTest {
                         IP_ADDRESS,
                         PHONE_NUMBER,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", true));
     }

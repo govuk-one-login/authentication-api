@@ -265,6 +265,7 @@ class ResetPasswordRequestHandlerTest {
                             "123.123.123.123",
                             PHONE_NUMBER,
                             PERSISTENT_ID,
+                            AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
@@ -318,6 +319,7 @@ class ResetPasswordRequestHandlerTest {
                             "123.123.123.123",
                             PHONE_NUMBER,
                             PERSISTENT_ID,
+                            AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }

@@ -319,6 +319,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
+                AuditService.RestrictedSection.empty,
                 metadataPairs.toArray(new AuditService.MetadataPair[0]));
     }
 }

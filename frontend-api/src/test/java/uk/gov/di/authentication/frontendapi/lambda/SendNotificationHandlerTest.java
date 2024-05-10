@@ -257,7 +257,8 @@ class SendNotificationHandlerTest {
                                 TEST_EMAIL_ADDRESS,
                                 "123.123.123.123",
                                 AuditService.UNKNOWN,
-                                PERSISTENT_ID);
+                                PERSISTENT_ID,
+                                AuditService.RestrictedSection.empty);
             }
         }
     }
@@ -327,7 +328,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -373,7 +375,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @ParameterizedTest
@@ -417,7 +420,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @ParameterizedTest
@@ -592,7 +596,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         phoneNumber,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -723,7 +728,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -764,7 +770,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -806,7 +813,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -837,7 +845,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -870,7 +879,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -905,7 +915,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -936,7 +947,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -969,7 +981,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -1000,7 +1013,8 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @ParameterizedTest

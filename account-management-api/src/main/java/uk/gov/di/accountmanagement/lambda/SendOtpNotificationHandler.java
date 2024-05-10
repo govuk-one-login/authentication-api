@@ -292,6 +292,7 @@ public class SendOtpNotificationHandler
                 IpAddressHelper.extractIpAddress(input),
                 sendNotificationRequest.getPhoneNumber(),
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                AuditService.RestrictedSection.empty,
                 pair("notification-type", sendNotificationRequest.getNotificationType()),
                 pair("test-user", isTestUserRequest));
 

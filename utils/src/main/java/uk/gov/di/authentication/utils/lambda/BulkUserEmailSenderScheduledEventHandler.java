@@ -268,6 +268,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
+                AuditService.RestrictedSection.empty,
                 pair("internalSubjectId", userProfile.getSubjectID()),
                 pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
     }

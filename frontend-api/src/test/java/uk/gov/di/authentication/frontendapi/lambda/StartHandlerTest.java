@@ -180,6 +180,7 @@ class StartHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
@@ -246,6 +247,7 @@ class StartHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
@@ -290,6 +292,7 @@ class StartHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 

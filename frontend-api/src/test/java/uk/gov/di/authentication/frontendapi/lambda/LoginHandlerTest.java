@@ -232,6 +232,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         CLIENT_ID.getValue(),
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -352,6 +353,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         CLIENT_ID.getValue(),
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         verifyNoInteractions(cloudwatchMetricsService);
@@ -415,6 +417,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -446,6 +449,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", maxRetriesAllowed),
                         pair("attemptNoFailedAt", maxRetriesAllowed));
@@ -455,6 +459,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -485,6 +490,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         "",
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -537,6 +543,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         "",
                         auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", 6));
@@ -636,7 +643,10 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL, "", auditUserWithoutUserInfo);
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        "",
+                        auditUserWithoutUserInfo,
+                        AuditService.RestrictedSection.empty);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

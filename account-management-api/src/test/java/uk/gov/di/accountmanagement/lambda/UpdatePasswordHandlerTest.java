@@ -117,7 +117,8 @@ class UpdatePasswordHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test

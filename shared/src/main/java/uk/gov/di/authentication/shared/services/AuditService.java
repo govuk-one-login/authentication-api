@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -44,6 +45,7 @@ public class AuditService {
             AuditableEvent event,
             String clientId,
             TxmaAuditUser user,
+            RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
@@ -61,6 +63,11 @@ public class AuditService {
                             }
                         });
 
+        restrictedSection.encoded.ifPresent(
+                encodedString ->
+                        txmaAuditEvent.addRestricted(
+                                "device_information", Map.of("encoded", encodedString)));
+
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
                 .flatMap(PhoneNumberHelper::maybeGetCountry)
@@ -69,6 +76,10 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    public record RestrictedSection(Optional<String> encoded) {
+        public static RestrictedSection empty = new RestrictedSection(Optional.empty());
     }
 
     public void submitAuditEvent(
@@ -81,6 +92,7 @@ public class AuditService {
             String ipAddress,
             String phoneNumber,
             String persistentSessionId,
+            RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
 
         var user =
@@ -93,7 +105,7 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId)
                         .withGovukSigninJourneyId(clientSessionId);
 
-        submitAuditEvent(event, clientId, user, metadataPairs);
+        submitAuditEvent(event, clientId, user, restrictedSection, metadataPairs);
     }
 
     public static class MetadataPair {

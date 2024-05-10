@@ -168,7 +168,8 @@ class UpdateProfileHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "",
                         PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -209,7 +210,8 @@ class UpdateProfileHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "",
                         PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -243,7 +245,8 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         "",
-                        "");
+                        "",
+                        AuditService.RestrictedSection.empty);
     }
 
     private void usingValidSession() {
@@ -284,7 +287,8 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         "",
-                        "");
+                        "",
+                        AuditService.RestrictedSection.empty);
 
         return response;
     }

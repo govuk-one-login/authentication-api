@@ -180,6 +180,7 @@ class SendOtpNotificationHandlerTest {
                                 "123.123.123.123",
                                 null,
                                 persistentIdValue,
+                                AuditService.RestrictedSection.empty,
                                 pair("notification-type", VERIFY_EMAIL),
                                 pair("test-user", false));
             }
@@ -262,6 +263,7 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        AuditService.RestrictedSection.empty,
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
     }
@@ -308,6 +310,7 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         null,
                         persistentIdValue,
+                        AuditService.RestrictedSection.empty,
                         pair("notification-type", VERIFY_EMAIL),
                         pair("test-user", true));
     }
