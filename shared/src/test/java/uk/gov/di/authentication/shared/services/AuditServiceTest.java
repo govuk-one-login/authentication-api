@@ -10,6 +10,7 @@ import java.time.ZoneId;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -56,21 +57,30 @@ class AuditServiceTest {
 
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
 
-        assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
-        assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
-        assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
-        assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("AUTH")));
+        var expected =
+                """
+                {
+                "timestamp":1630534200,
+                "event_timestamp_ms":1630534200012,
+                "event_name":"AUTH_TEST_EVENT_ONE",
+                "client_id":"client-id",
+                "component_id":"AUTH",
+                "user": {
+                    "user_id":"subject-id",
+                    "transaction_id":null,
+                    "email":"email",
+                    "phone":"phone-number",
+                    "ip_address":"ip-address",
+                    "session_id":"session-id",
+                    "persistent_session_id":"persistent-session-id",
+                    "govuk_signin_journey_id":"request-id"
+                },
+                "platform":null,
+                "restricted":null,
+                "extensions":null}
+                """;
 
-        var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
-
-        assertThat(userObject, hasFieldWithValue("session_id", equalTo("session-id")));
-        assertThat(
-                userObject,
-                hasFieldWithValue("persistent_session_id", equalTo("persistent-session-id")));
-        assertThat(userObject, hasFieldWithValue("user_id", equalTo("subject-id")));
-        assertThat(userObject, hasFieldWithValue("email", equalTo("email")));
-        assertThat(userObject, hasFieldWithValue("phone", equalTo("phone-number")));
-        assertThat(userObject, hasFieldWithValue("ip_address", equalTo("ip-address")));
+        assertEquals(asJson(expected), txmaMessage);
     }
 
     @Test
