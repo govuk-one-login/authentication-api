@@ -71,7 +71,8 @@ class DeleteSyntheticsUserHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -106,7 +107,8 @@ class DeleteSyntheticsUserHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        AuditService.RestrictedSection.empty);
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent() {

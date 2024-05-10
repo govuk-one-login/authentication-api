@@ -146,6 +146,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     IpAddressHelper.extractIpAddress(input),
                     authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty,
                     passwordResetCounterPair,
                     passwordResetTypePair);
 

@@ -113,7 +113,8 @@ class UpdatePhoneNumberHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         NEW_PHONE_NUMBER,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test

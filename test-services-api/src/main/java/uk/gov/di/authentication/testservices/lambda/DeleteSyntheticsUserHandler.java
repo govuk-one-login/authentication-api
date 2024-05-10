@@ -73,7 +73,8 @@ public class DeleteSyntheticsUserHandler
                                     userProfile.getEmail(),
                                     IpAddressHelper.extractIpAddress(input),
                                     AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+                                    AuditService.UNKNOWN,
+                                    AuditService.RestrictedSection.empty);
 
                             return generateApiGatewayProxyResponse(204, "");
                         })
@@ -91,7 +92,8 @@ public class DeleteSyntheticsUserHandler
                                     email,
                                     IpAddressHelper.extractIpAddress(input),
                                     AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+                                    AuditService.UNKNOWN,
+                                    AuditService.RestrictedSection.empty);
 
                             return generateApiGatewayProxyErrorResponse(
                                     404, ErrorResponse.ERROR_1010);

@@ -71,6 +71,10 @@ public class AuditService {
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
+    public record RestrictedSection(Optional<String> encoded) {
+        public static RestrictedSection empty = new RestrictedSection(Optional.empty());
+    }
+
     public void submitAuditEvent(
             AuditableEvent event,
             String clientId,
@@ -81,6 +85,7 @@ public class AuditService {
             String ipAddress,
             String phoneNumber,
             String persistentSessionId,
+            RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
 
         var user =

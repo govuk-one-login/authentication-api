@@ -239,6 +239,7 @@ class TokenHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        AuditService.RestrictedSection.empty);
     }
 }

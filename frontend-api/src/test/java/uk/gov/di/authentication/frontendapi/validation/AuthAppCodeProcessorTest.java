@@ -203,6 +203,7 @@ class AuthAppCodeProcessorTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false));
     }
@@ -232,6 +233,7 @@ class AuthAppCodeProcessorTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", true));
     }
@@ -258,6 +260,7 @@ class AuthAppCodeProcessorTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
     }
 

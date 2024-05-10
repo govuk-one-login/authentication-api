@@ -102,7 +102,8 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                             .orElse(AuditService.UNKNOWN),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty);
             var accountRecoveryResponse = new AccountRecoveryResponse(accountRecoveryPermitted);
             LOG.info("Returning response back to frontend");
             return generateApiGatewayProxyResponse(200, accountRecoveryResponse);

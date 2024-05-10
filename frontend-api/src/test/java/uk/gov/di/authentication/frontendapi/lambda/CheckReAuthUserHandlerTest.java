@@ -132,7 +132,8 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -164,7 +165,8 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -198,6 +200,7 @@ class CheckReAuthUserHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty,
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", 5));
     }
@@ -253,7 +256,8 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     private UserProfile generateUserProfile() {

@@ -116,7 +116,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        AuditService.RestrictedSection.empty);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
@@ -166,6 +167,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty,
                     pair("internalSubjectId", user.getUserProfile().getSubjectID()),
                     pair("rpPairwiseId", rpPairwiseId));
 

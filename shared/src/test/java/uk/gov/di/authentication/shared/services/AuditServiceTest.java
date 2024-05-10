@@ -51,7 +51,8 @@ class AuditServiceTest {
                 "email",
                 "ip-address",
                 "phone-number",
-                "persistent-session-id");
+                "persistent-session-id",
+                AuditService.RestrictedSection.empty);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -97,6 +98,7 @@ class AuditServiceTest {
                 "ip-address",
                 "phone-number",
                 "persistent-session-id",
+                AuditService.RestrictedSection.empty,
                 pair("key", "value"),
                 pair("key2", "value2"),
                 pair("restrictedKey1", "restrictedValue1", true),
@@ -133,6 +135,7 @@ class AuditServiceTest {
                 "ip-address",
                 "07700900000",
                 "persistent-session-id",
+                AuditService.RestrictedSection.empty,
                 pair("key", "value"),
                 pair("key2", "value2"));
 

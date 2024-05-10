@@ -115,7 +115,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        persistentSessionId,
+                        AuditService.RestrictedSection.empty);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -139,6 +140,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
+                        AuditService.RestrictedSection.empty,
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
@@ -194,6 +196,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     persistentSessionId,
+                    AuditService.RestrictedSection.empty,
                     pair("rpPairwiseId", rpPairwiseId));
 
             var lockoutInformation =

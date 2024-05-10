@@ -169,7 +169,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -199,7 +200,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -230,7 +232,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
@@ -241,7 +244,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -272,7 +276,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -300,7 +305,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -369,7 +375,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -415,7 +422,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
@@ -426,7 +434,8 @@ class ResetPasswordHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     private APIGatewayProxyResponseEvent generateRequest(String password) {

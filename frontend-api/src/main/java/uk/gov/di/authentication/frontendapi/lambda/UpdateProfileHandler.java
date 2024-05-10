@@ -86,7 +86,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                AuditService.UNKNOWN,
+                AuditService.RestrictedSection.empty);
     }
 
     @Override
@@ -100,7 +101,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                AuditService.UNKNOWN,
+                AuditService.RestrictedSection.empty);
     }
 
     @Override
@@ -231,7 +233,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 session.getEmailAddress(),
                 ipAddress,
                 auditablePhoneNumber,
-                persistentSessionId);
+                persistentSessionId,
+                AuditService.RestrictedSection.empty);
         return generateEmptySuccessApiGatewayResponse();
     }
 
@@ -288,7 +291,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 email,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                persistentSessionId);
+                persistentSessionId,
+                AuditService.RestrictedSection.empty);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }

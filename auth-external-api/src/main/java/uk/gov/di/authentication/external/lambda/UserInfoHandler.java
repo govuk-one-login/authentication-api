@@ -145,7 +145,8 @@ public class UserInfoHandler
                 Objects.isNull(userInfo.getPhoneNumber())
                         ? AuditService.UNKNOWN
                         : userInfo.getPhoneNumber(),
-                AuditService.UNKNOWN);
+                AuditService.UNKNOWN,
+                AuditService.RestrictedSection.empty);
 
         Optional<AccessTokenStore> updatedTokenStore =
                 accessTokenService.setAccessTokenStoreUsed(accessToken.getValue(), true);

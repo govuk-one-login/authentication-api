@@ -81,6 +81,7 @@ public abstract class MfaCodeProcessor {
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
+                AuditService.RestrictedSection.empty,
                 pair("mfa-type", mfaMethodType.getValue()),
                 pair("account-recovery", accountRecovery));
     }
@@ -107,6 +108,7 @@ public abstract class MfaCodeProcessor {
                     ipAddress,
                     AuditService.UNKNOWN,
                     persistentSessionId,
+                    AuditService.RestrictedSection.empty,
                     pair("mfa-type", mfaMethodType.getValue()));
         }
     }

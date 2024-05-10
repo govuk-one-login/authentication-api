@@ -177,6 +177,7 @@ public class UpdateEmailHandler
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty,
                     AuditService.MetadataPair.pair(
                             "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
 
