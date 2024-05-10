@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -148,5 +149,43 @@ class AuditServiceTest {
                         .getAsJsonObject();
 
         assertThat(extensions, hasFieldWithValue("phone_number_country_code", equalTo("44")));
+    }
+
+    @Test
+    void TxmaHeaderShouldBeAddedToAuditEvent() {
+        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+
+        var auditEncodedHeaderValue =
+                "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(Optional.of(auditEncodedHeaderValue));
+
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE,
+                "client-id",
+                "request-id",
+                "session-id",
+                "subject-id",
+                "email",
+                "ip-address",
+                "phone-number",
+                "persistent-session-id",
+                restrictedSection,
+                pair("restrictedKey1", "restrictedValue1", true));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+
+        assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
+
+        var deviceInformation =
+                restricted.getAsJsonObject().get("device_information").getAsJsonObject();
+
+        assertThat(
+                deviceInformation, hasFieldWithValue("encoded", equalTo(auditEncodedHeaderValue)));
     }
 }

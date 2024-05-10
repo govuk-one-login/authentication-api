@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -61,6 +62,11 @@ public class AuditService {
                                 txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
                             }
                         });
+
+        restrictedSection.encoded.ifPresent(
+                encodedString ->
+                        txmaAuditEvent.addRestricted(
+                                "device_information", Map.of("encoded", encodedString)));
 
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
