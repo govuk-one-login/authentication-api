@@ -138,7 +138,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL, clientId, auditUser);
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        clientId,
+                        auditUser,
+                        AuditService.RestrictedSection.empty);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -174,6 +177,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         clientId,
                         auditUser,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
@@ -194,6 +198,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         clientId,
                         auditUser,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
@@ -205,6 +210,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                             clientId,
                             auditUser,
+                            AuditService.RestrictedSection.empty,
                             pair("internalSubjectId", userProfile.getSubjectID()),
                             pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
                             pair(
@@ -281,7 +287,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     userMfaDetail.getMfaMethodType().getValue(),
                     userMfaDetail.isMfaMethodVerified());
 
-            auditService.submitAuditEvent(LOG_IN_SUCCESS, clientId, auditUser, pairs);
+            auditService.submitAuditEvent(
+                    LOG_IN_SUCCESS,
+                    clientId,
+                    auditUser,
+                    AuditService.RestrictedSection.empty,
+                    pairs);
 
             if (!userMfaDetail.isMfaRequired()) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(

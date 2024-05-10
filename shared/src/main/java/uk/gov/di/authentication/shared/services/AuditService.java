@@ -44,6 +44,7 @@ public class AuditService {
             AuditableEvent event,
             String clientId,
             TxmaAuditUser user,
+            RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
@@ -98,7 +99,7 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId)
                         .withGovukSigninJourneyId(clientSessionId);
 
-        submitAuditEvent(event, clientId, user, metadataPairs);
+        submitAuditEvent(event, clientId, user, restrictedSection, metadataPairs);
     }
 
     public static class MetadataPair {
