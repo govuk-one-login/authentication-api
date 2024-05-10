@@ -114,7 +114,7 @@ class UpdateEmailHandlerTest {
                         userProfile.getPhoneNumber(),
                         PERSISTENT_ID,
                         AuditService.MetadataPair.pair(
-                                "ReplacedEmail", EXISTING_EMAIL_ADDRESS, true));
+                                "replacedEmail", EXISTING_EMAIL_ADDRESS, true));
     }
 
     @Test
