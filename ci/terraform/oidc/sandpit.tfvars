@@ -66,6 +66,5 @@ back_channel_logout_cross_account_access_enabled = true
 kms_cross_account_access_enabled                 = true
 cmk_for_back_channel_logout_enabled              = true
 
-oidc_origin_domain_enabled = true
-
+oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
