@@ -47,6 +47,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -139,6 +140,7 @@ class QueryParamsAuthorizeValidatorTest {
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -216,6 +218,7 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request contains invalid claims")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -270,6 +273,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -308,6 +312,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -327,6 +332,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -353,6 +359,7 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request is missing state parameter")));
+        assertNull(errorObject.get().state());
     }
 
     @Test
@@ -368,7 +375,7 @@ class QueryParamsAuthorizeValidatorTest {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .state(new State())
+                        .state(STATE)
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
@@ -379,6 +386,7 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request is missing nonce parameter")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -393,7 +401,7 @@ class QueryParamsAuthorizeValidatorTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
+                        .state(STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
@@ -405,6 +413,7 @@ class QueryParamsAuthorizeValidatorTest {
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -419,7 +428,7 @@ class QueryParamsAuthorizeValidatorTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
+                        .state(STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
@@ -427,6 +436,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -492,6 +502,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 CLIENT_ID,
                                 REDIRECT_URI)
                         .requestURI(URI.create("https://localhost/redirect-uri"))
+                        .state(STATE)
                         .build();
 
         var authRequestError = queryParamsAuthorizeValidator.validate(authenticationRequest);
@@ -500,6 +511,7 @@ class QueryParamsAuthorizeValidatorTest {
         assertThat(
                 authRequestError.get().errorObject(),
                 equalTo(OAuth2Error.REQUEST_URI_NOT_SUPPORTED));
+        assertEquals(STATE, authRequestError.get().state());
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
