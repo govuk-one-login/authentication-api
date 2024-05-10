@@ -15,7 +15,7 @@ The list of permitted environments is set up in the script. The script will auto
 account and then create or update the Cloudformation stack using the parameters and tags provided.
 
 If you have not done so already, your AWS profiles will need to be configured using the
-script [here](../../../scripts/export_aws_creds.sh).
+script [here](../../../scripts/set-up-sso.sh).
 
 Note that the `dev` environment refers to the `oidc.sandpit.account.gov.uk` domain.
 

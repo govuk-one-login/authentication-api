@@ -96,7 +96,6 @@ if [[ $# == 2 ]] && [[ $2 == "--create" ]]; then
 else
     aws cloudformation update-stack \
         --region eu-west-2 \
-        --enable-termination-protection \
         --stack-name="$ENVIRONMENT-oidc-cloudfront" \
         --capabilities CAPABILITY_NAMED_IAM \
         --template-url ${TEMPLATE_URL} \
