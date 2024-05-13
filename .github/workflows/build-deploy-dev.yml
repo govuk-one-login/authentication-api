@@ -62,7 +62,7 @@
             VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
             echo "VERSION=$VERSION" >> $GITHUB_ENV
         - name: Start signing job for ${{ matrix.module }}
-          run: >
+          run: |
             SIGNER_RESPONSE=`aws signer start-signing-job \
               --profile-name "${{ env.SIGNING_PROFILE }}" \
               --source "s3={bucketName=${{ env.SOURCE_BUCKET }},key=${{ matrix.module }}/${{ github.sha }}.zip,version=$VERSION}" \
