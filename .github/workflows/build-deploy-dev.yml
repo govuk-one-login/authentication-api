@@ -70,7 +70,7 @@
             JOB_ID=`echo $SIGNER_RESPONSE | jq .jobId -r`
             aws signer wait successful-signing-job --job-id $JOB_ID
 
-    deploy:
+    deploy-account-mgmt:
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 60
@@ -107,6 +107,23 @@
             VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
             echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+
+    deploy-Auth-external:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
         - name: Download and copy Auth External API signed lambda zip
           working-directory: ci/terraform/auth-external-api
           run: |
@@ -127,6 +144,23 @@
             VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
             echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+
+    deploy-delivery-report:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
         - name: Download and copy Delivery Receipts signed lambda zip
           working-directory: ci/terraform/delivery-receipts
           run: |
@@ -147,6 +181,23 @@
             VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
             echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+
+    deploy-act-intervention:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
         - name: Download and copy Account Interventions API Stub signed lambda zip
           working-directory: ci/terraform/interventions-api-stub
           run: |
