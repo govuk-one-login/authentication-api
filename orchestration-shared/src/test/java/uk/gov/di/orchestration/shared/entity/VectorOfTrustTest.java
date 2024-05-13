@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,6 +98,13 @@ class VectorOfTrustTest {
                         VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL));
         var levelsOfConfidence = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
         assertThat(levelsOfConfidence, equalTo(List.of("P2", "P1")));
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenOnlyLevelsOfConfidenceRequestedButNonePresent() {
+        var vtrList = List.of(new VectorOfTrust(LOW_LEVEL), new VectorOfTrust(MEDIUM_LEVEL));
+        var levelsOfConfidence = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
+        assertThat(levelsOfConfidence, equalTo(emptyList()));
     }
 
     @ParameterizedTest
@@ -275,7 +283,7 @@ class VectorOfTrustTest {
 
     @Test
     void shouldThrowExceptionForEmptyVtrList() {
-        List<VectorOfTrust> vtrList = Collections.emptyList();
+        List<VectorOfTrust> vtrList = emptyList();
 
         IllegalArgumentException exception =
                 assertThrows(
