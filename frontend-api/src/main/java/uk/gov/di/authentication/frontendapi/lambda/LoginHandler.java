@@ -291,7 +291,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     LOG_IN_SUCCESS,
                     clientId,
                     auditUser,
-                    AuditService.RestrictedSection.empty,
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded())),
                     pairs);
 
             if (!userMfaDetail.isMfaRequired()) {

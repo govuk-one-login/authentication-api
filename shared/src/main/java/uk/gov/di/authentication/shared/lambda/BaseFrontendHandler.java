@@ -38,12 +38,14 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
+    public static final String TXMA_AUDIT_ENCODED_HEADER = "txma-audit-encoded";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
@@ -200,6 +202,11 @@ public abstract class BaseFrontendHandler<T>
         }
 
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
+
+        String txmaAuditEncoded =
+                getHeaderValueOrElse(input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, null);
+
+        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }

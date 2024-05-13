@@ -80,6 +80,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -112,14 +113,14 @@ class LoginHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private static final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
     private static final Map<String, String> VALID_HEADERS =
-            Map.of(
-                    PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                    PERSISTENT_ID,
-                    "Session-Id",
-                    session.getSessionId(),
-                    CLIENT_SESSION_ID_HEADER,
-                    CLIENT_SESSION_ID);
+            Map.ofEntries(
+                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
+                    Map.entry("Session-Id", session.getSessionId()),
+                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -206,6 +207,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
+        // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -220,11 +222,15 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
         var result = handler.handleRequest(event, context);
 
+        // Assert
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(
@@ -237,7 +243,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         CLIENT_ID.getValue(),
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -359,7 +365,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         CLIENT_ID.getValue(),
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         verifyNoInteractions(cloudwatchMetricsService);
