@@ -44,7 +44,28 @@ class AccountInterventionServiceTest {
                             "appliedAt": 1696869005821,
                             "sentAt": 1696869003456,
                             "description": "AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED",
-                            "reprovedIdentityAt": 1696969322935
+                            "reprovedIdentityAt": 1696969322935,
+                            "resetPasswordAt": 1696969322935
+                        },
+                        "state": {
+                            "blocked": false,
+                            "suspended": true,
+                            "reproveIdentity": true,
+                            "resetPassword": false
+                        },
+                        "auditLevel": "standard",
+                        "history": []
+                    }
+                    """;
+
+    private static final String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_WITHOUT_OPTIONAL_FIELDS =
+            """
+                    {
+                        "intervention": {
+                            "updatedAt": 1696969322935,
+                            "appliedAt": 1696869005821,
+                            "sentAt": 1696869003456,
+                            "description": "AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED"
                         },
                         "state": {
                             "blocked": false,
@@ -113,6 +134,39 @@ class AccountInterventionServiceTest {
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
+        when(httpResponse.statusCode()).thenReturn(200);
+
+        AccountIntervention intervention =
+                accountInterventionService.getAccountIntervention(internalPairwiseSubjectId);
+
+        assertFalse(intervention.getBlocked());
+        assertTrue(intervention.getSuspended());
+        assertTrue(intervention.getReproveIdentity());
+        assertFalse(intervention.getResetPassword());
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "AISResult",
+                        Map.of(
+                                "blocked", "false",
+                                "suspended", "true",
+                                "resetPassword", "false",
+                                "reproveIdentity", "true"));
+    }
+
+    @Test
+    void shouldReturnAccountInterventionWhenOptionalFieldsAreNotPresentInResponse()
+            throws IOException, InterruptedException {
+
+        var internalPairwiseSubjectId = "some-internal-subject-id";
+        var accountInterventionService =
+                new AccountInterventionService(
+                        config, httpClient, cloudwatchMetricsService, auditService);
+        var httpResponse = mock(HttpResponse.class);
+
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        when(httpResponse.body())
+                .thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_WITHOUT_OPTIONAL_FIELDS);
         when(httpResponse.statusCode()).thenReturn(200);
 
         AccountIntervention intervention =
