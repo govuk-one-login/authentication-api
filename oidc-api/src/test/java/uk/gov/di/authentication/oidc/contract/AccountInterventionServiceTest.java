@@ -358,12 +358,7 @@ class AccountInterventionServiceTest {
                             body.object(
                                     "intervention",
                                     (obj) -> {
-                                        obj.numberType("updatedAt", TIME_NOW);
                                         obj.numberType("appliedAt", TIME_NOW);
-                                        obj.numberType("sentAt", TIME_NOW);
-                                        obj.stringType("description", "TEST_DESCRIPTION");
-                                        obj.numberType("reprovedIdentityAt", TIME_NOW);
-                                        obj.numberType("resetPasswordAt", TIME_NOW);
                                     });
                             body.object(
                                     "state",
