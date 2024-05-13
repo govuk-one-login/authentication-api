@@ -44,7 +44,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -178,7 +177,6 @@ class AuthorisationHandlerTest {
     private static final EncryptedJWT TEST_ENCRYPTED_JWT;
     private static final Boolean IS_ONE_LOGIN = false;
     private static final Boolean IS_COOKIE_CONSENT_SHARED = false;
-    private static final Boolean IS_CONSENT_REQUIRED = true;
     private static final String RP_SERVICE_TYPE = "MANDATORY";
     private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final ECKey EC_SIGNING_KEY = generateECSigningKey();
@@ -1574,31 +1572,23 @@ class AuthorisationHandlerTest {
                         pair("description", errorObject.getDescription()));
     }
 
-    private static Stream<Arguments> invalidPromptValues() {
-        return Stream.of(
-                Arguments.of("login consent", OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS),
-                Arguments.of("consent", OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS),
-                Arguments.of("select_account", OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS));
-    }
-
-    @ParameterizedTest
-    @MethodSource("invalidPromptValues")
-    void shouldReturnErrorWhenInvalidPromptValuesArePassed(
-            String invalidPromptValues, ErrorObject expectedError) {
-        Map<String, String> requestParams =
-                buildRequestParams(Map.of("prompt", invalidPromptValues));
+    @Test
+    void shouldReturnErrorWhenInvalidPromptValuesArePassed() {
+        Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "select_account"));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString(expectedError.getCode()));
+                containsString(OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getCode()));
 
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
                         CLIENT_ID.getValue(),
                         BASE_AUDIT_USER,
-                        pair("description", expectedError.getDescription()));
+                        pair(
+                                "description",
+                                OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
@@ -1692,13 +1682,12 @@ class AuthorisationHandlerTest {
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withClientID("test-id")
-                .withConsentRequired(IS_COOKIE_CONSENT_SHARED)
+                .withCookieConsentShared(IS_COOKIE_CONSENT_SHARED)
                 .withClientName(RP_CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withRedirectUrls(List.of(REDIRECT_URI))
                 .withOneLoginService(IS_ONE_LOGIN)
                 .withServiceType(RP_SERVICE_TYPE)
-                .withConsentRequired(IS_CONSENT_REQUIRED)
                 .withSubjectType("public")
                 .withIdentityVerificationSupported(true);
     }
@@ -1709,7 +1698,6 @@ class AuthorisationHandlerTest {
                 new JWTClaimsSet.Builder()
                         .claim("client-name", RP_CLIENT_NAME)
                         .claim("cookie-consent-shared", IS_COOKIE_CONSENT_SHARED)
-                        .claim("consent-required", IS_CONSENT_REQUIRED)
                         .claim("is-one-login-service", IS_ONE_LOGIN)
                         .claim("service-type", RP_SERVICE_TYPE)
                         .claim("state", STATE)

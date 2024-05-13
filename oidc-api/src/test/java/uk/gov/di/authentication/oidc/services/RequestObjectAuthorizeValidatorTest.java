@@ -589,7 +589,6 @@ class RequestObjectAuthorizeValidatorTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
-                .withConsentRequired(false)
                 .withClientName("test-client")
                 .withScopes(scope.toStringList())
                 .withRedirectUrls(singletonList(REDIRECT_URI))

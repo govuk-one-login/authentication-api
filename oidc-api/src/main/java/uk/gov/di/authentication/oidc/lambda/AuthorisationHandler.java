@@ -487,10 +487,7 @@ public class AuthorisationHandler
             List<VectorOfTrust> vtrList,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
-                && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
-                        || authenticationRequest
-                                .getPrompt()
-                                .contains(Prompt.Type.SELECT_ACCOUNT))) {
+                && authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
             return generateErrorResponse(
                     authenticationRequest.getRedirectionURI(),
                     authenticationRequest.getState(),
