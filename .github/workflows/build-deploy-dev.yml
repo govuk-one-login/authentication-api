@@ -2,7 +2,7 @@
   name: Build modules & Deploy in DEV
   env:
     AWS_REGION: eu-west-2
-    DEPLOYER_ROLE: arn:aws:iam::706615647326:role/deployers/github-actions-publish-to-s3-for-code-signing
+    DEPLOYER_ROLE: arn:aws:iam::706615647326:role/deployers/dev-github-actions-publish-to-s3-for-code-signing
     SOURCE_BUCKET: di-auth-lambda-source-20220215165054622300000001
     SIGNING_PROFILE: di_auth_lambda_signing_20220214175605677200000001
     DESTINATION_BUCKET: di-auth-lambda-signed-20220215165009815000000001
