@@ -217,3 +217,212 @@
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
             VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
             echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    deploy-oidc:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
+        
+        - name: Download and copy Audit Processors signed lambda zip
+          working-directory: ci/terraform/oidc
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-oidc-api-${{ github.sha }}-*"
+            mv artifacts/signed-oidc-api-*.zip artifacts/oidc-api.zip
+  
+        - name: Download and copy Client Registry API signed artifact
+          working-directory: ci/terraform/oidc
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-client-registry-api-${{ github.sha }}-*"
+            mv artifacts/signed-client-registry-api-*.zip artifacts/client-registry-api.zip
+  
+        - name: Download and copy Doc Checking App API signed artifact
+          working-directory: ci/terraform/oidc
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-doc-checking-app-api-${{ github.sha }}-*"
+            mv artifacts/signed-doc-checking-app-api-*.zip artifacts/doc-checking-app-api.zip
+  
+        - name: Download and copy Frontend API signed artifact
+          working-directory: ci/terraform/oidc
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-frontend-api-${{ github.sha }}-*"
+            mv artifacts/signed-frontend-api-*.zip artifacts/frontend-api.zip
+  
+        - name: Download and copy IPV API signed artifact
+          working-directory: ci/terraform/oidc
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-ipv-api-${{ github.sha }}-*"
+            mv artifacts/signed-ipv-api-*.zip artifacts/ipv-api.zip
+  
+        - name: Upload OIDC Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r oidc.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key oidc.zip \
+              --body oidc.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    deploy-shared:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
+
+        - name: Upload Shared Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r shared.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key shared.zip \
+              --body shared.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    deploy-test-services:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
+        
+        - name: Download and copy Test Services signed lambda zip
+          working-directory: ci/terraform/test-services
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-test-services-api-${{ github.sha }}-*"
+            mv artifacts/signed-test-services-api-*.zip artifacts/test-services-api.zip
+  
+        - name: Upload Test Services Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r test-services.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key test-services.zip \
+              --body test-services.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    deploy-TICF-stub:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
+  
+        - name: Download and copy TICF CRI Stub signed lambda zip
+          working-directory: ci/terraform/ticf-cri-stub
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-ticf-cri-stub-${{ github.sha }}-*"
+            mv artifacts/signed-ticf-cri-stub-*.zip artifacts/ticf-cri-stub.zip
+  
+        - name: Upload TICF CTI Stub Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r ticf-cri-stub.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key ticf-cri-stub.zip \
+              --body ticf-cri-stub.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    deploy-Utils:
+      needs: build
+      runs-on: ubuntu-latest
+      timeout-minutes: 60
+      permissions:
+        id-token: write
+        contents: read
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+  
+        - name: Set up AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4.0.2
+          with:
+            role-to-assume: ${{ env.DEV_GHA_DEPLOYER_ROLE }}
+            aws-region: ${{ env.AWS_REGION }}
+        
+        - name: Download and copy Utils signed lambda zip
+          working-directory: ci/terraform/utils
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-utils-${{ github.sha }}-*"
+            mv artifacts/signed-utils-*.zip artifacts/utils.zip
+  
+        - name: Upload Utils Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r utils.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key utils.zip \
+              --body utils.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
