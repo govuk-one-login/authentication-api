@@ -4,14 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.oidc.helpers.LogoutHelper;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -26,17 +22,13 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import java.net.URI;
 import java.text.ParseException;
 import java.util.Map;
-import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
-import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -94,186 +86,66 @@ public class LogoutHandler
     public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) {
         LOG.info("Logout request received");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
-        Optional<Session> sessionFromSessionCookie =
-                segmentedFunctionCall(
-                        "getSessionFromSessionCookie",
-                        () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
-        attachSessionToLogsIfExists(sessionFromSessionCookie, input.getHeaders());
 
-        var subjectId = sessionFromSessionCookie.map(Session::getInternalCommonSubjectIdentifier);
-        var sessionId = sessionFromSessionCookie.map(Session::getSessionId);
-
-        var auditUser =
-                TxmaAuditUser.user()
-                        .withIpAddress(extractIpAddress(input))
-                        .withPersistentSessionId(
-                                extractPersistentIdFromCookieHeader(input.getHeaders()))
-                        .withSessionId(sessionId.orElse(null))
-                        .withUserId(subjectId.orElse(null));
-
-        Map<String, String> queryStringParameters = input.getQueryStringParameters();
-        if (queryStringParameters == null || queryStringParameters.isEmpty()) {
-            LOG.info("Returning default logout as no input parameters");
-            getSessionAndDestroyIfExists(sessionFromSessionCookie);
-            return logoutService.generateDefaultLogoutResponse(
-                    Optional.empty(), auditUser, Optional.empty());
-        }
-        Optional<String> state = Optional.ofNullable(queryStringParameters.get("state"));
-
-        Optional<String> idTokenHint =
-                Optional.ofNullable(queryStringParameters.get("id_token_hint"));
-        if (idTokenHint.isEmpty()) {
-            getSessionAndDestroyIfExists(sessionFromSessionCookie);
-            return logoutService.generateDefaultLogoutResponse(state, auditUser, Optional.empty());
-        }
-
-        LOG.info("ID token hint is present");
-        boolean isTokenSignatureValid =
-                segmentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
-        if (!isTokenSignatureValid) {
-            LOG.warn("Unable to validate ID token signature");
-            return logoutService.generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
-                    auditUser,
-                    Optional.empty());
-        }
-
-        Optional<String> audience;
+        LogoutHelper helper =
+                new LogoutHelper(sessionService, tokenValidationService, dynamoClientService);
         try {
-            SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
-            audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+            helper.extractParamsFromRequest(input);
         } catch (ParseException e) {
             LOG.warn("Unable to extract JWTClaimsSet to get the audience");
             return logoutService.generateErrorLogoutResponse(
-                    Optional.empty(),
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"),
-                    auditUser,
-                    Optional.empty());
+                    helper.state(),
+                    helper.errorObject().get(),
+                    helper.auditUser(),
+                    helper.audience());
         }
 
-        if (audience.isEmpty()) {
-            getSessionAndDestroyIfExists(sessionFromSessionCookie);
-            return logoutService.generateDefaultLogoutResponse(
-                    Optional.empty(), auditUser, Optional.empty());
-        }
-        final String clientID = audience.get();
-
-        LOG.info("Validating ClientID");
-        attachLogFieldToLogs(CLIENT_ID, clientID);
-        Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
-        if (clientRegistry.isEmpty()) {
-            LOG.warn("Client not found in ClientRegistry");
-            getSessionAndDestroyIfExists(sessionFromSessionCookie);
-            return logoutService.generateErrorLogoutResponse(
-                    state,
-                    new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
-                    auditUser,
-                    Optional.of(clientID));
+        if (helper.session().isPresent()) {
+            attachSessionToLogs(helper.session().get(), input.getHeaders());
+            segmentedFunctionCall(
+                    "destroySessions", () -> logoutService.destroySessions(helper.session().get()));
         }
 
-        Optional<String> postLogoutRedirectUri =
-                Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
-        if (postLogoutRedirectUri.isEmpty()) {
-            LOG.info(
-                    "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
-            getSessionAndDestroyIfExists(sessionFromSessionCookie);
-            return logoutService.generateDefaultLogoutResponse(
-                    state, auditUser, Optional.of(clientID));
-        }
-
-        if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUri, clientRegistry)) {
-            getSessionAndDestroyIfExists(sessionFromSessionCookie);
-            return logoutService.generateErrorLogoutResponse(
-                    state,
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "client registry does not contain post_logout_redirect_uri"),
-                    auditUser,
-                    Optional.of(clientID));
-        }
-
-        if (sessionFromSessionCookie.isPresent()) {
-            return segmentedFunctionCall(
-                    "logoutWhenSessionExists",
-                    () ->
-                            logout(
-                                    sessionFromSessionCookie.get(),
-                                    clientID,
-                                    postLogoutRedirectUri.get(),
-                                    state,
-                                    auditUser));
-
-        } else {
-            return segmentedFunctionCall(
-                    "logoutWhenSessionDoesNotExist",
-                    () ->
-                            logoutService.generateLogoutResponse(
-                                    URI.create(postLogoutRedirectUri.get()),
-                                    state,
-                                    Optional.empty(),
-                                    auditUser,
-                                    Optional.of(clientID)));
+        switch (helper.validateRequest()) {
+            case VALID -> {
+                if (helper.session().isPresent()) {
+                    cloudwatchMetricsService.incrementLogout(helper.audience());
+                }
+                return logoutService.generateLogoutResponse(
+                        URI.create(helper.postLogoutRedirectUri().get()),
+                        helper.state(),
+                        helper.errorObject(),
+                        helper.auditUser(),
+                        helper.audience());
+            }
+            case INCOMPLETE -> {
+                return logoutService.generateDefaultLogoutResponse(
+                        helper.state(), helper.auditUser(), helper.audience());
+            }
+            case ERROR -> {
+                return logoutService.generateErrorLogoutResponse(
+                        helper.state(),
+                        helper.errorObject().get(),
+                        helper.auditUser(),
+                        helper.audience());
+            }
+            default -> {
+                LOG.warn(
+                        "Returning default error logout response due to error with logout validation");
+                return logoutService.generateErrorLogoutResponse(
+                        helper.state(),
+                        helper.errorObject().get(),
+                        helper.auditUser(),
+                        helper.audience());
+            }
         }
     }
 
-    private void attachSessionToLogsIfExists(
-            Optional<Session> sessionFromSessionCookie, Map<String, String> headers) {
-        if (sessionFromSessionCookie.isPresent()) {
-            Session session = sessionFromSessionCookie.get();
-            CookieHelper.SessionCookieIds sessionCookieIds =
-                    cookieHelper.parseSessionCookie(headers).orElseThrow();
-
-            attachSessionIdToLogs(session);
-            attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
-        }
-    }
-
-    private Optional<String> getSessionAndDestroyIfExists(
-            Optional<Session> sessionFromSessionCookie) {
-        if (sessionFromSessionCookie.isPresent()) {
-            Session session = sessionFromSessionCookie.get();
-            segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
-            return Optional.of(session.getSessionId());
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private boolean postLogoutRedirectUriInClientReg(
-            Optional<String> postLogoutRedirectUri, Optional<ClientRegistry> clientRegistry) {
-        return postLogoutRedirectUri
-                .map(
-                        uri -> {
-                            if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
-                                LOG.warn(
-                                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
-                                        uri);
-                                return false;
-                            } else {
-                                LOG.info(
-                                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
-                                        uri);
-                                return true;
-                            }
-                        })
-                .orElseGet(() -> false);
-    }
-
-    private APIGatewayProxyResponseEvent logout(
-            Session session,
-            String clientID,
-            String uri,
-            Optional<String> state,
-            TxmaAuditUser auditUser) {
-
-        segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
-        return logoutService.generateLogoutResponse(
-                URI.create(uri), state, Optional.empty(), auditUser, Optional.of(clientID));
+    private void attachSessionToLogs(Session session, Map<String, String> headers) {
+        CookieHelper.SessionCookieIds sessionCookieIds =
+                cookieHelper.parseSessionCookie(headers).orElseThrow();
+        attachSessionIdToLogs(session);
+        attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
     }
 }
