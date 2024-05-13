@@ -463,6 +463,25 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                                             SESSION_ID, CLIENT_SESSION_ID))),
                                     constructQueryStringParameters()));
         }
+
+        @Test
+        void shouldRedirectToRpWhenFieldsAreMissingInResponse() throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithoutOptionalFields(
+                    SUBJECT_ID.getValue(), false, false, false, false);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertUserInfoStoredAndRedirectedToRp(response);
+        }
     }
 
     @Nested
