@@ -36,6 +36,6 @@ the `configuration/[ENVIRONMENT]/[PIPELINE]/parameters.json` files.
 ## SSM Parameters
 
 The following parameters are not provisioned by CloudFormation, and instead are managed manually in Systems Manager Parameter Store:
-- `<envrionment>-ipv-capacity`
+- `<environment>-ipv-capacity`
 - `<environment>-auth-public-encryption-key`
 - `<environment>-ipv-public-encryption-key`
