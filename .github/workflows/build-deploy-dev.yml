@@ -100,7 +100,7 @@
           run: >
             zip -r account-management.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key account-management.zip \
               --body account-management.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -120,7 +120,7 @@
           run: >
             zip -r auth-external-api.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key auth-external-api.zip \
               --body auth-external-api.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -140,7 +140,7 @@
           run: >
             zip -r delivery-receipts.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key delivery-receipts.zip \
               --body delivery-receipts.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -150,7 +150,7 @@
         - name: Download and copy Account Interventions API Stub signed lambda zip
           working-directory: ci/terraform/interventions-api-stub
           run: >
-            aws s3 cp s3://di-auth-lambda-signed-20220215170204376200000002 ./artifacts \
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
               --include "signed-interventions-api-stub-${{ github.sha }}-*"
             mv artifacts/signed-interventions-api-stub-*.zip artifacts/interventions-api-stub.zip
@@ -160,7 +160,7 @@
           run: >
             zip -r interventions-api-stub.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket $ARTIFACT_BUCKET \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }}  \
               --key interventions-api-stub.zip \
               --body interventions-api-stub.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -212,7 +212,7 @@
           run: >
             zip -r oidc.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key oidc.zip \
               --body oidc.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -224,7 +224,7 @@
           run: |
             zip -r shared.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key shared.zip \
               --body shared.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -244,7 +244,7 @@
           run: |
             zip -r test-services.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key test-services.zip \
               --body test-services.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -254,7 +254,7 @@
         - name: Download and copy TICF CRI Stub signed lambda zip
           working-directory: ci/terraform/ticf-cri-stub
           run: |
-            aws s3 cp s3://di-auth-lambda-signed-20220215170204376200000002 ./artifacts \
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }}  ./artifacts \
               --recursive --exclude "*" \
               --include "signed-ticf-cri-stub-${{ github.sha }}-*"
             mv artifacts/signed-ticf-cri-stub-*.zip artifacts/ticf-cri-stub.zip
@@ -264,7 +264,7 @@
           run: |
             zip -r ticf-cri-stub.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket $ARTIFACT_BUCKET \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key ticf-cri-stub.zip \
               --body ticf-cri-stub.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
@@ -284,7 +284,7 @@
           run: |
             zip -r utils.zip .
             S3_RESPONSE=`aws s3api put-object \
-              --bucket ${{ env.ARTIFACT_BUCKET }} \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
               --key utils.zip \
               --body utils.zip \
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
