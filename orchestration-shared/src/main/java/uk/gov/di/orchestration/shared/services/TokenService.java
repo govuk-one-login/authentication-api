@@ -113,7 +113,8 @@ public class TokenService {
                                         rpPairwiseSubject,
                                         internalPairwiseSubject,
                                         claimsRequest,
-                                        signingAlgorithm));
+                                        signingAlgorithm,
+                                        journeyId));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
@@ -165,7 +166,8 @@ public class TokenService {
                         rpPaiwiseSubject,
                         internalPairwiseSubject,
                         null,
-                        signingAlgorithm);
+                        signingAlgorithm,
+                        null);
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
                         clientID,
@@ -322,7 +324,8 @@ public class TokenService {
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
             OIDCClaimsRequest claimsRequest,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String journeyId) {
 
         LOG.info("Generating AccessToken");
         Date expiryDate =
@@ -338,6 +341,7 @@ public class TokenService {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
+                        .claim("sid", journeyId)
                         .subject(rpPairwiseSubject.getValue())
                         .jwtID(jwtID);
 
@@ -366,7 +370,8 @@ public class TokenService {
                             new AccessTokenStore(
                                     accessToken.getValue(),
                                     internalSubject.getValue(),
-                                    internalPairwiseSubject.getValue())),
+                                    internalPairwiseSubject.getValue(),
+                                    journeyId)),
                     configService.getAccessTokenExpiry());
         } catch (JsonException e) {
             LOG.error("Unable to save access token to Redis");

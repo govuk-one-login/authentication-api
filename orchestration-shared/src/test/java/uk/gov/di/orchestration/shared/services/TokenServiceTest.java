@@ -92,6 +92,7 @@ class TokenServiceTest {
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final String JOURNEY_ID = "client-session-id";
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
@@ -165,7 +166,7 @@ class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
@@ -239,7 +240,7 @@ class TokenServiceTest {
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
@@ -312,7 +313,7 @@ class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
@@ -347,7 +348,7 @@ class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         var parsedAccessToken =
@@ -559,7 +560,8 @@ class TokenServiceTest {
                 new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         verify(redisConnectionService)
                 .saveWithExpiry(
                         accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
@@ -595,6 +597,6 @@ class TokenServiceTest {
 
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
-                is("client-session-id"));
+                is(JOURNEY_ID));
     }
 }
