@@ -106,3 +106,63 @@
               --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
             VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
             echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+        - name: Download and copy Auth External API signed lambda zip
+          working-directory: ci/terraform/auth-external-api
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-auth-external-api-${{ github.sha }}-*"
+            mv artifacts/signed-auth-external-api-*.zip artifacts/auth-external-api.zip
+    
+        - name: Upload Auth External API Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r auth-external-api.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key auth-external-api.zip \
+              --body auth-external-api.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+        - name: Download and copy Delivery Receipts signed lambda zip
+          working-directory: ci/terraform/delivery-receipts
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-delivery-receipts-api-${{ github.sha }}-*"
+            mv artifacts/signed-delivery-receipts-api-*.zip artifacts/delivery-receipts-api.zip
+    
+        - name: Upload Delivery Receipts Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r delivery-receipts.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key delivery-receipts.zip \
+              --body delivery-receipts.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+        - name: Download and copy Account Interventions API Stub signed lambda zip
+          working-directory: ci/terraform/interventions-api-stub
+          run: |
+            aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+              --recursive --exclude "*" \
+              --include "signed-interventions-api-stub-${{ github.sha }}-*"
+            mv artifacts/signed-interventions-api-stub-*.zip artifacts/interventions-api-stub.zip
+    
+        - name: Upload Account Interventions API Stub Terraform files
+          working-directory: ci/terraform
+          run: |
+            zip -r interventions-api-stub.zip .
+            S3_RESPONSE=`aws s3api put-object \
+              --bucket ${{ env.DEV_ARTIFACT_BUCKET }} \
+              --key interventions-api-stub.zip \
+              --body interventions-api-stub.zip \
+              --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
+            VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
