@@ -16,6 +16,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
@@ -42,6 +43,10 @@ class UserInfoHandlerTest {
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
+    private static final String TOKEN = "token";
+    private static final String INTERNAL_SUBJECT_ID = "internal-subject-id";
+    private static final String INTERNAL_PAIRWISE_ID = "internal-pairwise-subject-id";
+    private static final String JOURNEY_ID = "client-session-id";
     private static final Subject AUDIT_SUBJECT_ID = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -62,6 +67,10 @@ class UserInfoHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-request-id");
         when(accessTokenInfo.getClientID()).thenReturn("client-id");
         when(accessTokenInfo.getSubject()).thenReturn(SUBJECT.getValue());
+        when(accessTokenInfo.getAccessTokenStore())
+                .thenReturn(
+                        new AccessTokenStore(
+                                TOKEN, INTERNAL_SUBJECT_ID, INTERNAL_PAIRWISE_ID, JOURNEY_ID));
     }
 
     @Test
@@ -95,7 +104,9 @@ class UserInfoHandlerTest {
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
                         "client-id",
-                        TxmaAuditUser.user().withUserId(AUDIT_SUBJECT_ID.getValue()));
+                        TxmaAuditUser.user()
+                                .withUserId(AUDIT_SUBJECT_ID.getValue())
+                                .withGovukSigninJourneyId(JOURNEY_ID));
     }
 
     @Test
@@ -118,7 +129,9 @@ class UserInfoHandlerTest {
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
                         "client-id",
-                        TxmaAuditUser.user().withUserId(AUDIT_SUBJECT_ID.getValue()),
+                        TxmaAuditUser.user()
+                                .withUserId(AUDIT_SUBJECT_ID.getValue())
+                                .withGovukSigninJourneyId(JOURNEY_ID),
                         AuditService.MetadataPair.pair("return-code", RETURN_CODE));
     }
 
