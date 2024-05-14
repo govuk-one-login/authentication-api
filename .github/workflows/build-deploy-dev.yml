@@ -69,6 +69,8 @@
               --destination "s3={bucketName=${{ env.DESTINATION_BUCKET }},prefix=signed-${{ matrix.module }}-${{ github.sha }}}"`
             JOB_ID=`echo $SIGNER_RESPONSE | jq .jobId -r`
             aws signer wait successful-signing-job --job-id $JOB_ID
+            echo "JOB_ID=$SIGNED_JOB_ID" >> $GITHUB_ENV
+            Print "$SIGNED_JOB_ID"
 
     deploy-account-mgmt:
       needs: build
