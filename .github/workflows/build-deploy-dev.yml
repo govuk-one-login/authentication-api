@@ -98,7 +98,7 @@
           run: |
             aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
-              --include "signed-account-management-api-${{ github.sha }}-${{ env.signedjob }}"
+              --include "signed-account-management-api-${{ github.sha }}-${{ env.signedjob }}.zip"
             mv artifacts/signed-account-management-*.zip artifacts/account-management-api.zip
     
         - name: Upload Account Management Terraform files
