@@ -27,11 +27,8 @@ import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -46,38 +43,6 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void setup() {
         handler = new UpdateProfileHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
-    }
-
-    @Test
-    void shouldCallUpdateProfileToUpdateConsentAndReturn204() throws Json.JsonException {
-        String sessionId = redis.createSession();
-        String clientSessionId = IdGenerator.generate();
-        AuthenticationRequest authRequest = setUpTest(sessionId, clientSessionId);
-        redis.createClientSession(clientSessionId, CLIENT_NAME, authRequest.toParameters());
-        UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
-
-        var response =
-                makeRequest(
-                        Optional.of(request),
-                        constructFrontendHeaders(sessionId, clientSessionId),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-        Optional<ClientConsent> consent =
-                userStore
-                        .getUserConsents(EMAIL_ADDRESS)
-                        .flatMap(
-                                list ->
-                                        list.stream()
-                                                .filter(c -> c.getClientId().equals(CLIENT_ID))
-                                                .findFirst());
-        assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.OPENID.getClaimNames()));
-        assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.EMAIL.getClaimNames()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_CONSENT_UPDATED));
     }
 
     @Test

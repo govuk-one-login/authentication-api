@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -156,8 +155,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                                     .getValue())
                             .orElse(AuditService.UNKNOWN);
 
-            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
-
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
                     userContext
@@ -186,7 +183,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             LOG.info("Successfully processed request");
             try {
-                return generateApiGatewayProxyResponse(200, new SignUpResponse(consentRequired));
+                return generateApiGatewayProxyResponse(200, new SignUpResponse());
             } catch (JsonException e) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }
