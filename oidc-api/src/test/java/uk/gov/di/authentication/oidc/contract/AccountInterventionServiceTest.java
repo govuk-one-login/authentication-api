@@ -39,8 +39,8 @@ class AccountInterventionServiceTest {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private AccountInterventionService accountInterventionService;
 
-    private static final String PROVIDER_NAME = "ExternalAccountInterventionService";
-    private static final String CONSUMER_NAME = "OrchestrationAccountInterventionService";
+    private static final String PROVIDER_NAME = "AccountInterventionServiceProvider";
+    private static final String CONSUMER_NAME = "OrchAccountInterventionServiceConsumer";
     private static final String INTERNAL_PAIRWISE_SUBJECT_ID = "internal-pairwise-subject-id";
     private static final String INVALID_INTERNAL_PAIRWISE_SUBJECT_ID =
             "invalid-internal-pairwise-subject-id";
@@ -358,12 +358,7 @@ class AccountInterventionServiceTest {
                             body.object(
                                     "intervention",
                                     (obj) -> {
-                                        obj.numberType("updatedAt", TIME_NOW);
                                         obj.numberType("appliedAt", TIME_NOW);
-                                        obj.numberType("sentAt", TIME_NOW);
-                                        obj.stringType("description", "TEST_DESCRIPTION");
-                                        obj.numberType("reprovedIdentityAt", TIME_NOW);
-                                        obj.numberType("resetPasswordAt", TIME_NOW);
                                     });
                             body.object(
                                     "state",
