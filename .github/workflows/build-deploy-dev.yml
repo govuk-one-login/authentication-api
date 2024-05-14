@@ -245,7 +245,11 @@
       runs-on: ubuntu-latest
       timeout-minutes: 60
       env:
-        signedjob: ${{needs.build.outputs.oidc}}
+        signedjob-oidc: ${{needs.build.outputs.oidc}}
+        signedjob-clientreg: ${{needs.build.outputs.client-registry}}
+        signedjob-docchecking: ${{needs.build.outputs.doc-checking-app}}
+        signedjob-frontend: ${{needs.build.outputs.frontend}}
+        signedjob-ipv: ${{needs.build.outputs.ipv}}
       permissions:
         id-token: write
         contents: read
@@ -264,7 +268,7 @@
           run: |
             aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
-              --include "signed-oidc-api-${{ github.sha }}-${{ env.signedjob }}.zip"
+              --include "signed-oidc-api-${{ github.sha }}-${{ env.signedjob-oidc }}.zip"
             mv artifacts/signed-oidc-api-*.zip artifacts/oidc-api.zip
   
         - name: Download and copy Client Registry API signed artifact
@@ -272,7 +276,7 @@
           run: |
             aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
-              --include "signed-client-registry-api-${{ github.sha }}-${{ env.signedjob }}.zip"
+              --include "signed-client-registry-api-${{ github.sha }}-${{ env.signedjob-clientreg }}.zip"
             mv artifacts/signed-client-registry-api-*.zip artifacts/client-registry-api.zip
   
         - name: Download and copy Doc Checking App API signed artifact
@@ -280,7 +284,7 @@
           run: |
             aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
-              --include "signed-doc-checking-app-api-${{ github.sha }}-${{ env.signedjob }}.zip"
+              --include "signed-doc-checking-app-api-${{ github.sha }}-${{ env.signedjob-docchecking }}.zip"
             mv artifacts/signed-doc-checking-app-api-*.zip artifacts/doc-checking-app-api.zip
   
         - name: Download and copy Frontend API signed artifact
@@ -288,7 +292,7 @@
           run: |
             aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
-              --include "signed-frontend-api-${{ github.sha }}-${{ env.signedjob }}.zip"
+              --include "signed-frontend-api-${{ github.sha }}-${{ env.signedjob-frontend }}.zip"
             mv artifacts/signed-frontend-api-*.zip artifacts/frontend-api.zip
   
         - name: Download and copy IPV API signed artifact
@@ -296,7 +300,7 @@
           run: |
             aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
               --recursive --exclude "*" \
-              --include "signed-ipv-api-${{ github.sha }}-${{ env.signedjob }}.zip"
+              --include "signed-ipv-api-${{ github.sha }}-${{ env.signedjob-ipv }}.zip"
             mv artifacts/signed-ipv-api-*.zip artifacts/ipv-api.zip
   
         - name: Upload OIDC Terraform files
