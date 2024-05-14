@@ -87,13 +87,10 @@
 
     deploy:
       needs: build
-      strategy:
-        matrix:
-          option: ${{ needs.build.outputs.* }}
       runs-on: ubuntu-latest
       timeout-minutes: 60
       env:
-        signedjob: echo '${{ toJSON(needs.build.outputs) }}'
+        signedjob: ${{needs.build.outputs.account-management}}
       permissions:
         id-token: write
         contents: read
