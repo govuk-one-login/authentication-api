@@ -357,8 +357,6 @@ public class TokenHandler
 
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
 
-        var isConsentRequired =
-                clientRegistry.isConsentRequired() && !vtr.containsLevelOfConfidence();
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =
@@ -372,8 +370,6 @@ public class TokenHandler
                                             additionalTokenClaims,
                                             clientSession.getDocAppSubjectId(),
                                             clientSession.getDocAppSubjectId(),
-                                            null,
-                                            false,
                                             finalClaimsRequest,
                                             true,
                                             signingAlgorithm,
@@ -404,8 +400,6 @@ public class TokenHandler
                                             additionalTokenClaims,
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
-                                            userProfile.getClientConsent(),
-                                            isConsentRequired,
                                             finalClaimsRequest,
                                             false,
                                             signingAlgorithm,

@@ -43,7 +43,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
@@ -76,7 +75,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -177,27 +175,17 @@ public class TokenHandlerTest {
 
     private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Arguments.of("Cl.Cm", true, false, true),
-                Arguments.of("Cl", true, false, true),
-                Arguments.of("P2.Cl.Cm", true, false, true),
-                Arguments.of("Cl.Cm", false, false, true),
-                Arguments.of("Cl", false, false, true),
-                Arguments.of("P2.Cl.Cm", false, false, true),
-                Arguments.of("Cl.Cm", true, false, false),
-                Arguments.of("Cl", true, false, false),
-                Arguments.of("P2.Cl.Cm", true, false, false),
-                Arguments.of("Cl.Cm", false, false, false),
-                Arguments.of("Cl", false, false, false),
-                Arguments.of("P2.Cl.Cm", false, false, false));
+                Arguments.of("Cl.Cm", true),
+                Arguments.of("Cl", true),
+                Arguments.of("P2.Cl.Cm", true),
+                Arguments.of("Cl.Cm", false),
+                Arguments.of("Cl", false),
+                Arguments.of("P2.Cl.Cm", false));
     }
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    void shouldReturn200ForSuccessfulTokenRequest(
-            String vectorValue,
-            boolean clientRegistryConsent,
-            boolean expectedConsentRequired,
-            boolean clientIdInHeader)
+    void shouldReturn200ForSuccessfulTokenRequest(String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
@@ -210,8 +198,7 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, clientRegistryConsent, CLIENT_ID);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -246,8 +233,6 @@ public class TokenHandlerTest {
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        userProfile.getClientConsent(),
-                        expectedConsentRequired,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -265,10 +250,7 @@ public class TokenHandlerTest {
     @ParameterizedTest
     @MethodSource("validVectorValues")
     void shouldReturn200ForSuccessfulTokenRequestWithRsaSigning(
-            String vectorValue,
-            boolean clientRegistryConsent,
-            boolean expectedConsentRequired,
-            boolean clientIdInHeader)
+            String vectorValue, boolean clientIdInHeader)
             throws JOSEException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
@@ -284,8 +266,7 @@ public class TokenHandlerTest {
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, clientRegistryConsent, CLIENT_ID)
-                        .withIdTokenSigningAlgorithm("RSA256");
+                generateClientRegistry(keyPair, CLIENT_ID).withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -320,8 +301,6 @@ public class TokenHandlerTest {
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        userProfile.getClientConsent(),
-                        expectedConsentRequired,
                         null,
                         false,
                         JWSAlgorithm.RS256,
@@ -347,7 +326,7 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -402,8 +381,7 @@ public class TokenHandlerTest {
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, false, CLIENT_ID)
-                        .withIdTokenSigningAlgorithm("RSA256");
+                generateClientRegistry(keyPair, CLIENT_ID).withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -519,7 +497,7 @@ public class TokenHandlerTest {
     void shouldReturn400IfAuthCodeIsNotFound() throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
 
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
@@ -542,7 +520,7 @@ public class TokenHandlerTest {
             throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, CLIENT_ID);
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
@@ -585,7 +563,7 @@ public class TokenHandlerTest {
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, false, DOC_APP_CLIENT_ID.getValue());
+                generateClientRegistry(keyPair, DOC_APP_CLIENT_ID.getValue());
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
@@ -622,8 +600,6 @@ public class TokenHandlerTest {
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         null,
-                        false,
-                        null,
                         true,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
@@ -650,10 +626,7 @@ public class TokenHandlerTest {
                 .withCreated(LocalDateTime.now().toString())
                 .withUpdated(LocalDateTime.now().toString())
                 .withPublicSubjectID(new Subject().getValue())
-                .withSalt(SALT)
-                .withClientConsent(
-                        new ClientConsent(
-                                CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
+                .withSalt(SALT);
     }
 
     private SignedJWT createSignedRefreshToken() throws JOSEException {
@@ -685,11 +658,9 @@ public class TokenHandlerTest {
                 null);
     }
 
-    private ClientRegistry generateClientRegistry(
-            KeyPair keyPair, boolean consentRequired, String clientID) {
+    private ClientRegistry generateClientRegistry(KeyPair keyPair, String clientID) {
         return new ClientRegistry()
                 .withClientID(clientID)
-                .withConsentRequired(consentRequired)
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI))
                 .withScopes(SCOPES.toStringList())

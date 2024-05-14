@@ -89,19 +89,12 @@ public class TokenService {
             Map<String, Object> additionalTokenClaims,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
-            List<ClientConsent> clientConsents,
-            boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
             String vot) {
-        List<String> scopesForToken;
-        if (isConsentRequired) {
-            scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
-        } else {
-            scopesForToken = authRequestScopes.toStringList();
-        }
+        List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
                         "generateAndStoreAccessToken",
@@ -209,6 +202,7 @@ public class TokenService {
         return Optional.empty();
     }
 
+    // TODO: Remove once all uses have been deleted
     private List<String> calculateScopesForToken(
             List<ClientConsent> clientConsents, String clientID, Scope authRequestScopes) {
         ClientConsent clientConsent =
