@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -10,18 +11,23 @@ import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasField;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
 
 class AuditServiceTest {
 
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
@@ -39,9 +45,15 @@ class AuditServiceTest {
         }
     }
 
+    private AuditService auditService;
+
+    @BeforeEach
+    void beforeEach() {
+        auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+    }
+
     @Test
     void shouldLogAuditEvent() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
@@ -87,7 +99,6 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
@@ -124,7 +135,6 @@ class AuditServiceTest {
 
     @Test
     void shouldAddCountryCodeExtensionToPhoneNumberEvents() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
@@ -152,9 +162,7 @@ class AuditServiceTest {
     }
 
     @Test
-    void TxmaHeaderShouldBeAddedToAuditEvent() {
-        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
-
+    void txmaHeaderShouldBeAddedToAuditEvent() {
         var auditEncodedHeaderValue =
                 "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
@@ -175,17 +183,82 @@ class AuditServiceTest {
                 pair("restrictedKey1", "restrictedValue1", true));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        assertThatTheRestrictedDataPairsAreWrittenToTheRestrictedSection();
+        assertThatTheDeviceInformationIsWrittenToTheRestrictedSection();
+    }
 
+    @Test
+    void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenNoOtherRestrictedData() {
+        // Arrange
+        var restrictedSection = new AuditService.RestrictedSection(Optional.of(""));
+
+        // Act
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE,
+                "client-id",
+                "request-id",
+                "session-id",
+                "subject-id",
+                "email",
+                "ip-address",
+                "phone-number",
+                "persistent-session-id",
+                restrictedSection);
+
+        // Assert
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        assertThatTheRestrictedSectionDoesNotExist();
+    }
+
+    @Test
+    void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenOtherRestrictedDataHasBeenWritten() {
+        // Arrange
+        var restrictedSection = new AuditService.RestrictedSection(Optional.of(""));
+
+        // Act
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE,
+                "client-id",
+                "request-id",
+                "session-id",
+                "subject-id",
+                "email",
+                "ip-address",
+                "phone-number",
+                "persistent-session-id",
+                restrictedSection,
+                pair("restrictedKey1", "restrictedValue1", true));
+
+        // Assert
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        assertThatTheRestrictedSectionDoesNotContainADeviceInformationObject();
+    }
+
+    private void assertThatTheRestrictedSectionDoesNotExist() {
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        var restricted = txmaMessage.getAsJsonObject().get("restricted");
+        assertTrue(restricted.isJsonNull());
+    }
 
+    private void assertThatTheRestrictedSectionDoesNotContainADeviceInformationObject() {
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        var restricted = txmaMessage.getAsJsonObject().get("restricted");
+        assertThat(restricted.getAsJsonObject(), not(hasField("device_information")));
+    }
+
+    private void assertThatTheDeviceInformationIsWrittenToTheRestrictedSection() {
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
         var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
-
-        assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
-
         var deviceInformation =
                 restricted.getAsJsonObject().get("device_information").getAsJsonObject();
-
         assertThat(
-                deviceInformation, hasFieldWithValue("encoded", equalTo(auditEncodedHeaderValue)));
+                deviceInformation,
+                hasFieldWithValue("encoded", equalTo(ENCODED_DEVICE_INFORMATION)));
+    }
+
+    private void assertThatTheRestrictedDataPairsAreWrittenToTheRestrictedSection() {
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+        assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
     }
 }

@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -16,6 +18,7 @@ import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
+    private static final Logger LOG = LogManager.getLogger(AuditService.class);
 
     public static final String UNKNOWN = "";
 
@@ -63,10 +66,20 @@ public class AuditService {
                             }
                         });
 
-        restrictedSection.encoded.ifPresent(
-                encodedString ->
-                        txmaAuditEvent.addRestricted(
-                                "device_information", Map.of("encoded", encodedString)));
+        restrictedSection
+                .encoded
+                .filter(s -> !s.isEmpty())
+                .ifPresentOrElse(
+                        s ->
+                                txmaAuditEvent.addRestricted(
+                                        "device_information", Map.of("encoded", s)),
+                        () -> {
+                            if (restrictedSection.encoded.isPresent()) {
+                                LOG.warn("encoded present but empty");
+                            } else {
+                                LOG.warn("encoded not present");
+                            }
+                        });
 
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))

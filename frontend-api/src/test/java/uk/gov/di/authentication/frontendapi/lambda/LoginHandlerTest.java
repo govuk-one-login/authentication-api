@@ -503,7 +503,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         "",
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -661,7 +661,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
                         "",
                         auditUserWithoutUserInfo,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

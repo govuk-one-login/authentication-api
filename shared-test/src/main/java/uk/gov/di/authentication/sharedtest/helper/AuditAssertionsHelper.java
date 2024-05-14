@@ -3,7 +3,6 @@ package uk.gov.di.authentication.sharedtest.helper;
 import com.google.gson.JsonElement;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.authentication.sharedtest.matchers.JsonMatcher;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -15,6 +14,8 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
 public class AuditAssertionsHelper {
 
@@ -29,13 +30,13 @@ public class AuditAssertionsHelper {
     public static void assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
-        var txmaEvents =
+        var expectedTxmaEvents =
                 events.stream()
                         .map(Objects::toString)
                         .map("AUTH_"::concat)
                         .collect(Collectors.toList());
 
-        if (txmaEvents.isEmpty()) {
+        if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
@@ -45,18 +46,35 @@ public class AuditAssertionsHelper {
                         () ->
                                 assertThat(
                                         queue.getApproximateMessageCount(),
-                                        equalTo(txmaEvents.size())));
+                                        equalTo(expectedTxmaEvents.size())));
 
-        var receivedEvents =
-                queue.getRawMessages().stream()
-                        .map(JsonMatcher::asJson)
-                        .map(JsonElement::getAsJsonObject)
-                        .map(json -> json.get("event_name"))
-                        .map(JsonElement::getAsString)
-                        .collect(Collectors.toSet());
+        queue.getRawMessages().stream()
+                .forEach(
+                        rawEvent -> {
+                            var event = asJson(rawEvent);
+                            assertThat(
+                                    expectedTxmaEvents,
+                                    hasItem(
+                                            event.getAsJsonObject()
+                                                    .get("event_name")
+                                                    .getAsString()));
+                            assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
+                        });
+    }
 
-        txmaEvents.stream()
-                .map(Object::toString)
-                .forEach(expected -> assertThat(receivedEvents, hasItem(expected)));
+    private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(
+            JsonElement event) {
+        // TODO Remove this check as the other audit events are built with device information
+        if (event.getAsJsonObject()
+                .get("event_name")
+                .getAsString()
+                .equalsIgnoreCase("AUTH_LOG_IN_SUCCESS")) {
+            assertNotNull(event.getAsJsonObject().get("restricted"));
+            assertNotNull(
+                    event.getAsJsonObject()
+                            .get("restricted")
+                            .getAsJsonObject()
+                            .get("device_information"));
+        }
     }
 }

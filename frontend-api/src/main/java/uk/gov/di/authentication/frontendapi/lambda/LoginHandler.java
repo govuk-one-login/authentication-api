@@ -124,6 +124,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         .withPhone(AuditService.UNKNOWN)
                         .withIpAddress(IpAddressHelper.extractIpAddress(input));
 
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         attachSessionIdToLogs(userContext.getSession().getSessionId());
 
         LOG.info("Request received");
@@ -141,7 +145,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
                         clientId,
                         auditUser,
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -177,7 +181,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         clientId,
                         auditUser,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
