@@ -36,6 +36,9 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.AUTHORIZATION
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -130,6 +133,9 @@ public class UserInfoHandler
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+        String journeyId = accessTokenInfo.getAccessTokenStore().getJourneyId();
+        attachLogFieldToLogs(CLIENT_SESSION_ID, journeyId);
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, journeyId);
         var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
         LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
@@ -146,8 +152,7 @@ public class UserInfoHandler
                 accessTokenInfo.getClientID(),
                 TxmaAuditUser.user()
                         .withUserId(subjectForAudit)
-                        .withGovukSigninJourneyId(
-                                accessTokenInfo.getAccessTokenStore().getJourneyId()),
+                        .withGovukSigninJourneyId(journeyId),
                 metadataPairs);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
