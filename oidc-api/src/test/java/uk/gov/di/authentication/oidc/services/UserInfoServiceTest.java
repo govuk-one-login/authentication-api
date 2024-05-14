@@ -77,6 +77,7 @@ class UserInfoServiceTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject("test-subject");
+    private static final String JOURNEY_ID = "client-session-id";
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final Subject DOC_APP_SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES =
@@ -139,7 +140,8 @@ class UserInfoServiceTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
         givenThereIsUserInfo();
@@ -183,7 +185,8 @@ class UserInfoServiceTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
 
@@ -214,7 +217,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
@@ -263,7 +267,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -319,7 +324,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
@@ -349,7 +355,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
@@ -386,7 +393,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -439,7 +447,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
@@ -462,7 +471,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             DOC_APP_SUBJECT.getValue(),
-                            DOC_APP_SUBJECT.getValue());
+                            DOC_APP_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -492,7 +502,8 @@ class UserInfoServiceTest {
                     new AccessTokenStore(
                             accessToken.getValue(),
                             INTERNAL_SUBJECT.getValue(),
-                            INTERNAL_PAIRWISE_SUBJECT.getValue());
+                            INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                            JOURNEY_ID);
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
