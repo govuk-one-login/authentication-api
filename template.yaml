@@ -510,8 +510,8 @@ Resources:
 
   DocAppCallbackFunction:
     Type: AWS::Serverless::Function
+    IgnoreGlobals: [ VpcConfig ]
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-DocAppCallbackFunction
       AutoPublishAlias: latest
@@ -520,6 +520,13 @@ Resources:
       ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
