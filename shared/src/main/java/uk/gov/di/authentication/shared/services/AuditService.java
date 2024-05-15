@@ -24,19 +24,15 @@ public class AuditService {
     public static final String UNKNOWN = "";
 
     private final Clock clock;
-    private final ConfigurationService configurationService;
     private final AwsSqsClient txmaQueueClient;
-    private final String COMPONENT_ID = "AUTH";
 
     public AuditService(
             Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
         this.clock = clock;
-        this.configurationService = configurationService;
         this.txmaQueueClient = txmaQueueClient;
     }
 
     public AuditService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.clock = Clock.systemUTC();
         this.txmaQueueClient =
                 new AwsSqsClient(
@@ -54,32 +50,27 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId(COMPONENT_ID)
+                        .withComponentId("AUTH")
                         .withUser(user);
 
-        Arrays.stream(metadataPairs)
-                .forEach(
-                        pair -> {
-                            if (pair.isRestricted()) {
-                                txmaAuditEvent.addRestricted(pair.getKey(), pair.getValue());
-                            } else {
-                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
-                            }
-                        });
-
-        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent);
-
-        Optional.ofNullable(user.getPhone())
-                .filter(not(String::isBlank))
-                .flatMap(PhoneNumberHelper::maybeGetCountry)
-                .ifPresent(
-                        country ->
-                                txmaAuditEvent.addExtension("phone_number_country_code", country));
+        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);
+        addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
-    private static void addRestrictedSectionToAuditEvent(RestrictedSection restrictedSection, TxmaAuditEvent txmaAuditEvent) {
+    private static void addRestrictedSectionToAuditEvent(
+            RestrictedSection restrictedSection,
+            TxmaAuditEvent txmaAuditEvent,
+            MetadataPair... metadataPairs) {
+        Arrays.stream(metadataPairs)
+                .forEach(
+                        pair -> {
+                            if (Boolean.TRUE.equals(pair.isRestricted())) {
+                                txmaAuditEvent.addRestricted(pair.getKey(), pair.getValue());
+                            }
+                        });
+
         restrictedSection
                 .encoded()
                 .ifPresentOrElse(
@@ -88,10 +79,30 @@ public class AuditService {
                                 txmaAuditEvent.addRestricted(
                                         "device_information", Map.of("encoded", s));
                             } else {
-                                LOG.warn("Encoded device information for audit event present but empty.");
+                                LOG.warn(
+                                        "Encoded device information for audit event present but empty.");
                             }
                         },
-                        () -> LOG.warn("Encoded device information for audit event is not present."));
+                        () ->
+                                LOG.warn(
+                                        "Encoded device information for audit event is not present."));
+    }
+
+    private static void addExtensionSectionToAuditEvent(
+            TxmaAuditUser user, TxmaAuditEvent txmaAuditEvent, MetadataPair... metadataPairs) {
+        Arrays.stream(metadataPairs)
+                .forEach(
+                        pair -> {
+                            if (Boolean.FALSE.equals(pair.isRestricted())) {
+                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
+                            }
+                        });
+        Optional.ofNullable(user.getPhone())
+                .filter(not(String::isBlank))
+                .flatMap(PhoneNumberHelper::maybeGetCountry)
+                .ifPresent(
+                        country ->
+                                txmaAuditEvent.addExtension("phone_number_country_code", country));
     }
 
     public record RestrictedSection(Optional<String> encoded) {
