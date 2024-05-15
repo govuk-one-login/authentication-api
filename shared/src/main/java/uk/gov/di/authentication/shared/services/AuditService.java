@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -66,20 +67,7 @@ public class AuditService {
                             }
                         });
 
-        restrictedSection
-                .encoded
-                .filter(s -> !s.isEmpty())
-                .ifPresentOrElse(
-                        s ->
-                                txmaAuditEvent.addRestricted(
-                                        "device_information", Map.of("encoded", s)),
-                        () -> {
-                            if (restrictedSection.encoded.isPresent()) {
-                                LOG.warn("encoded present but empty");
-                            } else {
-                                LOG.warn("encoded not present");
-                            }
-                        });
+        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent);
 
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
@@ -89,6 +77,21 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    private static void addRestrictedSectionToAuditEvent(RestrictedSection restrictedSection, TxmaAuditEvent txmaAuditEvent) {
+        restrictedSection
+                .encoded()
+                .ifPresentOrElse(
+                        s -> {
+                            if (!s.isEmpty()) {
+                                txmaAuditEvent.addRestricted(
+                                        "device_information", Map.of("encoded", s));
+                            } else {
+                                LOG.warn("Encoded device information for audit event present but empty.");
+                            }
+                        },
+                        () -> LOG.warn("Encoded device information for audit event is not present."));
     }
 
     public record RestrictedSection(Optional<String> encoded) {
