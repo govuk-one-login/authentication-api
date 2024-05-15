@@ -1042,10 +1042,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "public",
                 clientType,
                 true,
-                jarValidationRequired,
-                List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue()));
+                jarValidationRequired);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
