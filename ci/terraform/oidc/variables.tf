@@ -285,6 +285,11 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
+variable "phone_checker_with_reply" {
+  type    = string
+  default = "false"
+}
+
 variable "client_registry_api_enabled" {
   default = true
 }
@@ -323,6 +328,11 @@ variable "ipv_backend_uri" {
 }
 
 variable "ipv_no_session_response_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "phone_checker_with_retry" {
   type    = bool
   default = false
 }
