@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
 public class AuditAssertionsHelper {
@@ -48,16 +48,29 @@ public class AuditAssertionsHelper {
                                         queue.getApproximateMessageCount(),
                                         equalTo(expectedTxmaEvents.size())));
 
-        queue.getRawMessages().stream()
+        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+
+        var namesOfSentEvents =
+                sentEvents.stream()
+                        .map(
+                                event ->
+                                        asJson(event)
+                                                .getAsJsonObject()
+                                                .get("event_name")
+                                                .getAsString())
+                        .toList();
+
+        // Check all expected events have been sent
+        // Check no unexpected events were sent
+        assertTrue(
+                expectedTxmaEvents.containsAll(namesOfSentEvents)
+                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+
+        // Check all sent events applied business rules, i.e. include a device_information section.
+        sentEvents.stream()
                 .forEach(
-                        rawEvent -> {
-                            var event = asJson(rawEvent);
-                            assertThat(
-                                    expectedTxmaEvents,
-                                    hasItem(
-                                            event.getAsJsonObject()
-                                                    .get("event_name")
-                                                    .getAsString()));
+                        sentEvent -> {
+                            var event = asJson(sentEvent);
                             assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
                         });
     }

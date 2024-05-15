@@ -28,7 +28,9 @@ import java.util.Set;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -75,7 +77,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
-                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
+                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_CONSENT_UPDATED));
     }
 
     @Test
@@ -97,7 +99,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
-                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
+                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE));
     }
 
     private AuthenticationRequest setUpTest(String sessionId, String clientSessionId)
