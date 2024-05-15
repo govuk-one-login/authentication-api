@@ -105,19 +105,6 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
-                LOG.error(
-                        "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
-                        levelOfConfidenceValues);
-                return Optional.of(
-                        new AuthRequestError(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request vtr is not permitted"),
-                                redirectURI,
-                                state));
-            }
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {

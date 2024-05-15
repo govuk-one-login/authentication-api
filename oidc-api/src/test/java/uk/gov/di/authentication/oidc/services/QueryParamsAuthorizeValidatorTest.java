@@ -22,11 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -391,35 +389,8 @@ class QueryParamsAuthorizeValidatorTest {
         assertEquals(STATE, errorObject.get().state());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"Cm", "Cl.Cm.P3"})
-    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest(String vtr) {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf(vtr))
-                        .build();
-        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
-
-        assertTrue(errorObject.isPresent());
-        assertThat(
-                errorObject.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")
-                                .toJSONObject()));
-    }
-
     @Test
-    void shouldReturnErrorWhenVtrInAuthRequestIsNotPermittedForGivenClient() {
+    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -432,18 +403,17 @@ class QueryParamsAuthorizeValidatorTest {
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf("Cl.P0"))
+                        .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject.get().errorObject().toJSONObject(),
+                errorObject.get().errorObject(),
                 equalTo(
                         new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request vtr is not permitted")
-                                .toJSONObject()));
+                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -561,7 +531,6 @@ class QueryParamsAuthorizeValidatorTest {
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .withPublicKey(null)
                 .withTestClient(testClient)
-                .withClientLoCs(singletonList(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
                 .withScopes(scopes);
     }
 

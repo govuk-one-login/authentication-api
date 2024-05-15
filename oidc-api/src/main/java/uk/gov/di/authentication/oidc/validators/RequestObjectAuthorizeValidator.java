@@ -167,7 +167,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                 "Request is missing nonce parameter"),
                         state);
             }
-            var vtrError = validateVtr(jwtClaimsSet, client);
+            var vtrError = validateVtr(jwtClaimsSet);
             if (vtrError.isPresent()) {
                 return errorResponse(redirectURI, vtrError.get(), state);
             }
@@ -221,20 +221,11 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         }
     }
 
-    private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
+    private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet) {
         List<String> authRequestVtr = new ArrayList<>();
         try {
             authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
-                LOG.error(
-                        "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
-                        levelOfConfidenceValues);
-                return Optional.of(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
-            }
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return Optional.of(OAuth2Error.TEMPORARILY_UNAVAILABLE);
