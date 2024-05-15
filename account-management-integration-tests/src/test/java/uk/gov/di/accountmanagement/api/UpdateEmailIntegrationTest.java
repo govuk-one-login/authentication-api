@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
@@ -11,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
@@ -36,6 +38,10 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_ID = "some-client-id";
+
+    @RegisterExtension
+    protected static final EmailCheckResultExtension emailCheckResultExtension =
+            new EmailCheckResultExtension();
 
     @BeforeEach
     void setup() {
