@@ -48,10 +48,21 @@ public class DynamoService implements AuthenticationService {
     }
 
     public DynamoService(ConfigurationService configurationService) {
-        String userProfileTableName =
-                configurationService.getEnvironment() + "-" + USER_PROFILE_TABLE;
-        String userCredentialsTableName =
-                configurationService.getEnvironment() + "-" + USER_CREDENTIAL_TABLE;
+        String userProfileTableName = USER_PROFILE_TABLE;
+        String userCredentialsTableName = USER_CREDENTIAL_TABLE;
+
+        if (configurationService.getDynamoArnPrefix().isPresent()) {
+            userProfileTableName =
+                    configurationService.getDynamoArnPrefix().get() + userProfileTableName;
+            userCredentialsTableName =
+                    configurationService.getDynamoArnPrefix().get() + userCredentialsTableName;
+        } else {
+            userProfileTableName =
+                    configurationService.getEnvironment() + "-" + userProfileTableName;
+            userCredentialsTableName =
+                    configurationService.getEnvironment() + "-" + userCredentialsTableName;
+        }
+
         dynamoDbEnhancedClient =
                 DynamoClientHelper.createDynamoEnhancedClient(configurationService);
         this.dynamoUserProfileTable =

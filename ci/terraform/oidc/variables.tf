@@ -513,6 +513,12 @@ variable "orch_doc_app_callback_enabled" {
   default     = false
 }
 
+variable "orch_token_enabled" {
+  description = "Flag to enable routing token traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_openid_configuration_name" {
   type    = string
   default = ""
@@ -523,6 +529,11 @@ variable "orch_trustmark_name" {
 }
 
 variable "orch_doc_app_callback_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_token_name" {
   type    = string
   default = ""
 }
