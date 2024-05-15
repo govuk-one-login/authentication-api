@@ -26,7 +26,9 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -34,6 +36,7 @@ import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,6 +68,7 @@ public class LogoutServiceTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
 
     private final APIGatewayProxyRequestEvent event = mock(APIGatewayProxyRequestEvent.class);
 
@@ -75,6 +79,7 @@ public class LogoutServiceTest {
 
     private static MockedStatic<IpAddressHelper> ipAddressHelper;
     private static MockedStatic<PersistentIdHelper> persistentIdHelper;
+    private static MockedStatic<ClientSubjectHelper> clientSubjectHelper;
 
     private static final State STATE = new State();
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -98,20 +103,31 @@ public class LogoutServiceTest {
 
     private static final String ENVIRONMENT = "test";
 
+    private static final UserProfile USER_PROFILE =
+            new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
+
     private SignedJWT signedIDToken;
     private Optional<String> audience;
     private Session session;
     private LogoutService logoutService;
-    private final TxmaAuditUser user =
+    private final TxmaAuditUser auditUser =
             TxmaAuditUser.user()
                     .withIpAddress(IP_ADDRESS)
                     .withSessionId(SESSION_ID)
-                    .withPersistentSessionId(PERSISTENT_SESSION_ID);
+                    .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                    .withUserId(SUBJECT.getValue());
+    private final TxmaAuditUser auditUserWhenNoCookie =
+            TxmaAuditUser.user()
+                    .withIpAddress(IP_ADDRESS)
+                    .withSessionId(SESSION_ID)
+                    .withPersistentSessionId(null)
+                    .withUserId(null);
 
     @BeforeEach
     void setup() throws JOSEException, ParseException {
         ipAddressHelper = mockStatic(IpAddressHelper.class);
         persistentIdHelper = mockStatic(PersistentIdHelper.class);
+        clientSubjectHelper = mockStatic(ClientSubjectHelper.class);
         when(IpAddressHelper.extractIpAddress(any())).thenReturn(IP_ADDRESS);
         when(PersistentIdHelper.extractPersistentIdFromCookieHeader(event.getHeaders()))
                 .thenReturn(PERSISTENT_SESSION_ID);
@@ -131,7 +147,8 @@ public class LogoutServiceTest {
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        backChannelLogoutService);
+                        backChannelLogoutService,
+                        dynamoService);
 
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -141,13 +158,17 @@ public class LogoutServiceTest {
         SignedJWT idToken = SignedJWT.parse(signedIDToken.serialize());
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
 
-        session = generateSession().setEmailAddress(EMAIL);
+        session =
+                generateSession()
+                        .setEmailAddress(EMAIL)
+                        .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
     }
 
     @AfterEach
     void teardown() {
         ipAddressHelper.close();
         persistentIdHelper.close();
+        clientSubjectHelper.close();
     }
 
     @Test
@@ -157,11 +178,10 @@ public class LogoutServiceTest {
                         CLIENT_LOGOUT_URI,
                         Optional.of(STATE.getValue()),
                         Optional.empty(),
-                        event,
-                        Optional.of(audience.get()),
-                        Optional.of(SESSION_ID));
+                        auditUser,
+                        Optional.of(audience.get()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -173,12 +193,9 @@ public class LogoutServiceTest {
     void successfullyReturnsDefaultLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.generateDefaultLogoutResponse(
-                        Optional.empty(),
-                        event,
-                        Optional.of(audience.get()),
-                        Optional.of(SESSION_ID));
+                        Optional.empty(), auditUser, Optional.of(audience.get()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -191,12 +208,9 @@ public class LogoutServiceTest {
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
                 logoutService.generateDefaultLogoutResponse(
-                        Optional.of(STATE.getValue()),
-                        event,
-                        Optional.of(audience.get()),
-                        Optional.of(SESSION_ID));
+                        Optional.of(STATE.getValue()), auditUser, Optional.of(audience.get()));
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
@@ -211,11 +225,10 @@ public class LogoutServiceTest {
                 logoutService.generateErrorLogoutResponse(
                         Optional.empty(),
                         new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
-                        event,
-                        Optional.empty(),
-                        Optional.of(SESSION_ID));
+                        auditUser,
+                        Optional.empty());
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUser);
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertThat(response, hasStatus(302));
@@ -240,7 +253,7 @@ public class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -261,7 +274,7 @@ public class LogoutServiceTest {
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, user);
+        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
         verify(cloudwatchMetricsService)
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(intervention));
 
@@ -286,12 +299,13 @@ public class LogoutServiceTest {
                 CLIENT_LOGOUT_URI,
                 Optional.of(STATE.getValue()),
                 Optional.empty(),
-                input,
-                Optional.empty(),
-                Optional.of(SESSION_ID));
+                auditUserWhenNoCookie,
+                Optional.empty());
 
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
         verifyNoInteractions(cloudwatchMetricsService);
+        verify(auditService)
+                .submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUserWhenNoCookie);
     }
 
     @Test
@@ -331,6 +345,29 @@ public class LogoutServiceTest {
                         "Expected to throw exception");
 
         assertEquals("Account status must be blocked or suspended", exception.getMessage());
+    }
+
+    @Test
+    void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
+        Subject rpSubject = new Subject();
+        when(dynamoClientService.getClient(CLIENT_ID))
+                .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
+        when(dynamoService.getUserProfileFromSubject(any())).thenReturn(USER_PROFILE);
+        when(ClientSubjectHelper.getSubject(any(), any(), any(), any())).thenReturn(rpSubject);
+
+        logoutService.generateLogoutResponse(
+                CLIENT_LOGOUT_URI,
+                Optional.of(STATE.getValue()),
+                Optional.empty(),
+                auditUser,
+                Optional.of(audience.get()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpSubject.getValue()));
     }
 
     private Session generateSession() {

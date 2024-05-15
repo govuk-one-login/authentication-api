@@ -157,7 +157,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_openid_configuration_enabled,
       var.orch_trustmark_enabled,
-      var.orch_doc_app_callback_enabled
+      var.orch_doc_app_callback_enabled,
+      var.orch_token_enabled
     ]))
   }
 
@@ -179,6 +180,10 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.ipv-callback,
     module.ipv-capacity,
     module.doc-app-callback,
+    aws_api_gateway_integration.orch_openid_configuration_integration,
+    aws_api_gateway_integration.orch_trustmark_integration,
+    aws_api_gateway_integration.orch_doc_app_callback_integration,
+    aws_api_gateway_integration.orch_token_integration
   ]
 }
 
@@ -640,7 +645,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api"
   log_destination_configs = [aws_cloudwatch_log_group.oidc_waf_logs[count.index].arn]
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
   logging_filter {
-    default_behavior = "DROP"
+    default_behavior = "KEEP"
 
     filter {
       behavior = "KEEP"
@@ -842,6 +847,9 @@ resource "aws_api_gateway_resource" "orch_trustmark_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "trustmark"
+  depends_on = [
+    module.trustmarks
+  ]
 }
 
 resource "aws_api_gateway_method" "orch_trustmark_method" {
@@ -874,6 +882,9 @@ resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "doc-app-callback"
+  depends_on = [
+    module.doc-app-callback
+  ]
 }
 
 resource "aws_api_gateway_method" "orch_doc_app_callback_method" {
@@ -899,4 +910,39 @@ resource "aws_api_gateway_integration" "orch_doc_app_callback_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_doc_app_callback_name}:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_token_resource" {
+  count       = var.orch_token_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "token"
+  depends_on = [
+    module.token
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_token_method" {
+  count       = var.orch_token_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_token_resource[0].id
+  http_method = "POST"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_token_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_token_integration" {
+  count       = var.orch_token_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_token_resource[0].id
+  http_method = aws_api_gateway_method.orch_token_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_token_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_token_name}:latest/invocations"
 }

@@ -24,7 +24,7 @@ stub_rp_clients = [
       "openid",
       "email",
       "phone",
-      "wallet-subject-id",
+      "wallet-subject-id"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
@@ -47,6 +47,7 @@ stub_rp_clients = [
       "email",
       "phone",
       "wallet-subject-id",
+      "doc-checking-app"
     ]
     one_login_service = false
     service_type      = "MANDATORY"

@@ -109,7 +109,8 @@ class AccountRecoveryHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -142,7 +143,8 @@ class AccountRecoveryHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     private void usingValidSession() {

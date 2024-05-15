@@ -198,7 +198,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                                 .getUserProfile()
                                 .map(UserProfile::getPhoneNumber)
                                 .orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        AuditService.RestrictedSection.empty);
             }
             auditService.submitAuditEvent(
                     auditableEvent,
@@ -212,7 +213,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty);
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
@@ -274,7 +276,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty);
         }
     }
 }

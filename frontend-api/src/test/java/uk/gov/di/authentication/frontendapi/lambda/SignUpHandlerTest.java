@@ -190,6 +190,7 @@ class SignUpHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         persistentId,
+                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
 
@@ -279,7 +280,8 @@ class SignUpHandlerTest {
                         "joe.bloggs@test.com",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        AuditService.RestrictedSection.empty);
     }
 
     private void usingValidSession() {

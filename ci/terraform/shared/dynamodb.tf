@@ -198,7 +198,8 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = var.identity_credentials_cross_account_access_enabled ? aws_kms_key.identity_credentials_table_encryption_key.arn : null
   }
 
   lifecycle {

@@ -24,7 +24,13 @@ public class DynamoClientService implements ClientService {
     private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
 
     public DynamoClientService(ConfigurationService configurationService) {
-        String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        var tableName = CLIENT_REGISTRY_TABLE;
+        if (configurationService.getDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getDynamoArnPrefix().get() + tableName;
+        } else {
+            tableName = configurationService.getEnvironment() + "-" + tableName;
+        }
+
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));

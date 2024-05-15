@@ -32,12 +32,15 @@ Mappings:
       authEnvironment: sandpit
       serviceDomain: sandpit.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/170fc24d-b278-49b0-a860-4fa1f3fa7a48
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -45,12 +48,15 @@ Mappings:
       authEnvironment: build
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -58,25 +64,31 @@ Mappings:
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.staging.account.gov.uk
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
       authAccountId: "761723964695"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
+      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.integration.account.gov.uk
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -84,12 +96,15 @@ Mappings:
       authEnvironment: production
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.account.gov.uk
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
 
 Globals:
   Function:
@@ -175,6 +190,7 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
+      FunctionName: !Sub ${Environment}-OpenIdConfigurationFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
@@ -285,6 +301,7 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
+      FunctionName: !Sub ${Environment}-TrustmarkFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
@@ -396,6 +413,7 @@ Resources:
     # checkov:skip=CKV_AWS_117: Lambda needs open egress so isn't in VPC
     IgnoreGlobals: [VpcConfig]
     Properties:
+      FunctionName: !Sub ${Environment}-BackChannelLogoutRequestFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
@@ -510,6 +528,7 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
+      FunctionName: !Sub ${Environment}-DocAppCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./doc-checking-app-api
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
@@ -562,10 +581,10 @@ Resources:
               - "ssm:GetParameter"
               - "ssm:GetParameters"
             Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
           - Sid: AllowDecryptOfParameters
             Effect: "Allow"
             Action: "kms:Decrypt"
@@ -620,6 +639,201 @@ Resources:
         - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback'
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
           ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  TokenFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-TokenFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref TokenFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        Statement:
+          - Sid: AllowIdTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          - Sid: AllowIdTokenSigningKmsRsa
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          - Sid: AllowGetParameters
+            Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+          - Sid: AllowDecryptOfParameters
+            Effect: "Allow"
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowClientRegistryTableReadAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowUserProfileTableReadAndWriteAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowUserProfileTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  TokenFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref TokenFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/token'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  TokenFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-token-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  TokenFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-token-logout-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref TokenFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-token-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  TokenFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-token-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: TokenFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: TokenFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  TokenFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-token-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref TokenFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref TokenFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup

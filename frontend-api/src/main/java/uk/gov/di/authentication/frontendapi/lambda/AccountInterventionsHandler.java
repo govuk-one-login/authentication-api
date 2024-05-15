@@ -241,7 +241,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                             .getUserProfile()
                             .map(UserProfile::getPhoneNumber)
                             .orElse(AuditService.UNKNOWN),
-                    persistentSessionID);
+                    persistentSessionID,
+                    AuditService.RestrictedSection.empty);
         } else {
             LOG.error(
                     "Unhandled account interventions state combination to calculate audit event: {}",

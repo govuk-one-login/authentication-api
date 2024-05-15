@@ -8,8 +8,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,6 +23,7 @@ import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class LogoutService {
 
@@ -32,6 +36,7 @@ public class LogoutService {
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final BackChannelLogoutService backChannelLogoutService;
+    private final DynamoService dynamoService;
 
     public LogoutService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
@@ -41,6 +46,7 @@ public class LogoutService {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     public LogoutService(
@@ -50,7 +56,8 @@ public class LogoutService {
             ClientSessionService clientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            BackChannelLogoutService backChannelLogoutService) {
+            BackChannelLogoutService backChannelLogoutService,
+            DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
@@ -58,6 +65,7 @@ public class LogoutService {
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.backChannelLogoutService = backChannelLogoutService;
+        this.dynamoService = dynamoService;
     }
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
@@ -65,9 +73,17 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
+
+        var auditUser =
+                TxmaAuditUser.user()
+                        .withIpAddress(extractIpAddress(input))
+                        .withPersistentSessionId(
+                                extractPersistentIdFromCookieHeader(input.getHeaders()))
+                        .withSessionId(session.getSessionId())
+                        .withUserId(session.getInternalCommonSubjectIdentifier());
+
         destroySessions(session);
-        return generateAccountInterventionLogoutResponse(
-                input, clientId, session.getSessionId(), intervention);
+        return generateAccountInterventionLogoutResponse(auditUser, clientId, intervention);
     }
 
     public void destroySessions(Session session) {
@@ -95,9 +111,8 @@ public class LogoutService {
     public APIGatewayProxyResponseEvent generateErrorLogoutResponse(
             Optional<String> state,
             ErrorObject errorObject,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId) {
+            TxmaAuditUser auditUser,
+            Optional<String> clientId) {
         LOG.info(
                 "Generating Logout Error Response with code: {} and description: {}",
                 errorObject.getCode(),
@@ -106,34 +121,30 @@ public class LogoutService {
                 configurationService.getDefaultLogoutURI(),
                 state,
                 Optional.of(errorObject),
-                input,
-                clientId,
-                sessionId);
+                auditUser,
+                clientId);
     }
 
     public APIGatewayProxyResponseEvent generateDefaultLogoutResponse(
-            Optional<String> state,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId) {
+            Optional<String> state, TxmaAuditUser auditUser, Optional<String> clientId) {
         LOG.info("Generating default Logout Response");
-        sessionId.ifPresent(t -> cloudwatchMetricsService.incrementLogout(clientId));
+        if (auditUser.sessionId() != null) {
+            cloudwatchMetricsService.incrementLogout(clientId);
+        }
         return generateLogoutResponse(
                 configurationService.getDefaultLogoutURI(),
                 state,
                 Optional.empty(),
-                input,
-                clientId,
-                sessionId);
+                auditUser,
+                clientId);
     }
 
     public APIGatewayProxyResponseEvent generateLogoutResponse(
             URI logoutUri,
             Optional<String> state,
             Optional<ErrorObject> errorObject,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId) {
+            TxmaAuditUser auditUser,
+            Optional<String> clientId) {
         LOG.info("Generating Logout Response using URI: {}", logoutUri);
         URIBuilder uriBuilder = new URIBuilder(logoutUri);
         state.ifPresent(s -> uriBuilder.addParameter("state", s));
@@ -148,24 +159,13 @@ public class LogoutService {
             throw new RuntimeException("Unable to build URI");
         }
 
-        var user =
-                TxmaAuditUser.user()
-                        .withIpAddress(extractIpAddress(input))
-                        .withPersistentSessionId(
-                                extractPersistentIdFromCookieHeader(input.getHeaders()))
-                        .withSessionId(sessionId.orElse(null));
-
-        auditService.submitAuditEvent(LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), user);
-
+        sendAuditEvent(clientId, auditUser);
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
     }
 
     private APIGatewayProxyResponseEvent generateAccountInterventionLogoutResponse(
-            APIGatewayProxyRequestEvent input,
-            String clientId,
-            String sessionId,
-            AccountIntervention intervention) {
+            TxmaAuditUser auditUser, String clientId, AccountIntervention intervention) {
         URI redirectURI;
         if (intervention.getBlocked()) {
             redirectURI = configurationService.getAccountStatusBlockedURI();
@@ -179,11 +179,50 @@ public class LogoutService {
 
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
         return generateLogoutResponse(
-                redirectURI,
-                Optional.empty(),
-                Optional.empty(),
-                input,
-                Optional.of(clientId),
-                Optional.of(sessionId));
+                redirectURI, Optional.empty(), Optional.empty(), auditUser, Optional.of(clientId));
+    }
+
+    public Optional<String> getRpPairwiseId(String subject, String clientId) {
+        try {
+            if (subject == null || clientId == null) {
+                LOG.warn("User or client ID is null while getting RP pairwise ID for audit event");
+                return Optional.empty();
+            }
+            UserProfile userProfile = dynamoService.getUserProfileFromSubject(subject);
+            Optional<ClientRegistry> client = dynamoClientService.getClient(clientId);
+            if (client.isEmpty()) {
+                LOG.warn("Client not found while getting RP pairwise ID for audit event");
+                return Optional.empty();
+            }
+            return Optional.of(
+                    ClientSubjectHelper.getSubject(
+                                    userProfile,
+                                    client.get(),
+                                    dynamoService,
+                                    configurationService.getInternalSectorUri())
+                            .getValue());
+        } catch (Exception e) {
+            LOG.warn("Exception caught while getting RP pairwise ID for audit event");
+            return Optional.empty();
+        }
+    }
+
+    private void sendAuditEvent(Optional<String> clientId, TxmaAuditUser auditUser) {
+        if (clientId.isPresent()) {
+            Optional<String> rpPairwiseId = getRpPairwiseId(auditUser.userId(), clientId.get());
+            if (rpPairwiseId.isPresent()) {
+                auditService.submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        clientId.orElse(AuditService.UNKNOWN),
+                        auditUser,
+                        pair("rpPairwiseId", rpPairwiseId.get()));
+            } else {
+                auditService.submitAuditEvent(
+                        LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
+            }
+        } else {
+            auditService.submitAuditEvent(
+                    LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
+        }
     }
 }

@@ -179,7 +179,8 @@ public class TokenHandler
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
-                    AuditService.UNKNOWN);
+                    AuditService.UNKNOWN,
+                    AuditService.RestrictedSection.empty);
 
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");

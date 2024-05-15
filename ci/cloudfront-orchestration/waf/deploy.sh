@@ -31,6 +31,7 @@ PERMITTED_ENVIRONMENTS="dev build staging integration production"
 
 if  [[ $# == 0 ]] || ! [[ $PERMITTED_ENVIRONMENTS =~ ( |^)$1( |$) ]]; then
   echo "Call ./deploy <env>, where <env> is one of $PERMITTED_ENVIRONMENTS"
+  exit 1
 fi
 
 ENVIRONMENT=$1

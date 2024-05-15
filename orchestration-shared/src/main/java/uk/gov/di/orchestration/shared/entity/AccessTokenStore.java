@@ -10,13 +10,19 @@ public class AccessTokenStore {
 
     @Expose private String internalPairwiseSubjectId = "missing";
 
+    @Expose private String journeyId = "missing";
+
     public AccessTokenStore() {}
 
     public AccessTokenStore(
-            String token, String internalSubjectId, String internalPairwiseSubjectId) {
+            String token,
+            String internalSubjectId,
+            String internalPairwiseSubjectId,
+            String journeyId) {
         this.token = token;
         this.internalSubjectId = internalSubjectId;
         this.internalPairwiseSubjectId = internalPairwiseSubjectId;
+        this.journeyId = journeyId;
     }
 
     public String getToken() {
@@ -29,5 +35,9 @@ public class AccessTokenStore {
 
     public String getInternalPairwiseSubjectId() {
         return internalPairwiseSubjectId;
+    }
+
+    public String getJourneyId() {
+        return journeyId;
     }
 }

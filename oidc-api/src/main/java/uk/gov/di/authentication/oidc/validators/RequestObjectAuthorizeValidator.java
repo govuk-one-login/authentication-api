@@ -10,6 +10,7 @@ import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
@@ -85,35 +86,47 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
 
+            if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
+                LOG.error("State is missing from authRequest");
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing state parameter"),
+                        null);
+            }
+
+            State state = new State(jwtClaimsSet.getStringClaim("state"));
+
             if (Arrays.stream(ClientType.values())
                     .noneMatch(type -> type.getValue().equals(client.getClientType()))) {
                 LOG.error("ClientType value of {} is not recognised", client.getClientType());
-                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT, state);
             }
 
             if (!CODE.toString().equals(authRequest.getResponseType().toString())) {
                 LOG.error(
                         "Unsupported responseType included in request. Expected responseType of code");
-                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
+                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, state);
             }
 
             if (requestContainsInvalidScopes(authRequest.getScope(), client)) {
                 LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
-                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
+                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE, state);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("client_id"))
                     || !jwtClaimsSet
                             .getClaim("client_id")
                             .toString()
                             .equals(authRequest.getClientID().getValue())) {
-                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT, state);
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("request"))
                     || Objects.nonNull(jwtClaimsSet.getClaim("request_uri"))) {
                 LOG.error("request or request_uri claim should not be included in request JWT");
-                return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST);
+                return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST, state);
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
                     || !jwtClaimsSet
@@ -126,32 +139,24 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                                                     "/authorize")
                                             .toString())) {
                 LOG.error("Invalid or missing audience");
-                return errorResponse(redirectURI, OAuth2Error.ACCESS_DENIED);
+                return errorResponse(redirectURI, OAuth2Error.ACCESS_DENIED, state);
             }
             if (Objects.isNull(jwtClaimsSet.getIssuer())
                     || !jwtClaimsSet.getIssuer().equals(client.getClientID())) {
                 LOG.error("Invalid or missing issuer");
-                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT, state);
             }
 
             if (!CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
                 LOG.error(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
-                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
+                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, state);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
                             Scope.parse(jwtClaimsSet.getClaim("scope").toString()), client)) {
                 LOG.error("Invalid scopes in request JWT");
-                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
-            }
-            if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
-                LOG.error("State is missing from authRequest");
-                return errorResponse(
-                        redirectURI,
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "Request is missing state parameter"));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE, state);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
                 LOG.error("Nonce is missing from authRequest");
@@ -159,11 +164,12 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         redirectURI,
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
-                                "Request is missing nonce parameter"));
+                                "Request is missing nonce parameter"),
+                        state);
             }
-            var vtrError = validateVtr(jwtClaimsSet, redirectURI);
+            var vtrError = validateVtr(jwtClaimsSet, client);
             if (vtrError.isPresent()) {
-                return vtrError;
+                return errorResponse(redirectURI, vtrError.get(), state);
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
                 try {
@@ -175,7 +181,8 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                             redirectURI,
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
-                                    "ui_locales parameter is invalid"));
+                                    "ui_locales parameter is invalid"),
+                            state);
                 }
             }
             LOG.info("RequestObject has passed initial validation");
@@ -214,27 +221,34 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         }
     }
 
-    private Optional<AuthRequestError> validateVtr(JWTClaimsSet jwtClaimsSet, URI redirectURI) {
+    private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
         List<String> authRequestVtr = new ArrayList<>();
         try {
             authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
+            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
+                LOG.error(
+                        "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
+                        levelOfConfidenceValues);
+                return Optional.of(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
+            }
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
-                return errorResponse(redirectURI, OAuth2Error.TEMPORARILY_UNAVAILABLE);
+                return Optional.of(OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }
         } catch (IllegalArgumentException e) {
             LOG.error(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
-            return errorResponse(
-                    redirectURI,
+            return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         } catch (ParseException | Json.JsonException e) {
             LOG.error("Parse exception thrown when validating vtr", e);
-            return errorResponse(
-                    redirectURI,
+            return Optional.of(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
         return Optional.empty();
@@ -256,7 +270,8 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         throw new ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
 
-    private static Optional<AuthRequestError> errorResponse(URI uri, ErrorObject error) {
-        return Optional.of(new AuthRequestError(error, uri));
+    private static Optional<AuthRequestError> errorResponse(
+            URI uri, ErrorObject error, State state) {
+        return Optional.of(new AuthRequestError(error, uri, state));
     }
 }

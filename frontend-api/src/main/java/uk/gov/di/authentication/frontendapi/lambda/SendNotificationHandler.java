@@ -190,7 +190,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        AuditService.RestrictedSection.empty);
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
             switch (request.getNotificationType()) {
@@ -322,7 +323,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 request.getEmail(),
                 IpAddressHelper.extractIpAddress(input),
                 Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                AuditService.RestrictedSection.empty);
         return generateEmptySuccessApiGatewayResponse();
     }
 

@@ -14,7 +14,7 @@ plugins {
     id "com.avast.gradle.docker-compose" version "0.17.6"
     id "org.sonarqube" version "5.0.0.4638"
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.0.13'
+    id 'com.github.spotbugs' version '6.0.14'
 }
 
 apply plugin: "java"
@@ -23,7 +23,7 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.25.41",
+        aws_sdk_v2_version: "2.25.52",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.11.5",
         gson: "2.10.1",
@@ -109,7 +109,7 @@ subprojects {
     }
 
     dependencies {
-        apache "commons-codec:commons-codec:1.16.1",
+        apache "commons-codec:commons-codec:1.17.0",
                 "org.apache.httpcomponents:httpclient:4.5.14",
                 "org.apache.commons:commons-collections4:4.1",
                 "commons-net:commons-net:3.10.0"
@@ -142,7 +142,7 @@ subprojects {
         lettuce "org.apache.commons:commons-pool2:2.12.0",
                 "io.lettuce:lettuce-core:6.3.2.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.35"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.36"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.13"
@@ -162,9 +162,9 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:5.11.0",
+                "org.mockito:mockito-core:5.12.0",
                 "org.awaitility:awaitility:4.2.1",
-                "com.approvaltests:approvaltests:23.1.0",
+                "com.approvaltests:approvaltests:24.1.0",
                 configurations.hamcrest,
                 "org.reflections:reflections:0.10.2"
 
@@ -177,7 +177,7 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        spotbugs "com.github.spotbugs:spotbugs:4.8.4"
+        spotbugs "com.github.spotbugs:spotbugs:4.8.5"
 
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
 

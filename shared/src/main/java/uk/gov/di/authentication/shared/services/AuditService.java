@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -44,6 +45,7 @@ public class AuditService {
             AuditableEvent event,
             String clientId,
             TxmaAuditUser user,
+            RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
@@ -52,7 +54,19 @@ public class AuditService {
                         .withUser(user);
 
         Arrays.stream(metadataPairs)
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+                .forEach(
+                        pair -> {
+                            if (pair.isRestricted()) {
+                                txmaAuditEvent.addRestricted(pair.getKey(), pair.getValue());
+                            } else {
+                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
+                            }
+                        });
+
+        restrictedSection.encoded.ifPresent(
+                encodedString ->
+                        txmaAuditEvent.addRestricted(
+                                "device_information", Map.of("encoded", encodedString)));
 
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
@@ -62,6 +76,10 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    public record RestrictedSection(Optional<String> encoded) {
+        public static RestrictedSection empty = new RestrictedSection(Optional.empty());
     }
 
     public void submitAuditEvent(
@@ -74,6 +92,7 @@ public class AuditService {
             String ipAddress,
             String phoneNumber,
             String persistentSessionId,
+            RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
 
         var user =
@@ -86,20 +105,30 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId)
                         .withGovukSigninJourneyId(clientSessionId);
 
-        submitAuditEvent(event, clientId, user, metadataPairs);
+        submitAuditEvent(event, clientId, user, restrictedSection, metadataPairs);
     }
 
     public static class MetadataPair {
         private final String key;
         private final Object value;
+        private final Boolean restricted;
 
         private MetadataPair(String key, Object value) {
+            this(key, value, false);
+        }
+
+        private MetadataPair(String key, Object value, Boolean restricted) {
             this.key = key;
             this.value = value;
+            this.restricted = restricted;
         }
 
         public static MetadataPair pair(String key, Object value) {
-            return new MetadataPair(key, value);
+            return new MetadataPair(key, value, false);
+        }
+
+        public static MetadataPair pair(String key, Object value, Boolean restricted) {
+            return new MetadataPair(key, value, restricted);
         }
 
         public String getKey() {
@@ -108,6 +137,10 @@ public class AuditService {
 
         public Object getValue() {
             return value;
+        }
+
+        public Boolean isRestricted() {
+            return restricted;
         }
 
         @Override
@@ -120,12 +153,14 @@ public class AuditService {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             MetadataPair that = (MetadataPair) o;
-            return Objects.equals(key, that.key) && Objects.equals(value, that.value);
+            return Objects.equals(key, that.key)
+                    && Objects.equals(value, that.value)
+                    && Objects.equals(restricted, that.restricted);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(key, value);
+            return Objects.hash(key, value, restricted);
         }
     }
 

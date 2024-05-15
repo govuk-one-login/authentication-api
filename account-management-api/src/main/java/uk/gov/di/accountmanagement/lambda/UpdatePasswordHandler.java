@@ -179,7 +179,8 @@ public class UpdatePasswordHandler
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty);
 
             return generateEmptySuccessApiGatewayResponse();
 

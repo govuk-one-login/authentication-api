@@ -327,7 +327,8 @@ public class AccountInterventionsHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         TEST_IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        TEST_PERSISTENT_SESSION_ID);
+                        TEST_PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     private UserProfile generateUserProfile() {

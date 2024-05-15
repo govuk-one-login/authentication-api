@@ -101,7 +101,8 @@ public class AccountDeletionService {
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
-                    AuditService.UNKNOWN);
+                    AuditService.UNKNOWN,
+                    AuditService.RestrictedSection.empty);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

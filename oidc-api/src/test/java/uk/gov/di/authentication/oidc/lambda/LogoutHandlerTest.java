@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -47,6 +48,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
+import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -107,9 +110,9 @@ class LogoutHandlerTest {
                         logoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any(), any()))
+        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
-        when(logoutService.generateErrorLogoutResponse(any(), any(), any(), any(), any()))
+        when(logoutService.generateErrorLogoutResponse(any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
 
@@ -128,7 +131,10 @@ class LogoutHandlerTest {
 
         @BeforeEach
         void sessionExistsSetup() {
-            session = generateSession().setEmailAddress(EMAIL);
+            session =
+                    generateSession()
+                            .setEmailAddress(EMAIL)
+                            .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
             idTokenHint = signedIDToken.serialize();
             when(dynamoClientService.getClient("client-id"))
                     .thenReturn(Optional.of(createClientRegistry()));
@@ -159,9 +165,8 @@ class LogoutHandlerTest {
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.toString()),
                             Optional.empty(),
-                            event,
-                            audience,
-                            Optional.of(SESSION_ID));
+                            getAuditUser(event),
+                            audience);
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
@@ -188,9 +193,8 @@ class LogoutHandlerTest {
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.toString()),
                             Optional.empty(),
-                            event,
-                            audience,
-                            Optional.of(SESSION_ID));
+                            getAuditUser(event),
+                            audience);
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
@@ -205,7 +209,7 @@ class LogoutHandlerTest {
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.empty(), event, Optional.empty(), Optional.of(SESSION_ID));
+                            Optional.empty(), getAuditUser(event), Optional.empty());
         }
 
         @Test
@@ -228,9 +232,8 @@ class LogoutHandlerTest {
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.getValue()),
                             Optional.empty(),
-                            event,
-                            audience,
-                            Optional.empty());
+                            getAuditUserWhenNoCookie(event),
+                            audience);
             verifyNoInteractions(cloudwatchMetricsService);
         }
     }
@@ -239,7 +242,10 @@ class LogoutHandlerTest {
     class IdToken {
         @Test
         void shouldRedirectToDefaultLogoutUriForValidLogoutRequestWithNoTokenHint() {
-            session = generateSession().setEmailAddress(EMAIL);
+            session =
+                    generateSession()
+                            .setEmailAddress(EMAIL)
+                            .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
             APIGatewayProxyRequestEvent event =
                     generateRequestEvent(
                             Map.of(
@@ -253,10 +259,7 @@ class LogoutHandlerTest {
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.of(STATE.toString()),
-                            event,
-                            Optional.empty(),
-                            Optional.of(session.getSessionId()));
+                            Optional.of(STATE.toString()), getAuditUser(event), Optional.empty());
         }
 
         @Test
@@ -274,15 +277,17 @@ class LogoutHandlerTest {
             verify(logoutService)
                     .generateDefaultLogoutResponse(
                             Optional.of(STATE.toString()),
-                            event,
-                            Optional.empty(),
+                            getAuditUserWhenNoCookie(event),
                             Optional.empty());
         }
 
         @Test
         void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignatureIdTokenIsInvalid()
                 throws JOSEException {
-            session = generateSession().setEmailAddress(EMAIL);
+            session =
+                    generateSession()
+                            .setEmailAddress(EMAIL)
+                            .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
             ECKey ecSigningKey =
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             SignedJWT signedJWT =
@@ -308,8 +313,7 @@ class LogoutHandlerTest {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "unable to validate id_token_hint"),
-                            event,
-                            Optional.empty(),
+                            getAuditUser(event),
                             Optional.empty());
             verifyNoInteractions(cloudwatchMetricsService);
         }
@@ -321,7 +325,10 @@ class LogoutHandlerTest {
         @Test
         void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientIsNotFoundInClientRegistry()
                 throws JOSEException, ParseException {
-            session = generateSession().setEmailAddress(EMAIL);
+            session =
+                    generateSession()
+                            .setEmailAddress(EMAIL)
+                            .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
             ECKey ecSigningKey =
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             SignedJWT signedJWT =
@@ -346,9 +353,8 @@ class LogoutHandlerTest {
                             Optional.of(STATE.getValue()),
                             new ErrorObject(
                                     OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
-                            event,
-                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
-                            Optional.of(session.getSessionId()));
+                            getAuditUser(event),
+                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
 
@@ -378,15 +384,17 @@ class LogoutHandlerTest {
                             Optional.of(STATE.getValue()),
                             new ErrorObject(
                                     OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
-                            event,
-                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
-                            Optional.empty());
+                            getAuditUserWhenNoCookie(event),
+                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
 
         @Test
         void shouldRedirectToDefaultUriWhenLogoutRedirectUriIsMissing() {
-            session = generateSession().setEmailAddress(EMAIL);
+            session =
+                    generateSession()
+                            .setEmailAddress(EMAIL)
+                            .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
             var idTokenHint = signedIDToken.serialize();
 
             session.getClientSessions().add(CLIENT_SESSION_ID);
@@ -404,10 +412,7 @@ class LogoutHandlerTest {
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.of(STATE.toString()),
-                            event,
-                            audience,
-                            Optional.of(session.getSessionId()));
+                            Optional.of(STATE.toString()), getAuditUser(event), audience);
         }
 
         @Test
@@ -427,14 +432,19 @@ class LogoutHandlerTest {
             verify(logoutService, times(0)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.of(STATE.toString()), event, audience, Optional.empty());
+                            Optional.of(STATE.toString()),
+                            getAuditUserWhenNoCookie(event),
+                            audience);
         }
 
         @Test
         void
                 shouldRedirectToDefaultLogoutUriWithErrorMessageWhenLogoutUriInRequestDoesNotMatchClientRegistry()
                         throws JOSEException, ParseException {
-            session = generateSession().setEmailAddress(EMAIL);
+            session =
+                    generateSession()
+                            .setEmailAddress(EMAIL)
+                            .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
             ECKey ecSigningKey =
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             SignedJWT signedJWT =
@@ -461,9 +471,8 @@ class LogoutHandlerTest {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "client registry does not contain post_logout_redirect_uri"),
-                            event,
-                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
-                            Optional.of(session.getSessionId()));
+                            getAuditUser(event),
+                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
 
@@ -495,9 +504,8 @@ class LogoutHandlerTest {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "client registry does not contain post_logout_redirect_uri"),
-                            event,
-                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
-                            Optional.empty());
+                            getAuditUserWhenNoCookie(event),
+                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
     }
@@ -554,5 +562,21 @@ class LogoutHandlerTest {
         session.getClientSessions().add(clientSessionId);
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
+    }
+
+    private TxmaAuditUser getAuditUser(APIGatewayProxyRequestEvent event) {
+        return TxmaAuditUser.user()
+                .withIpAddress(extractIpAddress(event))
+                .withPersistentSessionId(extractPersistentIdFromCookieHeader(event.getHeaders()))
+                .withSessionId(session.getSessionId())
+                .withUserId(session.getInternalCommonSubjectIdentifier());
+    }
+
+    private TxmaAuditUser getAuditUserWhenNoCookie(APIGatewayProxyRequestEvent event) {
+        return TxmaAuditUser.user()
+                .withIpAddress(extractIpAddress(event))
+                .withPersistentSessionId(extractPersistentIdFromCookieHeader(event.getHeaders()))
+                .withSessionId(null)
+                .withUserId(null);
     }
 }

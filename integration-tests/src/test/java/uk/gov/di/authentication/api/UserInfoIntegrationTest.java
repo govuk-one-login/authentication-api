@@ -81,6 +81,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
+    private static final String JOURNEY_ID = "client-session-id";
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
@@ -149,7 +150,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
@@ -395,7 +397,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 objectMapper.writeValueAsString(accessTokenStore),
@@ -424,7 +427,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,

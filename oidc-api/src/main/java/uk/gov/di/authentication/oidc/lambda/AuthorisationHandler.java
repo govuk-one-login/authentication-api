@@ -296,7 +296,7 @@ public class AuthorisationHandler
         if (authRequestError.isPresent()) {
             return generateErrorResponse(
                     authRequestError.get().redirectURI(),
-                    authRequest.getState(),
+                    authRequestError.get().state(),
                     authRequest.getResponseMode(),
                     authRequestError.get().errorObject(),
                     authRequest.getClientID().getValue(),

@@ -157,7 +157,8 @@ public class UpdatePhoneNumberHandler
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     updatePhoneNumberRequest.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty);
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();

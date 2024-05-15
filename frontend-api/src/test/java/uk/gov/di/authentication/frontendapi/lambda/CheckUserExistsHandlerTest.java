@@ -188,6 +188,7 @@ class CheckUserExistsHandlerTest {
                             "123.123.123.123",
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
+                            AuditService.RestrictedSection.empty,
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
 
@@ -260,6 +261,7 @@ class CheckUserExistsHandlerTest {
                             "123.123.123.123",
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
+                            AuditService.RestrictedSection.empty,
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
         }
@@ -289,6 +291,7 @@ class CheckUserExistsHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty,
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
 
@@ -336,7 +339,8 @@ class CheckUserExistsHandlerTest {
                         "joe.bloggs",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     private void usingValidSession() {

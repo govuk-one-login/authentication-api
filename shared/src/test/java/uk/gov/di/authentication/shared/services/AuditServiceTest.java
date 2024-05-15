@@ -7,9 +7,11 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -50,27 +52,37 @@ class AuditServiceTest {
                 "email",
                 "ip-address",
                 "phone-number",
-                "persistent-session-id");
+                "persistent-session-id",
+                AuditService.RestrictedSection.empty);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
 
-        assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
-        assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
-        assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
-        assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("AUTH")));
+        var expected =
+                """
+                {
+                "timestamp":1630534200,
+                "event_timestamp_ms":1630534200012,
+                "event_name":"AUTH_TEST_EVENT_ONE",
+                "client_id":"client-id",
+                "component_id":"AUTH",
+                "user": {
+                    "user_id":"subject-id",
+                    "transaction_id":null,
+                    "email":"email",
+                    "phone":"phone-number",
+                    "ip_address":"ip-address",
+                    "session_id":"session-id",
+                    "persistent_session_id":"persistent-session-id",
+                    "govuk_signin_journey_id":"request-id"
+                },
+                "platform":null,
+                "restricted":null,
+                "extensions":null}
+                """;
 
-        var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
-
-        assertThat(userObject, hasFieldWithValue("session_id", equalTo("session-id")));
-        assertThat(
-                userObject,
-                hasFieldWithValue("persistent_session_id", equalTo("persistent-session-id")));
-        assertThat(userObject, hasFieldWithValue("user_id", equalTo("subject-id")));
-        assertThat(userObject, hasFieldWithValue("email", equalTo("email")));
-        assertThat(userObject, hasFieldWithValue("phone", equalTo("phone-number")));
-        assertThat(userObject, hasFieldWithValue("ip_address", equalTo("ip-address")));
+        assertEquals(asJson(expected), txmaMessage);
     }
 
     @Test
@@ -87,8 +99,11 @@ class AuditServiceTest {
                 "ip-address",
                 "phone-number",
                 "persistent-session-id",
+                AuditService.RestrictedSection.empty,
                 pair("key", "value"),
-                pair("key2", "value2"));
+                pair("key2", "value2"),
+                pair("restrictedKey1", "restrictedValue1", true),
+                pair("restrictedKey2", "restrictedValue2", true));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
@@ -100,6 +115,11 @@ class AuditServiceTest {
 
         assertThat(extensions, hasFieldWithValue("key", equalTo("value")));
         assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
+
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+
+        assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
+        assertThat(restricted, hasFieldWithValue("restrictedKey2", equalTo("restrictedValue2")));
     }
 
     @Test
@@ -116,6 +136,7 @@ class AuditServiceTest {
                 "ip-address",
                 "07700900000",
                 "persistent-session-id",
+                AuditService.RestrictedSection.empty,
                 pair("key", "value"),
                 pair("key2", "value2"));
 
@@ -128,5 +149,43 @@ class AuditServiceTest {
                         .getAsJsonObject();
 
         assertThat(extensions, hasFieldWithValue("phone_number_country_code", equalTo("44")));
+    }
+
+    @Test
+    void TxmaHeaderShouldBeAddedToAuditEvent() {
+        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+
+        var auditEncodedHeaderValue =
+                "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(Optional.of(auditEncodedHeaderValue));
+
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE,
+                "client-id",
+                "request-id",
+                "session-id",
+                "subject-id",
+                "email",
+                "ip-address",
+                "phone-number",
+                "persistent-session-id",
+                restrictedSection,
+                pair("restrictedKey1", "restrictedValue1", true));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        var restricted = txmaMessage.getAsJsonObject().get("restricted").getAsJsonObject();
+
+        assertThat(restricted, hasFieldWithValue("restrictedKey1", equalTo("restrictedValue1")));
+
+        var deviceInformation =
+                restricted.getAsJsonObject().get("device_information").getAsJsonObject();
+
+        assertThat(
+                deviceInformation, hasFieldWithValue("encoded", equalTo(auditEncodedHeaderValue)));
     }
 }

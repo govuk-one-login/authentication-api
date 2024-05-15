@@ -188,6 +188,7 @@ public class StartHandler
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.RestrictedSection.empty,
                     pair("internalSubjectId", internalSubjectId));
 
             return generateApiGatewayProxyResponse(200, startResponse);

@@ -63,7 +63,8 @@ class AuthenticateHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentIdValue);
+                        persistentIdValue,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -91,7 +92,8 @@ class AuthenticateHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentIdValue);
+                        persistentIdValue,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -117,7 +119,8 @@ class AuthenticateHandlerTest {
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentIdValue);
+                        persistentIdValue,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -145,6 +148,7 @@ class AuthenticateHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentIdValue);
+                        persistentIdValue,
+                        AuditService.RestrictedSection.empty);
     }
 }
