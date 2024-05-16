@@ -31,10 +31,6 @@ dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
 -----END PUBLIC KEY-----
 EOT
 
-logging_endpoint_arns = [
-  "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
-]
-
 performance_tuning = {
   register = {
     memory          = 512
