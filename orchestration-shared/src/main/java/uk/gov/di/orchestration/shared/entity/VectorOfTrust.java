@@ -165,6 +165,7 @@ public class VectorOfTrust {
     public static List<String> getRequestedLevelsOfConfidence(List<VectorOfTrust> vtrList) {
         return vtrList.stream()
                 .map(VectorOfTrust::getLevelOfConfidence)
+                .filter(Objects::nonNull)
                 .map(LevelOfConfidence::getValue)
                 .toList();
     }
