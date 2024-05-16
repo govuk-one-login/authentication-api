@@ -180,6 +180,12 @@ variable "orch_privatesub_cidr_blocks" {
   default     = []
 }
 
+variable "orch_protectedsub_cidr_blocks" {
+  type        = list(string)
+  description = "Orchestration protected subnet cidr blocks"
+  default     = []
+}
+
 variable "authentication_callback_userinfo_table_cross_account_access_enabled" {
   default     = false
   type        = bool
