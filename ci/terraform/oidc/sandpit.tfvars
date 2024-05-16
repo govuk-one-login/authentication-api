@@ -67,6 +67,8 @@ orch_jwks_enabled                 = true
 orch_jwks_name                    = "dev-JwksFunction"
 orch_authorisation_enabled        = true
 orch_authorisation_name           = "dev-AuthorisationFunction"
+orch_userinfo_enabled             = true
+orch_userinfo_name                = "dev-UserInfoFunction"
 
 orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true
