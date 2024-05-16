@@ -202,7 +202,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         clientId,
                         auditUser,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
@@ -214,7 +214,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                             clientId,
                             auditUser,
-                            AuditService.RestrictedSection.empty,
+                            restrictedSection,
                             pair("internalSubjectId", userProfile.getSubjectID()),
                             pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
                             pair(

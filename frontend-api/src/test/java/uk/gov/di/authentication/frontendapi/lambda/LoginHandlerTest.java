@@ -430,7 +430,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -462,7 +462,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", maxRetriesAllowed),
                         pair("attemptNoFailedAt", maxRetriesAllowed));
@@ -472,7 +472,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -557,7 +557,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         "",
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", 6));
