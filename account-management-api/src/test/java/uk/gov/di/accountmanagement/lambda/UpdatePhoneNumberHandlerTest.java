@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -57,6 +58,7 @@ class UpdatePhoneNumberHandlerTest {
     private static final String OTP = "123456";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private final String expectedCommonSubject =
@@ -114,7 +116,7 @@ class UpdatePhoneNumberHandlerTest {
                         "123.123.123.123",
                         NEW_PHONE_NUMBER,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
     }
 
     @Test
@@ -209,7 +211,9 @@ class UpdatePhoneNumberHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        CLIENT_SESSION_ID));
+                        CLIENT_SESSION_ID,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
 
         return event;
     }

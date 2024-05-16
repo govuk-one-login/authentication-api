@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -67,6 +68,7 @@ class UpdatePasswordHandlerTest {
     private static final String SESSION_ID = "some-session-id";
     private static final String CLIENT_ID = "some-client-id";
     private static final Subject INTERNAL_SUBJECT = new Subject();
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
@@ -118,7 +120,7 @@ class UpdatePasswordHandlerTest {
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
     }
 
     @Test
@@ -230,7 +232,9 @@ class UpdatePasswordHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        SESSION_ID));
+                        SESSION_ID,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
 
         return event;
     }

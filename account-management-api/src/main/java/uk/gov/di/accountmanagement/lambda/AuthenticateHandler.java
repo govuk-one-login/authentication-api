@@ -10,6 +10,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AuthenticateRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -82,7 +83,7 @@ public class AuthenticateHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditService.RestrictedSection.empty);
+                        AuditHelper.buildRestrictedSection(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
             boolean hasValidCredentials =
@@ -99,7 +100,7 @@ public class AuthenticateHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditService.RestrictedSection.empty);
+                        AuditHelper.buildRestrictedSection(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
@@ -114,7 +115,7 @@ public class AuthenticateHandler
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty);
+                    AuditHelper.buildRestrictedSection(input.getHeaders()));
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
@@ -128,7 +129,7 @@ public class AuthenticateHandler
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty);
+                    AuditHelper.buildRestrictedSection(input.getHeaders()));
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

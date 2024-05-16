@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -66,6 +67,7 @@ class SendOtpNotificationHandlerTest {
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final String TEST_CLIENT_AND_USER_SIX_DIGIT_CODE = "654321";
     private static final String TEST_PHONE_NUMBER = "07755551084";
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT = new Subject();
@@ -132,7 +134,9 @@ class SendOtpNotificationHandlerTest {
                         RequestHeaders.SESSION_ID_HEADER,
                         "some-session-id",
                         RequestHeaders.CLIENT_SESSION_ID_HEADER,
-                        "some-client-session-id"));
+                        "some-client-session-id",
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
@@ -180,7 +184,8 @@ class SendOtpNotificationHandlerTest {
                                 "123.123.123.123",
                                 null,
                                 persistentIdValue,
-                                AuditService.RestrictedSection.empty,
+                                new AuditService.RestrictedSection(
+                                        Optional.of(TXMA_ENCODED_HEADER_VALUE)),
                                 pair("notification-type", VERIFY_EMAIL),
                                 pair("test-user", false));
             }
@@ -209,7 +214,9 @@ class SendOtpNotificationHandlerTest {
                         RequestHeaders.SESSION_ID_HEADER,
                         "some-session-id",
                         RequestHeaders.CLIENT_SESSION_ID_HEADER,
-                        "some-client-session-id"));
+                        "some-client-session-id",
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
@@ -234,7 +241,12 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(ClientSessionIdHelper.SESSION_ID_HEADER_NAME, SESSION_ID));
+        event.setHeaders(
+                Map.of(
+                        ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
+                        SESSION_ID,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
@@ -263,7 +275,7 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
     }
@@ -280,7 +292,9 @@ class SendOtpNotificationHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         persistentIdValue,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        SESSION_ID));
+                        SESSION_ID,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
@@ -310,7 +324,7 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         null,
                         persistentIdValue,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
                         pair("notification-type", VERIFY_EMAIL),
                         pair("test-user", true));
     }
@@ -321,7 +335,12 @@ class SendOtpNotificationHandlerTest {
         String persistentIdValue = "some-persistent-session-id";
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        persistentIdValue,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -29,6 +30,17 @@ class AuthenticateHandlerTest {
     private static final String PASSWORD = "joe.bloggs@test.com";
     private static final String PHONE_NUMBER = "01234567890";
     private static final String IP_ADDRESS = "123.123.123.123";
+    private static final String persistentIdValue = "some-persistent-session-id";
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
+    private static final Map<String, String> headers =
+            Map.of(
+                    PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                    persistentIdValue,
+                    AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                    TXMA_ENCODED_HEADER_VALUE);
+    private static final AuditService.RestrictedSection restrictedSection =
+            new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE));
+    private APIGatewayProxyRequestEvent event;
     private AuthenticateHandler handler;
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -37,18 +49,41 @@ class AuthenticateHandlerTest {
     @BeforeEach
     public void setUp() {
         handler = new AuthenticateHandler(authenticationService, auditService);
+        event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
     }
 
     @Test
     public void shouldReturn204IfLoginIsSuccessful() {
-        String persistentIdValue = "some-persistent-session-id";
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        persistentIdValue,
+                        restrictedSection);
+    }
+
+    @Test
+    public void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
         event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -70,11 +105,6 @@ class AuthenticateHandlerTest {
     @Test
     public void shouldReturn401IfUserHasInvalidCredentials() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        String persistentIdValue = "some-persistent-session-id";
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -93,17 +123,13 @@ class AuthenticateHandlerTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         persistentIdValue,
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
     }
 
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        String persistentIdValue = "some-persistent-session-id";
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -120,17 +146,12 @@ class AuthenticateHandlerTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         persistentIdValue,
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
     }
 
     @Test
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
-        String persistentIdValue = "some-persistent-session-id";
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -149,6 +170,6 @@ class AuthenticateHandlerTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         persistentIdValue,
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
     }
 }
