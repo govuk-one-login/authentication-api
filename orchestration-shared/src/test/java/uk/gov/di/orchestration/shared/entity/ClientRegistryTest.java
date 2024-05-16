@@ -13,12 +13,15 @@ class ClientRegistryTest {
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
     @Test
-    void shouldReturnP2WhenidentityVerificationSupportedAndRegistryEmpty() {
+    void shouldReturnP2andP0WhenidentityVerificationSupportedAndRegistryEmpty() {
         var clientRegistry = new ClientRegistry();
         clientRegistry.setIdentityVerificationSupported(true);
         assertThat(
                 clientRegistry.getClientLoCs(),
-                equalTo(List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                equalTo(
+                        List.of(
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                LevelOfConfidence.NONE.getValue())));
     }
 
     @Test

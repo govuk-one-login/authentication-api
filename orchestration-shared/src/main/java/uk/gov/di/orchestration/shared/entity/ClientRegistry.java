@@ -397,7 +397,9 @@ public class ClientRegistry {
     public List<String> getClientLoCs() {
         if (clientLoCs.isEmpty()) {
             return identityVerificationSupported
-                    ? List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())
+                    ? List.of(
+                            LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                            LevelOfConfidence.NONE.getValue())
                     : List.of(LevelOfConfidence.NONE.getValue());
         }
         return clientLoCs;
