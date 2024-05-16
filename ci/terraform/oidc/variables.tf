@@ -577,6 +577,12 @@ variable "orch_auth_code_enabled" {
   default     = false
 }
 
+variable "orch_userinfo_enabled" {
+  description = "Flag to enable routing userinfo traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_openid_configuration_name" {
   type    = string
   default = ""
@@ -628,6 +634,11 @@ variable "orch_authentication_callback_name" {
 }
 
 variable "orch_auth_code_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_userinfo_name" {
   type    = string
   default = ""
 }

@@ -166,6 +166,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_register_enabled,
       var.orch_authentication_callback_enabled,
       var.orch_auth_code_enabled,
+      var.orch_userinfo_enabled,
     ]))
   }
 
@@ -198,6 +199,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_register_integration,
     aws_api_gateway_integration.orch_authentication_callback_integration,
     aws_api_gateway_integration.orch_auth_code_integration,
+    aws_api_gateway_integration.orch_userinfo_integration,
   ]
 }
 
@@ -1206,4 +1208,40 @@ resource "aws_api_gateway_integration" "orch_auth_code_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_auth_code_name}:latest/invocations"
+}
+
+
+resource "aws_api_gateway_resource" "orch_userinfo_resource" {
+  count       = var.orch_userinfo_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "userinfo"
+  depends_on = [
+    module.userinfo
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_userinfo_method" {
+  count       = var.orch_userinfo_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_userinfo_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_userinfo_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_userinfo_integration" {
+  count       = var.orch_userinfo_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_userinfo_resource[0].id
+  http_method = aws_api_gateway_method.orch_userinfo_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_userinfo_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_userinfo_name}:latest/invocations"
 }
