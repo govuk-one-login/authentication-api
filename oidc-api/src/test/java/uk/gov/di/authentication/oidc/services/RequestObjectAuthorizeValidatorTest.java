@@ -3,6 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -40,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
+import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class RequestObjectAuthorizeValidatorTest {
 
@@ -320,6 +323,34 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
+    void shouldReturnErrorIfVtrIsNotPermittedForGivenClient() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("vtr", jsonArrayOf("Cl.Cm.PCL250"))
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validate(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().errorObject().toJSONObject(),
+                equalTo(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request vtr is not permitted")
+                                .toJSONObject()));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
     void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws JOSEException {
         var clientRegistry =
                 generateClientRegistry(
@@ -595,6 +626,7 @@ class RequestObjectAuthorizeValidatorTest {
                 .withRedirectUrls(singletonList(REDIRECT_URI))
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise")
+                .withClientLoCs(singletonList(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
                 .withClientType(clientType);
     }
 
