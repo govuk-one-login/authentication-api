@@ -190,13 +190,16 @@ public class LogoutServiceTest {
     }
 
     @Test
-    void successfullyReturnsDefaultLogoutResponseWithoutStateWhenStateIsAbsent() {
+    void successfullyReturnsLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateDefaultLogoutResponse(
-                        Optional.empty(), auditUser, Optional.of(audience.get()));
+                logoutService.generateLogoutResponse(
+                        configurationService.getDefaultLogoutURI(),
+                        Optional.empty(),
+                        Optional.empty(),
+                        auditUser,
+                        Optional.of(audience.get()));
 
         verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -207,11 +210,14 @@ public class LogoutServiceTest {
     @Test
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateDefaultLogoutResponse(
-                        Optional.of(STATE.getValue()), auditUser, Optional.of(audience.get()));
+                logoutService.generateLogoutResponse(
+                        configurationService.getDefaultLogoutURI(),
+                        Optional.of(STATE.getValue()),
+                        Optional.empty(),
+                        auditUser,
+                        Optional.of(audience.get()));
 
         verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -222,9 +228,12 @@ public class LogoutServiceTest {
     @Test
     void successfullyReturnsErrorLogoutResponse() throws URISyntaxException {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateErrorLogoutResponse(
+                logoutService.generateLogoutResponse(
+                        configurationService.getDefaultLogoutURI(),
                         Optional.empty(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                        Optional.of(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE, "invalid session")),
                         auditUser,
                         Optional.empty());
 

@@ -83,7 +83,21 @@ public class LogoutService {
                         .withUserId(session.getInternalCommonSubjectIdentifier());
 
         destroySessions(session);
-        return generateAccountInterventionLogoutResponse(auditUser, clientId, intervention);
+
+        URI redirectURI;
+        if (intervention.getBlocked()) {
+            redirectURI = configurationService.getAccountStatusBlockedURI();
+            LOG.info("Generating Account Intervention blocked logout response");
+        } else if (intervention.getSuspended()) {
+            redirectURI = configurationService.getAccountStatusSuspendedURI();
+            LOG.info("Generating Account Intervention suspended logout response");
+        } else {
+            throw new RuntimeException("Account status must be blocked or suspended");
+        }
+
+        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
+        return generateLogoutResponse(
+                redirectURI, Optional.empty(), Optional.empty(), auditUser, Optional.of(clientId));
     }
 
     public void destroySessions(Session session) {
@@ -106,37 +120,6 @@ public class LogoutService {
         }
         LOG.info("Deleting Session");
         sessionService.deleteSessionFromRedis(session.getSessionId());
-    }
-
-    public APIGatewayProxyResponseEvent generateErrorLogoutResponse(
-            Optional<String> state,
-            ErrorObject errorObject,
-            TxmaAuditUser auditUser,
-            Optional<String> clientId) {
-        LOG.info(
-                "Generating Logout Error Response with code: {} and description: {}",
-                errorObject.getCode(),
-                errorObject.getDescription());
-        return generateLogoutResponse(
-                configurationService.getDefaultLogoutURI(),
-                state,
-                Optional.of(errorObject),
-                auditUser,
-                clientId);
-    }
-
-    public APIGatewayProxyResponseEvent generateDefaultLogoutResponse(
-            Optional<String> state, TxmaAuditUser auditUser, Optional<String> clientId) {
-        LOG.info("Generating default Logout Response");
-        if (auditUser.sessionId() != null) {
-            cloudwatchMetricsService.incrementLogout(clientId);
-        }
-        return generateLogoutResponse(
-                configurationService.getDefaultLogoutURI(),
-                state,
-                Optional.empty(),
-                auditUser,
-                clientId);
     }
 
     public APIGatewayProxyResponseEvent generateLogoutResponse(
@@ -162,24 +145,6 @@ public class LogoutService {
         sendAuditEvent(clientId, auditUser);
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
-    }
-
-    private APIGatewayProxyResponseEvent generateAccountInterventionLogoutResponse(
-            TxmaAuditUser auditUser, String clientId, AccountIntervention intervention) {
-        URI redirectURI;
-        if (intervention.getBlocked()) {
-            redirectURI = configurationService.getAccountStatusBlockedURI();
-            LOG.info("Generating Account Intervention blocked logout response");
-        } else if (intervention.getSuspended()) {
-            redirectURI = configurationService.getAccountStatusSuspendedURI();
-            LOG.info("Generating Account Intervention suspended logout response");
-        } else {
-            throw new RuntimeException("Account status must be blocked or suspended");
-        }
-
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
-        return generateLogoutResponse(
-                redirectURI, Optional.empty(), Optional.empty(), auditUser, Optional.of(clientId));
     }
 
     public Optional<String> getRpPairwiseId(String subject, String clientId) {
