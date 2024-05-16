@@ -244,8 +244,7 @@ variable "shared_state_bucket" {
 }
 
 variable "contra_state_bucket" {
-  type    = string
-  default = "digital-identity-dev-tfstate"
+  type = string
 }
 
 variable "cloudwatch_log_retention" {
@@ -323,6 +322,11 @@ variable "ipv_backend_uri" {
 }
 
 variable "ipv_no_session_response_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "phone_checker_with_retry" {
   type    = bool
   default = false
 }
