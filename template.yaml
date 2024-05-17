@@ -459,6 +459,11 @@ Resources:
       ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref BackChannelLogoutRequestFunctionLogGroup
+      Events:
+        BackChannelLogoutQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BackChannelLogoutQueue.Arn
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -476,6 +481,20 @@ Resources:
               - kms:GetPublicKey
             Resource:
               - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          - Sid: AllowConsumeFromBackChannelLogoutQueue
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource:
+              - !Ref BackChannelLogoutQueue
+          - Sid: AllowDecryptBackChannelLogoutQueue
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              - !Ref BackChannelLogoutQueueEncryptionKey
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1315,6 +1334,39 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  #endregion
+
+  #region Back Channel Logout Queue
+
+  BackChannelLogoutQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-BackChannelLogoutQueue
+      MaximumMessageSize: 2048
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BackChannelLogoutDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+
+  BackChannelLogoutDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-BackChannelLogoutDlq
+      KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+      MessageRetentionPeriod: 21600
+
+  BackChannelLogoutQueueEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for back channel logout queue and dlq
+      PendingWindowInDays: 30
+      KeyUsage: ENCRYPT_DECRYPT
+      KeySpec: SYMMETRIC_DEFAULT
+      EnableKeyRotation: true
   #endregion
 
   AccountInterventionsServiceUriSecret:
