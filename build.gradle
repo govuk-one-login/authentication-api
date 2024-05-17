@@ -192,6 +192,11 @@ allprojects {
         tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:deprecation" << "-Werror"
         }
+        tasks.withType(AbstractArchiveTask) {
+            includeEmptyDirs = false
+            preserveFileTimestamps = false
+            reproducibleFileOrder = true
+        }
     }
 }
 
