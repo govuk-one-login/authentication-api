@@ -90,15 +90,14 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class LoginHandlerTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
-    private static final String PASSWORD = "computer-1";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private final UserCredentials userCredentials =
-            new UserCredentials().withEmail(EMAIL).withPassword(PASSWORD);
+            new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
     private final UserCredentials userCredentialsAuthApp =
             new UserCredentials()
                     .withEmail(EMAIL)
-                    .withPassword(PASSWORD)
+                    .withPassword(CommonTestVariables.PASSWORD)
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
@@ -142,12 +141,12 @@ class LoginHandlerTest {
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
     private final String validBodyWithEmailAndPassword =
-            format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL.toUpperCase());
+            format("{ \"password\": \"%s\", \"email\": \"%s\" }", CommonTestVariables.PASSWORD, EMAIL.toUpperCase());
 
     private final String validBodyWithReauthJourney =
             format(
                     "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                    PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
+                    CommonTestVariables.PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
 
     private final TxmaAuditUser auditUserWithAllUserInfo =
             new TxmaAuditUser()
@@ -301,13 +300,13 @@ class LoginHandlerTest {
         var userCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
-                        .withPassword(PASSWORD)
+                        .withPassword(CommonTestVariables.PASSWORD)
                         .setMfaMethod(
                                 new MFAMethod()
                                         .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                                         .withMethodVerified(false)
                                         .withEnabled(true));
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD)).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
@@ -372,7 +371,7 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials =
                 usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         applicableUserCredentials.withPassword(null);
-        when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
+        when(userMigrationService.processMigratedUser(applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
@@ -515,7 +514,7 @@ class LoginHandlerTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
 
-        when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -589,7 +588,7 @@ class LoginHandlerTest {
 
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
 
-        when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
+        when(userMigrationService.processMigratedUser(applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -605,7 +604,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
-        var bodyWithoutEmail = format("{ \"password\": \"%s\"}", PASSWORD);
+        var bodyWithoutEmail = format("{ \"password\": \"%s\"}", CommonTestVariables.PASSWORD);
         var event = eventWithHeadersAndBody(VALID_HEADERS, bodyWithoutEmail);
 
         usingValidSession();
@@ -717,7 +716,7 @@ class LoginHandlerTest {
     private UserCredentials usingApplicableUserCredentialsWithLogin(
             MFAMethodType mfaMethodType, boolean loginSuccessful) {
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
-        when(authenticationService.login(applicableUserCredentials, PASSWORD))
+        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(loginSuccessful);
         return applicableUserCredentials;
     }

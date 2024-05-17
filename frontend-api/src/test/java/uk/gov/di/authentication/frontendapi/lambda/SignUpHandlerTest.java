@@ -65,6 +65,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -90,7 +91,7 @@ class SignUpHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
     private static final String EMAIL = CommonTestVariables.EMAIL;
-    private static final String PASSWORD = "computer-1";
+
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final URI REDIRECT_URI = URI.create("test-uri");

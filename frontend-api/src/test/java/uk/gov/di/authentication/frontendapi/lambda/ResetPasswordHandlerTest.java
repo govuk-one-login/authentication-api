@@ -90,7 +90,7 @@ class ResetPasswordHandlerTest {
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final Context context = mock(Context.class);
     private static final String TEST_CLIENT_ID = "test-client-id";
-    private static final String NEW_PASSWORD = "Pa55word!";
+    private static final String NEW_PASSWORD = CommonTestVariables.PASSWORD;
     private static final String SUBJECT = "some-subject";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String EMAIL = CommonTestVariables.EMAIL;
