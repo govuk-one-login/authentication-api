@@ -1,7 +1,7 @@
 name: Pre-merge checks for Terraform
 on:
   pull_request:
-    paths: ['ci/terraform/**']
+    paths: ["ci/terraform/**"]
     types:
       - opened
       - reopened

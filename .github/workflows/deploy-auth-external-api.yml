@@ -7,7 +7,6 @@ env:
 #Artifact bucket is Build Auth deploy github artifcat Source bucket
 #Destination Bucket is auth-lambda-signed bucket from prod tooling account
 
-
 on:
   workflow_run:
     workflows: ["Build modules"]
@@ -31,7 +30,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.GHA_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
-      
+
       - name: Download and copy Auth External API signed lambda zip
         working-directory: ci/terraform/auth-external-api
         run: |
@@ -51,4 +50,3 @@ jobs:
             --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
- 

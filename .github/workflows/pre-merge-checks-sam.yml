@@ -1,7 +1,7 @@
 name: Pre-merge checks for SAM
 on:
   pull_request:
-    paths: ['template.yaml']
+    paths: ["template.yaml"]
     types:
       - opened
       - reopened
