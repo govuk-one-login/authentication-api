@@ -16,12 +16,18 @@ Parameters:
     Type: String
     Description: The ARN of the permissions boundary to apply when creating IAM roles
     Default: none
+  LoggingSubscriptionEndpointArn:
+    Type: String
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
   UsePermissionsBoundary:
     !Not [ !Equals [ none, !Ref PermissionsBoundary ] ]
   UseCodeSigning:
     !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
+  IsNotDevEnvironment:
+    !Not [ !Equals [!Ref Environment, 'dev'] ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -787,6 +793,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-token-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  TokenSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TokenFunctionLogGroup
 
   TokenFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
