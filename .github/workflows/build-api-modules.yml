@@ -31,6 +31,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      ARTIFACT_HAS_CHANGED: true # preset to true, so that the artifact is uploaded on the first run of this workflow
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,25 +51,87 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: false
 
       - name: Build ${{ matrix.module }}
-        run: ./gradlew --no-daemon :${{ matrix.module }}:buildZip
+        run: |
+          ./gradlew --no-daemon :${{ matrix.module }}:buildZip
+
+      - name: Download latest unsigned artifact
+        id: download_latest_unsigned_artifact
+        run: |
+          if S3_RESPONSE=$(aws s3api get-object \
+            --bucket ${{ secrets.SOURCE_BUCKET }} \
+            --key ${{ matrix.module }}/latest.zip \
+            /tmp/latest-${{ matrix.module }}-unsigned.zip
+          ); then
+            echo "Downloaded latest artifact from S3 bucket"
+
+            echo success=true >> $GITHUB_OUTPUT
+            echo "download-path=/tmp/latest-${{ matrix.module }}-unsigned.zip" >> $GITHUB_OUTPUT
+            echo "previous_sha=$(echo "${S3_RESPONSE}" | jq '.Metadata.commitsha' -r)" >> $GITHUB_OUTPUT
+          else
+            echo "No previous artifact found in S3 bucket"
+            echo success=false >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare previous and current artifacts
+        id: compare_artifacts
+        if: steps.download_latest_unsigned_artifact.outputs.success == 'true'
+        run: |
+          if ! cmp "${{ steps.download_latest_unsigned_artifact.outputs.download-path }}" "${{ matrix.module }}/build/distributions/${{ matrix.module }}.zip"; then
+            echo "Artifact has changed"
+            echo 'ARTIFACT_HAS_CHANGED=true' >> $GITHUB_ENV
+          else
+            echo "Artifact has not changed"
+            echo 'ARTIFACT_HAS_CHANGED=false' >> $GITHUB_ENV
+          fi
 
       - name: Upload ${{ matrix.module }} to source bucket
+        if: env.ARTIFACT_HAS_CHANGED == 'true'
         working-directory: ${{ matrix.module }}/build/distributions
         run: |
-          S3_RESPONSE=`aws s3api put-object \
+          S3_RESPONSE="$(aws s3api put-object \
             --bucket ${{ secrets.SOURCE_BUCKET }} \
             --key ${{ matrix.module }}/${{ github.sha }}.zip \
-            --body ${{ matrix.module }}.zip`
-          VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+            --body ${{ matrix.module }}.zip \
+            --metadata commitsha=${{ github.sha }}
+            )"
+
+          echo "Uploaded unsigned ${{ matrix.module }} to S3 bucket, key: ${{ matrix.module }}/${{ github.sha }}.zip"
+
+          VERSION=$(echo $S3_RESPONSE | jq .VersionId -r)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
+          # copy to 'latest.zip'
+          aws s3api copy-object \
+            --bucket ${{ secrets.SOURCE_BUCKET }} \
+            --copy-source ${{ secrets.SOURCE_BUCKET }}/${{ matrix.module }}/${{ github.sha }}.zip \
+            --key ${{ matrix.module }}/latest.zip \
+            --metadata-directive COPY
+
+          echo "Copied ${{ matrix.module }}/${{ github.sha }}.zip to ${{ matrix.module }}/latest.zip"
+
       - name: Start signing job for ${{ matrix.module }}
+        if: env.ARTIFACT_HAS_CHANGED == 'true'
         run: |
           SIGNER_RESPONSE=`aws signer start-signing-job \
             --profile-name "${{ secrets.SIGNING_PROFILE }}" \
             --source "s3={bucketName=${{ secrets.SOURCE_BUCKET }},key=${{ matrix.module }}/${{ github.sha }}.zip,version=$VERSION}" \
             --destination "s3={bucketName=${{ secrets.DESTINATION_BUCKET }},prefix=signed-${{ matrix.module }}-${{ github.sha }}-}"`
           JOB_ID=`echo $SIGNER_RESPONSE | jq .jobId -r`
+
           aws signer wait successful-signing-job --job-id $JOB_ID
+
+      - name: Duplicate previous signed artifact
+        if: env.ARTIFACT_HAS_CHANGED == 'false'
+        run: |
+          object="$(aws s3api list-objects-v2 \
+            --bucket ${{ secrets.DESTINATION_BUCKET }} \
+            --query "Contents[?starts_with(Key, 'signed-${{ matrix.module }}-${{ steps.download_latest_unsigned_artifact.outputs.previous_sha }}-')].Key" \
+            --output text)"
+          aws s3api copy-object \
+            --bucket ${{ secrets.DESTINATION_BUCKET }} \
+            --copy-source "${{ secrets.DESTINATION_BUCKET }}/${object}" \
+            --key "signed-${{ matrix.module }}-${{ github.sha }}-reused-${{ steps.download_latest_unsigned_artifact.outputs.previous_sha }}.zip"
