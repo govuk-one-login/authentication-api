@@ -1,5 +1,25 @@
 [
   {
+    "ParameterKey": "AccessDynamoDBAccounts",
+    "ParameterValue": "758531536632"
+  },
+  {
+    "ParameterKey": "AllowedServiceOne",
+    "ParameterValue": "DynamoDB"
+  },
+  {
+    "ParameterKey": "AllowedServiceTwo",
+    "ParameterValue": "SSM"
+  },
+  {
+    "ParameterKey": "AllowedServiceThree",
+    "ParameterValue": "SQS"
+  },
+  {
+    "ParameterKey": "AllowedServiceFour",
+    "ParameterValue": "EC2"
+  },
+  {
     "ParameterKey": "AdditionalCodeSigningVersionArns",
     "ParameterValue": "arn:aws:signer:eu-west-2:216552277552:/signing-profiles/DynatraceSigner/5uwzCCGTPq"
   },
@@ -22,6 +42,10 @@
   {
     "ParameterKey": "IncludePromotion",
     "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "ProgrammaticPermissionsBoundary",
+    "ParameterValue": "True"
   },
   {
     "ParameterKey": "RequireManualApproval",
