@@ -29,10 +29,14 @@ java {
 }
 
 task buildZip(type: Zip) {
+    includeEmptyDirs = false
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+
     from compileJava
     from processResources
     into("lib") {
-        from configurations.runtimeClasspath
+        from configurations.runtimeClasspath.files.sort()
     }
 }
 
