@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -98,7 +99,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class SendNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
@@ -166,7 +166,7 @@ class SendNotificationHandlerTest {
                                         CLIENT_ID,
                                         TEST_CLIENT_ID,
                                         TEST_EMAIL_ADDRESS,
-                                        TEST_PHONE_NUMBER))));
+                                        CommonTestVariables.UK_MOBILE_NUMBER))));
     }
 
     @BeforeEach
@@ -346,7 +346,7 @@ class SendNotificationHandlerTest {
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 TEST_EMAIL_ADDRESS,
                                 VERIFY_PHONE_NUMBER,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
 
         assertThat(result, hasStatus(204));
@@ -361,7 +361,7 @@ class SendNotificationHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        TEST_PHONE_NUMBER,
+                                        CommonTestVariables.UK_MOBILE_NUMBER,
                                         VERIFY_PHONE_NUMBER,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
@@ -374,7 +374,7 @@ class SendNotificationHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }
@@ -660,7 +660,7 @@ class SendNotificationHandlerTest {
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 TEST_EMAIL_ADDRESS,
                                 notificationTypeTwo,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 journeyTypeTwo));
 
         assertEquals(204, result.getStatusCode());
@@ -689,7 +689,7 @@ class SendNotificationHandlerTest {
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 TEST_EMAIL_ADDRESS,
                                 notificationTypeTwo,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 journeyTypeTwo));
 
         assertEquals(204, result.getStatusCode());
@@ -786,7 +786,7 @@ class SendNotificationHandlerTest {
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
                                 TEST_EMAIL_ADDRESS,
                                 VERIFY_PHONE_NUMBER,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
@@ -812,7 +812,7 @@ class SendNotificationHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }
@@ -898,7 +898,7 @@ class SendNotificationHandlerTest {
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
                                 TEST_EMAIL_ADDRESS,
                                 VERIFY_PHONE_NUMBER,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
@@ -914,7 +914,7 @@ class SendNotificationHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }

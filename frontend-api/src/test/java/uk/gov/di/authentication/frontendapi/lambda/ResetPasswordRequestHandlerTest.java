@@ -20,6 +20,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -97,7 +98,6 @@ class ResetPasswordRequestHandlerTest {
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final long LOCKOUT_DURATION = 799;
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final String PHONE_NUMBER = "01234567890";
     private static final AuditService.MetadataPair PASSWORD_RESET_COUNTER =
             pair("passwordResetCounter", 0);
     private static final AuditService.MetadataPair PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD =
@@ -190,11 +190,14 @@ class ResetPasswordRequestHandlerTest {
             Subject subject = new Subject("subject_1");
             when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
             when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(PHONE_NUMBER));
+                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(PHONE_NUMBER));
+                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(userProfileWithPhoneNumber(PHONE_NUMBER)));
+                    .thenReturn(
+                            Optional.of(
+                                    userProfileWithPhoneNumber(
+                                            CommonTestVariables.UK_MOBILE_NUMBER)));
             when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                     .thenReturn(Optional.of(getClientSession()));
             var disabledMfaMethod =
@@ -263,7 +266,7 @@ class ResetPasswordRequestHandlerTest {
                             expectedCommonSubject,
                             TEST_EMAIL_ADDRESS,
                             "123.123.123.123",
-                            PHONE_NUMBER,
+                            CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
@@ -317,7 +320,7 @@ class ResetPasswordRequestHandlerTest {
                             expectedCommonSubject,
                             TEST_EMAIL_ADDRESS,
                             "123.123.123.123",
-                            PHONE_NUMBER,
+                            CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
@@ -408,7 +411,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn400WhenNoEmailIsPresentInSession() {
             when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(PHONE_NUMBER));
+                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(sessionService.getSessionFromRequestHeaders(anyMap()))
                     .thenReturn(Optional.of(new Session(IdGenerator.generate())));
 

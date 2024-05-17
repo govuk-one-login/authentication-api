@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
@@ -82,7 +83,6 @@ class VerifyMfaCodeHandlerTest {
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String SUBJECT_ID = "test-subject-id";
-    private static final String PHONE_NUMBER = "+447700900000";
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private static final String SECTOR_HOST = "test.account.gov.uk";
@@ -258,7 +258,10 @@ class VerifyMfaCodeHandlerTest {
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                                MFAMethodType.SMS,
+                                CODE,
+                                JourneyType.REGISTRATION,
+                                CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -332,7 +335,7 @@ class VerifyMfaCodeHandlerTest {
                                 MFAMethodType.SMS,
                                 CODE,
                                 JourneyType.ACCOUNT_RECOVERY,
-                                PHONE_NUMBER));
+                                CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -422,7 +425,7 @@ class VerifyMfaCodeHandlerTest {
         var phoneNumber =
                 List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
                         ? null
-                        : PHONE_NUMBER;
+                        : CommonTestVariables.UK_MOBILE_NUMBER;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, phoneNumber);
         var result = makeCallWithCode(codeRequest);
@@ -574,7 +577,8 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -610,7 +614,8 @@ class VerifyMfaCodeHandlerTest {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedPrefix))
                 .thenReturn(true);
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -640,7 +645,8 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
         if (!CodeRequestType.isValidCodeRequestType(
                 codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
             return;

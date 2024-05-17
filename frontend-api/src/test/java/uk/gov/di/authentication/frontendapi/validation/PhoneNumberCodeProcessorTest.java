@@ -9,6 +9,7 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -58,8 +59,6 @@ class PhoneNumberCodeProcessorTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
-    private static final String PHONE_NUMBER = "+447700900000";
-    private static final String DIFFERENT_PHONE_NUMBER = "+447700900001";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String SESSION_ID = "a-session-id";
@@ -76,7 +75,11 @@ class PhoneNumberCodeProcessorTest {
     void shouldReturnNoErrorForValidPhoneNumberCode(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, journeyType, PHONE_NUMBER),
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        journeyType,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 codeRequestType);
 
         assertThat(phoneNumberCodeProcessor.validateCode(), equalTo(Optional.empty()));
@@ -89,7 +92,11 @@ class PhoneNumberCodeProcessorTest {
             JourneyType journeyType,
             NotificationType notificationType) {
         setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, journeyType, PHONE_NUMBER),
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        journeyType,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 codeRequestType);
 
         phoneNumberCodeProcessor.validateCode();
@@ -100,7 +107,10 @@ class PhoneNumberCodeProcessorTest {
     void shouldReturnErrorForInvalidRegistrationPhoneNumberCode() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        JourneyType.REGISTRATION,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
         assertThat(
@@ -115,7 +125,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         JourneyType.PASSWORD_RESET_MFA,
-                        PHONE_NUMBER),
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.PW_RESET_MFA_SMS);
 
         assertThat(
@@ -131,7 +141,10 @@ class PhoneNumberCodeProcessorTest {
             NotificationType notificationType) {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, INVALID_CODE, journeyType, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        journeyType,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 codeRequestType);
 
         phoneNumberCodeProcessor.validateCode();
@@ -142,7 +155,10 @@ class PhoneNumberCodeProcessorTest {
     void shouldReturnErrorWhenInvalidRegistrationPhoneNumberCodeUsedTooManyTimes() {
         setUpPhoneNumberCodeRetryLimitExceeded(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        JourneyType.REGISTRATION,
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -156,7 +172,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         JourneyType.PASSWORD_RESET_MFA,
-                        PHONE_NUMBER));
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -170,7 +186,7 @@ class PhoneNumberCodeProcessorTest {
                         MFAMethodType.SMS,
                         INVALID_CODE,
                         JourneyType.REAUTHENTICATION,
-                        PHONE_NUMBER));
+                        CommonTestVariables.UK_MOBILE_NUMBER));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -183,7 +199,10 @@ class PhoneNumberCodeProcessorTest {
             CodeRequestType codeRequestType, JourneyType journeyType) {
         setUpBlockedPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, INVALID_CODE, journeyType, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        journeyType,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 codeRequestType);
 
         assertThat(
@@ -212,14 +231,17 @@ class PhoneNumberCodeProcessorTest {
     void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.REGISTRATION,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
-                        TEST_EMAIL_ADDRESS, PHONE_NUMBER, true, true);
+                        TEST_EMAIL_ADDRESS, CommonTestVariables.UK_MOBILE_NUMBER, true, true);
         verify(authenticationService, never())
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(anyString(), anyString());
         verify(auditService)
@@ -231,7 +253,7 @@ class PhoneNumberCodeProcessorTest {
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
@@ -242,13 +264,17 @@ class PhoneNumberCodeProcessorTest {
     void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
         verify(authenticationService)
-                .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(TEST_EMAIL_ADDRESS, PHONE_NUMBER);
+                .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                        TEST_EMAIL_ADDRESS, CommonTestVariables.UK_MOBILE_NUMBER);
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(
                         anyString(), anyString(), anyBoolean(), anyBoolean());
@@ -261,7 +287,7 @@ class PhoneNumberCodeProcessorTest {
                         INTERNAL_SUB_ID,
                         TEST_EMAIL_ADDRESS,
                         IP_ADDRESS,
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
@@ -296,7 +322,7 @@ class PhoneNumberCodeProcessorTest {
                                 .writeValueAsString(
                                         new PhoneNumberRequest(
                                                 true,
-                                                PHONE_NUMBER,
+                                                CommonTestVariables.PHONE_NUMBER,
                                                 true,
                                                 JourneyType.REGISTRATION,
                                                 INTERNAL_SUB_ID)));

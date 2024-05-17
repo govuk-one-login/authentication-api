@@ -9,6 +9,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -46,7 +47,6 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 public class NotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String BUCKET_NAME = "test-s3-bucket";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
@@ -113,7 +113,9 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         var notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER, PASSWORD_RESET_CONFIRMATION_SMS, SupportedLanguage.EN);
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        PASSWORD_RESET_CONFIRMATION_SMS,
+                        SupportedLanguage.EN);
         var sqsEvent = generateSQSEvent(objectMapper.writeValueAsString(notifyRequest));
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
@@ -122,7 +124,10 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = Map.of("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendText(TEST_PHONE_NUMBER, personalisation, PASSWORD_RESET_CONFIRMATION_SMS);
+                .sendText(
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        personalisation,
+                        PASSWORD_RESET_CONFIRMATION_SMS);
     }
 
     @Test
@@ -155,7 +160,10 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -231,7 +239,10 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -239,7 +250,8 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
+                .sendText(
+                        CommonTestVariables.UK_MOBILE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
 
         RuntimeException exception =
                 assertThrows(
@@ -277,7 +289,11 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessMfaMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321", SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        MFA_SMS,
+                        "654321",
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 

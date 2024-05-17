@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -82,7 +83,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class MfaHandlerTest {
 
     private MfaHandler handler;
-    private static final String PHONE_NUMBER = "01234567890";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
@@ -156,10 +156,11 @@ public class MfaHandlerTest {
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -180,7 +181,7 @@ public class MfaHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         persistentId,
                         AuditService.RestrictedSection.empty,
                         pair("journey-type", JourneyType.SIGN_IN),
@@ -196,11 +197,15 @@ public class MfaHandlerTest {
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
         NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        CODE,
+                        SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(
@@ -230,7 +235,7 @@ public class MfaHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         persistentId,
                         AuditService.RestrictedSection.empty,
                         pair("journey-type", JourneyType.SIGN_IN),
@@ -242,10 +247,11 @@ public class MfaHandlerTest {
         usingValidSession();
 
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
@@ -271,7 +277,7 @@ public class MfaHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty,
                         pair("journey-type", JourneyType.SIGN_IN),
@@ -283,7 +289,7 @@ public class MfaHandlerTest {
         usingValidSession();
 
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
@@ -323,7 +329,7 @@ public class MfaHandlerTest {
     void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
@@ -394,7 +400,7 @@ public class MfaHandlerTest {
     void
             shouldReturn204IfUserHasReachedTheOtpRequestLimitsInADifferentLambdaButNotSmsSignInOtpRequestLimit() {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
@@ -422,7 +428,7 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn204IfUserIsBlockedForRequestingADifferentOtpTypeThanSmsSignInOtpRequest() {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         usingValidSession();
 
@@ -551,7 +557,7 @@ public class MfaHandlerTest {
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(JourneyType journeyType) {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
@@ -597,10 +603,11 @@ public class MfaHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
@@ -626,7 +633,7 @@ public class MfaHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty,
                         pair("journey-type", JourneyType.SIGN_IN),
@@ -641,7 +648,7 @@ public class MfaHandlerTest {
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(CODE));
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -651,7 +658,8 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService, never()).sixDigitCode();
@@ -675,7 +683,7 @@ public class MfaHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
 
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(PHONE_NUMBER));
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -685,7 +693,8 @@ public class MfaHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService).sixDigitCode();

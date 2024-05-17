@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -68,7 +69,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class UpdateProfileHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String PHONE_NUMBER = "07755551084";
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
@@ -167,7 +167,7 @@ class UpdateProfileHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty);
     }
@@ -209,7 +209,7 @@ class UpdateProfileHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty);
     }
@@ -234,7 +234,8 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verify(authenticationService, never())
-                .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
+                .updatePhoneNumber(
+                        eq(TEST_EMAIL_ADDRESS), eq(CommonTestVariables.UK_MOBILE_NUMBER));
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
@@ -297,7 +298,7 @@ class UpdateProfileHandlerTest {
         return new UserProfile()
                 .withEmail(TEST_EMAIL_ADDRESS)
                 .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT);
@@ -308,7 +309,7 @@ class UpdateProfileHandlerTest {
         return new UserProfile()
                 .withEmail(TEST_EMAIL_ADDRESS)
                 .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT)

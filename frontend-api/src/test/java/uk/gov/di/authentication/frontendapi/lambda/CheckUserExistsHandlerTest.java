@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -93,7 +94,6 @@ class CheckUserExistsHandlerTest {
     private final Session session = new Session(IdGenerator.generate());
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
-    private static final String PHONE_NUMBER = "+44987654321";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
@@ -134,7 +134,8 @@ class CheckUserExistsHandlerTest {
         @BeforeEach
         void setup() {
             usingValidSession();
-            var userProfile = generateUserProfile().withPhoneNumber(PHONE_NUMBER);
+            var userProfile =
+                    generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
             setupUserProfileAndClient(Optional.of(userProfile));
         }
 
@@ -147,6 +148,7 @@ class CheckUserExistsHandlerTest {
                             new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var phoneNumber = CommonTestVariables.UK_MOBILE_NUMBER;
 
             assertThat(result, hasStatus(200));
             var expectedResponse =
@@ -155,10 +157,10 @@ class CheckUserExistsHandlerTest {
                     {"email":%s,
                     "doesUserExist":true,
                     "mfaMethodType":"SMS",
-                    "phoneNumberLastThree":"321",
+                    "phoneNumberLastThree":"%s",
                     "lockoutInformation":[]}
                     """,
-                            EMAIL_ADDRESS);
+                            EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));

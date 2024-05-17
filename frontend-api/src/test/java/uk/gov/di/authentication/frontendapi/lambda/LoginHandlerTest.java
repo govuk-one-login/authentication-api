@@ -99,7 +99,6 @@ class LoginHandlerTest {
                     .withEmail(EMAIL)
                     .withPassword(CommonTestVariables.PASSWORD)
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
-    private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
@@ -141,18 +140,22 @@ class LoginHandlerTest {
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
     private final String validBodyWithEmailAndPassword =
-            format("{ \"password\": \"%s\", \"email\": \"%s\" }", CommonTestVariables.PASSWORD, EMAIL.toUpperCase());
+            format(
+                    "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                    CommonTestVariables.PASSWORD, EMAIL.toUpperCase());
 
     private final String validBodyWithReauthJourney =
             format(
                     "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                    CommonTestVariables.PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
+                    CommonTestVariables.PASSWORD,
+                    EMAIL.toUpperCase(),
+                    JourneyType.REAUTHENTICATION);
 
     private final TxmaAuditUser auditUserWithAllUserInfo =
             new TxmaAuditUser()
                     .withUserId(expectedCommonSubject)
                     .withEmail(EMAIL)
-                    .withPhone(PHONE_NUMBER)
+                    .withPhone(CommonTestVariables.UK_MOBILE_NUMBER)
                     .withPersistentSessionId(PERSISTENT_ID)
                     .withSessionId(session.getSessionId())
                     .withIpAddress("123.123.123.123")
@@ -224,7 +227,9 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(
+                        FrontendApiPhoneNumberHelper.redactPhoneNumber(
+                                CommonTestVariables.UK_MOBILE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
@@ -306,7 +311,8 @@ class LoginHandlerTest {
                                         .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                                         .withMethodVerified(false)
                                         .withEnabled(true));
-        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD)).thenReturn(true);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
@@ -371,7 +377,8 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials =
                 usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         applicableUserCredentials.withPassword(null);
-        when(userMigrationService.processMigratedUser(applicableUserCredentials, CommonTestVariables.PASSWORD))
+        when(userMigrationService.processMigratedUser(
+                        applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
@@ -514,7 +521,8 @@ class LoginHandlerTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
 
-        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD)).thenReturn(true);
+        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -588,7 +596,8 @@ class LoginHandlerTest {
 
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
 
-        when(userMigrationService.processMigratedUser(applicableUserCredentials, CommonTestVariables.PASSWORD))
+        when(userMigrationService.processMigratedUser(
+                        applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -725,7 +734,7 @@ class LoginHandlerTest {
         return new UserProfile()
                 .withEmail(EMAIL)
                 .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
