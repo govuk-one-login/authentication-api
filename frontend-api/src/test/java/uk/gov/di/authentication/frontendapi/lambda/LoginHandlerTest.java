@@ -22,6 +22,7 @@ import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -88,7 +89,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class LoginHandlerTest {
 
-    private static final String EMAIL = "joe.bloggs@test.com";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String PASSWORD = "computer-1";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private final UserCredentials userCredentials =
