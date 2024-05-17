@@ -63,6 +63,8 @@ orch_doc_app_callback_enabled     = true
 orch_doc_app_callback_name        = "dev-DocAppCallbackFunction"
 orch_token_enabled                = true
 orch_token_name                   = "dev-TokenFunction"
+orch_jwks_enabled                 = true
+orch_jwks_name                    = "dev-JwksFunction"
 
 orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true

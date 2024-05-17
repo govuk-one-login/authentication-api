@@ -15,7 +15,7 @@ module "jwks" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "jwks.json"
-  path_part       = "jwks.json"
+  path_part       = var.orch_jwks_enabled ? "jwks-auth.json" : "jwks.json"
   endpoint_method = ["GET"]
   environment     = var.environment
 

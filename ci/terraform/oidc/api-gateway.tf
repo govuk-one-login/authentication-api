@@ -158,7 +158,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_openid_configuration_enabled,
       var.orch_trustmark_enabled,
       var.orch_doc_app_callback_enabled,
-      var.orch_token_enabled
+      var.orch_token_enabled,
+      var.orch_jwks_enabled
     ]))
   }
 
@@ -183,7 +184,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_openid_configuration_integration,
     aws_api_gateway_integration.orch_trustmark_integration,
     aws_api_gateway_integration.orch_doc_app_callback_integration,
-    aws_api_gateway_integration.orch_token_integration
+    aws_api_gateway_integration.orch_token_integration,
+    aws_api_gateway_integration.orch_jwks_integration
   ]
 }
 
@@ -945,4 +947,40 @@ resource "aws_api_gateway_integration" "orch_token_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_token_name}:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_jwks_resource" {
+  count       = var.orch_jwks_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.wellknown_resource.id
+  path_part   = "jwks.json"
+  depends_on = [
+    aws_api_gateway_resource.wellknown_resource,
+    module.jwks
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_jwks_method" {
+  count       = var.orch_jwks_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_jwks_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_jwks_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_jwks_integration" {
+  count       = var.orch_jwks_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_jwks_resource[0].id
+  http_method = aws_api_gateway_method.orch_jwks_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_jwks_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_jwks_name}:latest/invocations"
 }
