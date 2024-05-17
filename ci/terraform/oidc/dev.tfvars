@@ -9,5 +9,3 @@ shared_state_bucket                  = "di-auth-development-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.dev.account.gov.uk"
 orch_client_id                       = "orchestrationAuth"
-contra_state_bucket                  = "di-auth-development-tfstate"
-phone_checker_with_retry             = false
