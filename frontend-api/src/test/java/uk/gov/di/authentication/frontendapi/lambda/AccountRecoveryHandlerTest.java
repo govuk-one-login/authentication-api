@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -39,7 +40,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class AccountRecoveryHandlerTest {
 
-    private static final String EMAIL = "joe.bloggs@test.com";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String CLIENT_SESSION_ID = "known-client-session-id";

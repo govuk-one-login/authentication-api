@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -62,7 +63,7 @@ import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArr
 class StartServiceTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final String EMAIL = "joe.bloggs@example.com";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final Session SESSION = new Session("a-session-id").setEmailAddress(EMAIL);

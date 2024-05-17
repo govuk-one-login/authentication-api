@@ -14,6 +14,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -92,7 +93,7 @@ class ResetPasswordHandlerTest {
     private static final String NEW_PASSWORD = "Pa55word!";
     private static final String SUBJECT = "some-subject";
     private static final String TEST_PHONE_NUMBER = "01234567890";
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Json objectMapper = SerializationService.getInstance();
