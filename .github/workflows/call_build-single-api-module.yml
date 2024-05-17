@@ -1,0 +1,204 @@
+name: Build API Module
+on:
+  workflow_call:
+    inputs:
+      module_name:
+        description: "The name of the module to build"
+        type: string
+        required: true
+      aws_region:
+        description: "The AWS region to use"
+        type: string
+        required: true
+      aws_role:
+        description: "ARN of the AWS role to assume"
+        type: string
+        required: true
+      source_bucket:
+        description: "The S3 bucket where the unsigned artifact is stored"
+        type: string
+        required: true
+      destination_bucket:
+        description: "The S3 bucket where the signed artifact will be stored"
+        type: string
+        required: true
+      signing_profile:
+        description: "The AWS Signer profile to use for signing the artifact"
+        type: string
+        required: true
+      lookup_table:
+        description: "The DynamoDB table to use for looking up previous artifacts"
+        type: string
+        required: true
+
+      # The following are optional
+      java_version:
+        description: "The Java version to use"
+        type: string
+        default: "17"
+      java_distribution:
+        description: "The Java distribution to use"
+        type: string
+        default: "temurin"
+
+jobs:
+  build:
+    name: Build ${{ inputs.module_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ARTIFACT_HAS_CHANGED: true # preset to true, so that the artifact is uploaded on the first run of this workflow
+      SIGNED_OBJECT_KEY: "" # preset to empty string, so the linter doesn't complain about it being undefined
+      ARTIFACT_COMMIT_SHA: ${{ github.sha }}
+    outputs:
+      code_sha: ${{ steps.create_artifacts.outputs.code_sha }}
+      signed_object_key: ${{ steps.create_artifacts.outputs.signed_object_key }}
+      artifact_id: ${{ steps.upload-artifacts.outputs.artifact-id }}
+      artifact_url: ${{ steps.upload-artifacts.outputs.artifact-url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ inputs.aws_role }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: ${{ inputs.java_distribution }}
+
+      - name: Set up Gradle cache for ${{ inputs.module_name }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ inputs.module_name }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-${{ inputs.module_name }}
+            ${{ runner.os }}-gradle-
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-disabled: true
+
+      - name: Build ${{ inputs.module_name }}
+        id: build
+        run: |
+          ./gradlew --no-daemon :${{ inputs.module_name }}:buildZip
+
+          echo "Zip built successfully. Calculating sha256sum..."
+          sha256sum ${{ inputs.module_name }}/build/distributions/${{ inputs.module_name }}.zip
+
+          SHA="$(sha256sum ${{ inputs.module_name }}/build/distributions/${{ inputs.module_name }}.zip | cut -d ' ' -f 1)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Query dynamodb for previous artifact
+        id: query_dynamodb
+        run: |
+          PREVIOUS_SIGNED="$(aws dynamodb get-item \
+            --table-name ${{ inputs.lookup_table }} \
+            --key '{"module_name": {"S": "${{ inputs.module_name }}"}, "artifact_hash": {"S": "${{ steps.build.outputs.sha }}"}}')"
+
+          if [ -n "${PREVIOUS_SIGNED}" ]; then
+            PREVIOUS_KEY="$(echo "${PREVIOUS_SIGNED}" | jq '.Item.signed_object_key.S' -r)"
+            PREVIOUS_COMMIT_SHA="$(echo "${PREVIOUS_SIGNED}" | jq '.Item.commit_sha.S' -r)"
+            echo "Found previous artifact in DynamoDB table: ${PREVIOUS_COMMIT_SHA}"
+            {
+              echo "SIGNED_OBJECT_KEY=$PREVIOUS_KEY"
+              echo "ARTIFACT_COMMIT_SHA=$PREVIOUS_COMMIT_SHA"
+              echo "ARTIFACT_HAS_CHANGED=false"
+            } >> "$GITHUB_ENV"
+          else
+            echo "No previous artifact found in DynamoDB table"
+            echo 'ARTIFACT_HAS_CHANGED=true' >> "$GITHUB_ENV"
+            echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module has changed, using the new artifact"
+          fi
+
+      - name: Ensure previous artifact still exists
+        if: env.ARTIFACT_HAS_CHANGED == 'false'
+        run: |
+          if ! aws s3api head-object \
+            --bucket ${{ inputs.destination_bucket }} \
+            --key ${{ env.SIGNED_OBJECT_KEY }}
+          then
+            echo "Previous artifact no longer exists in S3 bucket, reuploading and resigning artifact. Deleting record from DynamoDB table..."
+            aws dynamodb delete-item \
+              --table-name ${{ inputs.lookup_table }} \
+              --key '{"module_name": {"S": "${{ inputs.module_name }}"}, "artifact_hash": {"S": "${{ steps.build.outputs.sha }}"}}'
+            echo 'ARTIFACT_HAS_CHANGED=true' >> "$GITHUB_ENV"
+            echo "::warning title=${{ inputs.module_name }}::${{ inputs.module_name }} module has changed, using the new artifact"
+          else
+            echo "::notice title=${{ inputs.module_name }}::${{ inputs.module_name }} module has not changed, reusing artifact from commit ${{ env.ARTIFACT_COMMIT_SHA }}"
+          fi
+
+      - name: Upload ${{ inputs.module_name }} to source bucket
+        id: upload_unsigned_artifact
+        if: env.ARTIFACT_HAS_CHANGED == 'true'
+        working-directory: ${{ inputs.module_name }}/build/distributions
+        run: |
+          VERSION="$(aws s3api put-object \
+            --bucket ${{ inputs.source_bucket }} \
+            --key ${{ inputs.module_name }}/${{ github.sha }}.zip \
+            --body ${{ inputs.module_name }}.zip \
+            --metadata commitsha=${{ github.sha }} \
+            --query "VersionId" --output text)"
+
+          echo "Uploaded unsigned ${{ inputs.module_name }} to S3 bucket, key: ${{ inputs.module_name }}/${{ github.sha }}.zip"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Run signing job for ${{ inputs.module_name }}
+        if: env.ARTIFACT_HAS_CHANGED == 'true'
+        run: |
+          JOB_ID="$(aws signer start-signing-job \
+            --profile-name "${{ inputs.signing_profile }}" \
+            --source "s3={bucketName=${{ inputs.source_bucket }},key=${{ inputs.module_name }}/${{ github.sha }}.zip,version=${{ steps.upload_unsigned_artifact.outputs.version }}}" \
+            --destination "s3={bucketName=${{ inputs.destination_bucket }},prefix=signed-${{ inputs.module_name }}-${{ github.sha }}-}" \
+            --query "jobId" --output=text)"
+
+          echo "Waiting for signing job ${JOB_ID} to complete..."
+          aws signer wait successful-signing-job --job-id "$JOB_ID"
+
+          SIGNED_OBJECT="$(aws signer describe-signing-job --job-id "${JOB_ID}" --query "signedObject.s3.key" --output=text)"
+
+          echo "Object signed: ${SIGNED_OBJECT}"
+          echo "SIGNED_OBJECT_KEY=${SIGNED_OBJECT}" >> "$GITHUB_ENV"
+
+      - name: Record artifact in DynamoDB
+        if: env.ARTIFACT_HAS_CHANGED == 'true'
+        run: |
+          aws dynamodb put-item \
+            --table-name "${{ inputs.lookup_table }}" \
+            --item '{"module_name":{"S":"${{ inputs.module_name }}"},"artifact_hash":{"S":"${{ steps.build.outputs.sha }}"},"signed_object_key":{"S":"${{ env.SIGNED_OBJECT_KEY }}"},"commit_sha":{"S":"${{ github.sha }}"}}'
+
+      - name: Prepare GHA artifacts
+        id: create_artifacts
+        run: |
+          artifact_dir="/tmp/artifacts"
+
+          mkdir -p "${artifact_dir}"
+          echo -n "${{ env.ARTIFACT_COMMIT_SHA }}" >> "${artifact_dir}/${{ inputs.module_name }}_commitsha.txt"
+
+          aws s3api get-object \
+            --bucket ${{ inputs.destination_bucket }} \
+            --key ${{ env.SIGNED_OBJECT_KEY }} \
+            "${artifact_dir}/${{ inputs.module_name }}.zip"
+
+          {
+            echo "artifact_dir=${artifact_dir}"
+            echo "code_sha=${{ env.ARTIFACT_COMMIT_SHA }}"
+            echo "signed_object_key=${{ env.SIGNED_OBJECT_KEY }}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts
+        id: upload-artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-${{ inputs.module_name }}
+          path: "${{ steps.create_artifacts.outputs.artifact_dir }}/"

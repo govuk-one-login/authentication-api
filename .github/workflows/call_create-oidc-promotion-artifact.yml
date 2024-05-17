@@ -1,0 +1,81 @@
+name: Create OIDC promotion artifact
+
+on:
+  workflow_call:
+    inputs:
+      terraform_directory_name:
+        description: "The name of the directory where the terraform for this module is stored"
+        type: string
+        required: true
+
+      oidc_api_module_name:
+        description: "The name of the oidc API module"
+        type: string
+        required: true
+      client_registry_api_module_name:
+        description: "The name of the client registry API module"
+        type: string
+        required: true
+      doc_checking_app_api_module_name:
+        description: "The name of the Doc Checking App API module"
+        type: string
+        required: true
+      frontend_api_module_name:
+        description: "The name of the Frontend API module"
+        type: string
+        required: true
+      ipv_api_module_name:
+        description: "The name of the IPV API module"
+        type: string
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download OIDC API code artifact
+        id: download_client_registry_api_artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-${{ inputs.oidc_api_module_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+
+      - name: Download Client Registry API code artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-${{ inputs.client_registry_api_module_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+
+      - name: Download Doc Checking App API code artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-${{ inputs.doc_checking_app_api_module_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+
+      - name: Download Frontend API code artifact
+        id: download_frontend_api_artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-${{ inputs.frontend_api_module_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+
+      - name: Download IPV API code artifact
+        id: download_ipv_api_artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-${{ inputs.ipv_api_module_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+
+      - name: Zip oidc Terraform files
+        working-directory: ci/terraform
+        run: zip -r oidc.zip .
+
+      - name: upload promotion_artifact_oidc.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion_artifact_oidc.zip
+          path: ci/terraform/oidc.zip
