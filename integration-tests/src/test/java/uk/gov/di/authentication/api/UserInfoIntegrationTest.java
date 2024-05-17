@@ -60,6 +60,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -86,6 +87,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
     private static String DOC_APP_CREDENTIAL;
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     private static final List<String> SCOPES =
             List.of(
@@ -162,7 +165,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
                         Map.of());
 
         assertThat(response, hasStatus(200));
@@ -180,7 +185,13 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturnInvalidTokenErrorWhenAccessTokenIsInvalid() {
-        var response = makeRequest(Optional.empty(), Map.of("Authorization", "ru"), Map.of());
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", "ru"),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
+                        Map.of());
 
         assertThat(response, hasStatus(401));
 
@@ -406,7 +417,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         return makeRequest(
                 Optional.empty(),
-                Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                Map.ofEntries(
+                        Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
                 Map.of());
     }
 
@@ -436,7 +449,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 300L);
         return makeRequest(
                 Optional.empty(),
-                Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                Map.ofEntries(
+                        Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
                 Map.of());
     }
 

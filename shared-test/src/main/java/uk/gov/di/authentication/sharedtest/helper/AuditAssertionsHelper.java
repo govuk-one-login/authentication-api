@@ -27,6 +27,45 @@ public class AuditAssertionsHelper {
                         () -> assertThat(txmaAuditQueue.getApproximateMessageCount(), equalTo(0)));
     }
 
+    public static void assertUnvalidatedTxmaAuditEventsReceived(
+            SqsQueueExtension queue, Collection<AuditableEvent> events) {
+        var expectedTxmaEvents =
+                events.stream()
+                        .map(Objects::toString)
+                        .map("AUTH_"::concat)
+                        .collect(Collectors.toList());
+
+        if (expectedTxmaEvents.isEmpty()) {
+            throw new RuntimeException(
+                    "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
+        }
+
+        await().atMost(TIMEOUT)
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                        queue.getApproximateMessageCount(),
+                                        equalTo(expectedTxmaEvents.size())));
+
+        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+
+        var namesOfSentEvents =
+                sentEvents.stream()
+                        .map(
+                                event ->
+                                        asJson(event)
+                                                .getAsJsonObject()
+                                                .get("event_name")
+                                                .getAsString())
+                        .toList();
+
+        // Check all expected events have been sent
+        // Check no unexpected events were sent
+        assertTrue(
+                expectedTxmaEvents.containsAll(namesOfSentEvents)
+                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+    }
+
     public static void assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
@@ -77,17 +116,11 @@ public class AuditAssertionsHelper {
 
     private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(
             JsonElement event) {
-        // TODO Remove this check as the other audit events are built with device information
-        if (event.getAsJsonObject()
-                .get("event_name")
-                .getAsString()
-                .equalsIgnoreCase("AUTH_LOG_IN_SUCCESS")) {
-            assertNotNull(event.getAsJsonObject().get("restricted"));
-            assertNotNull(
-                    event.getAsJsonObject()
-                            .get("restricted")
-                            .getAsJsonObject()
-                            .get("device_information"));
-        }
+        assertNotNull(event.getAsJsonObject().get("restricted"));
+        assertNotNull(
+                event.getAsJsonObject()
+                        .get("restricted")
+                        .getAsJsonObject()
+                        .get("device_information"));
     }
 }

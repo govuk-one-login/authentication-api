@@ -13,7 +13,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertUnvalidatedTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -36,7 +36,8 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(204));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE));
+        assertUnvalidatedTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE));
     }
 
     @Test
@@ -51,7 +52,7 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(401));
 
-        assertTxmaAuditEventsReceived(
+        assertUnvalidatedTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE));
     }
 }

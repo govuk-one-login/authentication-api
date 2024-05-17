@@ -43,6 +43,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -55,6 +56,8 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
@@ -76,6 +79,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put("Client-Session-Id", clientSessionId);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response = makeRequest(Optional.empty(), headers, Map.of());
 
@@ -111,6 +115,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put("Client-Session-Id", clientSessionId);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response = makeRequest(Optional.empty(), headers, Map.of());
 

@@ -181,6 +181,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -200,6 +201,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response1 =
                 makeRequest(
@@ -259,6 +261,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response1 =
                 makeRequest(
