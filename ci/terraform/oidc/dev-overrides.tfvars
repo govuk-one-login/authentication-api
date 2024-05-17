@@ -7,7 +7,7 @@ doc_app_authorisation_uri                   = "https://dcmaw-cri.dev.stubs.accou
 doc_app_jwks_endpoint                       = "https://dcmaw-cri.dev.stubs.account.gov.uk/.well-known/jwks.json"
 doc_app_aud                                 = "https://dcmaw-cri.dev.stubs.account.gov.uk"
 doc_app_new_aud_claim_enabled               = true
-doc_app_encryption_key_id                   = "KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs"
+doc_app_encryption_key_id                   = ""
 spot_enabled                                = false
 internal_sector_uri                         = "https://identity.dev.account.gov.uk"
 custom_doc_app_claim_enabled                = true
@@ -21,13 +21,13 @@ account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
 auth_frontend_public_encryption_key         = <<-EOT
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLJWOHz7uHLinSJr8XM0
-fhyq0aLm8HP06lCT7csGUoRav2xybsCsypufvJHbuD5SLkg25/VGFt21KH2g60u8
-6mV7ULLG/m4hvAiXbwSGdcRTToPS+UULX3YDnDXZHvd+3ypane82+XLjVZ9B2V0i
-1MGCJ7kiRurXCuE+9Kx/MQYBCqhz/OwHlCe3FJZXKvgnqqpO5ZtyjrxDJSZJpxbi
-KsVnLksPKV10Z0/XvpJ6oHtOjseetk8TRdekRWBvqCX5MqLjdi1TfiaDu2Tjg2N0
-dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
-1wIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0PcOHuVXOuexYZmpOlCo
+vFcGfezObHnnVTTfnCrS5TBmAEC9JNwH/YFmE/zx84I1dy5fEjll+2GIe8Hcue+W
+ubQMToFaAAeaqowqjgJYIPjgTubJ+baAP7+6GFPBWkk+LntBRQaoF7YkICT6im9h
+JTrFb5KxyDNT/j4SCCXlkMTzqmeMVM59NM66MSS7OXsUny9GinG6xhDovUswvU99
+N7GtGZBYIDmG6IrT/rS9ZosBLeLqCvRAfaYjq0/2EKHcudyeYjPDkkGpBNt7vXJJ
+A+Ud3Nx8MmuKS3kb8NoDhQJxKxg7lgjAj+Lhb9xr+Y074hdTs5ju2Jx2tmP1y9vl
+RwIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
