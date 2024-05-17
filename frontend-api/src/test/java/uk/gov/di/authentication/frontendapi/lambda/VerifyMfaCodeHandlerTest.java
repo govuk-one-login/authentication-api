@@ -76,7 +76,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class VerifyMfaCodeHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final String CLIENT_ID = "client-id";
     private static final String CLIENT_NAME = "client-name";
@@ -93,7 +92,7 @@ class VerifyMfaCodeHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
             new Session("session-id")
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
@@ -123,7 +122,7 @@ class VerifyMfaCodeHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
@@ -192,8 +191,9 @@ class VerifyMfaCodeHandlerTest {
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_VERIFIED,
@@ -232,8 +232,9 @@ class VerifyMfaCodeHandlerTest {
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_VERIFIED,
@@ -269,8 +270,9 @@ class VerifyMfaCodeHandlerTest {
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_VERIFIED,
@@ -306,8 +308,9 @@ class VerifyMfaCodeHandlerTest {
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_VERIFIED,
@@ -343,8 +346,9 @@ class VerifyMfaCodeHandlerTest {
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_VERIFIED,
@@ -376,8 +380,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
@@ -470,9 +475,10 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
         verify(codeStorageService)
-                .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+                .deleteIncorrectMfaCodeAttemptsCount(
+                        CommonTestVariables.EMAIL, MFAMethodType.AUTH_APP);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -489,7 +495,8 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var authAppSecret =
                 List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
@@ -509,8 +516,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -548,8 +556,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1043));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.INVALID_CODE_SENT,
@@ -591,8 +600,10 @@ class VerifyMfaCodeHandlerTest {
         }
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                        CommonTestVariables.EMAIL,
+                        CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                        blockTime);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -611,7 +622,7 @@ class VerifyMfaCodeHandlerTest {
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         var codeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedPrefix))
+        when(codeStorageService.isBlockedForEmail(CommonTestVariables.EMAIL, codeBlockedPrefix))
                 .thenReturn(true);
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -622,8 +633,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedPrefix, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, codeBlockedPrefix, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -657,8 +669,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1037));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
                 FrontendAuditableEvent.INVALID_CODE_SENT,
@@ -695,8 +708,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1041));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(auditService);
         verifyNoInteractions(cloudwatchMetricsService);
     }
@@ -742,7 +756,7 @@ class VerifyMfaCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,

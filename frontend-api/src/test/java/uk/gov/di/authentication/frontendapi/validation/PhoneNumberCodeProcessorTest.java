@@ -56,7 +56,6 @@ class PhoneNumberCodeProcessorTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
@@ -100,7 +99,7 @@ class PhoneNumberCodeProcessorTest {
                 codeRequestType);
 
         phoneNumberCodeProcessor.validateCode();
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+        verify(codeStorageService).deleteOtpCode(CommonTestVariables.EMAIL, notificationType);
     }
 
     @Test
@@ -148,7 +147,8 @@ class PhoneNumberCodeProcessorTest {
                 codeRequestType);
 
         phoneNumberCodeProcessor.validateCode();
-        verify(codeStorageService, never()).deleteOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+        verify(codeStorageService, never())
+                .deleteOtpCode(CommonTestVariables.EMAIL, notificationType);
     }
 
     @Test
@@ -241,7 +241,10 @@ class PhoneNumberCodeProcessorTest {
 
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
-                        TEST_EMAIL_ADDRESS, CommonTestVariables.UK_MOBILE_NUMBER, true, true);
+                        CommonTestVariables.EMAIL,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        true,
+                        true);
         verify(authenticationService, never())
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(anyString(), anyString());
         verify(auditService)
@@ -251,7 +254,7 @@ class PhoneNumberCodeProcessorTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         INTERNAL_SUB_ID,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
@@ -274,7 +277,7 @@ class PhoneNumberCodeProcessorTest {
 
         verify(authenticationService)
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
-                        TEST_EMAIL_ADDRESS, CommonTestVariables.UK_MOBILE_NUMBER);
+                        CommonTestVariables.EMAIL, CommonTestVariables.UK_MOBILE_NUMBER);
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(
                         anyString(), anyString(), anyBoolean(), anyBoolean());
@@ -285,7 +288,7 @@ class PhoneNumberCodeProcessorTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         INTERNAL_SUB_ID,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
@@ -379,7 +382,7 @@ class PhoneNumberCodeProcessorTest {
     }
 
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(session.getSessionId()).thenReturn(SESSION_ID);
         when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -389,12 +392,12 @@ class PhoneNumberCodeProcessorTest {
         when(userProfile.getPhoneNumber()).thenReturn(DIFFERENT_PHONE_NUMBER);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
-                        TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
+                        CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, NotificationType.MFA_SMS))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, NotificationType.MFA_SMS))
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(false);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
@@ -409,14 +412,16 @@ class PhoneNumberCodeProcessorTest {
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
+                .thenReturn(6);
+        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
-                        TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
+                        CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
@@ -432,14 +437,14 @@ class PhoneNumberCodeProcessorTest {
 
     public void setUpBlockedPhoneNumberCode(
             CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
-                        TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
+                        CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(

@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -58,7 +59,6 @@ class AuthAppCodeProcessorTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String SESSION_ID = "a-session-id";
     private static final String IP_ADDRESS = "123.123.123.123";
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
     private final int MAX_RETRIES = 5;
 
@@ -191,7 +191,8 @@ class AuthAppCodeProcessorTest {
 
         verify(mockDynamoService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
-        verify(mockDynamoService).setAuthAppAndAccountVerified(TEST_EMAIL_ADDRESS, AUTH_APP_SECRET);
+        verify(mockDynamoService)
+                .setAuthAppAndAccountVerified(CommonTestVariables.EMAIL, AUTH_APP_SECRET);
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
@@ -199,7 +200,7 @@ class AuthAppCodeProcessorTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         INTERNAL_SUB_ID,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -221,7 +222,8 @@ class AuthAppCodeProcessorTest {
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockDynamoService)
-                .setVerifiedAuthAppAndRemoveExistingMfaMethod(TEST_EMAIL_ADDRESS, AUTH_APP_SECRET);
+                .setVerifiedAuthAppAndRemoveExistingMfaMethod(
+                        CommonTestVariables.EMAIL, AUTH_APP_SECRET);
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
@@ -229,7 +231,7 @@ class AuthAppCodeProcessorTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         INTERNAL_SUB_ID,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -256,7 +258,7 @@ class AuthAppCodeProcessorTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         INTERNAL_SUB_ID,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -280,7 +282,7 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpSuccessfulCodeRequest(CodeRequest codeRequest) {
-        when(mockSession.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(mockSession.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(mockSession.getSessionId()).thenReturn(SESSION_ID);
         when(mockSession.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);

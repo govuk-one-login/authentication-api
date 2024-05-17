@@ -46,7 +46,6 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 
 public class NotificationHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String BUCKET_NAME = "test-s3-bucket";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
@@ -74,7 +73,8 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -86,7 +86,8 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
+        verify(notificationService)
+                .sendEmail(CommonTestVariables.EMAIL, personalisation, VERIFY_EMAIL);
     }
 
     @Test
@@ -94,7 +95,9 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
+                        CommonTestVariables.EMAIL,
+                        PASSWORD_RESET_CONFIRMATION,
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -105,7 +108,7 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, PASSWORD_RESET_CONFIRMATION);
+                .sendEmail(CommonTestVariables.EMAIL, personalisation, PASSWORD_RESET_CONFIRMATION);
     }
 
     @Test
@@ -141,7 +144,9 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
+                        CommonTestVariables.EMAIL,
+                        ACCOUNT_CREATED_CONFIRMATION,
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -152,7 +157,8 @@ public class NotificationHandlerTest {
         personalisation.put("gov-uk-accounts-url", govUKAccountsUrl.toString());
 
         verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);
+                .sendEmail(
+                        CommonTestVariables.EMAIL, personalisation, ACCOUNT_CREATED_CONFIRMATION);
     }
 
     @Test
@@ -180,7 +186,7 @@ public class NotificationHandlerTest {
     void shouldNotSendAnythingWhenATermsAndConditionsBulkEmail() throws Json.JsonException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         TERMS_AND_CONDITIONS_BULK_EMAIL,
                         "",
                         SupportedLanguage.EN);
@@ -210,7 +216,8 @@ public class NotificationHandlerTest {
     void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -221,7 +228,7 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
+                .sendEmail(CommonTestVariables.EMAIL, personalisation, VERIFY_EMAIL);
 
         RuntimeException exception =
                 assertThrows(
@@ -332,7 +339,9 @@ public class NotificationHandlerTest {
                     throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
+                        CommonTestVariables.EMAIL,
+                        ACCOUNT_CREATED_CONFIRMATION,
+                        SupportedLanguage.EN);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -358,7 +367,7 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         RESET_PASSWORD_WITH_CODE,
                         "654321",
                         SupportedLanguage.EN);
@@ -374,7 +383,7 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD_WITH_CODE);
+                .sendEmail(CommonTestVariables.EMAIL, personalisation, RESET_PASSWORD_WITH_CODE);
     }
 
     @Test
@@ -382,7 +391,7 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                         "654321",
                         SupportedLanguage.EN);
@@ -397,7 +406,9 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendEmail(
-                        TEST_EMAIL_ADDRESS, personalisation, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+                        CommonTestVariables.EMAIL,
+                        personalisation,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
     }
 
     private String buildContactUsUrl() {

@@ -91,7 +91,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.c
 
 class ResetPasswordRequestHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final long CODE_EXPIRY_TIME = 900;
@@ -128,12 +127,12 @@ class ResetPasswordRequestHandlerTest {
                     .withTestClientEmailAllowlist(
                             List.of(
                                     "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    TEST_EMAIL_ADDRESS,
+                                    CommonTestVariables.EMAIL,
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
             new Session(IdGenerator.generate())
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
@@ -155,7 +154,10 @@ class ResetPasswordRequestHandlerTest {
     public void tearDown() {
         assertThat(
                 logging.events(),
-                not(hasItem(withMessageContaining(session.getSessionId(), TEST_EMAIL_ADDRESS))));
+                not(
+                        hasItem(
+                                withMessageContaining(
+                                        session.getSessionId(), CommonTestVariables.EMAIL))));
     }
 
     @BeforeEach
@@ -170,10 +172,11 @@ class ResetPasswordRequestHandlerTest {
     @Nested
     class WhenTheRequestIsValid {
 
-        static final String validRequestBody = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        static final String validRequestBody =
+                format("{ \"email\": \"%s\"}", CommonTestVariables.EMAIL);
         static NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         RESET_PASSWORD_WITH_CODE,
                         TEST_SIX_DIGIT_CODE,
                         SupportedLanguage.EN);
@@ -181,19 +184,20 @@ class ResetPasswordRequestHandlerTest {
         public static APIGatewayProxyRequestEvent validEvent;
 
         private boolean isSessionWithEmailSent(Session session) {
-            return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
+            return session.getEmailAddress().equals(CommonTestVariables.EMAIL);
         }
 
         @BeforeEach
         void setup() {
             validEvent = eventWithHeadersAndBody(validHeaders(), validRequestBody);
             Subject subject = new Subject("subject_1");
-            when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getSubjectFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(subject);
+            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(
                             Optional.of(
                                     userProfileWithPhoneNumber(
@@ -214,7 +218,7 @@ class ResetPasswordRequestHandlerTest {
                             true,
                             true,
                             NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-            when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(
                             new UserCredentials()
                                     .withMfaMethods(List.of(disabledMfaMethod, enabledMfaMethod)));
@@ -230,7 +234,7 @@ class ResetPasswordRequestHandlerTest {
             assertEquals(expectedBody, result.getBody());
             verify(codeStorageService)
                     .saveOtpCode(
-                            TEST_EMAIL_ADDRESS,
+                            CommonTestVariables.EMAIL,
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
@@ -264,7 +268,7 @@ class ResetPasswordRequestHandlerTest {
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
+                            CommonTestVariables.EMAIL,
                             "123.123.123.123",
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
@@ -305,7 +309,7 @@ class ResetPasswordRequestHandlerTest {
             verifyNoInteractions(awsSqsClient);
             verify(codeStorageService)
                     .saveOtpCode(
-                            TEST_EMAIL_ADDRESS,
+                            CommonTestVariables.EMAIL,
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
@@ -318,7 +322,7 @@ class ResetPasswordRequestHandlerTest {
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
+                            CommonTestVariables.EMAIL,
                             "123.123.123.123",
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
@@ -329,7 +333,7 @@ class ResetPasswordRequestHandlerTest {
 
         @Test
         void shouldReturn404IfUserProfileIsNotFound() {
-            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.empty());
 
             usingValidSession();
@@ -347,7 +351,7 @@ class ResetPasswordRequestHandlerTest {
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
             var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(
-                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
                     .thenReturn(true);
 
             var result = handler.handleRequest(validEvent, context);
@@ -365,7 +369,7 @@ class ResetPasswordRequestHandlerTest {
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
             var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(
-                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
                     .thenReturn(true);
 
             var result = handler.handleRequest(validEvent, context);
@@ -403,14 +407,16 @@ class ResetPasswordRequestHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
             verify(codeStorageService)
                     .saveBlockedForEmail(
-                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, LOCKOUT_DURATION);
+                            CommonTestVariables.EMAIL,
+                            codeRequestBlockedKeyPrefix,
+                            LOCKOUT_DURATION);
             verify(session).resetPasswordResetCount();
             verifyNoInteractions(awsSqsClient);
         }
 
         @Test
         void shouldReturn400WhenNoEmailIsPresentInSession() {
-            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(sessionService.getSessionFromRequestHeaders(anyMap()))
                     .thenReturn(Optional.of(new Session(IdGenerator.generate())));
@@ -428,7 +434,7 @@ class ResetPasswordRequestHandlerTest {
     class WhenRequestIsInvalid {
         @Test
         void shouldReturn400IfInvalidSessionProvided() {
-            var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
+            var body = format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL);
             APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(Map.of(), body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -476,9 +482,9 @@ class ResetPasswordRequestHandlerTest {
 
     private Session usingSessionWithPasswordResetCount(int passwordResetCount) {
         Session session = mock(Session.class);
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(session.getSessionId()).thenReturn(SESSION_ID);
-        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.validateSession(CommonTestVariables.EMAIL)).thenReturn(true);
         when(session.getPasswordResetCount()).thenReturn(passwordResetCount);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
@@ -505,7 +511,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private UserProfile userProfileWithPhoneNumber(String phoneNumber) {
-        return new UserProfile().withEmail(TEST_EMAIL_ADDRESS).withPhoneNumber(phoneNumber);
+        return new UserProfile().withEmail(CommonTestVariables.EMAIL).withPhoneNumber(phoneNumber);
     }
 
     private ClientSession getClientSession() {
