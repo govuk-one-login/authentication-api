@@ -8,4 +8,37 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "di-auth-development-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.dev.account.gov.uk"
-orch_client_id                       = "orchestrationAuth"
+
+# lockout config
+lockout_duration                     = 60
+reduced_lockout_duration             = 30
+incorrect_password_lockout_count_ttl = 60
+lockout_count_ttl                    = 60
+otp_code_ttl_duration                = 60
+
+auth_frontend_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0PcOHuVXOuexYZmpOlCo
+vFcGfezObHnnVTTfnCrS5TBmAEC9JNwH/YFmE/zx84I1dy5fEjll+2GIe8Hcue+W
+ubQMToFaAAeaqowqjgJYIPjgTubJ+baAP7+6GFPBWkk+LntBRQaoF7YkICT6im9h
+JTrFb5KxyDNT/j4SCCXlkMTzqmeMVM59NM66MSS7OXsUny9GinG6xhDovUswvU99
+N7GtGZBYIDmG6IrT/rS9ZosBLeLqCvRAfaYjq0/2EKHcudyeYjPDkkGpBNt7vXJJ
+A+Ud3Nx8MmuKS3kb8NoDhQJxKxg7lgjAj+Lhb9xr+Y074hdTs5ju2Jx2tmP1y9vl
+RwIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
+auth_to_orch_token_signing_public_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESgoCw5pZYyGtFpPBV2YfU3DGrDqC
+8UKoRGN4gYTbuwAsLkOSYYY8BM7dhSEhgF4DX9i66HXjteogg6mhOZI1mA==
+-----END PUBLIC KEY-----
+EOT
+
+orch_client_id                     = "orchestrationAuth"
+orch_redirect_uri                  = "https://oidc.dev.account.gov.uk/orchestration-redirect"
+authorize_protected_subnet_enabled = true
+
+orch_openid_configuration_name = ""
+
+orch_account_id = "767397776536"
