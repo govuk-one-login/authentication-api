@@ -185,6 +185,8 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
 
+  #region Open ID Configuration Lambda
+
   OpenIdConfigurationFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
@@ -295,6 +297,9 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Trustmark Lambda
 
   TrustmarkFunction:
     Type: AWS::Serverless::Function
@@ -406,6 +411,9 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Back Channel Logout Request Lambda
 
   BackChannelLogoutRequestFunction:
     Type: AWS::Serverless::Function
@@ -522,6 +530,9 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Doc App Callback Lambda
 
   DocAppCallbackFunction:
     Type: AWS::Serverless::Function
@@ -646,6 +657,9 @@ Resources:
         - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback'
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
           ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+  #endregion
+
+  #region Token Lambda
 
   TokenFunction:
     Type: AWS::Serverless::Function
@@ -841,6 +855,7 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
