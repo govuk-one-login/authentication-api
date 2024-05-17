@@ -45,6 +45,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -301,6 +302,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             UserContext userContext,
             AuditableEvent auditableEvent,
             AuditService.MetadataPair... metadataPairs) {
+        String txmaAuditEncoded =
+                getHeaderValueOrElse(input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, null);
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
+
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext
@@ -314,7 +321,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                AuditService.RestrictedSection.empty,
+                restrictedSection,
                 metadataPairs);
     }
 

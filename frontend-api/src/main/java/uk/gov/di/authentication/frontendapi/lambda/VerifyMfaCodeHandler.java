@@ -306,6 +306,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             pair("account-recovery", isAccountRecovery),
                             pair("journey-type", journeyType));
                 };
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext
@@ -319,7 +324,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                AuditService.RestrictedSection.empty,
+                restrictedSection,
                 metadataPairs.toArray(new AuditService.MetadataPair[0]));
     }
 }

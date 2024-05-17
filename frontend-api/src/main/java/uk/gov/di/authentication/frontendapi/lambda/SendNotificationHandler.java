@@ -178,6 +178,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getNotificationType(),
                             request.getJourneyType());
             if (codeRequestValid.isPresent()) {
+                var restrictedSection =
+                        new AuditService.RestrictedSection(
+                                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
                         userContext
@@ -191,7 +195,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         IpAddressHelper.extractIpAddress(input),
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
             switch (request.getNotificationType()) {
@@ -310,6 +314,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             LOG.info("{} placed on queue", request.getNotificationType());
             LOG.info("Successfully processed request");
         }
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         auditService.submitAuditEvent(
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
@@ -324,7 +333,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 IpAddressHelper.extractIpAddress(input),
                 Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                AuditService.RestrictedSection.empty);
+                restrictedSection);
         return generateEmptySuccessApiGatewayResponse();
     }
 

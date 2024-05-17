@@ -67,6 +67,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -87,6 +89,8 @@ class VerifyMfaCodeHandlerTest {
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
@@ -720,11 +724,10 @@ class VerifyMfaCodeHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        "Client-Session-Id",
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
+                        Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
         event.setBody(objectMapper.writeValueAsString(mfaCodeRequest));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
@@ -760,7 +763,7 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pairs);
     }
 }

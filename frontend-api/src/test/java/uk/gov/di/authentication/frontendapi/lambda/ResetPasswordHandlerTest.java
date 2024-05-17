@@ -66,6 +66,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -107,6 +108,8 @@ class ResetPasswordHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
@@ -170,7 +173,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -201,7 +204,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -233,7 +236,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
@@ -245,7 +248,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -277,7 +280,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -306,7 +309,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -376,7 +379,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -423,7 +426,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
@@ -435,7 +438,7 @@ class ResetPasswordHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private APIGatewayProxyResponseEvent generateRequest(String password) {
@@ -443,6 +446,7 @@ class ResetPasswordHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\"}", password));
         event.setHeaders(headers);

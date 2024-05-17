@@ -74,6 +74,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -100,6 +101,8 @@ class CheckUserExistsHandlerTest {
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -190,7 +193,7 @@ class CheckUserExistsHandlerTest {
                             "123.123.123.123",
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
-                            AuditService.RestrictedSection.empty,
+                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
 
@@ -263,7 +266,7 @@ class CheckUserExistsHandlerTest {
                             "123.123.123.123",
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
-                            AuditService.RestrictedSection.empty,
+                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
         }
@@ -293,7 +296,7 @@ class CheckUserExistsHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
 
@@ -342,7 +345,7 @@ class CheckUserExistsHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private void usingValidSession() {
@@ -403,13 +406,13 @@ class CheckUserExistsHandlerTest {
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(
-                        Map.of(
-                                "Session-Id",
-                                session.getSessionId(),
-                                CLIENT_SESSION_ID_HEADER,
-                                CLIENT_SESSION_ID,
-                                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                PERSISTENT_SESSION_ID))
+                        Map.ofEntries(
+                                Map.entry("Session-Id", session.getSessionId()),
+                                Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                                Map.entry(
+                                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                                        PERSISTENT_SESSION_ID),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)))
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp("123.123.123.123"));
     }

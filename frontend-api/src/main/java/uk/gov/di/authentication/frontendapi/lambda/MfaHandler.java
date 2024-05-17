@@ -141,6 +141,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         journeyType.getValue());
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
             }
+
+            var restrictedSection =
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             Optional<ErrorResponse> codeRequestValid =
                     validateCodeRequestAttempts(email, journeyType, userContext);
             if (codeRequestValid.isPresent()) {
@@ -157,7 +162,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
 
@@ -179,7 +184,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("journey-type", journeyType),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
 
@@ -201,7 +206,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("journey-type", journeyType),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
 
@@ -257,7 +262,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     IpAddressHelper.extractIpAddress(input),
                     phoneNumber,
                     persistentSessionId,
-                    AuditService.RestrictedSection.empty,
+                    restrictedSection,
                     pair("journey-type", journeyType),
                     pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
             LOG.info("Successfully processed request");

@@ -89,6 +89,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -125,6 +126,8 @@ class SendNotificationHandlerTest {
                     .withTestClient(true)
                     .withClientID(TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(List.of(CommonTestVariables.EMAIL));
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
@@ -254,7 +257,8 @@ class SendNotificationHandlerTest {
                                 "123.123.123.123",
                                 AuditService.UNKNOWN,
                                 PERSISTENT_ID,
-                                AuditService.RestrictedSection.empty);
+                                new AuditService.RestrictedSection(
+                                        Optional.of(ENCODED_DEVICE_DETAILS)));
             }
         }
     }
@@ -325,7 +329,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -372,7 +376,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @ParameterizedTest
@@ -417,7 +421,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @ParameterizedTest
@@ -595,7 +599,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         phoneNumber,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -732,7 +736,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -774,7 +778,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -817,7 +821,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -849,7 +853,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -883,7 +887,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -919,7 +923,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -951,7 +955,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -985,7 +989,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -1019,7 +1023,7 @@ class SendNotificationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @ParameterizedTest
@@ -1077,6 +1081,7 @@ class SendNotificationHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setBody(body);

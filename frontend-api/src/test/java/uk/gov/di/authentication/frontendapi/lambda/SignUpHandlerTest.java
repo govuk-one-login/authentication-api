@@ -67,6 +67,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -100,6 +101,8 @@ class SignUpHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private static final Json objectMapper = SerializationService.getInstance();
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private SignUpHandler handler;
 
@@ -148,6 +151,8 @@ class SignUpHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
@@ -192,7 +197,7 @@ class SignUpHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         persistentId,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
 
@@ -258,11 +263,10 @@ class SignUpHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -283,7 +287,7 @@ class SignUpHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private void usingValidSession() {

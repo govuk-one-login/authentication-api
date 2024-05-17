@@ -175,6 +175,10 @@ public class StartHandler
                                 .map(UserProfile::getSubjectID)
                                 .orElse(AuditService.UNKNOWN);
             }
+            var restrictedSection =
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.START_INFO_FOUND,
                     userContext.getClient().get().getClientID(),
@@ -188,7 +192,7 @@ public class StartHandler
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty,
+                    restrictedSection,
                     pair("internalSubjectId", internalSubjectId));
 
             return generateApiGatewayProxyResponse(200, startResponse);

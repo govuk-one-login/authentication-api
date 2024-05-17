@@ -72,6 +72,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -87,6 +88,9 @@ public class MfaHandlerTest {
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
     private static final String TEST_CLIENT_ID = "test-client-id";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
+
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
@@ -154,6 +158,8 @@ public class MfaHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
         when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
@@ -183,7 +189,7 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         persistentId,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -196,6 +202,8 @@ public class MfaHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
         when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, VERIFY_PHONE_NUMBER))
@@ -237,7 +245,7 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         persistentId,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -254,11 +262,10 @@ public class MfaHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(format("{ \"email\": \"%s\"}", CommonTestVariables.EMAIL));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -280,7 +287,7 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -294,11 +301,10 @@ public class MfaHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(format("{ \"email\": \"%s\"}", CommonTestVariables.EMAIL));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 

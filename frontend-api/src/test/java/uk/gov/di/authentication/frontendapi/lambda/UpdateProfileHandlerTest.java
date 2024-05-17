@@ -60,8 +60,10 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -82,6 +84,9 @@ class UpdateProfileHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT, "test.account.gov.uk", SaltHelper.generateNewSalt());
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
+
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -141,11 +146,10 @@ class UpdateProfileHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -169,7 +173,7 @@ class UpdateProfileHandlerTest {
                         "",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -181,16 +185,17 @@ class UpdateProfileHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
-                Map.of(
-                        COOKIE,
-                        buildCookieString(
-                                "gs",
-                                SESSION_ID + "." + CLIENT_SESSION_ID,
-                                3600,
-                                "Secure; HttpOnly;",
-                                "domain"),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry(
+                                COOKIE,
+                                buildCookieString(
+                                        "gs",
+                                        SESSION_ID + "." + CLIENT_SESSION_ID,
+                                        3600,
+                                        "Secure; HttpOnly;",
+                                        "domain")),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -211,7 +216,7 @@ class UpdateProfileHandlerTest {
                         "",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -220,11 +225,10 @@ class UpdateProfileHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
@@ -247,7 +251,7 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         "",
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private void usingValidSession() {
@@ -289,7 +293,7 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         "",
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
 
         return response;
     }

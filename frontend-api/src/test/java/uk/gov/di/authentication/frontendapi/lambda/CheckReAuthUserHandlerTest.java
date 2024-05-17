@@ -57,6 +57,8 @@ class CheckReAuthUserHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private static final String CLIENT_ID = "test-client-id";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
@@ -77,6 +79,7 @@ class CheckReAuthUserHandlerTest {
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         var userProfile = generateUserProfile();
         userProfile.setSubjectID(TEST_SUBJECT_ID);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
@@ -133,7 +136,7 @@ class CheckReAuthUserHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -166,7 +169,7 @@ class CheckReAuthUserHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
@@ -200,7 +203,7 @@ class CheckReAuthUserHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", 5));
     }
@@ -257,7 +260,7 @@ class CheckReAuthUserHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private UserProfile generateUserProfile() {

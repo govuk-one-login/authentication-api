@@ -68,6 +68,8 @@ public class AccountInterventionsHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
     private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private static final Instant fixedDate = Instant.now();
 
@@ -117,6 +119,7 @@ public class AccountInterventionsHandlerTest {
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(TEST_CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(TEST_CLIENT_SESSION_ID);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
@@ -334,7 +337,7 @@ public class AccountInterventionsHandlerTest {
                         TEST_IP_ADDRESS,
                         AuditService.UNKNOWN,
                         TEST_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private UserProfile generateUserProfile() {
