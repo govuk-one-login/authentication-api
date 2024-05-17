@@ -1,0 +1,39 @@
+name: Create 'Simple' module promotion artifact
+
+on:
+  workflow_call:
+    inputs:
+      module_name:
+        description: "The name of the module to deploy"
+        type: string
+        required: true
+      terraform_directory_name:
+        description: "The name of the directory where the terraform for this module is stored"
+        type: string
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download ${{ inputs.module_name }} code artifact
+        id: download_artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-${{ inputs.module_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}/artifacts
+
+      - name: Zip ${{ inputs.module_name }} Terraform files
+        id: upload_object
+        working-directory: ci/terraform
+        run: zip -r "${{ inputs.terraform_directory_name }}.zip" .
+
+      - name: upload promotion_artifact_${{ inputs.terraform_directory_name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion_artifact_${{ inputs.terraform_directory_name }}
+          path: ci/terraform/${{ inputs.terraform_directory_name }}.zip
