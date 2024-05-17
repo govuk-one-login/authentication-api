@@ -8,7 +8,6 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
@@ -25,7 +24,6 @@ class MfaCodeProcessorFactoryTest {
     private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final Session session = mock(Session.class);
-    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
@@ -63,7 +61,6 @@ class MfaCodeProcessorFactoryTest {
     void whenMfaMethodGeneratesPhoneNumberCodeProcessor() {
         when(session.getEmailAddress()).thenReturn("test@test.com");
         when(userContext.getSession()).thenReturn(session);
-        when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory.getMfaCodeProcessor(
                         MFAMethodType.SMS,
