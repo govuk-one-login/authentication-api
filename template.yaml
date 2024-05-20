@@ -580,6 +580,7 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
@@ -1037,6 +1038,7 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Authorisation Lambda
 
   AuthorisationFunction:
     Type: AWS::Serverless::Function
@@ -1171,7 +1173,7 @@ Resources:
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
-  AuthorisationFunctionCrossAccountPermission:
+  AuthorisationFunctionCrossAccountGetPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref AuthorisationFunction.Alias
@@ -1182,12 +1184,31 @@ Resources:
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
           ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
 
+  AuthorisationFunctionCrossAccountPostPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorisationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/authorize'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
   AuthorisationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-authorisation-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  AuthorisationSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
 
   AuthorisationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
@@ -1256,6 +1277,8 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+
+  #endregion
 
   HttpsEgressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
