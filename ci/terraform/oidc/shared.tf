@@ -30,6 +30,16 @@ data "terraform_remote_state" "auth-ext-api" {
   }
 }
 
+data "terraform_remote_state" "contra" {
+  backend = "s3"
+  config = {
+    bucket   = var.contra_state_bucket
+    key      = "${var.environment}-experian-phone-check-terraform.tfstate"
+    role_arn = var.deployer_role_arn
+    region   = var.aws_region
+  }
+}
+
 
 locals {
   redis_key                                           = "session"
@@ -75,4 +85,6 @@ locals {
   pending_email_check_queue_access_policy_arn         = data.terraform_remote_state.shared.outputs.pending_email_check_queue_access_policy_arn
   user_profile_kms_key_arn                            = data.terraform_remote_state.shared.outputs.user_profile_kms_key_arn
   email_check_results_encryption_policy_arn           = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
+  experian_phone_check_sqs_queue_id                   = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_id
+  experian_phone_check_sqs_queue_policy_arn           = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_policy_arn
 }
