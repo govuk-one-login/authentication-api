@@ -523,10 +523,17 @@ variable "orch_token_enabled" {
   default     = false
 }
 
+variable "orch_jwks_enabled" {
+  description = "Flag to enable routing jwks traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_openid_configuration_name" {
   type    = string
   default = ""
 }
+
 variable "orch_trustmark_name" {
   type    = string
   default = ""
@@ -538,6 +545,11 @@ variable "orch_doc_app_callback_name" {
 }
 
 variable "orch_token_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_jwks_name" {
   type    = string
   default = ""
 }
