@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -46,6 +47,7 @@ class RemoveAccountHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
 
     private RemoveAccountHandler handler;
     private final Context context = mock(Context.class);
@@ -85,7 +87,30 @@ class RemoveAccountHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(accountDeletionService).removeAccount(Optional.of(event), userProfile);
+        verify(accountDeletionService)
+                .removeAccount(
+                        Optional.of(event),
+                        userProfile,
+                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+    }
+
+    @Test
+    void shouldNotSendEncodedAuditDataIfHeaderNotPresent() throws Json.JsonException {
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+
+        var event = generateApiGatewayEvent(expectedCommonSubject);
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+        verify(accountDeletionService)
+                .removeAccount(
+                        Optional.of(event), userProfile, AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -135,7 +160,12 @@ class RemoveAccountHandlerTest {
         proxyRequestContext.setAuthorizer(authorizerParams);
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         event.setRequestContext(proxyRequestContext);
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_ID,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
 
         return event;
     }

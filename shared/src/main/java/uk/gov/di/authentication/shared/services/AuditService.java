@@ -79,7 +79,7 @@ public class AuditService {
     }
 
     public record RestrictedSection(Optional<String> encoded) {
-        public static RestrictedSection empty = new RestrictedSection(Optional.empty());
+        public static final RestrictedSection empty = new RestrictedSection(Optional.empty());
     }
 
     public void submitAuditEvent(

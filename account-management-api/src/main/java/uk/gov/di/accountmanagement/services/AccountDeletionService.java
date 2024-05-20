@@ -45,7 +45,9 @@ public class AccountDeletionService {
     }
 
     public DeletedAccountIdentifiers removeAccount(
-            Optional<APIGatewayProxyRequestEvent> input, UserProfile userProfile)
+            Optional<APIGatewayProxyRequestEvent> input,
+            UserProfile userProfile,
+            AuditService.RestrictedSection restrictedSection)
             throws Json.JsonException {
         var accountIdentifiers =
                 new DeletedAccountIdentifiers(
@@ -102,7 +104,7 @@ public class AccountDeletionService {
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     AuditService.UNKNOWN,
-                    AuditService.RestrictedSection.empty);
+                    restrictedSection);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

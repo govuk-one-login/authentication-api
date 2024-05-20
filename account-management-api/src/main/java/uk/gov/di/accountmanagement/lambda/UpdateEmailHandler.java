@@ -17,6 +17,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -177,7 +178,7 @@ public class UpdateEmailHandler
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty,
+                    AuditHelper.buildRestrictedSection(input.getHeaders()),
                     AuditService.MetadataPair.pair(
                             "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
 
