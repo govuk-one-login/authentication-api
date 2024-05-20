@@ -59,6 +59,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -207,7 +208,6 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
-        // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -223,10 +223,8 @@ class LoginHandlerTest {
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
@@ -256,6 +254,44 @@ class LoginHandlerTest {
                         false);
 
         verifySessionIsSaved();
+    }
+
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        var headersWithoutTICFHeader =
+                VALID_HEADERS.entrySet().stream()
+                        .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                        .collect(
+                                Collectors.toUnmodifiableMap(
+                                        Map.Entry::getKey, Map.Entry::getValue));
+
+        var event =
+                eventWithHeadersAndBody(headersWithoutTICFHeader, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_ID.getValue(),
+                        auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
 
     @ParameterizedTest

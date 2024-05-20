@@ -140,6 +140,49 @@ class CheckReAuthUserHandlerTest {
     }
 
     @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+        var context = mock(Context.class);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+
+        when(configurationService.getEnvironment()).thenReturn("build");
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
+        when(userContext.getTxmaAuditEncoded()).thenReturn(null);
+
+        var userProfile = generateUserProfile();
+        var expectedRpPairwiseSub =
+                ClientSubjectHelper.getSubject(
+                                userProfile,
+                                clientRegistry,
+                                authenticationService,
+                                INTERNAL_SECTOR_URI)
+                        .getValue();
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, expectedRpPairwiseSub),
+                        userContext);
+
+        assertEquals(200, result.getStatusCode());
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
+    }
+
+    @Test
     void shouldReturn404ForWhenUserNotFound() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

@@ -22,6 +22,7 @@ public class AuditService {
     private static final Logger LOG = LogManager.getLogger(AuditService.class);
 
     public static final String UNKNOWN = "";
+    public static final String COMPONENT_ID = "AUTH";
 
     private final Clock clock;
     private final AwsSqsClient txmaQueueClient;
@@ -50,7 +51,7 @@ public class AuditService {
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId("AUTH")
+                        .withComponentId(COMPONENT_ID)
                         .withUser(user);
 
         addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);

@@ -156,8 +156,9 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verifyNoInteractions(sqsClient);
@@ -177,14 +178,44 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentials());
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
+        var event = generateRequest(NEW_PASSWORD);
+        event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+        verifyNoInteractions(sqsClient);
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
+                        TEST_CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
+    }
+
+    @Test
     void shouldReturn204ForSuccessfulRequestAndDontSendConfirmationToSMSWhenPhoneNumberNotVerified()
             throws Json.JsonException {
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(sqsClient, times(1))
@@ -215,8 +246,9 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(true));
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(sqsClient, times(1))
@@ -258,8 +290,9 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(sqsClient, times(1))
@@ -290,8 +323,9 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateMigratedUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(sqsClient, times(1))
@@ -317,6 +351,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -327,7 +362,9 @@ class ResetPasswordHandlerTest {
 
     @Test
     void shouldReturn400IfPasswordFailsValidation() {
-        APIGatewayProxyResponseEvent result = generateRequest("password");
+        var event = generateRequest("password");
+
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
@@ -340,8 +377,9 @@ class ResetPasswordHandlerTest {
     void shouldReturn400IfNewPasswordEqualsExistingPassword() {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
@@ -358,8 +396,9 @@ class ResetPasswordHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
+        var event = generateRequest(NEW_PASSWORD);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
@@ -406,7 +445,8 @@ class ResetPasswordHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
 
-        var result = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
@@ -441,7 +481,7 @@ class ResetPasswordHandlerTest {
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
-    private APIGatewayProxyResponseEvent generateRequest(String password) {
+    private APIGatewayProxyRequestEvent generateRequest(String password) {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
@@ -452,7 +492,7 @@ class ResetPasswordHandlerTest {
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
-        return handler.handleRequest(event, context);
+        return event;
     }
 
     private void usingValidClientSession() {

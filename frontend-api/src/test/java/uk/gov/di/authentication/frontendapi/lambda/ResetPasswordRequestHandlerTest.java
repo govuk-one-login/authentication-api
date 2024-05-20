@@ -58,6 +58,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -281,6 +282,36 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
+        void checkPasswordResetRequestedAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            usingValidSession();
+            var headers = validEvent.getHeaders();
+            var headersWithoutTICF =
+                    headers.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            validEvent.setHeaders(headersWithoutTICF);
+
+            handler.handleRequest(validEvent, context);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                            TEST_CLIENT_ID,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            expectedCommonSubject,
+                            CommonTestVariables.EMAIL,
+                            "123.123.123.123",
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PERSISTENT_ID,
+                            AuditService.RestrictedSection.empty,
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
         void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
             when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                     .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
@@ -330,6 +361,41 @@ class ResetPasswordRequestHandlerTest {
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
+        void
+                checkPasswordResetRequestedForTestClientAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            usingValidSession();
+            usingValidClientSession();
+            var headers = validEvent.getHeaders();
+            var headersWithoutTICF =
+                    headers.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            validEvent.setHeaders(headersWithoutTICF);
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
+                            TEST_CLIENT_ID,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            expectedCommonSubject,
+                            CommonTestVariables.EMAIL,
+                            "123.123.123.123",
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PERSISTENT_ID,
+                            AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }

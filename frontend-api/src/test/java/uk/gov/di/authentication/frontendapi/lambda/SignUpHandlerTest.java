@@ -212,6 +212,53 @@ class SignUpHandlerTest {
     }
 
     @Test
+    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided()
+            throws Json.JsonException {
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry(true)));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
+        usingValidSession();
+        usingValidClientSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        var expectedRpPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CREATE_ACCOUNT,
+                        CLIENT_ID.getValue(),
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        persistentId,
+                        AuditService.RestrictedSection.empty,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                        pair("rpPairwiseId", expectedRpPairwiseId));
+    }
+
+    @Test
     void shouldReturn400IfSessionIdMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -288,6 +335,40 @@ class SignUpHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+    }
+
+    @Test
+    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided()
+            throws Json.JsonException {
+        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(
+                Map.ofEntries(
+                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                        AuditService.UNKNOWN,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        "joe.bloggs@test.com",
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        AuditService.RestrictedSection.empty);
     }
 
     private void usingValidSession() {

@@ -54,7 +54,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertUnvalidatedTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -151,7 +151,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(204));
 
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
@@ -181,7 +181,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
@@ -208,7 +208,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
         assertThat(response, hasStatus(204));
 
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
@@ -290,7 +290,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
         assertThat(response, hasStatus(204));
 
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
@@ -329,7 +329,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         List<AuditableEvent> expectedAuditableEvents =
                 List.of(CODE_VERIFIED, ACCOUNT_RECOVERY_BLOCK_REMOVED);
-        assertUnvalidatedTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, expectedAuditableEvents);
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
@@ -366,7 +366,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 nonRegistrationJourneyTypes.contains(journeyType)
                         ? singletonList(CODE_VERIFIED)
                         : List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP);
-        assertUnvalidatedTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, expectedAuditableEvents);
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(
@@ -667,7 +667,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(
@@ -697,7 +697,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertTrue(
@@ -725,7 +725,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertTrue(
@@ -752,7 +752,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getPhoneNumberForUser(EMAIL_ADDRESS).get(), equalTo(PHONE_NUMBER));
@@ -775,7 +775,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
         assertThat(userStore.isAuthAppEnabled(EMAIL_ADDRESS), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));

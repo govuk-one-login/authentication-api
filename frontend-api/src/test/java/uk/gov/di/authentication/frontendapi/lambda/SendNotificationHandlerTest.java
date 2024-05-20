@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -82,6 +81,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSISTENT_ID;
@@ -125,7 +125,7 @@ class SendNotificationHandlerTest {
             new ClientRegistry()
                     .withTestClient(true)
                     .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(List.of(CommonTestVariables.EMAIL));
+                    .withTestClientEmailAllowlist(List.of(EMAIL));
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
@@ -134,7 +134,7 @@ class SendNotificationHandlerTest {
 
     private final Session session =
             new Session(IdGenerator.generate())
-                    .setEmailAddress(CommonTestVariables.EMAIL)
+                    .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final SendNotificationHandler handler =
@@ -164,7 +164,7 @@ class SendNotificationHandlerTest {
                                         session.getSessionId(),
                                         CLIENT_ID,
                                         TEST_CLIENT_ID,
-                                        CommonTestVariables.EMAIL,
+                                        EMAIL,
                                         CommonTestVariables.UK_MOBILE_NUMBER))));
     }
 
@@ -184,10 +184,21 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.of(clientSession));
     }
 
+    private static Stream<Arguments> notificationTypeAndJourneyTypeArgs() {
+        return Stream.of(
+                Arguments.of(VERIFY_EMAIL, JourneyType.REGISTRATION, true),
+                Arguments.of(VERIFY_EMAIL, JourneyType.REGISTRATION, false),
+                Arguments.of(
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY, true),
+                Arguments.of(
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY, false));
+    }
+
     @ParameterizedTest
     @MethodSource("notificationTypeAndJourneyTypeArgs")
     void shouldReturn204ForValidEmailOtpRequest(
-            NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
+            NotificationType notificationType, JourneyType journeyType, boolean ticfHeaderPresent)
+            throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
@@ -198,18 +209,28 @@ class SendNotificationHandlerTest {
                 mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
                 mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
 
-                var result =
+                var event =
                         sendRequest(
                                 format(
                                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                        CommonTestVariables.EMAIL, notificationType, journeyType));
+                                        EMAIL, notificationType, journeyType));
+
+                var restrictedSection =
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
+
+                if (!ticfHeaderPresent) {
+                    event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+                    restrictedSection = AuditService.RestrictedSection.empty;
+                }
+
+                var result = handler.handleRequest(event, context);
 
                 assertEquals(204, result.getStatusCode());
                 verify(emailSqsClient)
                         .send(
                                 objectMapper.writeValueAsString(
                                         new NotifyRequest(
-                                                CommonTestVariables.EMAIL,
+                                                EMAIL,
                                                 notificationType,
                                                 TEST_SIX_DIGIT_CODE,
                                                 SupportedLanguage.EN)));
@@ -219,7 +240,7 @@ class SendNotificationHandlerTest {
                                     format(
                                             "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
                                             mockedUUID,
-                                            CommonTestVariables.EMAIL,
+                                            EMAIL,
                                             session.getSessionId(),
                                             CLIENT_SESSION_ID,
                                             PERSISTENT_ID,
@@ -230,14 +251,11 @@ class SendNotificationHandlerTest {
                     verifyNoInteractions(pendingEmailCheckSqsClient);
                 }
                 verify(codeGeneratorService).sixDigitCode();
-                verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, notificationType);
+                verify(codeStorageService).getOtpCode(EMAIL, notificationType);
                 verify(codeStorageService)
                         .saveOtpCode(
-                                CommonTestVariables.EMAIL,
-                                TEST_SIX_DIGIT_CODE,
-                                CODE_EXPIRY_TIME,
-                                notificationType);
-                verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, notificationType);
+                                EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
+                verify(codeStorageService).getOtpCode(EMAIL, notificationType);
                 verify(sessionService)
                         .save(
                                 argThat(
@@ -253,12 +271,11 @@ class SendNotificationHandlerTest {
                                 CLIENT_SESSION_ID,
                                 session.getSessionId(),
                                 expectedCommonSubject,
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 "123.123.123.123",
                                 AuditService.UNKNOWN,
                                 PERSISTENT_ID,
-                                new AuditService.RestrictedSection(
-                                        Optional.of(ENCODED_DEVICE_DETAILS)));
+                                restrictedSection);
             }
         }
     }
@@ -271,11 +288,13 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, notificationType, journeyType));
+                                EMAIL, notificationType, journeyType));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(pendingEmailCheckSqsClient);
@@ -290,29 +309,24 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                notificationType,
-                                true,
-                                JourneyType.ACCOUNT_RECOVERY));
+                                EMAIL, notificationType, true, JourneyType.ACCOUNT_RECOVERY));
+
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(codeGeneratorService).sixDigitCode();
         verify(codeStorageService, never()).getOtpCode(any(), any());
         verify(codeStorageService)
-                .saveOtpCode(
-                        CommonTestVariables.EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        notificationType);
+                .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
         verify(emailSqsClient)
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        CommonTestVariables.EMAIL,
+                                        EMAIL,
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
@@ -325,7 +339,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -340,14 +354,16 @@ class SendNotificationHandlerTest {
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 VERIFY_PHONE_NUMBER,
                                 CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(codeGeneratorService, never()).sixDigitCode();
@@ -372,7 +388,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
@@ -387,21 +403,19 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, notificationType, journeyType));
+                                EMAIL, notificationType, journeyType));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
-        verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, notificationType);
+        verify(codeStorageService).getOtpCode(EMAIL, notificationType);
         verify(codeStorageService)
-                .saveOtpCode(
-                        CommonTestVariables.EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        notificationType);
+                .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
         verify(sessionService)
                 .save(
                         argThat(
@@ -417,7 +431,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -428,11 +442,13 @@ class SendNotificationHandlerTest {
     @MethodSource("notificationTypeAndJourneyTypeArgs")
     void shouldReturn400IfInvalidSessionProvided(
             NotificationType notificationType, JourneyType journeyType) {
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, notificationType, journeyType));
+                                EMAIL, notificationType, journeyType));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
@@ -463,14 +479,13 @@ class SendNotificationHandlerTest {
         clientRegistry.withSmokeTest(isSmokeTest);
         when(configurationService.getEnvironment()).thenReturn(environment);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                phoneNumber,
-                                JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
@@ -483,7 +498,9 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result = sendRequest("{ }");
+        var event = sendRequest("{ }");
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
@@ -505,18 +522,18 @@ class SendNotificationHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        CommonTestVariables.EMAIL,
+                                        EMAIL,
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                notificationType,
-                                JourneyType.REGISTRATION));
+                                EMAIL, notificationType, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(500, result.getStatusCode());
         assertTrue(result.getBody().contains("Error sending message to queue"));
@@ -528,11 +545,13 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, "VERIFY_PASSWORD"));
+                                EMAIL, "VERIFY_PASSWORD"));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
@@ -562,24 +581,19 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                phoneNumber,
-                                JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
         verify(codeGeneratorService).sixDigitCode();
-        verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, VERIFY_PHONE_NUMBER);
+        verify(codeStorageService).getOtpCode(EMAIL, VERIFY_PHONE_NUMBER);
         verify(codeStorageService)
-                .saveOtpCode(
-                        CommonTestVariables.EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        VERIFY_PHONE_NUMBER);
+                .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
         verify(emailSqsClient)
                 .send(
                         objectMapper.writeValueAsString(
@@ -595,7 +609,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         phoneNumber,
                         PERSISTENT_ID,
@@ -607,13 +621,13 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
@@ -658,14 +672,16 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 notificationTypeTwo,
                                 CommonTestVariables.UK_MOBILE_NUMBER,
                                 journeyTypeTwo));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
     }
@@ -680,21 +696,23 @@ class SendNotificationHandlerTest {
         CodeRequestType codeRequestTypeForBlockedOtpRequestType =
                 CodeRequestType.getCodeRequestType(notificationTypeOne, journeyTypeOne);
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
                 .thenReturn(true);
 
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 notificationTypeTwo,
                                 CommonTestVariables.UK_MOBILE_NUMBER,
                                 journeyTypeTwo));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
     }
@@ -705,25 +723,23 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
-                .saveOtpCode(
-                        CommonTestVariables.EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        VERIFY_EMAIL);
+                .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
@@ -732,11 +748,41 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+    }
+
+    @Test
+    void checkEmailInvalidCodeRequestAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+        maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        var event =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+        event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+
+        var result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        verify(auditService)
+                .submitAuditEvent(
+                        EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -745,24 +791,26 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                 JourneyType.ACCOUNT_RECOVERY));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
@@ -774,7 +822,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -787,28 +835,26 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 VERIFY_PHONE_NUMBER,
                                 CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1030));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
-                .saveOtpCode(
-                        CommonTestVariables.EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        VERIFY_PHONE_NUMBER);
+                .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_PHONE_NUMBER);
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
@@ -817,7 +863,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
@@ -827,17 +873,19 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreRegistrationEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
@@ -849,7 +897,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -859,19 +907,21 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreAccountRecoveryEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                 JourneyType.ACCOUNT_RECOVERY));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
@@ -883,7 +933,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -893,20 +943,21 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
+                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 VERIFY_PHONE_NUMBER,
                                 CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
@@ -919,7 +970,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
@@ -931,15 +982,16 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
+                        EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
@@ -951,7 +1003,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -963,17 +1015,18 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
+                        EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
+                                EMAIL,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                 JourneyType.ACCOUNT_RECOVERY));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
@@ -985,7 +1038,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -995,19 +1048,18 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        CommonTestVariables.EMAIL,
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
+                        EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                JourneyType.REGISTRATION));
+                                EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
@@ -1019,7 +1071,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -1039,12 +1091,10 @@ class SendNotificationHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                        CommonTestVariables.EMAIL, notificationType, JourneyType.REGISTRATION));
+                        EMAIL, notificationType, JourneyType.REGISTRATION));
         var result = handler.handleRequest(event, context);
 
-        var notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.EMAIL, notificationType, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(EMAIL, notificationType, SupportedLanguage.EN);
         verify(emailSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verifyNoInteractions(codeStorageService);
         verifyNoInteractions(auditService);
@@ -1062,20 +1112,20 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
-        var result =
+        var event =
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                CommonTestVariables.EMAIL,
-                                notificationType,
-                                JourneyType.REGISTRATION));
+                                EMAIL, notificationType, JourneyType.REGISTRATION));
+
+        var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
     }
 
-    private APIGatewayProxyResponseEvent sendRequest(String body) {
+    private APIGatewayProxyRequestEvent sendRequest(String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
@@ -1086,7 +1136,7 @@ class SendNotificationHandlerTest {
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setBody(body);
 
-        return handler.handleRequest(event, context);
+        return event;
     }
 
     private void maxOutCodeRequestCount(
@@ -1121,13 +1171,7 @@ class SendNotificationHandlerTest {
 
     private boolean isSessionWithEmailSent(
             Session session, NotificationType notificationType, JourneyType journeyType) {
-        return session.getEmailAddress().equals(CommonTestVariables.EMAIL)
+        return session.getEmailAddress().equals(EMAIL)
                 && session.getCodeRequestCount(notificationType, journeyType) == 1;
-    }
-
-    private static Stream<Arguments> notificationTypeAndJourneyTypeArgs() {
-        return Stream.of(
-                Arguments.of(VERIFY_EMAIL, JourneyType.REGISTRATION),
-                Arguments.of(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY));
     }
 }

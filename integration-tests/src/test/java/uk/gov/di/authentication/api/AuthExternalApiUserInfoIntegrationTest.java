@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertUnvalidatedTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -118,7 +118,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getClaim("salt"));
 
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
                 singletonList(AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION));
     }

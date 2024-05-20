@@ -27,7 +27,7 @@ public class AuditAssertionsHelper {
                         () -> assertThat(txmaAuditQueue.getApproximateMessageCount(), equalTo(0)));
     }
 
-    public static void assertUnvalidatedTxmaAuditEventsReceived(
+    public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
         var expectedTxmaEvents =
                 events.stream()

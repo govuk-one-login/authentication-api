@@ -18,7 +18,6 @@ import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundRe
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.entity.State;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -53,6 +52,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -96,7 +99,7 @@ public class AccountInterventionsHandlerTest {
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
             new Session(IdGenerator.generate())
-                    .setEmailAddress(CommonTestVariables.EMAIL)
+                    .setEmailAddress(EMAIL)
                     .setSessionId(TEST_SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
     private static final Json objectMapper = SerializationService.getInstance();
@@ -107,7 +110,7 @@ public class AccountInterventionsHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         UserProfile userProfile = generateUserProfile();
-        when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(true);
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
@@ -160,8 +163,7 @@ public class AccountInterventionsHandlerTest {
     void shouldReturnErrorResponseWhenUserDoesNotExists() throws Json.JsonException {
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.empty());
-        var result =
-                handler.handleRequest(apiRequestEventWithEmail(CommonTestVariables.EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
     }
@@ -178,8 +180,7 @@ public class AccountInterventionsHandlerTest {
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Unspecified Error", httpCode));
-        var result =
-                handler.handleRequest(apiRequestEventWithEmail(CommonTestVariables.EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
         assertThat(result, hasStatus(httpCode));
         assertThat(result, hasBody(objectMapper.writeValueAsString(expectedErrorResponse)));
     }
@@ -195,8 +196,7 @@ public class AccountInterventionsHandlerTest {
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Any 4xx/5xx error valid here", 404));
-        var result =
-                handler.handleRequest(apiRequestEventWithEmail(CommonTestVariables.EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
         verify(cloudwatchMetricsService)
@@ -217,8 +217,7 @@ public class AccountInterventionsHandlerTest {
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Any 4xx/5xx error valid here", 404));
-        var result =
-                handler.handleRequest(apiRequestEventWithEmail(CommonTestVariables.EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
@@ -234,8 +233,7 @@ public class AccountInterventionsHandlerTest {
                 .thenReturn(
                         generateAccountInterventionResponse(
                                 true, true, true, true, APPLIED_AT_TIMESTAMP));
-        var result =
-                handler.handleRequest(apiRequestEventWithEmail(CommonTestVariables.EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
@@ -244,8 +242,7 @@ public class AccountInterventionsHandlerTest {
     void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDiabled()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
-        var result =
-                handler.handleRequest(apiRequestEventWithEmail(CommonTestVariables.EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
 
         verify(accountInterventionsService, never()).sendAccountInterventionsOutboundRequest(any());
         assertThat(result, hasStatus(200));
@@ -253,33 +250,15 @@ public class AccountInterventionsHandlerTest {
     }
 
     static Stream<Arguments> accountInterventionResponseParameters() {
-        return Stream.of(
-                Arguments.of(false, false, false, false, FrontendAuditableEvent.NO_INTERVENTION),
-                Arguments.of(false, true, true, false, FrontendAuditableEvent.NO_INTERVENTION),
-                Arguments.of(
-                        true,
-                        false,
-                        false,
-                        false,
-                        FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION),
-                Arguments.of(
-                        false,
-                        true,
-                        false,
-                        false,
-                        FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION),
-                Arguments.of(
-                        false,
-                        true,
-                        false,
-                        true,
-                        FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION),
-                Arguments.of(
-                        false,
-                        true,
-                        true,
-                        true,
-                        FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION));
+        Stream<Arguments> argumentsStream =
+                Stream.of(
+                        Arguments.of(false, false, false, false, NO_INTERVENTION),
+                        Arguments.of(false, true, true, false, NO_INTERVENTION),
+                        Arguments.of(true, false, false, false, PERMANENTLY_BLOCKED_INTERVENTION),
+                        Arguments.of(false, true, false, false, TEMP_SUSPENDED_INTERVENTION),
+                        Arguments.of(false, true, false, true, PASSWORD_RESET_INTERVENTION),
+                        Arguments.of(false, true, true, true, PASSWORD_RESET_INTERVENTION));
+        return argumentsStream;
     }
 
     @ParameterizedTest
@@ -291,7 +270,7 @@ public class AccountInterventionsHandlerTest {
             boolean resetPassword,
             FrontendAuditableEvent expectedEvent)
             throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
-        var event = apiRequestEventWithEmail(CommonTestVariables.EMAIL);
+        var event = apiRequestEventWithEmail(EMAIL);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
@@ -302,6 +281,7 @@ public class AccountInterventionsHandlerTest {
                                 reproveIdentity,
                                 resetPassword,
                                 APPLIED_AT_TIMESTAMP));
+
         var result =
                 handler.handleRequestWithUserContext(
                         event, context, new AccountInterventionsRequest("test"), userContext);
@@ -333,16 +313,57 @@ public class AccountInterventionsHandlerTest {
                         TEST_CLIENT_SESSION_ID,
                         TEST_SESSION_ID,
                         TEST_INTERNAL_SUBJECT_ID,
-                        CommonTestVariables.EMAIL,
+                        EMAIL,
                         TEST_IP_ADDRESS,
                         AuditService.UNKNOWN,
                         TEST_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided()
+            throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
+        boolean blocked = false;
+        boolean suspended = false;
+        boolean reproveIdentity = false;
+        boolean resetPassword = false;
+        FrontendAuditableEvent expectedEvent = NO_INTERVENTION;
+        var event = apiRequestEventWithEmail(EMAIL);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(
+                        generateAccountInterventionResponse(
+                                blocked,
+                                suspended,
+                                reproveIdentity,
+                                resetPassword,
+                                APPLIED_AT_TIMESTAMP));
+        when(userContext.getTxmaAuditEncoded()).thenReturn(null);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AccountInterventionsRequest("test"), userContext);
+
+        assertThat(result, hasStatus(200));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        expectedEvent,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_SESSION_ID,
+                        TEST_SESSION_ID,
+                        TEST_INTERNAL_SUBJECT_ID,
+                        EMAIL,
+                        TEST_IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        TEST_PERSISTENT_SESSION_ID,
+                        AuditService.RestrictedSection.empty);
+    }
+
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .withEmail(CommonTestVariables.EMAIL)
+                .withEmail(EMAIL)
                 .withEmailVerified(true)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())

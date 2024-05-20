@@ -32,7 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertUnvalidatedTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_EMAIL_SENT;
 import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT;
@@ -75,7 +75,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
         assertThat(request, hasFieldWithValue("email_address", equalTo("user.1@account.gov.uk")));
         assertThat(noOfStatusEmailSent, equalTo(1));
-        assertUnvalidatedTxmaAuditEventsReceived(txmaAuditQueue, List.of(BULK_EMAIL_SENT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(BULK_EMAIL_SENT));
     }
 
     @Test
@@ -94,7 +94,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                         .size(),
                 equalTo(2));
         assertThat(emailsSent.size(), equalTo(8));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
         assertEmailNotSentTo(emailsSent, "user.email.sent.alreadt@account.gov.uk");
         assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
@@ -120,7 +120,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                         numberOfUsersWithErrorSendingEmailStatus
                                 + numberOfUsersWithEmailAlreadySent));
         assertThat(emailsSent.size(), equalTo(numberOfUsersWithErrorSendingEmailStatus));
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
                 Collections.nCopies(numberOfUsersWithErrorSendingEmailStatus, BULK_EMAIL_SENT));
     }
@@ -188,7 +188,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                                     .get()
                                     .getDeliveryReceiptStatus());
                 });
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, Collections.nCopies(5, BULK_RETRY_EMAIL_SENT));
     }
 
@@ -213,7 +213,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         assertThat(emailsSent.size(), equalTo(8));
         assertEmailNotSentTo(emailsSent, "user.email.sent.already@account.gov.uk");
         assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
-        assertUnvalidatedTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
     }
 

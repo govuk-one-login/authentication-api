@@ -51,6 +51,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -194,6 +195,43 @@ class CheckUserExistsHandlerTest {
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
+        }
+
+        @Test
+        void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+            var req = userExistsRequest(EMAIL_ADDRESS);
+            var headers =
+                    req.getHeaders().entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            req.setHeaders(headers);
+
+            var result = handler.handleRequest(req, context);
+
+            assertThat(result, hasStatus(200));
+            var expectedRpPairwiseId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            SUBJECT.getValue(), "sector-identifier", SALT.array());
+            var expectedInternalPairwiseId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                            CLIENT_ID,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            expectedInternalPairwiseId,
+                            EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PERSISTENT_SESSION_ID,
+                            AuditService.RestrictedSection.empty,
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
 
