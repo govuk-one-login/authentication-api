@@ -28,6 +28,12 @@ Conditions:
     !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
   IsNotDevEnvironment:
     !Not [ !Equals [!Ref Environment, 'dev'] ]
+  IsBuild:
+    !Equals [ build, !Ref Environment ]
+  AisAbortOnError:
+    !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
+  IdentityEnabled:
+    !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -52,6 +58,9 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
+      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/a12c7616-57d4-4d9b-b98a-d0df5ee583d7
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -73,6 +82,9 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
+      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/227f9cdd-3de3-4519-ab01-45302a10de95
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -94,6 +106,9 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
+      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/91836141-8c92-43ac-99a8-a586c73b6683
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -115,6 +130,9 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
+      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/42a8b69b-9488-44d2-94b8-144b4ff3b35c
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -136,6 +154,9 @@ Mappings:
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
+      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/b1897252-b34b-4094-9e0b-466feed2b7f1
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
 
 Globals:
   Function:
@@ -1607,6 +1628,300 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  #endregion
+
+  #region IPV Callback Lambda
+
+  IpvCallbackFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-IpvCallbackFunction
+      AutoPublishAlias: latest
+      CodeUri: ./ipv-api
+      Handler: uk.gov.di.authentication.oidc.lambda.IPVCallbackHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref IpvCallbackFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          IDENTITY_ENABLED: !If
+            - IsBuild
+            - false
+            - true
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          LOGIN_URI: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
+            - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+            - SecretArn: !Ref AccountInterventionsServiceUriSecret
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If
+            - AisAbortOnError
+            - true
+            - false
+          IPV_AUDIENCE: !If
+            - IdentityEnabled
+            - !Sub
+              - https://identity.${ServiceDomain}/
+              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_CALLBACK_URI: !If
+            - IdentityEnabled
+            - !Sub
+              - https://oidc.${ServiceDomain}/ipv-callback
+              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_CLIENT_ID: !If
+            - IdentityEnabled
+            - authOrchestrator
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_URI: !If
+            - IdentityEnabled
+            - !Sub
+              - https://identity.${ServiceDomain}/oauth2/authorize
+              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - !Ref AWS::NoValue
+          IPV_BACKEND_URI: !If
+            - IdentityEnabled
+            - !Sub
+              - https://api.identity.${ServiceDomain}/
+              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - !Ref AWS::NoValue
+          IPV_NO_SESSION_RESPONSE_ENABLED: true
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenAuthKeyArn ]
+          SPOT_QUEUE_URL: !If
+            - IdentityEnabled
+            - !Sub
+              - https://sqs.eu-west-2.amazonaws.com/${AccountId}/${AuthEnvironment}-spot-request-queue
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - !Ref AWS::NoValue
+      Policies:
+        - Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource:
+              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host
+              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls
+              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port
+              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowClientRegistryTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowUserProfileTableReadAndWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowUserProfileTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+          - Sid: AllowIdentityCredentialsTableReadAndWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowIdentityCredentialsTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
+          - Sid: AllowIpvTokenAuthKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenAuthKeyArn ]
+          - Sid: AllowWriteAccessToSpotQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !Sub
+              - arn:aws:sqs:eu-west-2:${AccountId}:${AuthEnvironment}-spot-request-queue
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowEncryptionAccessToSpotQueueKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, spotRequestQueueKmsArn ]
+        - !Ref AccountInterventionsServiceUriSecretAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  IpvCallbackFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IpvCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/ipv-callback
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  IpvCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-ipv-callback-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  IpvCallbackFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-ipv-callback-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref IpvCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-ipv-callback-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  IpvCallbackFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-ipv-callback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: IpvCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: IpvCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  IpvCallbackFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-ipv-callback-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref IpvCallbackFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref IpvCallbackFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
   #endregion
 
   #region Back Channel Logout Queue
