@@ -297,10 +297,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                             persistentSessionId,
                                             IpAddressHelper.extractIpAddress(input),
                                             JourneyType.REGISTRATION,
-                                            String.valueOf(
-                                                    NowHelper.now()
-                                                            .toInstant()
-                                                            .getEpochSecond()))));
+                                            NowHelper.now().toInstant().getEpochSecond())));
                 }
             }
             var notifyRequest =
