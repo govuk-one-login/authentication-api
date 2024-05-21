@@ -78,7 +78,8 @@ orch_authentication_callback_enabled = true
 orch_authentication_callback_name    = "dev-AuthenticationCallbackFunction"
 auth_backchannel_logout_disabled     = true
 auth_spot_response_disabled          = true
-
+orch_auth_code_enabled               = true
+orch_auth_code_name                  = "dev-AuthCodeFunction"
 
 orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true
