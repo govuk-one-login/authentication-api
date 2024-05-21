@@ -314,7 +314,10 @@ class PhoneNumberCodeProcessorTest {
         when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.REGISTRATION,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
@@ -325,7 +328,7 @@ class PhoneNumberCodeProcessorTest {
                                 .writeValueAsString(
                                         new PhoneNumberRequest(
                                                 true,
-                                                CommonTestVariables.PHONE_NUMBER,
+                                                CommonTestVariables.UK_MOBILE_NUMBER,
                                                 true,
                                                 JourneyType.REGISTRATION,
                                                 INTERNAL_SUB_ID)));
@@ -336,7 +339,10 @@ class PhoneNumberCodeProcessorTest {
         when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
@@ -347,7 +353,7 @@ class PhoneNumberCodeProcessorTest {
                                 .writeValueAsString(
                                         new PhoneNumberRequest(
                                                 true,
-                                                PHONE_NUMBER,
+                                                CommonTestVariables.UK_MOBILE_NUMBER,
                                                 true,
                                                 JourneyType.ACCOUNT_RECOVERY,
                                                 INTERNAL_SUB_ID)));
@@ -359,9 +365,12 @@ class PhoneNumberCodeProcessorTest {
         when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
-        when(userProfile.getPhoneNumber()).thenReturn(PHONE_NUMBER);
+        when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
@@ -373,7 +382,10 @@ class PhoneNumberCodeProcessorTest {
         when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(false);
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.REGISTRATION,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
@@ -382,6 +394,7 @@ class PhoneNumberCodeProcessorTest {
     }
 
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
+        var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
         when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(session.getSessionId()).thenReturn(SESSION_ID);
         when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
@@ -389,7 +402,7 @@ class PhoneNumberCodeProcessorTest {
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.isPhoneNumberVerified()).thenReturn(true);
-        when(userProfile.getPhoneNumber()).thenReturn(DIFFERENT_PHONE_NUMBER);
+        when(userProfile.getPhoneNumber()).thenReturn(differentPhoneNumber);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         CommonTestVariables.EMAIL, NotificationType.VERIFY_PHONE_NUMBER))
