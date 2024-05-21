@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -515,6 +516,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ClientType.WEB,
                 true,
                 null,
+                ES256.getName(),
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
     }
 
@@ -537,6 +539,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ClientType.WEB,
                 true,
                 clientSecret,
+                ES256.getName(),
                 clientAuthenticationMethod.getValue());
     }
 

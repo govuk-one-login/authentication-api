@@ -115,6 +115,7 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.isIdentityVerificationRequired(),
                     null,
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                    clientRegistrationRequest.getIdTokenSigningAlgorithm(),
                     clientRegistrationRequest.getClientLoCs());
 
             var clientRegistrationResponse =
@@ -131,7 +132,8 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.isJarValidationRequired(),
                             clientRegistrationRequest.getClaims(),
                             clientRegistrationRequest.getSectorIdentifierUri(),
-                            clientRegistrationRequest.getClientType());
+                            clientRegistrationRequest.getClientType(),
+                            clientRegistrationRequest.getIdTokenSigningAlgorithm());
             LOG.info("Generating successful Client registration response");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException e) {

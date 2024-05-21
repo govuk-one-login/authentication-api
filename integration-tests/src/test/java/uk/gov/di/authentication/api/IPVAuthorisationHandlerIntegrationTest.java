@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -92,6 +93,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 "https://test.com",
                 "pairwise",
                 ClientType.WEB,
+                ES256.getName(),
                 true);
 
         var response =
