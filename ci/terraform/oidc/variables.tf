@@ -535,6 +535,12 @@ variable "orch_authorisation_enabled" {
   default     = false
 }
 
+variable "orch_auth_code_enabled" {
+  description = "Flag to enable routing auth code traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_openid_configuration_name" {
   type    = string
   default = ""
@@ -561,6 +567,11 @@ variable "orch_jwks_name" {
 }
 
 variable "orch_authorisation_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_auth_code_name" {
   type    = string
   default = ""
 }
