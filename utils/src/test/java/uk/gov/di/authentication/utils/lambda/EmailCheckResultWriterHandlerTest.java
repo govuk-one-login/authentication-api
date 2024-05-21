@@ -8,12 +8,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -22,6 +24,7 @@ class EmailCheckResultWriterHandlerTest {
     private static final long TEST_MSG_TIME_TO_EXIST = 1706870420L;
     private static final String TEST_MSG_REF_NUMBER = "123456-abc1234def5678";
     private static DynamoEmailCheckResultService dbMock;
+    private static CloudwatchMetricsService cloudWatchMock;
     private static ArgumentCaptor<String> emailCaptor;
     private static ArgumentCaptor<EmailCheckResultStatus> statusCaptor;
     private static ArgumentCaptor<Long> timeToExistCaptor;
@@ -31,6 +34,7 @@ class EmailCheckResultWriterHandlerTest {
     @BeforeAll
     static void init() {
         dbMock = mock(DynamoEmailCheckResultService.class);
+        cloudWatchMock = mock(CloudwatchMetricsService.class);
         emailCaptor = ArgumentCaptor.forClass(String.class);
         statusCaptor = ArgumentCaptor.forClass(EmailCheckResultStatus.class);
         timeToExistCaptor = ArgumentCaptor.forClass(Long.class);
@@ -39,14 +43,13 @@ class EmailCheckResultWriterHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new EmailCheckResultWriterHandler(dbMock);
+        handler = new EmailCheckResultWriterHandler(dbMock, cloudWatchMock);
     }
 
     @Test
     void shouldProcessValidSQSEventWithSingleMessageAndSaveToDatabase() {
         var emailCheckResultStatus = EmailCheckResultStatus.ALLOW;
         SQSEvent event = getSqsEventWithSingleMessage(true, emailCheckResultStatus);
-
         handler.emailCheckResultWriterHandler(event);
 
         verify(dbMock)
@@ -58,6 +61,7 @@ class EmailCheckResultWriterHandlerTest {
         assertEquals(emailCheckResultStatus, statusCaptor.getValue());
         assertEquals(TEST_MSG_TIME_TO_EXIST, timeToExistCaptor.getValue());
         assertEquals(TEST_MSG_REF_NUMBER, referenceNumberCaptor.getValue());
+        verify(cloudWatchMock).logEmailCheckDuration(anyLong());
     }
 
     @Test

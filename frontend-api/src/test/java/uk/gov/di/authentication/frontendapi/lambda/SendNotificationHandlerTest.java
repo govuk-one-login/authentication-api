@@ -218,7 +218,7 @@ class SendNotificationHandlerTest {
                     verify(pendingEmailCheckSqsClient)
                             .send(
                                     format(
-                                            "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
+                                            "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d}",
                                             mockedUUID,
                                             TEST_EMAIL_ADDRESS,
                                             session.getSessionId(),

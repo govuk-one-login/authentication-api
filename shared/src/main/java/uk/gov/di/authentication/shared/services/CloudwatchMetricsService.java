@@ -18,6 +18,7 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.LOGOUT_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
@@ -142,5 +143,12 @@ public class CloudwatchMetricsService {
                         configurationService.getEnvironment(),
                         CLIENT.getValue(),
                         clientId.orElse("unknown")));
+    }
+
+    public void logEmailCheckDuration(long duration) {
+        this.putEmbeddedValue(
+                EMAIL_CHECK_DURATION.getValue(),
+                duration,
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 }
