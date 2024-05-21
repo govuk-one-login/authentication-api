@@ -529,6 +529,12 @@ variable "orch_jwks_enabled" {
   default     = false
 }
 
+variable "orch_authorisation_enabled" {
+  description = "Flag to enable routing authorisation endpoint traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_openid_configuration_name" {
   type    = string
   default = ""
@@ -550,6 +556,11 @@ variable "orch_token_name" {
 }
 
 variable "orch_jwks_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_authorisation_name" {
   type    = string
   default = ""
 }

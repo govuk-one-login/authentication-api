@@ -43,10 +43,15 @@ Mappings:
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
+      docAppClientId: orch-dev
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
+      docAppEncryptionKeyId: KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -59,10 +64,15 @@ Mappings:
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
+      docAppClientId: orch-build
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
+      docAppEncryptionKeyId: KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -75,10 +85,15 @@ Mappings:
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.staging.account.gov.uk
+      docAppAuthorisationUrl: https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize
+      docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
+      docAppEncryptionKeyId: ca6d5930-77a6-41a4-8192-125df996c084
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -91,10 +106,15 @@ Mappings:
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.integration.account.gov.uk
+      docAppAuthorisationUrl: https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize
+      docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
+      docAppEncryptionKeyId: 0948190d-384c-498d-81e2-a20dd30f147c
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -107,10 +127,15 @@ Mappings:
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.account.gov.uk
+      docAppAuthorisationUrl: https://www.review-b.account.gov.uk/dca/oauth2/authorize
+      docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
+      docAppEncryptionKeyId: 7958938d-eea0-4e6d-9ea1-ec0b9d421f77
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
       clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
 
 Globals:
   Function:
@@ -555,6 +580,7 @@ Resources:
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
@@ -1011,6 +1037,261 @@ Resources:
             Stat: Sum
             Unit: Count
   #endregion
+
+  #region Authorisation Lambda
+
+  AuthorisationFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
+    IgnoreGlobals: [ VpcConfig ]
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthorisationFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref AuthorisationFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          CUSTOM_DOC_APP_CLAIM_ENABLED: true
+          DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
+          DOC_APP_AUTHORISATION_CLIENT_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppClientId ]
+          DOC_APP_AUTHORISATION_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAuthorisationUrl ]
+          DOC_APP_DOMAIN: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
+          DOC_APP_ENCRYPTION_KEY_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppEncryptionKeyId ]
+          DOC_APP_JWKS_URL: !Sub
+            - ${DocAppBackendUri}/.well-known/jwks.json
+            - DocAppBackendUri: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
+          DOC_APP_NEW_AUD_CLAIM_ENABLED: true
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+          DOMAIN_NAME: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          IDENTITY_ENABLED: true
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          LOGIN_URI: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          ORCH_CLIENT_ID: orchestrationAuth
+          ORCH_REDIRECT_URI: !Sub
+            - https://oidc.${ServiceDomain}/orchestration-redirect/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthTokenSigningKeyAlias ]
+          REDIS_KEY: session
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+
+      Policies:
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key"
+          - Sid: AllowDecryptOfParameters
+            Effect: "Allow"
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowClientRegistryAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowDocAppAuthKmsKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+          - Sid: AllowOrchToAuthTokenSigning
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthTokenSigningKeyAlias ]
+          - Sid: AllowSQSTxMA
+            Effect: "Allow"
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub "arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue"
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  AuthorisationFunctionCrossAccountGetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorisationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/authorize'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  AuthorisationFunctionCrossAccountPostPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorisationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/authorize'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  AuthorisationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-authorisation-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  AuthorisationSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+
+  AuthorisationFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-authorisation-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-authorisation-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthorisationFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-authorisation-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: AuthorisationFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: AuthorisationFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthorisationFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-authorisation-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref AuthorisationFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref AuthorisationFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  HttpsEgressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow egress to external services
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outgoing HTTPS requests from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
