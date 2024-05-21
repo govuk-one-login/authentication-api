@@ -191,6 +191,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                             internalCommonSubjectIdentifier);
             try {
                 sqsClient.send(objectMapper.writeValueAsString(phoneNumberRequest));
+                LOG.info("Message successfully sent to Experian phone check SQS queue");
             } catch (Exception e) {
                 LOG.error(
                         "Unexpected exception when writing phone number request to experian checker SQS queue: {}",
