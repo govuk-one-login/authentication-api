@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.clientregistry.services;
 
+import com.nimbusds.jose.Algorithm;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
@@ -18,7 +19,12 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
@@ -43,6 +49,11 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Client Type");
     public static final ErrorObject INVALID_CLIENT_LOCS =
             new ErrorObject("invalid_client_metadata", "Invalid Accepted Levels of Confidence");
+    public static final ErrorObject INVALID_ID_TOKEN_SIGNING_ALGORITHM =
+            new ErrorObject("invalid_client_metadata", "Invalid ID Token Signing Algorithm");
+
+    public static final Set<String> VALID_ID_TOKEN_SIGNING_ALGORITHMS =
+            Stream.of(ES256, RS256).map(Algorithm::getName).collect(Collectors.toSet());
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -88,6 +99,11 @@ public class ClientConfigValidationService {
         if (!areClientLoCsValid(registrationRequest.getClientLoCs())) {
             return Optional.of(INVALID_CLIENT_LOCS);
         }
+        if (!Optional.ofNullable(registrationRequest.getIdTokenSigningAlgorithm())
+                .map(this::isValidIdTokenSigningAlgorithm)
+                .orElse(true)) {
+            return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
+        }
         return Optional.empty();
     }
 
@@ -132,6 +148,11 @@ public class ClientConfigValidationService {
                 .map(this::areClientLoCsValid)
                 .orElse(true)) {
             return Optional.of(INVALID_CLIENT_LOCS);
+        }
+        if (!Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
+                .map(this::isValidIdTokenSigningAlgorithm)
+                .orElse(true)) {
+            return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
         }
         return Optional.empty();
     }
@@ -195,5 +216,9 @@ public class ClientConfigValidationService {
             }
         }
         return true;
+    }
+
+    private boolean isValidIdTokenSigningAlgorithm(String idTokenSigningAlgorithm) {
+        return VALID_ID_TOKEN_SIGNING_ALGORITHMS.contains(idTokenSigningAlgorithm);
     }
 }

@@ -96,7 +96,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -126,6 +126,7 @@ class ClientRegistrationHandlerTest {
                         false,
                         null,
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        "ES256",
                         emptyList());
     }
 
@@ -139,7 +140,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -162,6 +163,7 @@ class ClientRegistrationHandlerTest {
                         false,
                         null,
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        "ES256",
                         emptyList());
     }
 

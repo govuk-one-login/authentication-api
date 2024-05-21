@@ -63,6 +63,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private String backChannelLogoutUri;
 
+    @SerializedName("id_token_signing_algorithm")
+    @Expose
+    private String idTokenSigningAlgorithm;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -119,6 +123,10 @@ public class UpdateClientConfigRequest {
 
     public String getBackChannelLogoutUri() {
         return backChannelLogoutUri;
+    }
+
+    public String getIdTokenSigningAlgorithm() {
+        return idTokenSigningAlgorithm;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -188,6 +196,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setBackChannelLogoutUri(String backChannelLogoutUri) {
         this.backChannelLogoutUri = backChannelLogoutUri;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setIdTokenSigningAlgorithm(String idTokenSigningAlgorithm) {
+        this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
         return this;
     }
 }

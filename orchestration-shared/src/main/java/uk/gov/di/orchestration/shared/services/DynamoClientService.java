@@ -77,6 +77,7 @@ public class DynamoClientService implements ClientService {
             boolean identityVerificationSupported,
             String clientSecret,
             String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs) {
         var clientRegistry =
                 new ClientRegistry()
@@ -96,6 +97,7 @@ public class DynamoClientService implements ClientService {
                         .withClaims(claims)
                         .withClientType(clientType)
                         .withIdentityVerificationSupported(identityVerificationSupported)
+                        .withIdTokenSigningAlgorithm(idTokenSigningAlgorithm)
                         .withTokenAuthMethod(tokenAuthMethod);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
@@ -125,6 +127,7 @@ public class DynamoClientService implements ClientService {
             boolean identityVerificationSupported,
             String clientSecret,
             String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs) {
         var clientRegistry =
                 new ClientRegistry()
@@ -143,6 +146,7 @@ public class DynamoClientService implements ClientService {
                         .withClaims(claims)
                         .withClientType(clientType)
                         .withIdentityVerificationSupported(identityVerificationSupported)
+                        .withIdTokenSigningAlgorithm(idTokenSigningAlgorithm)
                         .withTokenAuthMethod(tokenAuthMethod);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
@@ -177,6 +181,8 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withClientLoCs);
         Optional.ofNullable(updateRequest.getBackChannelLogoutUri())
                 .ifPresent(clientRegistry::withBackChannelLogoutUri);
+        Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
+                .ifPresent(clientRegistry::withIdTokenSigningAlgorithm);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.clientregistry.services;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLAIM;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_LOCS;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_TYPE;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_ID_TOKEN_SIGNING_ALGORITHM;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_POST_LOGOUT_URI;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
@@ -80,7 +82,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 claims,
-                                clientType));
+                                clientType,
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -98,7 +101,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 emptyList(),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -116,7 +120,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 emptyList(),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -134,7 +139,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 emptyList(),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -152,7 +158,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 emptyList(),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -170,7 +177,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 emptyList(),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -188,7 +196,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 List.of("name", "email"),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLAIM)));
     }
 
@@ -206,7 +215,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 "public",
                                 emptyList(),
-                                "Mobile"));
+                                "Mobile",
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 
@@ -227,11 +237,39 @@ class ClientConfigValidationServiceTest {
                         false,
                         emptyList(),
                         ClientType.WEB.getValue(),
+                        JWSAlgorithm.ES256.getName(),
                         List.of("Unsupported_LoC"));
 
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(regReq);
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_LOCS)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidAlgorithmSource")
+    void shouldReturnErrorForInvalidIdTokenSigningAlgorithmInInRegistrationRequest(
+            String invalidIdTokenSource) {
+        ClientRegistrationRequest regReq =
+                new ClientRegistrationRequest(
+                        "",
+                        singletonList("http://localhost:1000/redirect"),
+                        singletonList("test-client@test.com"),
+                        VALID_PUBLIC_CERT,
+                        singletonList("openid"),
+                        singletonList("http://localhost/post-redirect-logout"),
+                        "http://example.com",
+                        String.valueOf(MANDATORY),
+                        "http://test.com",
+                        "public",
+                        false,
+                        emptyList(),
+                        ClientType.WEB.getValue(),
+                        invalidIdTokenSource,
+                        List.of("Unsupported_LoC"));
+
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(regReq);
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM)));
     }
 
     @ParameterizedTest
@@ -250,7 +288,8 @@ class ClientConfigValidationServiceTest {
                                 "http://test.com",
                                 subjectType,
                                 emptyList(),
-                                ClientType.WEB.getValue()));
+                                ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName()));
         assertThat(errorResponse, equalTo(expectedResult));
     }
 
@@ -275,6 +314,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 "http://localhost/sector-id",
                                 ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
@@ -299,6 +339,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
@@ -316,6 +357,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
@@ -332,6 +374,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 false,
                                 null,
+                                JWSAlgorithm.ES256.getName(),
                                 ClientType.WEB.getValue(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
@@ -350,6 +393,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
@@ -366,6 +410,7 @@ class ClientConfigValidationServiceTest {
                                 String.valueOf(MANDATORY),
                                 false,
                                 null,
+                                JWSAlgorithm.ES256.getName(),
                                 "rubbish-client-type",
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
@@ -384,8 +429,33 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
+                                JWSAlgorithm.ES256.getName(),
                                 List.of("Unsupported_LoC")));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_LOCS)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidAlgorithmSource")
+    void shouldReturnErrorForInvalidIdTokenSigningAlgorithmInUpdateRequest(
+            String invalidIdTokenSource) {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientUpdateConfig(
+                        generateClientUpdateRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                VALID_PUBLIC_CERT,
+                                List.of("openid", "email", "fax"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                String.valueOf(MANDATORY),
+                                false,
+                                null,
+                                ClientType.WEB.getValue(),
+                                invalidIdTokenSource,
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM)));
+    }
+
+    static Stream<Arguments> invalidAlgorithmSource() {
+        return Stream.of(Arguments.of("NOT_AN_ALGORITHM", JWSAlgorithm.PS256.getName()));
     }
 
     private ClientRegistrationRequest generateClientRegRequest(
@@ -398,7 +468,8 @@ class ClientConfigValidationServiceTest {
             String sectorIdentifierUri,
             String subjectType,
             List<String> claims,
-            String clientType) {
+            String clientType,
+            String idTokenSigningAlgorithm) {
         return new ClientRegistrationRequest(
                 "The test client",
                 redirectUri,
@@ -412,7 +483,8 @@ class ClientConfigValidationServiceTest {
                 subjectType,
                 false,
                 claims,
-                clientType);
+                clientType,
+                idTokenSigningAlgorithm);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(
@@ -424,6 +496,7 @@ class ClientConfigValidationServiceTest {
             boolean jarValidationRequired,
             String sectorURI,
             String clientType,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs) {
         UpdateClientConfigRequest configRequest = new UpdateClientConfigRequest();
         configRequest.setScopes(scopes);
@@ -434,6 +507,7 @@ class ClientConfigValidationServiceTest {
         configRequest.setJarValidationRequired(jarValidationRequired);
         configRequest.setSectorIdentifierUri(sectorURI);
         configRequest.setClientType(clientType);
+        configRequest.setIdTokenSigningAlgorithm(idTokenSigningAlgorithm);
         configRequest.setClientLoCs(clientLoCs);
         return configRequest;
     }

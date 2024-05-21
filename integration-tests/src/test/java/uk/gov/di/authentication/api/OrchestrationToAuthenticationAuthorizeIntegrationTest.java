@@ -2,7 +2,6 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -32,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.EMAIL;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.PHONE;
@@ -297,7 +297,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("rp_sector_host"),
                 equalTo("rp-sector-uri.com"));
-        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
@@ -318,6 +318,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 RP_SECTOR_URI,
                 "public",
                 ClientType.WEB,
+                ES256.getName(),
                 identitySupported);
     }
 

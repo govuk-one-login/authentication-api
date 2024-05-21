@@ -2,7 +2,6 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -62,6 +61,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -816,6 +816,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 "https://test.com",
                 "pairwise",
                 ClientType.APP,
+                ES256.getName(),
                 identityVerificationSupport);
     }
 
@@ -1077,6 +1078,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 equalTo(CLIENT_SESSION_ID));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "PCL200")));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("scope"), equalTo("openid"));
-        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
     }
 }

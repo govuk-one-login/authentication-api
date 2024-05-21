@@ -31,6 +31,7 @@ public interface ClientService {
             boolean identityVerificationSupported,
             String clientSecret,
             String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs);
 
     void addClient(
@@ -51,6 +52,7 @@ public interface ClientService {
             boolean identityVerificationSupported,
             String clientSecret,
             String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs);
 
     Optional<ClientRegistry> getClient(String clientId);

@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -127,6 +128,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 "https://test.com",
                 "pairwise",
                 ClientType.APP,
+                ES256.getName(),
                 true);
         txmaAuditQueue.clear();
     }

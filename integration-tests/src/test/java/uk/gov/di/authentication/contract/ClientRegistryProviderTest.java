@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.contract;
 
 import au.com.dius.pact.provider.junitsupport.State;
+import com.nimbusds.jose.JWSAlgorithm;
 import org.junit.jupiter.api.BeforeAll;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
@@ -33,6 +34,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final boolean IDENTITY_VERIFICATION_SUPPORTED = false;
     private static final String CLIENT_SECRET = null;
     private static final String TOKEN_AUTH_METHOD = "private_key_jwt";
+    private static final String ID_TOKEN_SIGNING_ALGORITHM = JWSAlgorithm.ES256.getName();
     private static final List<String> CLIENT_LOCS = List.of();
 
     private DynamoClientService clientService;
@@ -81,6 +83,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 IDENTITY_VERIFICATION_SUPPORTED,
                 CLIENT_SECRET,
                 TOKEN_AUTH_METHOD,
+                ID_TOKEN_SIGNING_ALGORITHM,
                 CLIENT_LOCS);
     }
 }

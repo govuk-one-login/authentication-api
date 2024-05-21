@@ -79,6 +79,10 @@ public class ClientRegistrationRequest {
     @Expose
     private boolean jarValidationRequired;
 
+    @SerializedName("id_token_signing_algorithm")
+    @Expose
+    private String idTokenSigningAlgorithm;
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
@@ -94,7 +98,8 @@ public class ClientRegistrationRequest {
             String subjectType,
             boolean identityVerificationRequired,
             List<String> claims,
-            String clientType) {
+            String clientType,
+            String idTokenSigningAlgorithm) {
         this(
                 clientName,
                 redirectUris,
@@ -109,6 +114,7 @@ public class ClientRegistrationRequest {
                 identityVerificationRequired,
                 claims,
                 clientType,
+                idTokenSigningAlgorithm,
                 null);
     }
 
@@ -126,6 +132,7 @@ public class ClientRegistrationRequest {
             boolean identityVerificationRequired,
             List<String> claims,
             String clientType,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
@@ -150,6 +157,7 @@ public class ClientRegistrationRequest {
             clientType = ClientType.WEB.getValue();
         }
         this.clientType = clientType;
+        this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
         if (Objects.nonNull(clientLoCs)) {
             this.clientLoCs = clientLoCs;
         }
@@ -213,5 +221,9 @@ public class ClientRegistrationRequest {
 
     public boolean isJarValidationRequired() {
         return jarValidationRequired;
+    }
+
+    public String getIdTokenSigningAlgorithm() {
+        return idTokenSigningAlgorithm;
     }
 }

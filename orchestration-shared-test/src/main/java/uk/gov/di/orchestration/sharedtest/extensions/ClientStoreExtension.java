@@ -356,6 +356,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 false,
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                null,
                 emptyList());
     }
 
@@ -395,6 +396,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 false,
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                null,
                 clientLoCs);
     }
 
@@ -413,6 +415,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             ClientType clientType,
             boolean identityVerificationSupported,
             String clientSecret,
+            String isTokenSigningAlgorithm,
             String clientAuthMethod) {
         dynamoClientService.addClient(
                 clientID,
@@ -433,6 +436,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 identityVerificationSupported,
                 clientSecret,
                 clientAuthMethod,
+                isTokenSigningAlgorithm,
                 emptyList());
     }
 
@@ -472,6 +476,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 identityVerificationSupported,
                 clientSecret,
                 clientAuthMethod,
+                null,
                 emptyList());
     }
 
@@ -488,6 +493,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             String sectorIdentifierUri,
             String subjectType,
             ClientType clientType,
+            String isTokenSigningAlgorithm,
             boolean identityVerificationSupported) {
         dynamoClientService.addClient(
                 clientID,
@@ -508,6 +514,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 identityVerificationSupported,
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                isTokenSigningAlgorithm,
                 emptyList());
     }
 
@@ -545,6 +552,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 identityVerificationSupported,
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                null,
                 emptyList());
     }
 
@@ -583,6 +591,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 identityVerificationSupported,
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                null,
                 emptyList());
     }
 

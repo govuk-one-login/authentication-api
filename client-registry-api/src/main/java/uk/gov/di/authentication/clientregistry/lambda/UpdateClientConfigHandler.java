@@ -118,7 +118,8 @@ public class UpdateClientConfigHandler
                             clientRegistry.isJarValidationRequired(),
                             clientRegistry.getClaims(),
                             clientRegistry.getSectorIdentifierUri(),
-                            clientRegistry.getClientType());
+                            clientRegistry.getClientType(),
+                            clientRegistry.getIdTokenSigningAlgorithm());
             LOG.info("Client updated");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException | NullPointerException e) {
