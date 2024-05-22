@@ -59,6 +59,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -80,6 +81,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -112,14 +114,14 @@ class LoginHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private static final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
     private static final Map<String, String> VALID_HEADERS =
-            Map.of(
-                    PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                    PERSISTENT_ID,
-                    "Session-Id",
-                    session.getSessionId(),
-                    CLIENT_SESSION_ID_HEADER,
-                    CLIENT_SESSION_ID);
+            Map.ofEntries(
+                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
+                    Map.entry("Session-Id", session.getSessionId()),
+                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -220,11 +222,13 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(
@@ -237,7 +241,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         CLIENT_ID.getValue(),
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -250,6 +254,44 @@ class LoginHandlerTest {
                         false);
 
         verifySessionIsSaved();
+    }
+
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        var headersWithoutTICFHeader =
+                VALID_HEADERS.entrySet().stream()
+                        .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                        .collect(
+                                Collectors.toUnmodifiableMap(
+                                        Map.Entry::getKey, Map.Entry::getValue));
+
+        var event =
+                eventWithHeadersAndBody(headersWithoutTICFHeader, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_ID.getValue(),
+                        auditUserWithAllUserInfo,
+                        AuditService.RestrictedSection.empty,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
 
     @ParameterizedTest
@@ -359,7 +401,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         CLIENT_ID.getValue(),
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         verifyNoInteractions(cloudwatchMetricsService);
@@ -424,7 +466,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -456,7 +498,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", maxRetriesAllowed),
                         pair("attemptNoFailedAt", maxRetriesAllowed));
@@ -466,7 +508,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         AuditService.UNKNOWN,
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -497,7 +539,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         "",
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -551,7 +593,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         "",
                         auditUserWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", 6));
@@ -655,7 +697,7 @@ class LoginHandlerTest {
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
                         "",
                         auditUserWithoutUserInfo,
-                        AuditService.RestrictedSection.empty);
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

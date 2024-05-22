@@ -100,6 +100,10 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.getPassword());
 
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         if (passwordValidationError.isEmpty()) {
             LOG.info("No password validation errors found");
             if (authenticationService.userExists(request.getEmail())) {
@@ -117,7 +121,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
@@ -167,7 +171,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty,
+                    restrictedSection,
                     pair("internalSubjectId", user.getUserProfile().getSubjectID()),
                     pair("rpPairwiseId", rpPairwiseId));
 

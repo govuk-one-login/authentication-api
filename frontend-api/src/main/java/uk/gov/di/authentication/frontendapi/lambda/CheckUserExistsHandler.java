@@ -103,6 +103,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             if (errorResponse.isPresent()) {
+                var restrictedSection =
+                        new AuditService.RestrictedSection(
+                                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
                         userContext
@@ -116,7 +120,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -130,6 +134,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 LOG.info("User account is locked");
                 sessionService.save(userContext.getSession());
 
+                var restrictedSection =
+                        new AuditService.RestrictedSection(
+                                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         userContext.getClientId(),
@@ -140,7 +148,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
@@ -183,6 +191,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
+
+            var restrictedSection =
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             auditService.submitAuditEvent(
                     auditableEvent,
                     userContext
@@ -196,7 +209,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     persistentSessionId,
-                    AuditService.RestrictedSection.empty,
+                    restrictedSection,
                     pair("rpPairwiseId", rpPairwiseId));
 
             var lockoutInformation =

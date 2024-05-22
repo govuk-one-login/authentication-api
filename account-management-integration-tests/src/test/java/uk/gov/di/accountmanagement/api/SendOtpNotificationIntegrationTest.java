@@ -24,7 +24,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.SEND_OTP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -62,7 +62,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 notificationsQueue,
                 List.of(new NotifyRequest(TEST_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(SEND_OTP));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(SEND_OTP));
     }
 
     @Test
@@ -108,7 +108,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         new NotifyRequest(
                                 TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(SEND_OTP));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(SEND_OTP));
     }
 
     @Test
@@ -135,7 +135,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         new NotifyRequest(
                                 TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(SEND_OTP));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(SEND_OTP));
     }
 
     @Test

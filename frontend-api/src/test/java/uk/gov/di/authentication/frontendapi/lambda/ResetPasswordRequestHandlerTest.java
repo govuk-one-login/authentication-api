@@ -58,6 +58,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -80,6 +81,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -101,6 +103,8 @@ class ResetPasswordRequestHandlerTest {
             pair("passwordResetCounter", 0);
     private static final AuditService.MetadataPair PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD =
             pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -272,6 +276,36 @@ class ResetPasswordRequestHandlerTest {
                             "123.123.123.123",
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
+                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
+        void checkPasswordResetRequestedAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            usingValidSession();
+            var headers = validEvent.getHeaders();
+            var headersWithoutTICF =
+                    headers.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            validEvent.setHeaders(headersWithoutTICF);
+
+            handler.handleRequest(validEvent, context);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                            TEST_CLIENT_ID,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            expectedCommonSubject,
+                            CommonTestVariables.EMAIL,
+                            "123.123.123.123",
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PERSISTENT_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -314,6 +348,41 @@ class ResetPasswordRequestHandlerTest {
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
             verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
+                            TEST_CLIENT_ID,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            expectedCommonSubject,
+                            CommonTestVariables.EMAIL,
+                            "123.123.123.123",
+                            CommonTestVariables.UK_MOBILE_NUMBER,
+                            PERSISTENT_ID,
+                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
+        void
+                checkPasswordResetRequestedForTestClientAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            usingValidSession();
+            usingValidClientSession();
+            var headers = validEvent.getHeaders();
+            var headersWithoutTICF =
+                    headers.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            validEvent.setHeaders(headersWithoutTICF);
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
 
             verify(auditService)
                     .submitAuditEvent(
@@ -492,13 +561,11 @@ class ResetPasswordRequestHandlerTest {
     }
 
     private Map<String, String> validHeaders() {
-        return Map.of(
-                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                PERSISTENT_ID,
-                "Session-Id",
-                session.getSessionId(),
-                CLIENT_SESSION_ID_HEADER,
-                CLIENT_SESSION_ID);
+        return Map.ofEntries(
+                Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
+                Map.entry("Session-Id", session.getSessionId()),
+                Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(

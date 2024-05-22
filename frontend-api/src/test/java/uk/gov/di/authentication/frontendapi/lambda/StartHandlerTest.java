@@ -64,6 +64,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -86,6 +87,8 @@ class StartHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String AUDIENCE = "https://localhost/authorize";
     private static final Json objectMapper = SerializationService.getInstance();
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -138,6 +141,7 @@ class StartHandlerTest {
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
+        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         when(startService.getCookieConsentValue(anyMap(), anyString()))
                 .thenReturn(cookieConsentValue);
@@ -151,6 +155,7 @@ class StartHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -180,7 +185,7 @@ class StartHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
@@ -188,6 +193,7 @@ class StartHandlerTest {
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
             throws ParseException, Json.JsonException {
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true, null);
@@ -213,6 +219,7 @@ class StartHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
+
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -247,13 +254,59 @@ class StartHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
     @Test
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
+        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
+        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
+        when(startService.getGATrackingId(anyMap())).thenReturn(null);
+        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
+        when(startService.buildUserStartInfo(userContext, null, null, true, true))
+                .thenReturn(new UserStartInfo(false, false, false, false, null, null, false, null));
+        usingValidSession();
+        usingValidClientSession();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(REAUTHENTICATE_HEADER, "true");
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
+
+        assertFalse(response.user().isAuthenticated());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.START_INFO_FOUND,
+                        TEST_CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", AuditService.UNKNOWN));
+    }
+
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
@@ -270,17 +323,14 @@ class StartHandlerTest {
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(REAUTHENTICATE_HEADER, "true");
+
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
-
-        assertFalse(response.user().isAuthenticated());
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
@@ -315,6 +365,8 @@ class StartHandlerTest {
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(REAUTHENTICATE_HEADER, "false");
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -351,6 +403,8 @@ class StartHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
         event.setHeaders(headers);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -376,6 +430,8 @@ class StartHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));

@@ -182,6 +182,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     sqsClient.send(serialiseRequest(smsNotifyRequest));
                 }
             }
+
+            var restrictedSection =
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             if (request.isForcedPasswordReset()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE,
@@ -199,7 +204,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                                 .map(UserProfile::getPhoneNumber)
                                 .orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditService.RestrictedSection.empty);
+                        restrictedSection);
             }
             auditService.submitAuditEvent(
                     auditableEvent,
@@ -214,7 +219,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty);
+                    restrictedSection);
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
@@ -264,6 +269,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Adding block to account modifiers table");
             dynamoAccountModifiersService.setAccountRecoveryBlock(
                     internalCommonSubjectId.getValue(), true);
+
+            var restrictedSection =
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             auditService.submitAuditEvent(
                     ACCOUNT_RECOVERY_BLOCK_ADDED,
                     userContext
@@ -277,7 +287,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty);
+                    restrictedSection);
         }
     }
 }

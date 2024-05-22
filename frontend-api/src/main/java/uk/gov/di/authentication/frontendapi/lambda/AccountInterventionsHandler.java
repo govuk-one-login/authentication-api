@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -228,6 +229,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         FrontendAuditableEvent auditEvent =
                 ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT.get(requiredInterventionsState);
 
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         if (auditEvent != null) {
             auditService.submitAuditEvent(
                     auditEvent,
@@ -242,7 +247,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                             .map(UserProfile::getPhoneNumber)
                             .orElse(AuditService.UNKNOWN),
                     persistentSessionID,
-                    AuditService.RestrictedSection.empty);
+                    restrictedSection);
         } else {
             LOG.error(
                     "Unhandled account interventions state combination to calculate audit event: {}",

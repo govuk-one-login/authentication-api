@@ -43,6 +43,7 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 
 public abstract class HandlerIntegrationTest<Q, S> {
     private static final String REDIS_HOST = "localhost";
@@ -71,6 +72,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
                                             .orElse("")));
     public static final ECKey EC_KEY_PAIR;
     public static final String EC_PUBLIC_KEY;
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     static {
         try {
@@ -231,8 +234,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
         var headers = new HashMap<String, String>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+
         clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
         persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, "base64 encoded");
         return headers;
     }
 

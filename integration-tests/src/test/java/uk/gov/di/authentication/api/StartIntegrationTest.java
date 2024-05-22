@@ -52,7 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -63,6 +64,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String TEST_CLIENT_NAME = "test-client-name";
     private static final State STATE = new State();
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
@@ -142,7 +145,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(JsonParser.parseString(response.getBody()), is(equalTo(expectedJson)));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -176,7 +179,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     private static Stream<MFAMethodType> mfaMethodTypes() {
@@ -226,7 +229,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         verifyStandardUserInformationSetOnResponse(startResponse.user(), true);
         assertThat(startResponse.user().isAuthenticated(), equalTo(true));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -277,7 +280,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNotNull(clientSession.getDocAppSubjectId());
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -309,7 +312,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     private void registerClient(KeyPair keyPair, ClientType clientType, boolean consentRequired) {
@@ -375,6 +378,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
         return headers;
     }
 

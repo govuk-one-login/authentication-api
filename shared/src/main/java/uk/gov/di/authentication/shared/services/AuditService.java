@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -16,23 +19,21 @@ import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
+    private static final Logger LOG = LogManager.getLogger(AuditService.class);
 
     public static final String UNKNOWN = "";
+    public static final String COMPONENT_ID = "AUTH";
 
     private final Clock clock;
-    private final ConfigurationService configurationService;
     private final AwsSqsClient txmaQueueClient;
-    private final String COMPONENT_ID = "AUTH";
 
     public AuditService(
             Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
         this.clock = clock;
-        this.configurationService = configurationService;
         this.txmaQueueClient = txmaQueueClient;
     }
 
     public AuditService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.clock = Clock.systemUTC();
         this.txmaQueueClient =
                 new AwsSqsClient(
@@ -53,29 +54,56 @@ public class AuditService {
                         .withComponentId(COMPONENT_ID)
                         .withUser(user);
 
+        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);
+        addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
+
+        txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    private static void addRestrictedSectionToAuditEvent(
+            RestrictedSection restrictedSection,
+            TxmaAuditEvent txmaAuditEvent,
+            MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
                 .forEach(
                         pair -> {
-                            if (pair.isRestricted()) {
+                            if (Boolean.TRUE.equals(pair.isRestricted())) {
                                 txmaAuditEvent.addRestricted(pair.getKey(), pair.getValue());
-                            } else {
-                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
                             }
                         });
 
-        restrictedSection.encoded.ifPresent(
-                encodedString ->
-                        txmaAuditEvent.addRestricted(
-                                "device_information", Map.of("encoded", encodedString)));
+        restrictedSection
+                .encoded()
+                .ifPresentOrElse(
+                        s -> {
+                            if (!s.isEmpty()) {
+                                txmaAuditEvent.addRestricted(
+                                        "device_information", Map.of("encoded", s));
+                            } else {
+                                LOG.warn(
+                                        "Encoded device information for audit event present but empty.");
+                            }
+                        },
+                        () ->
+                                LOG.warn(
+                                        "Encoded device information for audit event is not present."));
+    }
 
+    private static void addExtensionSectionToAuditEvent(
+            TxmaAuditUser user, TxmaAuditEvent txmaAuditEvent, MetadataPair... metadataPairs) {
+        Arrays.stream(metadataPairs)
+                .forEach(
+                        pair -> {
+                            if (Boolean.FALSE.equals(pair.isRestricted())) {
+                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
+                            }
+                        });
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
                 .flatMap(PhoneNumberHelper::maybeGetCountry)
                 .ifPresent(
                         country ->
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
-
-        txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
     public record RestrictedSection(Optional<String> encoded) {

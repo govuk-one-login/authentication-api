@@ -29,7 +29,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -39,6 +40,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String TEST_PASSWORD = "password-1";
     private static final Subject TEST_SUBJECT = new Subject();
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     protected static final AccessTokenStoreExtension accessTokenStoreExtension =
@@ -82,7 +85,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
                         Map.of());
 
         assertThat(response, hasStatus(200));
@@ -113,7 +118,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getClaim("salt"));
 
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
-        assertTxmaAuditEventsReceived(
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
                 singletonList(AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION));
     }

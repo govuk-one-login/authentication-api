@@ -76,7 +76,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestReceived(String clientSessionId) {
+    public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {
+        var restrictedSection =
+                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
+
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_RECEIVED,
                 AuditService.UNKNOWN,
@@ -87,11 +90,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                AuditService.RestrictedSection.empty);
+                restrictedSection);
     }
 
     @Override
-    public void onRequestValidationError(String clientSessionId) {
+    public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {
+        var restrictedSection =
+                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
+
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
                 AuditService.UNKNOWN,
@@ -102,7 +108,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                AuditService.RestrictedSection.empty);
+                restrictedSection);
     }
 
     @Override
@@ -138,7 +144,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     persistentSessionId,
-                    AuditService.UNKNOWN);
+                    AuditService.UNKNOWN,
+                    userContext.getTxmaAuditEncoded());
         }
 
         AuditableEvent auditableEvent;
@@ -165,7 +172,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 auditableClientId,
                                 request.getEmail(),
                                 persistentSessionId,
-                                session.getInternalCommonSubjectIdentifier());
+                                session.getInternalCommonSubjectIdentifier(),
+                                userContext.getTxmaAuditEncoded());
                     }
                     AuthenticationRequest authorizationRequest;
                     try {
@@ -179,7 +187,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 auditableClientId,
                                 request.getEmail(),
                                 persistentSessionId,
-                                session.getInternalCommonSubjectIdentifier());
+                                session.getInternalCommonSubjectIdentifier(),
+                                userContext.getTxmaAuditEncoded());
                     }
                     String clientId = authorizationRequest.getClientID().getValue();
 
@@ -222,8 +231,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         auditableClientId,
                         request.getEmail(),
                         persistentSessionId,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        userContext.getTxmaAuditEncoded());
         }
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         auditService.submitAuditEvent(
                 auditableEvent,
                 auditableClientId,
@@ -234,7 +248,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 ipAddress,
                 auditablePhoneNumber,
                 persistentSessionId,
-                AuditService.RestrictedSection.empty);
+                restrictedSection);
         return generateEmptySuccessApiGatewayResponse();
     }
 
@@ -281,7 +295,11 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             String clientId,
             String email,
             String persistentSessionId,
-            String subjectId) {
+            String subjectId,
+            String txmaAuditEncoded) {
+        var restrictedSection =
+                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
+
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
                 clientId,
@@ -292,7 +310,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 persistentSessionId,
-                AuditService.RestrictedSection.empty);
+                restrictedSection);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }

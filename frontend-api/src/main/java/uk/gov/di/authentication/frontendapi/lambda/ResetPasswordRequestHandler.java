@@ -131,6 +131,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             LOG.info("passwordResetType: {}", passwordResetTypePair);
 
+            var restrictedSection =
+                    new AuditService.RestrictedSection(
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             auditService.submitAuditEvent(
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
@@ -146,7 +150,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     IpAddressHelper.extractIpAddress(input),
                     authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.RestrictedSection.empty,
+                    restrictedSection,
                     passwordResetCounterPair,
                     passwordResetTypePair);
 

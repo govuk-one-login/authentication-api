@@ -18,6 +18,7 @@ public class UserContext {
     private final ClientSession clientSession;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
+    private final String txmaAuditEncoded;
 
     protected UserContext(
             Session session,
@@ -27,7 +28,8 @@ public class UserContext {
             Optional<ClientRegistry> client,
             ClientSession clientSession,
             SupportedLanguage userLanguage,
-            String clientSessionId) {
+            String clientSessionId,
+            String txmaAuditEncoded) {
         this.session = session;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
@@ -36,6 +38,7 @@ public class UserContext {
         this.clientSession = clientSession;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
+        this.txmaAuditEncoded = txmaAuditEncoded;
     }
 
     public Session getSession() {
@@ -78,6 +81,10 @@ public class UserContext {
         return clientSessionId;
     }
 
+    public String getTxmaAuditEncoded() {
+        return txmaAuditEncoded;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
@@ -91,6 +98,7 @@ public class UserContext {
         private ClientSession clientSession = null;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
+        private String txmaAuditEncoded;
 
         protected Builder(Session session) {
             this.session = session;
@@ -139,6 +147,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withTxmaAuditEvent(String txmaAuditEncoded) {
+            this.txmaAuditEncoded = txmaAuditEncoded;
+            return this;
+        }
+
         public UserContext build() {
             return new UserContext(
                     session,
@@ -148,7 +161,8 @@ public class UserContext {
                     client,
                     clientSession,
                     userLanguage,
-                    clientSessionId);
+                    clientSessionId,
+                    txmaAuditEncoded);
         }
     }
 }

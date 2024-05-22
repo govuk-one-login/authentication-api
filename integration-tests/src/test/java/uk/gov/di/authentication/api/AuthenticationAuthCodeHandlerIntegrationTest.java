@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -29,6 +30,8 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
     private static final String TEST_SUBJECT_ID = "subject-id";
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
@@ -116,9 +119,11 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     private Map<String, String> getHeaders() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
+        // TODO: Not appropriate place to do this.
         var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         headers.put("Session-Id", sessionId);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
         return headers;
     }
 }
