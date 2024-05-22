@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -97,8 +98,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class SendNotificationHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
@@ -125,17 +124,14 @@ class SendNotificationHandlerTest {
             new ClientRegistry()
                     .withTestClient(true)
                     .withClientID(TEST_CLIENT_ID)
-                    .withTestClientEmailAllowlist(
-                            List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    "jb2@digital.cabinet-office.gov.uk"));
+                    .withTestClientEmailAllowlist(List.of(CommonTestVariables.EMAIL));
 
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session =
             new Session(IdGenerator.generate())
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final SendNotificationHandler handler =
@@ -165,8 +161,8 @@ class SendNotificationHandlerTest {
                                         session.getSessionId(),
                                         CLIENT_ID,
                                         TEST_CLIENT_ID,
-                                        TEST_EMAIL_ADDRESS,
-                                        TEST_PHONE_NUMBER))));
+                                        CommonTestVariables.EMAIL,
+                                        CommonTestVariables.UK_MOBILE_NUMBER))));
     }
 
     @BeforeEach
@@ -203,14 +199,14 @@ class SendNotificationHandlerTest {
                         sendRequest(
                                 format(
                                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                        TEST_EMAIL_ADDRESS, notificationType, journeyType));
+                                        CommonTestVariables.EMAIL, notificationType, journeyType));
 
                 assertEquals(204, result.getStatusCode());
                 verify(emailSqsClient)
                         .send(
                                 objectMapper.writeValueAsString(
                                         new NotifyRequest(
-                                                TEST_EMAIL_ADDRESS,
+                                                CommonTestVariables.EMAIL,
                                                 notificationType,
                                                 TEST_SIX_DIGIT_CODE,
                                                 SupportedLanguage.EN)));
@@ -220,7 +216,7 @@ class SendNotificationHandlerTest {
                                     format(
                                             "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
                                             mockedUUID,
-                                            TEST_EMAIL_ADDRESS,
+                                            CommonTestVariables.EMAIL,
                                             session.getSessionId(),
                                             CLIENT_SESSION_ID,
                                             PERSISTENT_ID,
@@ -231,14 +227,14 @@ class SendNotificationHandlerTest {
                     verifyNoInteractions(pendingEmailCheckSqsClient);
                 }
                 verify(codeGeneratorService).sixDigitCode();
-                verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+                verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, notificationType);
                 verify(codeStorageService)
                         .saveOtpCode(
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 TEST_SIX_DIGIT_CODE,
                                 CODE_EXPIRY_TIME,
                                 notificationType);
-                verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+                verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, notificationType);
                 verify(sessionService)
                         .save(
                                 argThat(
@@ -254,7 +250,7 @@ class SendNotificationHandlerTest {
                                 CLIENT_SESSION_ID,
                                 session.getSessionId(),
                                 expectedCommonSubject,
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 "123.123.123.123",
                                 AuditService.UNKNOWN,
                                 PERSISTENT_ID,
@@ -275,7 +271,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType, journeyType));
+                                CommonTestVariables.EMAIL, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(pendingEmailCheckSqsClient);
@@ -294,7 +290,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 notificationType,
                                 true,
                                 JourneyType.ACCOUNT_RECOVERY));
@@ -304,7 +300,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService, never()).getOtpCode(any(), any());
         verify(codeStorageService)
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
@@ -312,7 +308,7 @@ class SendNotificationHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        TEST_EMAIL_ADDRESS,
+                                        CommonTestVariables.EMAIL,
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
@@ -325,7 +321,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -344,9 +340,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_PHONE_NUMBER,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
 
         assertThat(result, hasStatus(204));
@@ -361,7 +357,7 @@ class SendNotificationHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        TEST_PHONE_NUMBER,
+                                        CommonTestVariables.UK_MOBILE_NUMBER,
                                         VERIFY_PHONE_NUMBER,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
@@ -372,9 +368,9 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }
@@ -391,14 +387,14 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType, journeyType));
+                                CommonTestVariables.EMAIL, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
-        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+        verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, notificationType);
         verify(codeStorageService)
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
@@ -417,7 +413,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -432,7 +428,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType, journeyType));
+                                CommonTestVariables.EMAIL, notificationType, journeyType));
 
         assertEquals(400, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
@@ -467,7 +463,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_PHONE_NUMBER,
                                 phoneNumber,
                                 JourneyType.REGISTRATION));
@@ -505,7 +501,7 @@ class SendNotificationHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        TEST_EMAIL_ADDRESS,
+                                        CommonTestVariables.EMAIL,
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
@@ -514,7 +510,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL,
+                                notificationType,
+                                JourneyType.REGISTRATION));
 
         assertEquals(500, result.getStatusCode());
         assertTrue(result.getBody().contains("Error sending message to queue"));
@@ -530,7 +528,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, "VERIFY_PASSWORD"));
+                                CommonTestVariables.EMAIL, "VERIFY_PASSWORD"));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
@@ -564,17 +562,17 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_PHONE_NUMBER,
                                 phoneNumber,
                                 JourneyType.REGISTRATION));
 
         assertEquals(204, result.getStatusCode());
         verify(codeGeneratorService).sixDigitCode();
-        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER);
+        verify(codeStorageService).getOtpCode(CommonTestVariables.EMAIL, VERIFY_PHONE_NUMBER);
         verify(codeStorageService)
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_PHONE_NUMBER);
@@ -593,7 +591,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         phoneNumber,
                         PERSISTENT_ID,
@@ -609,7 +607,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
@@ -658,9 +658,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 notificationTypeTwo,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 journeyTypeTwo));
 
         assertEquals(204, result.getStatusCode());
@@ -676,7 +676,7 @@ class SendNotificationHandlerTest {
         CodeRequestType codeRequestTypeForBlockedOtpRequestType =
                 CodeRequestType.getCodeRequestType(notificationTypeOne, journeyTypeOne);
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
                 .thenReturn(true);
 
@@ -687,9 +687,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 notificationTypeTwo,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 journeyTypeTwo));
 
         assertEquals(204, result.getStatusCode());
@@ -705,18 +705,21 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+                        CommonTestVariables.EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_EMAIL);
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
@@ -725,7 +728,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -742,7 +745,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                 JourneyType.ACCOUNT_RECOVERY));
 
@@ -750,12 +753,12 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
@@ -767,7 +770,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -784,21 +787,21 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_PHONE_NUMBER,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1030));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
                         LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_PHONE_NUMBER);
@@ -810,9 +813,9 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }
@@ -820,7 +823,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreRegistrationEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
@@ -830,7 +833,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
@@ -842,7 +845,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -852,7 +855,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreAccountRecoveryEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
         usingValidSession();
@@ -862,7 +865,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                 JourneyType.ACCOUNT_RECOVERY));
 
@@ -876,7 +879,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -886,7 +889,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
@@ -896,9 +899,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_PHONE_NUMBER,
-                                TEST_PHONE_NUMBER,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
                                 JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
@@ -912,9 +915,9 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }
@@ -924,7 +927,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
 
@@ -932,7 +935,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
@@ -944,7 +947,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -956,7 +959,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
 
@@ -964,7 +967,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
+                                CommonTestVariables.EMAIL,
                                 VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                                 JourneyType.ACCOUNT_RECOVERY));
 
@@ -978,7 +981,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -988,7 +991,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
@@ -998,7 +1001,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL,
+                                VERIFY_PHONE_NUMBER,
+                                JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
@@ -1010,7 +1015,7 @@ class SendNotificationHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -1030,11 +1035,12 @@ class SendNotificationHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
+                        CommonTestVariables.EMAIL, notificationType, JourneyType.REGISTRATION));
         var result = handler.handleRequest(event, context);
 
         var notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
+                new NotifyRequest(
+                        CommonTestVariables.EMAIL, notificationType, SupportedLanguage.EN);
         verify(emailSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verifyNoInteractions(codeStorageService);
         verifyNoInteractions(auditService);
@@ -1056,7 +1062,9 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
+                                CommonTestVariables.EMAIL,
+                                notificationType,
+                                JourneyType.REGISTRATION));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
@@ -1108,7 +1116,7 @@ class SendNotificationHandlerTest {
 
     private boolean isSessionWithEmailSent(
             Session session, NotificationType notificationType, JourneyType journeyType) {
-        return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS)
+        return session.getEmailAddress().equals(CommonTestVariables.EMAIL)
                 && session.getCodeRequestCount(notificationType, journeyType) == 1;
     }
 

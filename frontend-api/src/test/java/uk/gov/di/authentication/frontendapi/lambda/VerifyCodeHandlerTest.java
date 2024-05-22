@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -75,7 +76,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class VerifyCodeHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final String INVALID_CODE = "6543221";
     private static final String CLIENT_ID = "client-id";
@@ -99,7 +99,7 @@ class VerifyCodeHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
             new Session("session-id")
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Session testSession =
             new Session("test-client-session-id").setEmailAddress(TEST_CLIENT_EMAIL);
@@ -161,7 +161,7 @@ class VerifyCodeHandlerTest {
                         cloudwatchMetricsService,
                         accountModifiersService);
 
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
         when(authenticationService.getUserProfileFromEmail(TEST_CLIENT_EMAIL))
@@ -216,13 +216,13 @@ class VerifyCodeHandlerTest {
     @MethodSource("emailNotificationTypes")
     void shouldReturn204ForValidEmailCodeRequest(NotificationType emailNotificationType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, emailNotificationType))
                 .thenReturn(Optional.of(CODE));
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(CODE, emailNotificationType.toString());
 
         assertThat(result, hasStatus(204));
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType);
+        verify(codeStorageService).deleteOtpCode(CommonTestVariables.EMAIL, emailNotificationType);
         verify(sessionService).save(session);
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
@@ -232,7 +232,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -253,7 +253,7 @@ class VerifyCodeHandlerTest {
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode(
             NotificationType emailNotificationType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, emailNotificationType))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
@@ -276,7 +276,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -376,8 +376,9 @@ class VerifyCodeHandlerTest {
     void
             shouldReturnMaxReachedAndNotSetBlockWhenRegistrationEmailCodeAttemptsExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
+                .thenReturn(6);
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
         var result = makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.name());
 
@@ -385,9 +386,10 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
         assertThat(session.getRetryCount(), equalTo(0));
         verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, LOCKOUT_DURATION);
+                .saveBlockedForEmail(
+                        CommonTestVariables.EMAIL, CODE_BLOCKED_KEY_PREFIX, LOCKOUT_DURATION);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -395,7 +397,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -408,7 +410,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturnMaxReachedAndNotSetBlockWhenAccountRecoveryEmailCodeIsBlocked() {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+        when(codeStorageService.isBlockedForEmail(CommonTestVariables.EMAIL, codeBlockedKeyPrefix))
                 .thenReturn(true);
 
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
@@ -422,7 +424,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturnMaxReachedAndNotSetBlockWhenPasswordResetEmailCodeIsBlocked() {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_PASSWORD_RESET;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+        when(codeStorageService.isBlockedForEmail(CommonTestVariables.EMAIL, codeBlockedKeyPrefix))
                 .thenReturn(true);
 
         var result = makeCallWithCode(CODE, RESET_PASSWORD_WITH_CODE.name());
@@ -438,7 +440,7 @@ class VerifyCodeHandlerTest {
     void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlocked(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+        when(codeStorageService.isBlockedForEmail(CommonTestVariables.EMAIL, codeBlockedKeyPrefix))
                 .thenReturn(true);
 
         var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
@@ -456,17 +458,19 @@ class VerifyCodeHandlerTest {
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+        when(codeStorageService.isBlockedForEmail(CommonTestVariables.EMAIL, codeBlockedKeyPrefix))
                 .thenReturn(false);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
+                .thenReturn(6);
 
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, LOCKOUT_DURATION);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+                .saveBlockedForEmail(
+                        CommonTestVariables.EMAIL, codeBlockedKeyPrefix, LOCKOUT_DURATION);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
@@ -475,7 +479,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -490,7 +494,7 @@ class VerifyCodeHandlerTest {
     void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         session.setNewAccount(Session.AccountState.EXISTING);
@@ -502,7 +506,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
+        verify(codeStorageService).deleteOtpCode(CommonTestVariables.EMAIL, MFA_SMS);
         verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
         var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
         verify(sessionService, times(saveSessionCount)).save(session);
@@ -513,7 +517,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -533,7 +537,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -547,7 +551,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
         when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
                 .thenReturn(false);
@@ -557,7 +561,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
+        verify(codeStorageService).deleteOtpCode(CommonTestVariables.EMAIL, MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
         verify(sessionService, times(2)).save(session);
         verify(auditService)
@@ -567,7 +571,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -586,7 +590,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
@@ -601,7 +605,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -621,9 +625,10 @@ class VerifyCodeHandlerTest {
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
+                .thenReturn(1);
 
         var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
@@ -632,11 +637,11 @@ class VerifyCodeHandlerTest {
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_BLOCKED_KEY_PREFIX + codeRequestType,
                         LOCKOUT_DURATION);
         verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -644,7 +649,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
@@ -664,9 +669,10 @@ class VerifyCodeHandlerTest {
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenPasswordResetExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE))
+        when(codeStorageService.getOtpCode(CommonTestVariables.EMAIL, RESET_PASSWORD_WITH_CODE))
                 .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
+                .thenReturn(1);
 
         var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
 
@@ -675,11 +681,11 @@ class VerifyCodeHandlerTest {
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_PASSWORD_RESET,
                         LOCKOUT_DURATION);
         verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -687,7 +693,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,

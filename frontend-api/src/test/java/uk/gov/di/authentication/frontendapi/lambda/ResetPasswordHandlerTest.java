@@ -14,6 +14,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -89,16 +90,15 @@ class ResetPasswordHandlerTest {
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final Context context = mock(Context.class);
     private static final String TEST_CLIENT_ID = "test-client-id";
-    private static final String NEW_PASSWORD = "Pa55word!";
+    private static final String NEW_PASSWORD = CommonTestVariables.PASSWORD;
     private static final String SUBJECT = "some-subject";
-    private static final String TEST_PHONE_NUMBER = "01234567890";
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Json objectMapper = SerializationService.getInstance();
     private static final NotifyRequest EXPECTED_SMS_NOTIFY_REQUEST =
             new NotifyRequest(
-                    TEST_PHONE_NUMBER,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
                     NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
                     SupportedLanguage.EN);
     private static final NotifyRequest EXPECTED_EMAIL_NOTIFY_REQUEST =
@@ -489,7 +489,7 @@ class ResetPasswordHandlerTest {
         return new UserProfile()
                 .withEmail(EMAIL)
                 .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
-                .withPhoneNumber(TEST_PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withPhoneNumberVerified(isPhoneNumberVerified);
     }
 

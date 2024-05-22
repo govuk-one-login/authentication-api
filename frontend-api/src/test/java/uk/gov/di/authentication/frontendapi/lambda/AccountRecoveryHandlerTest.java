@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -39,7 +40,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class AccountRecoveryHandlerTest {
 
-    private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String CLIENT_SESSION_ID = "known-client-session-id";
@@ -59,14 +59,15 @@ class AccountRecoveryHandlerTest {
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final Session session =
+            new Session(IdGenerator.generate()).setEmailAddress(CommonTestVariables.EMAIL);
 
     @BeforeEach
     void setup() {
         var userProfile = generateUserProfile();
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(userProfile));
         handler =
                 new AccountRecoveryHandler(
@@ -92,7 +93,7 @@ class AccountRecoveryHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        event.setBody(format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL.toUpperCase()));
 
         var expectedResponse = new AccountRecoveryResponse(false);
         var result = handler.handleRequest(event, context);
@@ -106,7 +107,7 @@ class AccountRecoveryHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         internalCommonSubjectId,
-                        EMAIL,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -126,7 +127,7 @@ class AccountRecoveryHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        event.setBody(format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL.toUpperCase()));
 
         var expectedResponse = new AccountRecoveryResponse(true);
         var result = handler.handleRequest(event, context);
@@ -140,7 +141,7 @@ class AccountRecoveryHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         internalCommonSubjectId,
-                        EMAIL,
+                        CommonTestVariables.EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
@@ -154,7 +155,7 @@ class AccountRecoveryHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .withEmail(EMAIL)
+                .withEmail(CommonTestVariables.EMAIL)
                 .withEmailVerified(true)
                 .withSubjectID(INTERNAL_SUBJECT_ID.getValue());
     }

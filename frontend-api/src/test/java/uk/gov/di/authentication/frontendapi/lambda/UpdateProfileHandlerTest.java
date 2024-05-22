@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -67,8 +68,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class UpdateProfileHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String PHONE_NUMBER = "07755551084";
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
@@ -97,7 +96,7 @@ class UpdateProfileHandlerTest {
             configurationService.getTermsAndConditionsVersion();
     private final Session session =
             new Session(SESSION_ID)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     @RegisterExtension
@@ -114,7 +113,7 @@ class UpdateProfileHandlerTest {
                                         SESSION_ID,
                                         CLIENT_SESSION_ID,
                                         CLIENT_ID.toString(),
-                                        TEST_EMAIL_ADDRESS))));
+                                        CommonTestVariables.EMAIL))));
         verifyNoMoreInteractions(auditService);
     }
 
@@ -135,7 +134,7 @@ class UpdateProfileHandlerTest {
     void shouldReturn204WhenUpdatingTermsAndConditions() {
         usingValidSession();
         usingValidClientSession();
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(generateUserProfileWithConsent()));
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
@@ -150,13 +149,14 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         UPDATE_TERMS_CONDS,
                         UPDATED_TERMS_AND_CONDITIONS_VALUE));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         verify(authenticationService)
-                .updateTermsAndConditions(eq(TEST_EMAIL_ADDRESS), eq(TERMS_AND_CONDITIONS_VERSION));
+                .updateTermsAndConditions(
+                        eq(CommonTestVariables.EMAIL), eq(TERMS_AND_CONDITIONS_VERSION));
         assertThat(result, hasStatus(204));
         verify(auditService)
                 .submitAuditEvent(
@@ -165,9 +165,9 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty);
     }
@@ -176,7 +176,7 @@ class UpdateProfileHandlerTest {
     void shouldReturn204WhenUpdatingProfileWithConsent() {
         usingValidSession();
         usingValidClientSession();
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                 .thenReturn(Optional.of(generateUserProfileWithoutConsent()));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -194,12 +194,12 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, CAPTURE_CONSENT, CONSENT_VALUE));
+                        CommonTestVariables.EMAIL, CAPTURE_CONSENT, CONSENT_VALUE));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(204));
         verify(authenticationService)
-                .updateConsent(eq(TEST_EMAIL_ADDRESS), any(ClientConsent.class));
+                .updateConsent(eq(CommonTestVariables.EMAIL), any(ClientConsent.class));
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_CONSENT_UPDATED,
@@ -207,9 +207,9 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         "",
-                        PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty);
     }
@@ -228,13 +228,14 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        TEST_EMAIL_ADDRESS, UPDATE_TERMS_CONDS));
+                        CommonTestVariables.EMAIL, UPDATE_TERMS_CONDS));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verify(authenticationService, never())
-                .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
+                .updatePhoneNumber(
+                        eq(CommonTestVariables.EMAIL), eq(CommonTestVariables.UK_MOBILE_NUMBER));
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
@@ -295,9 +296,9 @@ class UpdateProfileHandlerTest {
 
     private UserProfile generateUserProfileWithoutConsent() {
         return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmail(CommonTestVariables.EMAIL)
                 .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT);
@@ -306,9 +307,9 @@ class UpdateProfileHandlerTest {
     private UserProfile generateUserProfileWithConsent() {
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmail(CommonTestVariables.EMAIL)
                 .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT)
