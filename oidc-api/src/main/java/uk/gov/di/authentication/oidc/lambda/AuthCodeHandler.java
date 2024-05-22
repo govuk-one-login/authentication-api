@@ -71,7 +71,6 @@ public class AuthCodeHandler
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
     private final DynamoClientService dynamoClientService;
 
@@ -83,7 +82,6 @@ public class AuthCodeHandler
             ClientSessionService clientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            ConfigurationService configurationService,
             DynamoService dynamoService,
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
@@ -93,7 +91,6 @@ public class AuthCodeHandler
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.configurationService = configurationService;
         this.dynamoService = dynamoService;
         this.dynamoClientService = dynamoClientService;
     }
@@ -106,7 +103,6 @@ public class AuthCodeHandler
         clientSessionService = new ClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.configurationService = configurationService;
         dynamoService = new DynamoService(configurationService);
         dynamoClientService = new DynamoClientService(configurationService);
         authCodeResponseService =
@@ -133,10 +129,7 @@ public class AuthCodeHandler
         try {
             session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
             clientSessionId =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+                    getHeaderValueFromHeaders(input.getHeaders(), CLIENT_SESSION_ID_HEADER);
             validateSessions(session, clientSessionId);
         } catch (ProcessAuthRequestException e) {
             return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());

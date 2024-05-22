@@ -12,6 +12,11 @@ public final class RequestHeaderHelper {
     private RequestHeaderHelper() {}
 
     public static boolean headersContainValidHeader(
+            Map<String, String> headers, String headerName) {
+        return headersContainValidHeader(headers, headerName, false);
+    }
+
+    public static boolean headersContainValidHeader(
             Map<String, String> headers, String headerName, boolean matchLowerCase) {
         if (headers == null || headers.isEmpty()) {
             LOG.warn("All headers are missing or empty when looking for header {}", headerName);
@@ -39,6 +44,10 @@ public final class RequestHeaderHelper {
             LOG.warn("Header {} is missing, matchLowerCase={}", headerName, matchLowerCase);
             return false;
         }
+    }
+
+    public static String getHeaderValueFromHeaders(Map<String, String> headers, String headerName) {
+        return getHeaderValueFromHeaders(headers, headerName, false);
     }
 
     public static String getHeaderValueFromHeaders(

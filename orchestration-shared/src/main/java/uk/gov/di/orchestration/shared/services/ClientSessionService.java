@@ -128,17 +128,10 @@ public class ClientSessionService {
     }
 
     public Optional<ClientSession> getClientSessionFromRequestHeaders(Map<String, String> headers) {
-        if (!headersContainValidHeader(
-                headers,
-                CLIENT_SESSION_ID_HEADER,
-                configurationService.getHeadersCaseInsensitive())) {
+        if (!headersContainValidHeader(headers, CLIENT_SESSION_ID_HEADER)) {
             return Optional.empty();
         }
-        String clientSessionId =
-                getHeaderValueFromHeaders(
-                        headers,
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+        String clientSessionId = getHeaderValueFromHeaders(headers, CLIENT_SESSION_ID_HEADER);
         if (clientSessionId == null) {
             LOG.warn("Value not found for Client-Session-Id header");
             return Optional.empty();

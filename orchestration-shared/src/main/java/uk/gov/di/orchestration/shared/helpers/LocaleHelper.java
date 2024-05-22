@@ -4,7 +4,6 @@ import com.nimbusds.langtag.LangTag;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.util.Map;
 import java.util.Objects;
@@ -41,8 +40,7 @@ public class LocaleHelper {
     }
 
     public static Optional<SupportedLanguage> getPrimaryLanguageFromUILocales(
-            AuthenticationRequest authenticationRequest,
-            ConfigurationService configurationService) {
+            AuthenticationRequest authenticationRequest) {
 
         if (Objects.isNull(authenticationRequest.getUILocales())) {
             return Optional.empty();
@@ -71,17 +69,11 @@ public class LocaleHelper {
                 .orElseGet(() -> SupportedLanguage.EN);
     }
 
-    public static Optional<String> getUserLanguageFromRequestHeaders(
-            Map<String, String> headers, ConfigurationService configurationService) {
-        if (!headersContainValidHeader(
-                headers, USER_LANGUAGE_HEADER, configurationService.getHeadersCaseInsensitive())) {
+    public static Optional<String> getUserLanguageFromRequestHeaders(Map<String, String> headers) {
+        if (!headersContainValidHeader(headers, USER_LANGUAGE_HEADER)) {
             return Optional.empty();
         }
-        String language =
-                getHeaderValueFromHeaders(
-                        headers,
-                        USER_LANGUAGE_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+        String language = getHeaderValueFromHeaders(headers, USER_LANGUAGE_HEADER);
         if (language == null) {
             LOG.warn("Value not found for User-Language header");
             return Optional.empty();

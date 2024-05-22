@@ -138,10 +138,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
 
             var clientSessionId =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+                    getHeaderValueFromHeaders(input.getHeaders(), CLIENT_SESSION_ID_HEADER);
             var clientSession =
                     clientSessionService
                             .getClientSession(clientSessionId)

@@ -136,10 +136,7 @@ public class DocAppAuthorizeHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
             }
             String clientSessionId =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+                    getHeaderValueFromHeaders(input.getHeaders(), CLIENT_SESSION_ID_HEADER);
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             attachLogFieldToLogs(

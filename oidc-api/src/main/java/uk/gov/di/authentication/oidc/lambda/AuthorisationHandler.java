@@ -766,7 +766,7 @@ public class AuthorisationHandler
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
 
-        getPrimaryLanguageFromUILocales(authRequest, configurationService)
+        getPrimaryLanguageFromUILocales(authRequest)
                 .ifPresent(
                         primaryLanguage -> {
                             LOG.info("Setting primary language: {}", primaryLanguage.getLanguage());

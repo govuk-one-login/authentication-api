@@ -248,10 +248,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("ORCH_CLIENT_ID", "UNKNOWN");
     }
 
-    public boolean getHeadersCaseInsensitive() {
-        return false;
-    }
-
     public boolean isIdentityEnabled() {
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }

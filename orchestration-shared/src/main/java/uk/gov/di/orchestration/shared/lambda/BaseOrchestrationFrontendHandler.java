@@ -83,10 +83,7 @@ public abstract class BaseOrchestrationFrontendHandler
                 OrchestrationUserSession.builder(session);
 
         String clientSessionId =
-                getHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                getHeaderValueFromHeaders(input.getHeaders(), CLIENT_SESSION_ID_HEADER);
         userSessionBuilder.withClientSessionId(clientSessionId);
 
         Optional<ClientSession> clientSession =

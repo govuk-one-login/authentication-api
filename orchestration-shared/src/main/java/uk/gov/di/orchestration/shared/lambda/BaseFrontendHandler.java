@@ -99,10 +99,7 @@ public abstract class BaseFrontendHandler<T>
         ThreadContext.clearMap();
 
         String clientSessionId =
-                getHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+                getHeaderValueFromHeaders(input.getHeaders(), CLIENT_SESSION_ID_HEADER);
 
         onRequestReceived(clientSessionId);
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
@@ -118,8 +115,7 @@ public abstract class BaseFrontendHandler<T>
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        Optional<String> userLanguage =
-                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
+        Optional<String> userLanguage = getUserLanguageFromRequestHeaders(input.getHeaders());
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);

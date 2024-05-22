@@ -166,7 +166,6 @@ class AuthCodeHandlerTest {
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        configurationService,
                         dynamoService,
                         dynamoClientService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");

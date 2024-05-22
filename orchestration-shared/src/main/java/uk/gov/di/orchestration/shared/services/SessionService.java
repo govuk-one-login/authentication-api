@@ -71,16 +71,11 @@ public class SessionService {
     }
 
     public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
-        if (!headersContainValidHeader(
-                headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
+        if (!headersContainValidHeader(headers, SESSION_ID_HEADER)) {
             LOG.warn("Headers are missing Session-Id header");
             return Optional.empty();
         }
-        String sessionId =
-                getHeaderValueFromHeaders(
-                        headers,
-                        SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
+        String sessionId = getHeaderValueFromHeaders(headers, SESSION_ID_HEADER);
         if (sessionId == null) {
             LOG.warn("Value not found for Session-Id header");
             return Optional.empty();

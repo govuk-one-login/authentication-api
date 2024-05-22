@@ -13,7 +13,6 @@ import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.util.List;
@@ -23,8 +22,6 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 class LocaleHelperTest {
@@ -33,8 +30,6 @@ class LocaleHelperTest {
             Optional.of(SupportedLanguage.EN);
     private static Optional<SupportedLanguage> PRIMARY_LANGUAGE_CY =
             Optional.of(SupportedLanguage.CY);
-
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private static Stream<Arguments> uiLocalesAndPrimaryLanguageCYEnabled()
             throws LangTagException {
@@ -106,8 +101,7 @@ class LocaleHelperTest {
             List<LangTag> uiLocales, Optional<SupportedLanguage> primaryLanguage)
             throws LangTagException {
         MatcherAssert.assertThat(
-                LocaleHelper.getPrimaryLanguageFromUILocales(
-                        generateAuthRequest(uiLocales), configurationService),
+                LocaleHelper.getPrimaryLanguageFromUILocales(generateAuthRequest(uiLocales)),
                 equalTo(primaryLanguage));
     }
 
@@ -141,10 +135,7 @@ class LocaleHelperTest {
     @MethodSource("shouldGetUserLanguageFromRequestHeadersSource")
     void shouldGetUserLanguageFromRequestHeaders(
             Map<String, String> headers, Optional<String> result) {
-        when(configurationService.getHeadersCaseInsensitive()).thenReturn(false);
-        assertThat(
-                LocaleHelper.getUserLanguageFromRequestHeaders(headers, configurationService),
-                equalTo(result));
+        assertThat(LocaleHelper.getUserLanguageFromRequestHeaders(headers), equalTo(result));
     }
 
     private AuthenticationRequest generateAuthRequest(List<LangTag> uiLocales) {

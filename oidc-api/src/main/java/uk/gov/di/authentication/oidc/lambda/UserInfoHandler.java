@@ -102,10 +102,7 @@ public class UserInfoHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Request received to the UserInfoHandler");
-        if (!headersContainValidHeader(
-                input.getHeaders(),
-                AUTHORIZATION_HEADER,
-                configurationService.getHeadersCaseInsensitive())) {
+        if (!headersContainValidHeader(input.getHeaders(), AUTHORIZATION_HEADER)) {
             LOG.warn("AccessToken is missing from request");
             return generateApiGatewayProxyResponse(
                     401,
@@ -117,10 +114,7 @@ public class UserInfoHandler
         try {
             accessTokenInfo =
                     accessTokenService.parse(
-                            getHeaderValueFromHeaders(
-                                    input.getHeaders(),
-                                    AUTHORIZATION_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()),
+                            getHeaderValueFromHeaders(input.getHeaders(), AUTHORIZATION_HEADER),
                             configurationService.isIdentityEnabled());
             userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         } catch (AccessTokenException e) {
