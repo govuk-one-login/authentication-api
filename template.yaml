@@ -785,10 +785,15 @@ Resources:
               - dynamodb:Scan
               - dynamodb:UpdateItem
               - dynamodb:PutItem
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
           - Sid: AllowUserProfileTableKms
             Effect: Allow
             Action:
