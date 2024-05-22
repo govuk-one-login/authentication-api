@@ -669,6 +669,22 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_173
 
@@ -799,6 +815,22 @@ Resources:
               - kms:CreateGrant
               - kms:DescribeKey
             Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1165,11 +1197,11 @@ Resources:
               - kms:GetPublicKey
             Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthTokenSigningKeyAlias ]
           - Sid: AllowSQSTxMA
-            Effect: "Allow"
+            Effect: Allow
             Action:
               - sqs:SendMessage
             Resource:
-              - !Sub "arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue"
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
