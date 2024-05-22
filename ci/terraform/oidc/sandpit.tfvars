@@ -76,6 +76,7 @@ orch_register_enabled                = true
 orch_register_name                   = "dev-ClientRegistrationFunction"
 orch_authentication_callback_enabled = true
 orch_authentication_callback_name    = "dev-AuthenticationCallbackFunction"
+auth_backchannel_logout_disabled     = true
 
 orch_account_id                                  = "816047645251"
 back_channel_logout_cross_account_access_enabled = true
