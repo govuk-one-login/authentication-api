@@ -18,5 +18,9 @@
   {
     "ParameterKey": "StandardLoggingEnabled",
     "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue":  "csls_cw_logs_destination_prodpython"
   }
 ]
