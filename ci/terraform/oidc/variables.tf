@@ -535,6 +535,12 @@ variable "orch_authorisation_enabled" {
   default     = false
 }
 
+variable "auth_backchannel_logout_disabled" {
+  description = "Flag to disable routing back channel logout traffic to the authentication account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_logout_enabled" {
   description = "Flag to enable routing logout traffic to the orchestration account"
   type        = bool

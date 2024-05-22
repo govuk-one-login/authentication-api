@@ -68,6 +68,7 @@ orch_jwks_enabled                 = true
 orch_jwks_name                    = "dev-JwksFunction"
 orch_authorisation_enabled        = true
 orch_authorisation_name           = "dev-AuthorisationFunction"
+auth_backchannel_logout_disabled  = true
 orch_logout_enabled               = true
 orch_logout_name                  = "dev-LogoutFunction"
 
