@@ -105,7 +105,7 @@ resource "aws_api_gateway_resource" "connect_resource" {
 resource "aws_api_gateway_resource" "register_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.connect_resource.id
-  path_part   = "register"
+  path_part   = var.orch_register_enabled ? "register-auth" : "register"
 }
 
 data "aws_region" "current" {
@@ -162,7 +162,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_jwks_enabled,
       var.orch_authorisation_enabled,
       var.orch_logout_enabled,
-      var.orch_ipv_callback_enabled
+      var.orch_ipv_callback_enabled,
+      var.orch_register_enabled,
     ]))
   }
 
@@ -191,7 +192,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_jwks_integration,
     aws_api_gateway_integration.orch_authorisation_integration,
     aws_api_gateway_integration.orch_logout_integration,
-    aws_api_gateway_integration.orch_ipv_callback_integration
+    aws_api_gateway_integration.orch_ipv_callback_integration,
+    aws_api_gateway_integration.orch_register_integration,
   ]
 }
 
@@ -1094,4 +1096,40 @@ resource "aws_api_gateway_integration" "orch_ipv_callback_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_ipv_callback_name}:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_register_resource" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.connect_resource.id
+  path_part   = "register"
+  depends_on = [
+    module.register
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_register_method" {
+  count            = var.orch_register_enabled ? 1 : 0
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id      = aws_api_gateway_resource.orch_register_resource[0].id
+  http_method      = "POST"
+  api_key_required = true
+
+  depends_on = [
+    aws_api_gateway_resource.orch_register_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_register_integration" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_register_resource[0].id
+  http_method = aws_api_gateway_method.orch_register_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_register_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_register_name}:latest/invocations"
 }

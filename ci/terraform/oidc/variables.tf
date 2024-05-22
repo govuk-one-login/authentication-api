@@ -547,6 +547,12 @@ variable "orch_ipv_callback_enabled" {
   default     = false
 }
 
+variable "orch_register_enabled" {
+  description = "Flag to enable routing register traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_openid_configuration_name" {
   type    = string
   default = ""
@@ -583,6 +589,11 @@ variable "orch_logout_name" {
 }
 
 variable "orch_ipv_callback_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_register_name" {
   type    = string
   default = ""
 }
