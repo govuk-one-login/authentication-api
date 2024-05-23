@@ -238,13 +238,6 @@ Globals:
       - !Sub
         - '{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}'
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
-    VpcConfig:
-      SecurityGroupIds:
-        - !Ref LambdaSecurityGroup
-      SubnetIds:
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
 
 Resources:
   MainKmskeyAlias:
@@ -285,7 +278,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
       FunctionName: !Sub ${Environment}-OpenIdConfigurationFunction
       AutoPublishAlias: latest
@@ -302,6 +294,13 @@ Resources:
           - OpenIdConfigurationFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -313,7 +312,7 @@ Resources:
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   OpenIdConfigurationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -362,8 +361,8 @@ Resources:
       AlarmName: !Sub ${Environment}-openid-configuration-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: OpenIdConfigurationFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: OpenIdConfigurationFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-openid-configuration-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -392,7 +391,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref OpenIdConfigurationFunction.Alias
+                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -404,7 +403,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref OpenIdConfigurationFunction.Alias
+                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -416,7 +415,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
       FunctionName: !Sub ${Environment}-TrustmarkFunction
       AutoPublishAlias: latest
@@ -433,6 +431,13 @@ Resources:
           - TrustmarkFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -444,7 +449,7 @@ Resources:
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   TrustmarkFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -493,8 +498,8 @@ Resources:
       AlarmName: !Sub ${Environment}-trustmark-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: TrustmarkFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: TrustmarkFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-trustmark-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -523,7 +528,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref TrustmarkFunction.Alias
+                  Value: !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -535,7 +540,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref TrustmarkFunction.Alias
+                  Value: !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -548,7 +553,6 @@ Resources:
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambda needs open egress so isn't in VPC
-    IgnoreGlobals: [VpcConfig]
     Properties:
       FunctionName: !Sub ${Environment}-BackChannelLogoutRequestFunction
       AutoPublishAlias: latest
@@ -619,8 +623,8 @@ Resources:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: BackChannelLogoutRequestFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: BackChannelLogoutRequestFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-backchannel-logout-request-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -649,7 +653,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref BackChannelLogoutRequestFunction.Alias
+                  Value: !Sub ${Environment}-BackChannelLogoutRequestFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -661,7 +665,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref BackChannelLogoutRequestFunction.Alias
+                  Value: !Sub ${Environment}-BackChannelLogoutRequestFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -671,7 +675,6 @@ Resources:
 
   DocAppCallbackFunction:
     Type: AWS::Serverless::Function
-    IgnoreGlobals: [ VpcConfig ]
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
@@ -776,7 +779,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-TokenFunction
       AutoPublishAlias: latest
@@ -793,6 +795,13 @@ Resources:
           - TokenFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -821,7 +830,7 @@ Resources:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   TokenFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -870,8 +879,8 @@ Resources:
       AlarmName: !Sub ${Environment}-token-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: TokenFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: TokenFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-token-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -900,7 +909,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref TokenFunction.Alias
+                  Value: !Sub ${Environment}-TokenFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -912,7 +921,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref TokenFunction.Alias
+                  Value: !Sub ${Environment}-TokenFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -925,7 +934,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-LogoutFunction
       AutoPublishAlias: latest
@@ -942,6 +950,13 @@ Resources:
           - LogoutFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -979,7 +994,7 @@ Resources:
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref BackChannelLogoutQueueWritePolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   LogoutFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1028,8 +1043,8 @@ Resources:
       AlarmName: !Sub ${Environment}-logout-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: LogoutFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: LogoutFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-logout-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1058,7 +1073,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref LogoutFunction.Alias
+                  Value: !Sub ${Environment}-LogoutFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1070,7 +1085,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref LogoutFunction.Alias
+                  Value: !Sub ${Environment}-LogoutFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1082,7 +1097,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-AuthenticationCallbackFunction
       AutoPublishAlias: latest
@@ -1099,6 +1113,13 @@ Resources:
           - AuthenticationCallbackFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1168,7 +1189,7 @@ Resources:
         - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   AuthenticationCallbackFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1217,8 +1238,8 @@ Resources:
       AlarmName: !Sub ${Environment}-authentication-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: AuthenticationCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: AuthenticationCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-authentication-callback-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1247,7 +1268,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref AuthenticationCallbackFunction.Alias
+                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1259,7 +1280,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref AuthenticationCallbackFunction.Alias
+                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1271,7 +1292,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-JwksFunction
       AutoPublishAlias: latest
@@ -1288,6 +1308,13 @@ Resources:
           - JwksFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1300,7 +1327,7 @@ Resources:
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref DocAppSigningKmsAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   JwksFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1349,8 +1376,8 @@ Resources:
       AlarmName: !Sub ${Environment}-jwks-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: JwksFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: JwksFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-jwks-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1379,7 +1406,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref JwksFunction.Alias
+                  Value: !Sub ${Environment}-JwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1391,7 +1418,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref JwksFunction.Alias
+                  Value: !Sub ${Environment}-JwksFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1403,8 +1430,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
-    IgnoreGlobals: [ VpcConfig ]
     Properties:
       FunctionName: !Sub ${Environment}-AuthorisationFunction
       AutoPublishAlias: latest
@@ -1483,7 +1508,7 @@ Resources:
         - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref IpvCapacityAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   AuthorisationFunctionCrossAccountGetPermission:
     Type: AWS::Lambda::Permission
@@ -1543,8 +1568,8 @@ Resources:
       AlarmName: !Sub ${Environment}-authorisation-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: AuthorisationFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: AuthorisationFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-authorisation-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1573,7 +1598,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref AuthorisationFunction.Alias
+                  Value: !Sub ${Environment}-AuthorisationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1585,7 +1610,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref AuthorisationFunction.Alias
+                  Value: !Sub ${Environment}-AuthorisationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1598,7 +1623,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-UserInfoFunction
       AutoPublishAlias: latest
@@ -1615,6 +1639,13 @@ Resources:
           - UserInfoFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1646,7 +1677,7 @@ Resources:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   UserInfoFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1695,8 +1726,8 @@ Resources:
       AlarmName: !Sub ${Environment}-userinfo-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: UserInfoFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: UserInfoFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-userinfo-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1725,7 +1756,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref UserInfoFunction.Alias
+                  Value: !Sub ${Environment}-UserInfoFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1737,7 +1768,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref UserInfoFunction.Alias
+                  Value: !Sub ${Environment}-UserInfoFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1750,7 +1781,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-AuthCodeFunction
       AutoPublishAlias: latest
@@ -1767,6 +1797,13 @@ Resources:
           - AuthCodeFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1788,7 +1825,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref RedisParametersAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   AuthCodeFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1837,8 +1874,8 @@ Resources:
       AlarmName: !Sub ${Environment}-auth-code-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: AuthCodeFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: AuthCodeFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-auth-code-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1867,7 +1904,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref AuthCodeFunction.Alias
+                  Value: !Sub ${Environment}-AuthCodeFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1879,7 +1916,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref AuthCodeFunction.Alias
+                  Value: !Sub ${Environment}-AuthCodeFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -1892,7 +1929,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-UpdateClientConfigFunction
       AutoPublishAlias: latest
@@ -1900,6 +1936,13 @@ Resources:
       Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1915,7 +1958,7 @@ Resources:
         - !Ref ClientRegistryTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   UpdateClientConfigFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1964,8 +2007,8 @@ Resources:
       AlarmName: !Sub ${Environment}-update-client-config-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: UpdateClientConfigFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: UpdateClientConfigFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-update-client-config-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -1994,7 +2037,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref UpdateClientConfigFunction.Alias
+                  Value: !Sub ${Environment}-UpdateClientConfigFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2006,7 +2049,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref UpdateClientConfigFunction.Alias
+                  Value: !Sub ${Environment}-UpdateClientConfigFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2017,7 +2060,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-ClientRegistrationFunction
       AutoPublishAlias: latest
@@ -2025,6 +2067,13 @@ Resources:
       Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -2040,7 +2089,7 @@ Resources:
         - !Ref ClientRegistryTableWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   ClientRegistrationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2089,8 +2138,8 @@ Resources:
       AlarmName: !Sub ${Environment}-register-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: ClientRegistrationFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: ClientRegistrationFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-register-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -2119,7 +2168,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref ClientRegistrationFunction.Alias
+                  Value: !Sub ${Environment}-ClientRegistrationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2131,7 +2180,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref ClientRegistrationFunction.Alias
+                  Value: !Sub ${Environment}-ClientRegistrationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2142,10 +2191,8 @@ Resources:
 
   IpvCallbackFunction:
     Type: AWS::Serverless::Function
-    IgnoreGlobals: [ VpcConfig ]
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-IpvCallbackFunction
       AutoPublishAlias: latest
@@ -2250,7 +2297,7 @@ Resources:
         - !Ref SpotRequestQueueWritePolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   IpvCallbackFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2299,8 +2346,8 @@ Resources:
       AlarmName: !Sub ${Environment}-ipv-callback-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: IpvCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: IpvCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-ipv-callback-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -2329,7 +2376,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref IpvCallbackFunction.Alias
+                  Value: !Sub ${Environment}-IpvCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2341,7 +2388,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref IpvCallbackFunction.Alias
+                  Value: !Sub ${Environment}-IpvCallbackFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2354,7 +2401,6 @@ Resources:
     Condition: IpvExists
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-SpotResponseFunction
       AutoPublishAlias: latest
@@ -2362,6 +2408,13 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -2388,7 +2441,7 @@ Resources:
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref SpotResponseQueueConsumePolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   SpotResponseQueueEventMapping:
     Type: AWS::Lambda::EventSourceMapping
@@ -2439,8 +2492,8 @@ Resources:
       AlarmName: !Sub ${Environment}-spot-response-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: SpotResponseFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: SpotResponseFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-spot-response-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -2470,7 +2523,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref SpotResponseFunction.Alias
+                  Value: !Sub ${Environment}-SpotResponseFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2482,7 +2535,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref SpotResponseFunction.Alias
+                  Value: !Sub ${Environment}-SpotResponseFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2527,7 +2580,6 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-StorageTokenJwkFunction
       AutoPublishAlias: latest
@@ -2544,6 +2596,13 @@ Resources:
           - StorageTokenJwkFunction
           - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
         - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -2552,7 +2611,7 @@ Resources:
       Policies:
         - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   StorageTokenJwkFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2593,8 +2652,8 @@ Resources:
       AlarmName: !Sub ${Environment}-storage-token-jwk-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: StorageTokenJwkFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: StorageTokenJwkFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-storage-token-jwk-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -2623,7 +2682,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref StorageTokenJwkFunction.Alias
+                  Value: !Sub ${Environment}-StorageTokenJwkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -2635,7 +2694,7 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref StorageTokenJwkFunction.Alias
+                  Value: !Sub ${Environment}-StorageTokenJwkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -3293,15 +3352,87 @@ Resources:
 
   #endregion
 
+  #region Slack notifications
+
   SlackEvents:
     Type: AWS::SNS::Topic
     Properties:
+      DisplayName: !Sub "Slack Alerts for ${Environment}"
       TopicName: !Sub ${Environment}-slack-events
       KmsMasterKeyId: !GetAtt MainKmsKey.Arn
 
+  SlackEventsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref SlackEvents
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sns:Publish
+            Effect: Allow
+            Resource: !Ref SlackEvents
+            Principal:
+              Service:
+                - cloudwatch.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  SlackNotificationsFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: SlackNotificationsFunction doesn't need vpc configuration
+    IgnoreGlobals: '*'
+    Properties:
+      AutoPublishAlias: latest
+      FunctionName: !Sub ${Environment}-SlackNotificationsFunction
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      CodeSigningConfigArn: !If
+        - UseCodeSigning
+        - !Ref CodeSigningConfigArn
+        - !Ref AWS::NoValue
+      CodeUri: ./orchestration-alerting
+      Handler: slackNotifications.handler
+      ReservedConcurrentExecutions: 1
+      Runtime: "nodejs20.x"
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          DEPLOY_ENVIRONMENT: !Ref Environment
+      Events:
+        SNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref SlackEvents
+      Policies:
+        - Statement:
+            - Sid: AllowGetParameters
+              Effect: "Allow"
+              Action:
+                - "ssm:GetParameter"
+                - "ssm:GetParameters"
+              Resource:
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
+
+  SlackNotificationsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SlackNotificationsFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Ref SlackEvents
+
+  #endregion
+
 Outputs:
   SlackEventsArn:
-    Description: 'ARN of the SlackEvents SNS topic'
+    Description: "ARN of the SlackEvents SNS topic"
     Value: !Ref SlackEvents
     Export:
-      Name: !Sub '${AWS::StackName}-SlackEventsArn'
+      Name: !Sub "${AWS::StackName}-SlackEventsArn"
