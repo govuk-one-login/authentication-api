@@ -37,7 +37,7 @@ class AuditHelperTest {
     @Test
     void shouldAttachValidTxmaHeaderToThreadContext() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE);
+        headers.put("Txma-Audit-Encoded", TXMA_ENCODED_HEADER_VALUE);
 
         attachTxmaAuditFieldFromHeaders(headers);
 
@@ -58,7 +58,7 @@ class AuditHelperTest {
     @Test
     void shouldLogMalformedTxmaHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("txma-audit-encoded", NOT_VALID_BASE64);
+        headers.put("Txma-Audit-Encoded", NOT_VALID_BASE64);
         attachTxmaAuditFieldFromHeaders(headers);
 
         assertFalse(ThreadContext.containsKey(TXMA_ENCODED_HEADER.getFieldName()));
