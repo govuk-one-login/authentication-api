@@ -33,7 +33,7 @@ Conditions:
   AisAbortOnError:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
   IdentityEnabled:
-    !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ]]
+    !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1634,13 +1634,14 @@ Resources:
 
   IpvCallbackFunction:
     Type: AWS::Serverless::Function
+    IgnoreGlobals: [ VpcConfig ]
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
       FunctionName: !Sub ${Environment}-IpvCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./ipv-api
-      Handler: uk.gov.di.authentication.oidc.lambda.IPVCallbackHandler::handleRequest
+      Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
       ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
@@ -1656,10 +1657,7 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          IDENTITY_ENABLED: !If
-            - IsBuild
-            - false
-            - true
+          IDENTITY_ENABLED: !If [IsBuild, false, true] # Note that this sets whether the ipv api is turned on or not. It is true for sandpit for testing even though identity is not available in sandpit
           EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
           OIDC_API_BASE_URL: !Sub
