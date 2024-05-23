@@ -187,6 +187,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
     }
 
+    public URI getOrchestrationBackendURI() {
+        return URI.create(System.getenv().getOrDefault("ORCHESTRATION_BACKEND_URI", ""));
+    }
+
     public String getContactUsLinkRoute() {
         return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
     }
