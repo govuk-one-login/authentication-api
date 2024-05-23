@@ -24,9 +24,10 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
   publish       = true
 
 
-  s3_bucket               = aws_s3_bucket.source_bucket.bucket
-  s3_key                  = aws_s3_object.account_management_api_release_zip.key
-  s3_object_version       = aws_s3_object.account_management_api_release_zip.version_id
+  s3_bucket         = module.account_management_api_release_object.object_bucket
+  s3_key            = module.account_management_api_release_object.object_key
+  s3_object_version = module.account_management_api_release_object.object_version_id
+
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   vpc_config {
@@ -44,6 +45,7 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
       EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
       TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
       INTERNAl_SECTOR_URI  = var.internal_sector_uri
+      SOURCE_COMMIT_SHA    = module.account_management_api_release_object.source_commit_sha
     }
   }
 

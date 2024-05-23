@@ -75,6 +75,11 @@ variable "lambda_zip_file" {
   type        = string
 }
 
+locals {
+  lambda_zip_file_dir        = pathexpand(dirname(var.lambda_zip_file))
+  lambda_code_commitsha_file = "${local.lambda_zip_file_dir}/account-management-api_commitsha.txt"
+}
+
 variable "logging_endpoint_enabled" {
   type        = bool
   default     = true

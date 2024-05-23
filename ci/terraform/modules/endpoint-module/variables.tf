@@ -42,6 +42,12 @@ variable "lambda_zip_file_version" {
   type = string
 }
 
+variable "lambda_source_commit_sha" {
+  description = "The SHA of the commit that the lamba source was built from"
+  type        = string
+  default     = "unknown" # TODO: probably remove this later, but for now it's a useful default
+}
+
 variable "handler_function_name" {
   type = string
 }

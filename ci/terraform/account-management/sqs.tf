@@ -168,9 +168,9 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   runtime       = "java17"
   publish       = true
 
-  s3_bucket         = aws_s3_bucket.source_bucket.bucket
-  s3_key            = aws_s3_object.account_management_api_release_zip.key
-  s3_object_version = aws_s3_object.account_management_api_release_zip.version_id
+  s3_bucket         = module.account_management_api_release_object.object_bucket
+  s3_key            = module.account_management_api_release_object.object_key
+  s3_object_version = module.account_management_api_release_object.object_version_id
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
@@ -185,6 +185,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_API_KEY        = var.notify_api_key
       NOTIFY_URL            = var.notify_url
       JAVA_TOOL_OPTIONS     = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+      SOURCE_COMMIT_SHA     = module.account_management_api_release_object.source_commit_sha
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
