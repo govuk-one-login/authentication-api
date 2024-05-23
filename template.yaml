@@ -20,6 +20,12 @@ Parameters:
     Type: String
     Description: The ARN of the subscription endpoint to send logs to splunk
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
+  SlackWebhookUrl:
+    Type: String
+    Description: Slack webhook url
+  SlackChannelId:
+    Type: String
+    Description: Slack channel ID for alerts to be sent to from alerts lambda. Populated from Secrets Manager at deploy time
 
 Conditions:
   UsePermissionsBoundary:
@@ -1739,11 +1745,66 @@ Resources:
           FromPort: 443
           ToPort: 443
 
+  #region Slack notifications
+
   SlackEvents:
     Type: AWS::SNS::Topic
+    # checkov:skip=CKV_AWS_26: intentionally not encrypting for testing purposes
     Properties:
+      DisplayName: !Sub "Slack Alerts for ${Environment}"
       TopicName: !Sub ${Environment}-slack-events
-      KmsMasterKeyId: !GetAtt MainKmsKey.Arn
+#      KmsMasterKeyId: !GetAtt MainKmsKey.Arn #TODO: Uncomment when ready to encrypt, for testing leave commented out
+
+  SlackEventsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref SlackEvents
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: "sns:Publish"
+            Effect: Allow
+            Resource: !Ref SlackEvents
+            Principal:
+              Service:
+                - cloudwatch.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  SlackNotificationsFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      AutoPublishAlias: latest
+      CodeUri: ./orchestration-alerting
+      Handler: slackNotifications::handler
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          DEPLOY_ENVIRONMENT: !Ref Environment
+          SLACK_CHANNEL_ID: !Ref SlackChannelId
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+      Events:
+        SNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref SlackEvents
+
+  SlackNotificationsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SlackNotificationsFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Ref SlackEvents
+# TODO: look at example policies in the console
+
+  #endregion
 
 Outputs:
   SlackEventsArn:
