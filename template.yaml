@@ -1686,10 +1686,7 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
             - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
-          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If
-            - AisAbortOnError
-            - true
-            - false
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
           IPV_AUDIENCE: !If
             - IdentityEnabled
             - !Sub
