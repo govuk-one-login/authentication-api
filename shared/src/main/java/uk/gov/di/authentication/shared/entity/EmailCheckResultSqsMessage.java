@@ -8,4 +8,5 @@ public record EmailCheckResultSqsMessage(
         @Expose @SerializedName("Email") @Required String email,
         @Expose @SerializedName("Status") @Required EmailCheckResultStatus emailCheckResultStatus,
         @Expose @SerializedName("TimeToExist") @Required long timeToExist,
-        @Expose @SerializedName("ReferenceNumber") @Required String referenceNumber) {}
+        @Expose @SerializedName("ReferenceNumber") @Required String referenceNumber,
+        @Expose @SerializedName("TimeOfInitialRequest") @Required long timeOfInitialRequest) {}

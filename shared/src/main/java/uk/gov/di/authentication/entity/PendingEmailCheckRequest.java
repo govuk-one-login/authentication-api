@@ -15,4 +15,4 @@ public record PendingEmailCheckRequest(
         @SerializedName("persistentSessionId") @Expose @Required String persistentSessionId,
         @SerializedName("ipAddress") @Expose @Required String ipAddress,
         @SerializedName("journeyType") @Expose @Required JourneyType journeyType,
-        @SerializedName("timeOfInitialRequest") @Expose @Required String timeOfInitialRequest) {}
+        @SerializedName("timeOfInitialRequest") @Expose @Required Long timeOfInitialRequest) {}
