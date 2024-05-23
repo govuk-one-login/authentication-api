@@ -146,11 +146,7 @@ class SignUpHandlerTest {
     @ParameterizedTest
     @MethodSource("consentValues")
     void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired) throws Json.JsonException {
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        Map<String, String> headers = getHeaders();
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
@@ -196,7 +192,7 @@ class SignUpHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        persistentId,
+                        "some-persistent-id-value",
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
@@ -211,14 +207,10 @@ class SignUpHandlerTest {
                                                 .equals(expectedCommonSubject)));
     }
 
+
     @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided()
             throws Json.JsonException {
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
@@ -233,7 +225,7 @@ class SignUpHandlerTest {
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
+        event.setHeaders(getHeaders());
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -252,7 +244,7 @@ class SignUpHandlerTest {
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        persistentId,
+                        "some-persistent-id-value",
                         AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
@@ -402,5 +394,13 @@ class SignUpHandlerTest {
                 .withClientName("test-client")
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");
+    }
+
+    private Map<String, String> getHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, "some-persistent-id-value");
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        return headers;
     }
 }
