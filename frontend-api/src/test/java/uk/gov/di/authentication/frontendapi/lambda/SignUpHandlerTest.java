@@ -148,7 +148,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfSignUpIsSuccessful() throws Json.JsonException {
+    void shouldReturn200IfSignUpIsSuccessful() {
         Map<String, String> headers = getHeadersWithoutTxmaAuditEncoded();
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
@@ -165,7 +165,8 @@ class SignUpHandlerTest {
         verify(sessionService).save(argThat((session) -> session.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
-        var signUpResponse = objectMapper.readValue(result.getBody(), SignUpResponse.class);
+        var signUpResponse =
+                objectMapper.readValueUnchecked(result.getBody(), SignUpResponse.class);
         assertThat(signUpResponse.isConsentRequired(), equalTo(false));
         verify(authenticationService)
                 .signUp(
@@ -202,8 +203,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws Json.JsonException {
+    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
         usingValidClientSession();
 
@@ -316,8 +316,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws Json.JsonException {
+    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
         usingValidSession();
         APIGatewayProxyRequestEvent event =
