@@ -87,7 +87,13 @@ class SignUpHandlerTest {
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final ClientID CLIENT_ID = new ClientID();
+    public static final ClientRegistry CLIENT =
+            new ClientRegistry()
+                    .withClientID(IdGenerator.generate())
+                    .withConsentRequired(true)
+                    .withClientName("test-client")
+                    .withSectorIdentifierUri("https://test.com")
+                    .withSubjectType("pairwise");
     private static final String CLIENT_NAME = "client-name";
     private static final String EMAIL = CommonTestVariables.EMAIL;
 
@@ -125,8 +131,7 @@ class SignUpHandlerTest {
         when(user.getUserProfile()).thenReturn(userProfile);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
+        when(clientService.getClient(CLIENT.getClientID())).thenReturn(Optional.of(CLIENT));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
@@ -180,7 +185,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -221,7 +226,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -304,7 +309,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        CLIENT_ID.getValue(),
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
@@ -333,7 +338,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        CLIENT_ID.getValue(),
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
@@ -357,7 +362,8 @@ class SignUpHandlerTest {
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
-        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+        return new AuthenticationRequest.Builder(
+                        responseType, scope, new ClientID(CLIENT.getClientID()), REDIRECT_URI)
                 .state(state)
                 .nonce(nonce)
                 .build();
@@ -366,15 +372,6 @@ class SignUpHandlerTest {
     private void usingValidClientSession() {
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
-    }
-
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(true)
-                .withClientName("test-client")
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("pairwise");
     }
 
     private Map<String, String> getHeadersWithoutTxmaAuditEncoded() {
