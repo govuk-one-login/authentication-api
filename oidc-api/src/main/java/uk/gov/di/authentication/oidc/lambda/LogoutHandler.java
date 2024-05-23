@@ -143,9 +143,11 @@ public class LogoutHandler
         }
 
         Optional<String> audience;
+        String rpPairwiseId;
         try {
             SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
             audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+            rpPairwiseId = idToken.getJWTClaimsSet().getSubject();
         } catch (ParseException e) {
             LOG.warn("Unable to extract JWTClaimsSet to get the audience");
             return logoutService.generateErrorLogoutResponse(
@@ -155,7 +157,7 @@ public class LogoutHandler
                     Optional.empty());
         }
 
-        if (audience.isEmpty()) {
+        if (audience.isEmpty() || rpPairwiseId == null) {
             getSessionAndDestroyIfExists(sessionFromSessionCookie);
             return logoutService.generateDefaultLogoutResponse(
                     Optional.empty(), auditUser, Optional.empty());
@@ -182,7 +184,7 @@ public class LogoutHandler
                     "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
             getSessionAndDestroyIfExists(sessionFromSessionCookie);
             return logoutService.generateDefaultLogoutResponse(
-                    state, auditUser, Optional.of(clientID));
+                    state, auditUser, Optional.of(clientID), Optional.of(rpPairwiseId));
         }
 
         if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUri, clientRegistry)) {
@@ -205,7 +207,8 @@ public class LogoutHandler
                                     clientID,
                                     postLogoutRedirectUri.get(),
                                     state,
-                                    auditUser));
+                                    auditUser,
+                                    rpPairwiseId));
 
         } else {
             return segmentedFunctionCall(
@@ -216,7 +219,8 @@ public class LogoutHandler
                                     state,
                                     Optional.empty(),
                                     auditUser,
-                                    Optional.of(clientID)));
+                                    Optional.of(clientID),
+                                    Optional.of(rpPairwiseId)));
         }
     }
 
@@ -269,11 +273,17 @@ public class LogoutHandler
             String clientID,
             String uri,
             Optional<String> state,
-            TxmaAuditUser auditUser) {
+            TxmaAuditUser auditUser,
+            String rpPairwiseId) {
 
         segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
         cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
         return logoutService.generateLogoutResponse(
-                URI.create(uri), state, Optional.empty(), auditUser, Optional.of(clientID));
+                URI.create(uri),
+                state,
+                Optional.empty(),
+                auditUser,
+                Optional.of(clientID),
+                Optional.of(rpPairwiseId));
     }
 }
