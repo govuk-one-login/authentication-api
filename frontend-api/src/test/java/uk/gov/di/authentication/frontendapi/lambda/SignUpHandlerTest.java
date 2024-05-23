@@ -90,10 +90,7 @@ class SignUpHandlerTest {
     public static final ClientRegistry CLIENT =
             new ClientRegistry()
                     .withClientID(IdGenerator.generate())
-                    .withConsentRequired(true)
-                    .withClientName("test-client")
-                    .withSectorIdentifierUri("https://test.com")
-                    .withSubjectType("pairwise");
+                    .withSectorIdentifierUri("https://test.com");
     private static final String CLIENT_NAME = "client-name";
     private static final String EMAIL = CommonTestVariables.EMAIL;
 
