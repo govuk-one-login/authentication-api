@@ -41,9 +41,11 @@ module "update_phone_number" {
   max_provisioned_concurrency = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).max_concurrency
   scaling_trigger             = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).scaling_trigger
 
-  source_bucket           = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
-  lambda_zip_file_version = aws_s3_object.account_management_api_release_zip.version_id
+  source_bucket            = module.account_management_api_release_object.object_bucket
+  lambda_zip_file          = module.account_management_api_release_object.object_key
+  lambda_zip_file_version  = module.account_management_api_release_object.object_version_id
+  lambda_source_commit_sha = module.account_management_api_release_object.source_commit_sha
+
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   authentication_vpc_arn = local.vpc_arn

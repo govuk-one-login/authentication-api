@@ -28,9 +28,9 @@ resource "aws_lambda_function" "authorizer" {
   handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
   runtime       = "java17"
 
-  s3_bucket         = aws_s3_bucket.source_bucket.bucket
-  s3_key            = aws_s3_object.account_management_api_release_zip.key
-  s3_object_version = aws_s3_object.account_management_api_release_zip.version_id
+  s3_bucket         = module.account_management_api_release_object.object_bucket
+  s3_key            = module.account_management_api_release_object.object_key
+  s3_object_version = module.account_management_api_release_object.object_version_id
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
@@ -47,6 +47,7 @@ resource "aws_lambda_function" "authorizer" {
       TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
       ENVIRONMENT             = var.environment
       JAVA_TOOL_OPTIONS       = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+      SOURCE_COMMIT_SHA       = module.account_management_api_release_object.source_commit_sha
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn

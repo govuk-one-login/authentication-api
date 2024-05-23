@@ -17,11 +17,17 @@ resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
   }
 }
 
-resource "aws_s3_object" "account_management_api_release_zip" {
+module "account_management_api_release_object" {
+  source = "../modules/lambda_release_zip"
+
+  lambda_zip_file_path = var.lambda_zip_file
+  java_module_name     = "account-management-api"
+
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "account-management-api-release.zip"
+}
 
-  server_side_encryption = "AES256"
-  source                 = var.lambda_zip_file
-  source_hash            = filemd5(var.lambda_zip_file)
+moved {
+  from = aws_s3_object.account_management_api_release_zip
+  to   = module.account_management_api_release_object.aws_s3_object.release_zip
 }
