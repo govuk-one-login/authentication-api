@@ -15,8 +15,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -49,7 +47,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -129,7 +126,7 @@ class SignUpHandlerTest {
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(true)));
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
@@ -150,13 +147,8 @@ class SignUpHandlerTest {
                         passwordValidator);
     }
 
-    private static Stream<Boolean> consentValues() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("consentValues")
-    void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired) throws Json.JsonException {
+    @Test
+    void shouldReturn200IfSignUpIsSuccessful() throws Json.JsonException {
         Map<String, String> headers = getHeadersWithoutTxmaAuditEncoded();
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
@@ -377,10 +369,10 @@ class SignUpHandlerTest {
                 .thenReturn(Optional.of(clientSession));
     }
 
-    private ClientRegistry generateClientRegistry(boolean consentRequired) {
+    private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(consentRequired)
+                .withConsentRequired(true)
                 .withClientName("test-client")
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");
