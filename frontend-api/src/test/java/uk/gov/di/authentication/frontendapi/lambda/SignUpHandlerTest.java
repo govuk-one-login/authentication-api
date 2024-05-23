@@ -45,6 +45,7 @@ import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -160,10 +161,10 @@ class SignUpHandlerTest {
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
         usingValidClientSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        headers,
+                        format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService)
@@ -222,10 +223,11 @@ class SignUpHandlerTest {
         when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
         usingValidClientSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(getHeadersWithoutTxmaAuditEncoded());
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        getHeadersWithoutTxmaAuditEncoded(),
+                        format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -251,11 +253,12 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfSessionIdMissing() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        Collections.emptyMap(),
+                        format(
+                                "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                                PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -267,9 +270,11 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeadersWithoutTxmaAuditEncoded());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        getHeadersWithoutTxmaAuditEncoded(),
+                        format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -281,10 +286,11 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn400IfPasswordInvalid() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeadersWithoutTxmaAuditEncoded());
-        event.setBody(
-                format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase()));
+        String format =
+                format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase());
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(getHeadersWithoutTxmaAuditEncoded(), format);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -298,15 +304,15 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
 
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         var headers = getHeadersWithoutTxmaAuditEncoded();
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        headers,
+                        format(
+                                "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                                PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -331,13 +337,12 @@ class SignUpHandlerTest {
             throws Json.JsonException {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(getHeadersWithoutTxmaAuditEncoded());
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        getHeadersWithoutTxmaAuditEncoded(),
+                        format(
+                                "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                                PASSWORD, EMAIL.toUpperCase()));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -396,5 +401,12 @@ class SignUpHandlerTest {
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         return headers;
+    }
+
+    private APIGatewayProxyRequestEvent requestEvent(Map<String, String> headers, String body) {
+        return new APIGatewayProxyRequestEvent()
+                .withRequestContext(contextWithSourceIp("123.123.123.123"))
+                .withHeaders(headers)
+                .withBody(body);
     }
 }
