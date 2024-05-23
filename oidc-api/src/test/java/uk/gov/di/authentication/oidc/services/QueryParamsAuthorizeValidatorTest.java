@@ -21,8 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -60,6 +60,8 @@ import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMes
 class QueryParamsAuthorizeValidatorTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final List<String> DEFAULT_CLIENT_LOCS =
+            List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue(), LevelOfConfidence.NONE.getValue());
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
@@ -116,8 +118,18 @@ class QueryParamsAuthorizeValidatorTest {
         assertThat(errorObject, equalTo(Optional.empty()));
     }
 
-    @Test
-    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() {
+    private static Stream<Arguments> invalidVtrAttributes() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cm")),
+                Arguments.of(jsonArrayOf("Cl.Cm.P3")),
+                Arguments.of(jsonArrayOf("Cl.P0", "Cl.Cm.P2")),
+                Arguments.of(jsonArrayOf("Cm.Cl.P1", "P1.Cl")),
+                Arguments.of(jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidVtrAttributes")
+    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest(String invalidVtrAttribute) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -131,7 +143,7 @@ class QueryParamsAuthorizeValidatorTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
+                        invalidVtrAttribute,
                         Optional.empty());
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
@@ -391,35 +403,31 @@ class QueryParamsAuthorizeValidatorTest {
         assertEquals(STATE, errorObject.get().state());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"Cm", "Cl.Cm.P3"})
-    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest(String vtr) {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf(vtr))
-                        .build();
-        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
-
-        assertTrue(errorObject.isPresent());
-        assertThat(
-                errorObject.get().errorObject().toJSONObject(),
-                equalTo(
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")
-                                .toJSONObject()));
+    private static Stream<Arguments> requestVtrsNotPermitted() {
+        return Stream.of(
+                Arguments.of(List.of(LevelOfConfidence.NONE.getValue()), jsonArrayOf("Cl.P2.Cm")),
+                Arguments.of(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                        jsonArrayOf("Cl.PCL250.Cm")),
+                Arguments.of(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                        jsonArrayOf("PCL200.Cl.Cm", "Cl.P2.Cm")),
+                Arguments.of(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.HMRC250.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                        jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
     }
 
-    @Test
-    void shouldReturnErrorWhenVtrInAuthRequestIsNotPermittedForGivenClient() {
+    @ParameterizedTest
+    @MethodSource("requestVtrsNotPermitted")
+    void shouldReturnErrorWhenVtrInAuthRequestIsNotPermittedForGivenClient(
+            List<String> clientLoCs, String vtr) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -427,12 +435,14 @@ class QueryParamsAuthorizeValidatorTest {
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+                                        REDIRECT_URI.toString(),
+                                        clientLoCs,
+                                        CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(STATE)
                         .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf("Cl.P0"))
+                        .customParameter("vtr", vtr)
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
@@ -482,7 +492,8 @@ class QueryParamsAuthorizeValidatorTest {
                                         REDIRECT_URI.toString(),
                                         CLIENT_ID.toString(),
                                         singletonList("openid"),
-                                        true)));
+                                        true,
+                                        DEFAULT_CLIENT_LOCS)));
         var authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(new State())
@@ -545,23 +556,34 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
-        return generateClientRegistry(redirectURI, clientID, singletonList("openid"), false);
+        return generateClientRegistry(
+                redirectURI, clientID, singletonList("openid"), false, DEFAULT_CLIENT_LOCS);
     }
 
     private ClientRegistry generateClientRegistry(
             String redirectURI, String clientID, List<String> scopes) {
-        return generateClientRegistry(redirectURI, clientID, scopes, false);
+        return generateClientRegistry(redirectURI, clientID, scopes, false, DEFAULT_CLIENT_LOCS);
     }
 
     private ClientRegistry generateClientRegistry(
-            String redirectURI, String clientID, List<String> scopes, boolean testClient) {
+            String redirectURI, List<String> clientLoCs, String clientID) {
+        return generateClientRegistry(
+                redirectURI, clientID, singletonList("openid"), false, clientLoCs);
+    }
+
+    private ClientRegistry generateClientRegistry(
+            String redirectURI,
+            String clientID,
+            List<String> scopes,
+            boolean testClient,
+            List<String> clientLoCs) {
         return new ClientRegistry()
                 .withRedirectUrls(singletonList(redirectURI))
                 .withClientID(clientID)
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .withPublicKey(null)
                 .withTestClient(testClient)
-                .withClientLoCs(singletonList(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
+                .withClientLoCs(clientLoCs)
                 .withScopes(scopes);
     }
 
