@@ -127,7 +127,17 @@ class SignUpHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(user.getUserProfile()).thenReturn(userProfile);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry(true)));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
+
         handler =
                 new SignUpHandler(
                         configurationService,
@@ -150,15 +160,6 @@ class SignUpHandlerTest {
         Map<String, String> headers = getHeadersWithoutTxmaAuditEncoded();
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(authenticationService.signUp(
-                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
-                .thenReturn(user);
-        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
         usingValidClientSession();
         APIGatewayProxyRequestEvent event =
@@ -211,16 +212,6 @@ class SignUpHandlerTest {
     @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided()
             throws Json.JsonException {
-
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(true)));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(authenticationService.signUp(
-                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
-                .thenReturn(user);
-        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
         usingValidClientSession();
 
@@ -321,7 +312,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
@@ -351,7 +342,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
