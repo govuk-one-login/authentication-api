@@ -9,7 +9,12 @@ env:
   ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-ssdefc91xjh6
   ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:706615647326:table/di-auth-non-production-artifact-lookup
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  # TODO: Remove this push trigger once tested
+  push:
+    branches:
+      - AUT-2802/stop-repeat-deploy-same-lambda
 
 concurrency:
   group: "build-and-deploy-api-modules-dev"
