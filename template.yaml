@@ -1337,6 +1337,46 @@ Resources:
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
 
+  SpotResponseQueueArnSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: spot_response_queue_arn
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  SpotResponseQueueArnSecretAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Ref SpotResponseQueueArnSecret
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
+  SpotResponseQueueKeyArnSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: spot_response_queue_key_arn
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  SpotResponseQueueKeyArnSecretAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Ref SpotResponseQueueKeyArnSecret
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
   HttpsEgressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
