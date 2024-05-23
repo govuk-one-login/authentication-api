@@ -1317,6 +1317,26 @@ Resources:
 
   #endregion
 
+  AccountInterventionsServiceUriSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: account_interventions_service_uri
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  AccountInterventionsServiceUriSecretAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Ref AccountInterventionsServiceUriSecret
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
   HttpsEgressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
