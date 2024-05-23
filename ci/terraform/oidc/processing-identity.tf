@@ -24,7 +24,7 @@ module "processing-identity" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "processing-identity"
-  path_part       = "processing-identity"
+  path_part       = var.orch_processing_identity_enabled ? "processing-identity-auth" : "processing-identity"
   endpoint_method = ["POST"]
   environment     = var.environment
 
