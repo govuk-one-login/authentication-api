@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.AuditHelper;
@@ -29,12 +30,14 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -49,6 +52,7 @@ public class UpdateEmailHandler
 
     private final Json objectMapper = SerializationService.getInstance();
     private final DynamoService dynamoService;
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdateEmailHandler.class);
@@ -61,11 +65,13 @@ public class UpdateEmailHandler
 
     public UpdateEmailHandler(
             DynamoService dynamoService,
+            DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             AuditService auditService,
             ConfigurationService configurationService) {
         this.dynamoService = dynamoService;
+        this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
@@ -74,6 +80,8 @@ public class UpdateEmailHandler
 
     public UpdateEmailHandler(ConfigurationService configurationService) {
         this.dynamoService = new DynamoService(configurationService);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -107,6 +115,14 @@ public class UpdateEmailHandler
         try {
             UpdateEmailRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
+            AtomicReference<EmailCheckResultStatus> resultStatus =
+                    new AtomicReference<>(EmailCheckResultStatus.PENDING);
+            dynamoEmailCheckResultService
+                    .getEmailCheckStore(updateInfoRequest.getReplacementEmailAddress())
+                    .ifPresent(result -> resultStatus.set(result.getStatus()));
+            LOG.info(
+                    "UpdateEmailHandler: Experian email verification status: {}",
+                    resultStatus.get());
             boolean isValidOtpCode =
                     codeStorageService.isValidOtpCode(
                             updateInfoRequest.getReplacementEmailAddress(),
