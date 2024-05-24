@@ -14,6 +14,9 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
   }
 }
 
+locals {
+  vpc_endpoint_ids = var.orchestration_vpc_endpoint_id == "" ? [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id] : [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id, var.orchestration_vpc_endpoint_id]
+}
 
 resource "aws_api_gateway_rest_api" "interventions_api_stub" {
   name = "${var.environment}-di-interventions-api-stub"
@@ -48,7 +51,7 @@ resource "aws_api_gateway_rest_api" "interventions_api_stub" {
   tags = local.default_tags
   endpoint_configuration {
     types            = ["PRIVATE"]
-    vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
+    vpc_endpoint_ids = local.vpc_endpoint_ids
   }
   lifecycle {
     create_before_destroy = true
