@@ -141,7 +141,6 @@ class StartHandlerTest {
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         when(startService.getCookieConsentValue(anyMap(), anyString()))
                 .thenReturn(cookieConsentValue);
@@ -155,6 +154,7 @@ class StartHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
@@ -193,7 +193,6 @@ class StartHandlerTest {
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
             throws ParseException, Json.JsonException {
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true, null);
@@ -219,6 +218,7 @@ class StartHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
@@ -262,7 +262,6 @@ class StartHandlerTest {
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
         when(userContext.getClientSession()).thenReturn(clientSession);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
@@ -278,6 +277,7 @@ class StartHandlerTest {
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(REAUTHENTICATE_HEADER, "true");
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);

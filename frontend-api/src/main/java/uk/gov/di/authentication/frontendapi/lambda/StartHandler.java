@@ -39,6 +39,8 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class StartHandler
@@ -175,9 +177,12 @@ public class StartHandler
                                 .map(UserProfile::getSubjectID)
                                 .orElse(AuditService.UNKNOWN);
             }
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+            var txmaAuditHeader =
+                    getOptionalHeaderValueFromHeaders(
+                            input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
+
+            var restrictedSection = new AuditService.RestrictedSection(txmaAuditHeader);
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.START_INFO_FOUND,
