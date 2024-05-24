@@ -157,7 +157,7 @@ class SendOtpNotificationHandlerTest {
                 verify(pendingEmailCheckSqsClient)
                         .send(
                                 format(
-                                        "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d}",
+                                        "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
                                         mockedUUID,
                                         TEST_EMAIL_ADDRESS,
                                         "some-session-id",
@@ -165,7 +165,8 @@ class SendOtpNotificationHandlerTest {
                                         "some-persistent-session-id",
                                         "123.123.123.123",
                                         JourneyType.ACCOUNT_MANAGEMENT,
-                                        mockedDate.toInstant().getEpochSecond()));
+                                        mockedDate.toInstant().getEpochSecond(),
+                                        false));
                 verify(codeStorageService)
                         .saveOtpCode(
                                 TEST_EMAIL_ADDRESS,

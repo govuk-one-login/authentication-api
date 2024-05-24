@@ -196,7 +196,8 @@ public class SendOtpNotificationHandler
                                                 persistentSessionId,
                                                 IpAddressHelper.extractIpAddress(input),
                                                 JourneyType.ACCOUNT_MANAGEMENT,
-                                                NowHelper.now().toInstant().getEpochSecond())));
+                                                NowHelper.now().toInstant().getEpochSecond(),
+                                                isTestUserRequest)));
                     }
 
                     return handleNotificationRequest(
