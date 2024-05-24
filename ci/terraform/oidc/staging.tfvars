@@ -17,8 +17,6 @@ incorrect_password_lockout_count_ttl = 7200
 orch_openid_configuration_name = "staging-OpenIdConfigurationFunction"
 
 orch_account_id                                  = "590183975515"
-orch_doc_app_callback_enabled                    = false
-orch_doc_app_callback_name                       = "staging-DocAppCallbackFunction"
 back_channel_logout_cross_account_access_enabled = true
 kms_cross_account_access_enabled                 = true
 cmk_for_back_channel_logout_enabled              = true
@@ -30,3 +28,8 @@ phone_checker_with_retry = false
 
 oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
+
+orch_doc_app_callback_enabled = false
+orch_doc_app_callback_name    = "staging-DocAppCallbackFunction"
+orch_register_enabled         = true
+orch_register_name            = "staging-ClientRegistrationFunction"
