@@ -22,6 +22,7 @@ orch_doc_app_callback_name                       = "staging-DocAppCallbackFuncti
 back_channel_logout_cross_account_access_enabled = true
 kms_cross_account_access_enabled                 = true
 cmk_for_back_channel_logout_enabled              = true
+spot_request_queue_cross_account_access_enabled  = true
 txma_audit_encoded_enabled                       = true
 
 contra_state_bucket      = "di-auth-staging-tfstate"

@@ -6,15 +6,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
-import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
-import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.AuditHelper;
@@ -26,10 +23,8 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,7 +33,6 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +44,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -58,8 +51,6 @@ class UpdateEmailHandlerTest {
 
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
-    private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
-            mock(DynamoEmailCheckResultService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -81,16 +72,11 @@ class UpdateEmailHandlerTest {
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
 
-    @RegisterExtension
-    private final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(UpdateEmailHandler.class);
-
     @BeforeEach
     void setUp() {
         handler =
                 new UpdateEmailHandler(
                         dynamoService,
-                        dynamoEmailCheckResultService,
                         sqsClient,
                         codeStorageService,
                         auditService,
@@ -106,12 +92,6 @@ class UpdateEmailHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
-        when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
-                .thenReturn(
-                        Optional.of(
-                                new EmailCheckResultStore()
-                                        .withEmail(NEW_EMAIL_ADDRESS)
-                                        .withStatus(EmailCheckResultStatus.ALLOW)));
 
         var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
@@ -138,32 +118,6 @@ class UpdateEmailHandlerTest {
                         new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
                         AuditService.MetadataPair.pair(
                                 "replacedEmail", EXISTING_EMAIL_ADDRESS, true));
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                "UpdateEmailHandler: Experian email verification status: ALLOW")));
-    }
-
-    @Test
-    void shouldReceiveLogWithPendingStatusWhenEmailCheckResultStoreNotPresent()
-            throws Json.JsonException {
-        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
-                .thenReturn(true);
-        when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
-
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
-        handler.handleRequest(event, context);
-
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                "UpdateEmailHandler: Experian email verification status: PENDING")));
     }
 
     @Test
