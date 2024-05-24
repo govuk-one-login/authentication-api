@@ -1,13 +1,15 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
+      - id: destroyed-symlinks
+      - id: check-symlinks
 
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v0.86.2
+    rev: v1.2.5a9
     hooks:
       - id: cfn-python-lint
         exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|.*.approved.json$
@@ -19,3 +21,24 @@ repos:
       - id: gradle-spotless-apply
       - id: terraform-format
       - id: terraform-validate
+
+  - repo: local
+    hooks:
+      - id: tfupdate-lock
+        name: Ensure terraform providers are locked
+        language: golang
+        additional_dependencies:
+          - github.com/minamijoyo/tfupdate@latest
+        entry: tfupdate lock --platform linux_amd64 --platform linux_arm64 --platform darwin_amd64 --platform darwin_arm64 --platform windows_amd64 -r ci/terraform
+        files: ^ci/terraform/versions.tf$
+        pass_filenames: false
+      - id: tflint
+        name: Run tflint
+        language: system
+        entry: ./scripts/terraform-lint.sh
+        files: ^ci/terraform/.*\.tf$
+      - id: terraform-fmt
+        name: Run terraform fmt
+        language: system
+        entry: terraform fmt -write=true
+        files: ^ci/terraform/.*\.tf$
