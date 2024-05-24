@@ -200,6 +200,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_authentication_callback_integration,
     aws_api_gateway_integration.orch_auth_code_integration,
     aws_api_gateway_integration.orch_userinfo_integration,
+    aws_api_gateway_integration.orch_update_client_integration
   ]
 }
 
@@ -1160,6 +1161,44 @@ resource "aws_api_gateway_integration" "orch_register_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_register_name}:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_update_client_resource" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.orch_register_resource[0].id
+  path_part   = "{clientId}"
+  depends_on = [
+    module.update
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_update_client_method" {
+  count              = var.orch_register_enabled ? 1 : 0
+  rest_api_id        = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id        = aws_api_gateway_resource.orch_update_client_resource[0].id
+  http_method        = "PUT"
+  api_key_required   = true
+  request_parameters = { "method.request.path.clientId" = true }
+
+  depends_on = [
+    aws_api_gateway_resource.orch_update_client_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_update_client_integration" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_update_client_resource[0].id
+  http_method = aws_api_gateway_method.orch_update_client_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_update_client_resource
+  ]
+  request_parameters      = { "integration.request.path.clientId" = "method.request.path.clientId" }
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_update_client_name}:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {

@@ -643,6 +643,11 @@ variable "orch_userinfo_name" {
   default = ""
 }
 
+variable "orch_update_client_name" {
+  type    = string
+  default = ""
+}
+
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool
