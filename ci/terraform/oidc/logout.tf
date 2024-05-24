@@ -22,7 +22,7 @@ module "logout" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "logout"
-  path_part       = "logout"
+  path_part       = var.orch_logout_enabled ? "logout-auth" : "logout"
   endpoint_method = ["GET"]
   environment     = var.environment
 
