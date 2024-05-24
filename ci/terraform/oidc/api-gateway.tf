@@ -633,6 +633,55 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     metric_name                = "${replace(var.environment, "-", "")}OidcWafRules"
     sampled_requests_enabled   = true
   }
+
+  rule {
+    name     = "count_not_cloudfront"
+    priority = 99
+
+    action {
+      count {}
+    }
+
+    statement {
+      not_statement {
+        statement {
+          or_statement {
+            statement {
+              byte_match_statement {
+                field_to_match {
+                  single_header {
+                    name = local.cloudfront_origin_cloaking_header_name
+                  }
+                }
+                positional_constraint = "EXACTLY"
+                search_string         = var.oidc_origin_cloaking_header
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+
+            statement {
+              byte_match_statement {
+                field_to_match {
+                  single_header {
+                    name = local.cloudfront_origin_cloaking_header_name
+                  }
+                }
+                positional_constraint = "EXACTLY"
+                search_string         = var.previous_oidc_origin_cloaking_header
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
