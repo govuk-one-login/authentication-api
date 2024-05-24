@@ -29,7 +29,9 @@ phone_checker_with_retry = false
 oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
 
-orch_doc_app_callback_enabled = false
-orch_doc_app_callback_name    = "staging-DocAppCallbackFunction"
-orch_register_enabled         = true
-orch_register_name            = "staging-ClientRegistrationFunction"
+orch_doc_app_callback_enabled        = false
+orch_doc_app_callback_name           = "staging-DocAppCallbackFunction"
+orch_register_enabled                = true
+orch_register_name                   = "staging-ClientRegistrationFunction"
+orch_authentication_callback_enabled = true
+orch_authentication_callback_name    = "staging-AuthenticationCallbackFunction"
