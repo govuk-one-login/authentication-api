@@ -2414,13 +2414,6 @@ Resources:
       ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
-      Events:
-        SpotResponseQueue:
-          Type: SQS
-          Properties:
-            Queue: !Sub
-              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
-              - SecretArn: !Ref SpotResponseQueueKeyArnSecret
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -2483,6 +2476,15 @@ Resources:
             Resource: !Ref SpotResponseQueueKeyArnSecret
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  SpotResponseQueueEventMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: IdentityEnabled
+    Properties:
+      EventSourceArn: !Sub
+        - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+        - SecretArn: !Ref SpotResponseQueueKeyArnSecret
+      FunctionName: !Ref SpotResponseFunction.Alias
 
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
