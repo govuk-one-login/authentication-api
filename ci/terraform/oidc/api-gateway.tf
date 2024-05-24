@@ -164,6 +164,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_logout_enabled,
       var.orch_ipv_callback_enabled,
       var.orch_register_enabled,
+      var.orch_authentication_callback_enabled,
     ]))
   }
 
@@ -194,6 +195,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_logout_integration,
     aws_api_gateway_integration.orch_ipv_callback_integration,
     aws_api_gateway_integration.orch_register_integration,
+    aws_api_gateway_integration.orch_authentication_callback_integration,
   ]
 }
 
@@ -1132,4 +1134,39 @@ resource "aws_api_gateway_integration" "orch_register_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_register_name}:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {
+  count       = var.orch_authentication_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "orchestration-redirect"
+  depends_on = [
+    module.authentication_callback
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_authentication_callback_method" {
+  count       = var.orch_authentication_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_authentication_callback_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_authentication_callback_integration" {
+  count       = var.orch_authentication_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource[0].id
+  http_method = aws_api_gateway_method.orch_authentication_callback_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_authentication_callback_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_authentication_callback_name}:latest/invocations"
 }

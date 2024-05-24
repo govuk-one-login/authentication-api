@@ -34,17 +34,24 @@ Conditions:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
   IdentityEnabled:
     !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+  SendStorageToken:
+    !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
 
 Mappings:
   EnvironmentConfiguration:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "dfwubyergf"
+      authExternalApiId: "48oqh70cm7"
       authAccountId: "761723964695"
       authEnvironment: sandpit
       serviceDomain: sandpit.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/170fc24d-b278-49b0-a860-4fa1f3fa7a48
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8447683f-8800-4920-b4fe-1f410bf52ce0
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/a12c7616-57d4-4d9b-b98a-d0df5ee583d7
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
+      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
@@ -64,11 +71,16 @@ Mappings:
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
+      authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fcebbac-6a3a-4948-9700-e061ef3d308e
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/227f9cdd-3de3-4519-ab01-45302a10de95
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
+      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
@@ -88,11 +100,16 @@ Mappings:
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
+      authExternalApiId: "fag06zqnve"
       authAccountId: "758531536632"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/01d22c46-bccf-4a2f-bd3b-149fe03f5321
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/91836141-8c92-43ac-99a8-a586c73b6683
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
+      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
@@ -112,11 +129,16 @@ Mappings:
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
+      authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6dccb5b3-2754-4c66-ba66-c11f861ad55f
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/42a8b69b-9488-44d2-94b8-144b4ff3b35c
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
+      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
@@ -136,11 +158,16 @@ Mappings:
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
+      authExternalApiId: "fag06zqnve"
       authAccountId: "172348255554"
       authEnvironment: production
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0fce68a7-62bd-407d-919e-07f3fd621304
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/b1897252-b34b-4094-9e0b-466feed2b7f1
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
+      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
@@ -1239,6 +1266,305 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Authentication Callback Lambda
+
+  AuthenticationCallbackFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthenticationCallbackFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
+            - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+            - SecretArn: !Ref AccountInterventionsServiceUriSecret
+          AUTHENTICATION_BACKEND_URI: !Sub
+            - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
+            - AuthExternalApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authExternalApiId ]
+              VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          IDENTITY_ENABLED: !If [IsBuild, false, true]
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          IPV_AUDIENCE: !If
+            - IdentityEnabled
+            - !Sub
+              - https://identity.${ServiceDomain}/
+              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/ipv-callback
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
+          IPV_AUTHORISATION_URI: !Sub
+            - https://${ServiceDomain}/oauth2/authorize
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
+          LOGIN_URI: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          ORCH_CLIENT_ID: orchestrationAuth
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
+          REDIS_KEY: session
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
+          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [ SendStorageToken, true, false ]
+      Policies:
+        - Statement:
+          - Sid: AllowStorageTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
+          - Sid: AllowClientRegistryTableReadAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowUserInfoTableReadAndWriteAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo/index/*'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowGetRedisParameters
+            Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
+          - Sid: AllowDecryptOfParameters
+            Effect: "Allow"
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+          - Sid: AllowIpvTokenSigningKms
+            Effect: "Allow"
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
+          - Sid: AllowGetIpvPublicParameters
+            Effect: "Allow"
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource: !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-public-encryption-key"
+          - Sid: AllowOrchToAuthSigningKms
+            Effect: "Allow"
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
+          - Sid: AllowDecrpytUserInfoTable
+            Effect: "Allow"
+            Action: "kms:Decrypt*"
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, userInfoEncryptionKeyArn ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowUserProfileTableReadAndWriteAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeStream
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential/index/*'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+        - !Ref AccountInterventionsServiceUriSecretAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  AuthenticationCallbackFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthenticationCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/orchestration-redirect'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  AuthenticationCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-authentication-callback-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  AuthenticationCallbackSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
+
+  AuthenticationCallbackFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-authentication-callback-logout-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-authentication-callback-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthenticationCallbackFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-authentication-callback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: AuthenticationCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: AuthenticationCallbackFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthenticationCallbackFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-authentication-callback-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref AuthenticationCallbackFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref AuthenticationCallbackFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   #region Jwks Lambda
 
   JwksFunction:
@@ -1446,7 +1772,7 @@ Resources:
           ORCH_REDIRECT_URI: !Sub
             - https://oidc.${ServiceDomain}/orchestration-redirect/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthTokenSigningKeyAlias ]
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
@@ -1513,7 +1839,7 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthTokenSigningKeyAlias ]
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
           - Sid: AllowSQSTxMA
             Effect: Allow
             Action:
