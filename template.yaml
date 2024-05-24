@@ -1,5 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
 
 Parameters:
   Environment:
@@ -28,6 +30,9 @@ Conditions:
     !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
   IsNotDevEnvironment:
     !Not [ !Equals [!Ref Environment, 'dev'] ]
+  IdentityEnabled:
+    !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+
 
 Mappings:
   EnvironmentConfiguration:
@@ -1628,13 +1633,6 @@ Resources:
       ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
-      Events:
-        SpotResponseQueue:
-          Type: SQS
-          Properties:
-            Queue: !Sub
-              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
-              - SecretArn: !Ref SpotResponseQueueKeyArnSecret
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1697,6 +1695,15 @@ Resources:
             Resource: !Ref SpotResponseQueueKeyArnSecret
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  SpotResponseQueueEventMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: IdentityEnabled
+    Properties:
+      EventSourceArn: !Sub
+        - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+        - SecretArn: !Ref SpotResponseQueueKeyArnSecret
+      FunctionName: !Ref SpotResponseFunction.Alias
 
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
