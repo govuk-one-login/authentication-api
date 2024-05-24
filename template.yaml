@@ -261,6 +261,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
 
+  OpenIdConfigurationSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref OpenIdConfigurationFunctionLogGroup
+
   OpenIdConfigurationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -374,6 +382,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-trustmark-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  TrustmarkSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TrustmarkFunctionLogGroup
 
   TrustmarkFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
@@ -510,6 +526,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-backchannel-logout-request-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  BackChannelLogoutRequestSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref BackChannelLogoutRequestFunctionLogGroup
 
   BackChannelLogoutRequestFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
@@ -711,6 +735,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-doc-app-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  DocAppSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref DocAppCallbackFunctionLogGroup
 
   DocAppCallbackFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1257,6 +1289,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-jwks-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  JwksSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref JwksFunctionLogGroup
 
   JwksFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
