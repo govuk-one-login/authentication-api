@@ -1770,12 +1770,14 @@ Resources:
   SlackNotificationsFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
+    # checkov:skip=CKV_AWS_117: SlackNotificationsFunction doesn't need vpc configuration
+    IgnoreGlobals: [Runtime, Layers, VpcConfig]
     Properties:
       AutoPublishAlias: latest
       CodeUri: ./orchestration-alerting
       Handler: slackNotifications::handler
       ReservedConcurrentExecutions: 1
+      Runtime: "nodejs20.x"
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
