@@ -352,17 +352,13 @@ class SignUpHandlerTest {
     }
 
     public static AuthenticationRequest generateAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        State state = new State();
-        Scope scope = new Scope();
-        Nonce nonce = new Nonce();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add("phone");
-        scope.add("email");
         return new AuthenticationRequest.Builder(
-                        responseType, scope, new ClientID(CLIENT.getClientID()), REDIRECT_URI)
-                .state(state)
-                .nonce(nonce)
+                        ResponseType.CODE,
+                        new Scope(OIDCScopeValue.OPENID),
+                        new ClientID(CLIENT.getClientID()),
+                        REDIRECT_URI)
+                .state(new State())
+                .nonce(new Nonce())
                 .build();
     }
 
