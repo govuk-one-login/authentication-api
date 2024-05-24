@@ -63,13 +63,15 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
     }
 };
 
-const buildMessageRequest = (snsMessage, colorCode, snsMessageFooter) => {
+const buildMessageRequest = async function (snsMessage, colorCode, snsMessageFooter) {
     const body = formatMessage(snsMessage, colorCode, snsMessageFooter);
     if (process.env.DEPLOY_ENVIRONMENT === "integration") {
-        body.channel = process.env.SLACK_CHANNEL_ID;
+        body.channel = process.env.SLACK_CHANNEL_ID ||
+            (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id"));
     }
-    if (process.env.DEPLOY_ENVIRONMENT === "dev") {
-        body.channel = process.env.SLACK_CHANNEL_ID;
+    if (process.env.DEPLOY_ENVIRONMENT === "dev" || process.env.DEPLOY_ENVIRONMENT === "staging") {
+        body.channel = process.env.SLACK_CHANNEL_ID ||
+            (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-channel-id"));
     }
     return {
         method: "post",

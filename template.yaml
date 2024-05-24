@@ -20,12 +20,6 @@ Parameters:
     Type: String
     Description: The ARN of the subscription endpoint to send logs to splunk
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
-  SlackWebhookUrl:
-    Type: String
-    Description: Slack webhook url
-  SlackChannelId:
-    Type: String
-    Description: Slack channel ID for alerts to be sent to from alerts lambda. Populated from Secrets Manager at deploy time
 
 Conditions:
   UsePermissionsBoundary:
@@ -1763,7 +1757,7 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Action: "sns:Publish"
+          - Action: sns:Publish
             Effect: Allow
             Resource: !Ref SlackEvents
             Principal:
@@ -1786,13 +1780,23 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           DEPLOY_ENVIRONMENT: !Ref Environment
-          SLACK_CHANNEL_ID: !Ref SlackChannelId
-          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          SLACK_CHANNEL_ID: !Sub "{{resolve:ssm:${Environment}-slack-channel-id:1}}"
+          SLACK_WEBHOOK_URL: !Sub "{{resolve:ssm:${Environment}-slack-hook-url:1}}"
       Events:
         SNS:
           Type: SNS
           Properties:
             Topic: !Ref SlackEvents
+      Policies:
+        - Statement:
+            - Sid: AllowGetParameters
+              Effect: "Allow"
+              Action:
+                - "ssm:GetParameter"
+                - "ssm:GetParameters"
+              Resource:
+                - !Sub "arn:aws:sqs:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
+                - !Sub "arn:aws:sqs:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
 
   SlackNotificationsPermission:
     Type: AWS::Lambda::Permission
@@ -1808,7 +1812,7 @@ Resources:
 
 Outputs:
   SlackEventsArn:
-    Description: 'ARN of the SlackEvents SNS topic'
+    Description: "ARN of the SlackEvents SNS topic"
     Value: !Ref SlackEvents
     Export:
-      Name: !Sub '${AWS::StackName}-SlackEventsArn'
+      Name: !Sub "${AWS::StackName}-SlackEventsArn"
