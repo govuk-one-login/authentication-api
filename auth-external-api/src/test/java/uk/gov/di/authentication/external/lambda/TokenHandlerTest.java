@@ -109,6 +109,8 @@ class TokenHandlerTest {
                 .thenReturn(URI.create("https://test-callback.com"));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create("https://test-backend.com"));
+        when(configurationService.getOrchestrationBackendURI())
+                .thenReturn(URI.create("https://orch-test-backend.com"));
         when(configurationService.getInternalSectorUri()).thenReturn("https://test-backend.com");
 
         accessTokenService = mock(AccessTokenService.class);

@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -30,6 +31,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -117,9 +119,17 @@ public class TokenHandler
             var authExternalApiTokenEndpoint =
                     buildURI(authenticationBackendURI.toString(), "token");
 
+            var orchestrationBackendURI = configurationService.getOrchestrationBackendURI();
+            var orchAuthExternalApiTokenEndpoint =
+                    buildURI(orchestrationBackendURI.toString(), "token");
+
+            var expectedAudience =
+                    Set.of(
+                            new Audience(authExternalApiTokenEndpoint),
+                            new Audience(orchAuthExternalApiTokenEndpoint));
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
                     input.getBody(),
-                    authExternalApiTokenEndpoint,
+                    expectedAudience,
                     configurationService.getOrchestrationToAuthenticationSigningPublicKey());
 
             String suppliedAuthCode = requestBody.get("code");
