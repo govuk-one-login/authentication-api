@@ -26,7 +26,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -36,7 +35,6 @@ import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -92,8 +90,6 @@ public class LogoutServiceTest {
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
-    private static final URI AI_LOGOUT_URI =
-            URI.create("https://oidc.sandpit.account.gov.uk/orch-frontend/not-available");
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
@@ -102,9 +98,6 @@ public class LogoutServiceTest {
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
 
     private static final String ENVIRONMENT = "test";
-
-    private static final UserProfile USER_PROFILE =
-            new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
 
     private SignedJWT signedIDToken;
     private Optional<String> audience;
@@ -147,8 +140,7 @@ public class LogoutServiceTest {
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        backChannelLogoutService,
-                        dynamoService);
+                        backChannelLogoutService);
 
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -350,17 +342,14 @@ public class LogoutServiceTest {
     @Test
     void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
         Subject rpSubject = new Subject();
-        when(dynamoClientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
-        when(dynamoService.getUserProfileFromSubject(any())).thenReturn(USER_PROFILE);
-        when(ClientSubjectHelper.getSubject(any(), any(), any(), any())).thenReturn(rpSubject);
 
         logoutService.generateLogoutResponse(
                 CLIENT_LOGOUT_URI,
                 Optional.of(STATE.getValue()),
                 Optional.empty(),
                 auditUser,
-                Optional.of(audience.get()));
+                Optional.of(audience.get()),
+                Optional.of(rpSubject.getValue()));
 
         verify(auditService)
                 .submitAuditEvent(

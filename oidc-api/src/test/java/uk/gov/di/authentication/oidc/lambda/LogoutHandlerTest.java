@@ -166,7 +166,8 @@ class LogoutHandlerTest {
                             Optional.of(STATE.toString()),
                             Optional.empty(),
                             getAuditUser(event),
-                            audience);
+                            audience,
+                            Optional.of(SUBJECT.getValue()));
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
@@ -194,7 +195,8 @@ class LogoutHandlerTest {
                             Optional.of(STATE.toString()),
                             Optional.empty(),
                             getAuditUser(event),
-                            audience);
+                            audience,
+                            Optional.of(SUBJECT.getValue()));
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
@@ -233,7 +235,8 @@ class LogoutHandlerTest {
                             Optional.of(STATE.getValue()),
                             Optional.empty(),
                             getAuditUserWhenNoCookie(event),
-                            audience);
+                            audience,
+                            Optional.of(SUBJECT.getValue()));
             verifyNoInteractions(cloudwatchMetricsService);
         }
     }
@@ -412,7 +415,10 @@ class LogoutHandlerTest {
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.of(STATE.toString()), getAuditUser(event), audience);
+                            Optional.of(STATE.toString()),
+                            getAuditUser(event),
+                            audience,
+                            Optional.of(SUBJECT.getValue()));
         }
 
         @Test
@@ -434,7 +440,8 @@ class LogoutHandlerTest {
                     .generateDefaultLogoutResponse(
                             Optional.of(STATE.toString()),
                             getAuditUserWhenNoCookie(event),
-                            audience);
+                            audience,
+                            Optional.of(SUBJECT.getValue()));
         }
 
         @Test
