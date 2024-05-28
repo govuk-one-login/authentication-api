@@ -275,6 +275,7 @@ Resources:
 
   OpenIdConfigurationFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
@@ -282,7 +283,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
       Environment:
@@ -296,7 +296,7 @@ Resources:
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   OpenIdConfigurationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -397,6 +397,7 @@ Resources:
 
   TrustmarkFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
@@ -404,7 +405,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
       Environment:
@@ -418,7 +418,7 @@ Resources:
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   TrustmarkFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -519,6 +519,7 @@ Resources:
 
   BackChannelLogoutRequestFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambda needs open egress so isn't in VPC
     IgnoreGlobals: [VpcConfig]
@@ -527,7 +528,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref BackChannelLogoutRequestFunctionLogGroup
       Events:
@@ -565,7 +565,7 @@ Resources:
               - kms:Decrypt
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   BackChannelLogoutRequestFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -664,13 +664,13 @@ Resources:
   DocAppCallbackFunction:
     Type: AWS::Serverless::Function
     IgnoreGlobals: [ VpcConfig ]
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
       FunctionName: !Sub ${Environment}-DocAppCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./doc-checking-app-api
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
       VpcConfig:
@@ -782,7 +782,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   DocAppCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -815,6 +815,7 @@ Resources:
 
   TokenFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -822,7 +823,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref TokenFunctionLogGroup
       Environment:
@@ -941,7 +941,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   TokenFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1041,6 +1041,7 @@ Resources:
 
   LogoutFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -1048,7 +1049,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref LogoutFunctionLogGroup
       Environment:
@@ -1184,7 +1184,7 @@ Resources:
               - kms:DescribeKey
             Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   LogoutFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1277,6 +1277,7 @@ Resources:
 
   AuthenticationCallbackFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -1284,7 +1285,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
       Environment:
@@ -1475,7 +1475,7 @@ Resources:
                   AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   AuthenticationCallbackFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1576,6 +1576,7 @@ Resources:
 
   JwksFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -1583,7 +1584,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref JwksFunctionLogGroup
       Environment:
@@ -1624,7 +1624,7 @@ Resources:
               - kms:DescribeKey
             Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   JwksFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -1725,6 +1725,7 @@ Resources:
 
   AuthorisationFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     IgnoreGlobals: [ VpcConfig ]
@@ -1733,7 +1734,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref AuthorisationFunctionLogGroup
       VpcConfig:
@@ -1855,7 +1855,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   AuthorisationFunctionCrossAccountGetPermission:
     Type: AWS::Lambda::Permission
@@ -1964,6 +1964,7 @@ Resources:
 
   UserInfoFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -1971,7 +1972,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref UserInfoFunctionLogGroup
       Environment:
@@ -2154,7 +2154,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   UserInfoFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2244,6 +2244,7 @@ Resources:
 
   AuthCodeFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -2251,7 +2252,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref AuthCodeFunctionLogGroup
       Environment:
@@ -2351,7 +2351,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   AuthCodeFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2445,6 +2445,7 @@ Resources:
 
   UpdateClientConfigFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -2452,7 +2453,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./client-registry-api
       Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
       Environment:
@@ -2508,7 +2508,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   UpdateClientConfigFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2599,6 +2599,7 @@ Resources:
 
   ClientRegistrationFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -2606,7 +2607,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./client-registry-api
       Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
       Environment:
@@ -2662,7 +2662,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   ClientRegistrationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -2757,6 +2757,7 @@ Resources:
   IpvCallbackFunction:
     Type: AWS::Serverless::Function
     IgnoreGlobals: [ VpcConfig ]
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -2764,7 +2765,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./ipv-api
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
       VpcConfig:
@@ -2968,7 +2968,7 @@ Resources:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   IpvCallbackFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -3062,6 +3062,7 @@ Resources:
   SpotResponseFunction:
     Type: AWS::Serverless::Function
     Condition: IsNotBuild
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -3069,7 +3070,6 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./ipv-api
       Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
       Environment:
@@ -3153,7 +3153,7 @@ Resources:
             Resource:
               - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   SpotResponseQueueEventMapping:
     Type: AWS::Lambda::EventSourceMapping
