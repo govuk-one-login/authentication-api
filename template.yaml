@@ -864,10 +864,10 @@ Resources:
               - "ssm:GetParameter"
               - "ssm:GetParameters"
             Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
           - Sid: AllowDecryptOfParameters
             Effect: "Allow"
             Action: "kms:Decrypt"
@@ -1095,10 +1095,10 @@ Resources:
               - ssm:GetParameter
               - ssm:GetParameters
             Resource:
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
@@ -2012,10 +2012,10 @@ Resources:
               - "ssm:GetParameter"
               - "ssm:GetParameters"
             Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: "kms:Decrypt"
@@ -2273,10 +2273,10 @@ Resources:
               - "ssm:GetParameter"
               - "ssm:GetParameters"
             Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: "kms:Decrypt"
@@ -2833,10 +2833,10 @@ Resources:
               - ssm:GetParameter
               - ssm:GetParameters
             Resource:
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port
-              - !Sub arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
           - Sid: AllowDecryptOfParameters
             Effect: Allow
             Action: kms:Decrypt
