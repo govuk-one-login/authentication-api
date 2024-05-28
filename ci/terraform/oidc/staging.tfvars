@@ -43,6 +43,7 @@ orch_ipv_callback_enabled            = true
 orch_ipv_callback_name               = "staging-IpvCallbackFunction"
 orch_register_enabled                = true
 orch_register_name                   = "staging-ClientRegistrationFunction"
+orch_update_client_name              = "staging-UpdateClientConfigFunction"
 orch_authentication_callback_enabled = true
 orch_authentication_callback_name    = "staging-AuthenticationCallbackFunction"
 auth_backchannel_logout_disabled     = true
