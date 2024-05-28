@@ -604,7 +604,7 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -664,7 +664,7 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
@@ -705,7 +705,7 @@ class IPVCallbackHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new ErrorObject(errorObject.getCode(), redirectUriErrorMessage)));
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
@@ -780,7 +780,7 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
@@ -973,7 +973,7 @@ class IPVCallbackHandlerTest {
                 .thenReturn(Optional.of(clientRegistry));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
-        when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
