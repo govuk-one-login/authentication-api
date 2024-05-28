@@ -8,6 +8,10 @@
     "ParameterValue": "10.1.0.0/16"
   },
   {
+    "ParameterKey": "ExecuteApiGatewayEnabled",
+    "ParameterValue": "Yes"
+  },
+  {
     "ParameterKey": "SSMApiEnabled",
     "ParameterValue": "Yes"
   },
