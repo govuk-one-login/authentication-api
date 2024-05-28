@@ -219,7 +219,7 @@ public class IPVCallbackHandler
                                             session.getSessionId()));
             var userProfile =
                     dynamoService
-                            .getUserProfileFromEmail(session.getEmailAddress())
+                            .getUserProfileByEmailMaybe(session.getEmailAddress())
                             .orElseThrow(
                                     () ->
                                             new IpvCallbackException(
