@@ -238,7 +238,7 @@ class SendNotificationHandlerTest {
                     verify(pendingEmailCheckSqsClient)
                             .send(
                                     format(
-                                            "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d}",
+                                            "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
                                             mockedUUID,
                                             EMAIL,
                                             session.getSessionId(),
@@ -246,7 +246,8 @@ class SendNotificationHandlerTest {
                                             PERSISTENT_ID,
                                             "123.123.123.123",
                                             JourneyType.REGISTRATION,
-                                            mockedDate.toInstant().getEpochSecond()));
+                                            mockedDate.toInstant().getEpochSecond(),
+                                            false));
                 } else {
                     verifyNoInteractions(pendingEmailCheckSqsClient);
                 }

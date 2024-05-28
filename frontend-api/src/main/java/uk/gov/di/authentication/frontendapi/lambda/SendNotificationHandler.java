@@ -271,6 +271,29 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         request.getNotificationType(), request.getJourneyType()));
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
+
+        if (request.getJourneyType() == JourneyType.REGISTRATION) {
+            String sessionId = userContext.getSession().getSessionId();
+            String clientSessionId = userContext.getClientSessionId();
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+            if (configurationService.isEmailCheckEnabled()) {
+                pendingEmailCheckSqsClient.send(
+                        objectMapper.writeValueAsString(
+                                new PendingEmailCheckRequest(
+                                        UUID.randomUUID(),
+                                        destination,
+                                        sessionId,
+                                        clientSessionId,
+                                        persistentSessionId,
+                                        IpAddressHelper.extractIpAddress(input),
+                                        JourneyType.REGISTRATION,
+                                        NowHelper.now().toInstant().getEpochSecond(),
+                                        testClientWithAllowedEmail)));
+            }
+        }
+
         if (!testClientWithAllowedEmail) {
 
             if (notificationType == VERIFY_PHONE_NUMBER) {
@@ -284,26 +307,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 PhoneNumberHelper.getCountry(destination)));
             }
 
-            if (request.getJourneyType() == JourneyType.REGISTRATION) {
-                String sessionId = userContext.getSession().getSessionId();
-                String clientSessionId = userContext.getClientSessionId();
-                String persistentSessionId =
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-
-                if (configurationService.isEmailCheckEnabled()) {
-                    pendingEmailCheckSqsClient.send(
-                            objectMapper.writeValueAsString(
-                                    new PendingEmailCheckRequest(
-                                            UUID.randomUUID(),
-                                            destination,
-                                            sessionId,
-                                            clientSessionId,
-                                            persistentSessionId,
-                                            IpAddressHelper.extractIpAddress(input),
-                                            JourneyType.REGISTRATION,
-                                            NowHelper.now().toInstant().getEpochSecond())));
-                }
-            }
             var notifyRequest =
                     new NotifyRequest(
                             destination, notificationType, code, userContext.getUserLanguage());
