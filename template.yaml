@@ -1297,7 +1297,7 @@ Resources:
           AUTHENTICATION_BACKEND_URI: !Sub
             - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
             - AuthExternalApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authExternalApiId ]
-              VpcId: !ImportValue vpc-ExecuteApiGatewayVpcEndpointId
+              VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           DYNAMO_ARN_PREFIX: !Sub
