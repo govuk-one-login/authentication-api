@@ -3105,7 +3105,7 @@ Resources:
     Properties:
       EventSourceArn: !Sub
         - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
-        - SecretArn: !Ref SpotResponseQueueKeyArnSecret
+        - SecretArn: !Ref SpotResponseQueueArnSecret
       FunctionName: !Ref SpotResponseFunction.Alias
 
   SpotResponseFunctionLogGroup:
