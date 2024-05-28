@@ -36,6 +36,8 @@ Conditions:
     !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
   SendStorageToken:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
+  IsNotBuild:
+    !Not [ !Equals [ !Ref Environment, build ]  ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -3026,6 +3028,7 @@ Resources:
 
   SpotResponseFunction:
     Type: AWS::Serverless::Function
+    Condition: IsNotBuild
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
@@ -3110,6 +3113,7 @@ Resources:
 
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
+    Condition: IsNotBuild
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
@@ -3117,6 +3121,7 @@ Resources:
 
   SpotResponseFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
+    Condition: IsNotBuild
     Properties:
       FilterName: !Sub ${Environment}-spot-response-request-errors
       FilterPattern: "{($.level = \"ERROR\")}"
@@ -3128,6 +3133,7 @@ Resources:
 
   SpotResponseFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsNotBuild
     Properties:
       ActionsEnabled: true
       AlarmActions:
@@ -3144,6 +3150,7 @@ Resources:
 
   SpotResponseFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsNotBuild
     Properties:
       AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
