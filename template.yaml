@@ -3090,12 +3090,16 @@ Resources:
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
               - sqs:ChangeMessageVisibility
-            Resource: !Ref SpotResponseQueueArnSecret
+            Resource: !Sub
+              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+              - SecretArn: !Ref SpotResponseQueueArnSecret
           - Sid: AllowSpotResponseQueueKms
             Effect: Allow
             Action:
               - kms:Decrypt
-            Resource: !Ref SpotResponseQueueKeyArnSecret
+            Resource: !Sub
+              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+              - SecretArn: !Ref SpotResponseQueueKeyArnSecret
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
