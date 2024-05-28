@@ -639,11 +639,6 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       sampled_requests_enabled   = true
     }
   }
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${replace(var.environment, "-", "")}OidcWafRules"
-    sampled_requests_enabled   = true
-  }
 
   rule {
     name     = "count_not_cloudfront"
@@ -692,6 +687,18 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
         }
       }
     }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafNotCloudFrontCount"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${replace(var.environment, "-", "")}OidcWafRules"
+    sampled_requests_enabled   = true
   }
 }
 
