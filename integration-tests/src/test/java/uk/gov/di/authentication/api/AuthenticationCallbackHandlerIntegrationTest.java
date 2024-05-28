@@ -30,6 +30,7 @@ import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
 import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
+import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
@@ -725,7 +726,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
-                        OidcAuditableEvent.LOG_OUT_SUCCESS));
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS));
     }
 
     private void assertRedirectToBlockedPage(APIGatewayProxyResponseEvent response) {
@@ -749,7 +750,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
-                        OidcAuditableEvent.LOG_OUT_SUCCESS));
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS));
     }
 
     private void assertRedirectToIpv(APIGatewayProxyResponseEvent response, boolean reproveIdentity)
