@@ -535,6 +535,18 @@ variable "orch_authorisation_enabled" {
   default     = false
 }
 
+variable "auth_backchannel_logout_disabled" {
+  description = "Flag to disable routing back channel logout traffic to the authentication account"
+  type        = bool
+  default     = false
+}
+
+variable "auth_spot_response_disabled" {
+  description = "Flag to disable routing spot response traffic to the authentication account"
+  type        = bool
+  default     = false
+}
+
 variable "orch_logout_enabled" {
   description = "Flag to enable routing logout traffic to the orchestration account"
   type        = bool
@@ -555,6 +567,18 @@ variable "orch_register_enabled" {
 
 variable "orch_authentication_callback_enabled" {
   description = "Flag to enable routing authentication callback traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_auth_code_enabled" {
+  description = "Flag to enable routing auth code traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_userinfo_enabled" {
+  description = "Flag to enable routing userinfo traffic to the orchestration account"
   type        = bool
   default     = false
 }
@@ -605,6 +629,21 @@ variable "orch_register_name" {
 }
 
 variable "orch_authentication_callback_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_auth_code_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_userinfo_name" {
+  type    = string
+  default = ""
+}
+
+variable "orch_update_client_name" {
   type    = string
   default = ""
 }

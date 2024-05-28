@@ -68,6 +68,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
       ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/a12c7616-57d4-4d9b-b98a-d0df5ee583d7
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -97,6 +98,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
       ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/227f9cdd-3de3-4519-ab01-45302a10de95
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -126,6 +128,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
       ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/91836141-8c92-43ac-99a8-a586c73b6683
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -155,6 +158,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
       ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/42a8b69b-9488-44d2-94b8-144b4ff3b35c
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -184,6 +188,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
       ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/b1897252-b34b-4094-9e0b-466feed2b7f1
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
 
 Globals:
   Function:
@@ -1954,6 +1959,625 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  UserInfoFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-UserInfoFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref UserInfoFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        Statement:
+          - Sid: AllowIdTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          - Sid: AllowIdTokenSigningKmsRsa
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowClientRegistryTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowUserProfileTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowUserProfileTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+          - Sid: AllowIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowIdentityCredentialsTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
+          - Sid: AllowAuthenticationCallbackUserinfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowAuthenticationCallbackUserinfoTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
+          - Sid: AllowDocAppCredentialTableReadAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowDocAppCredentialTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  UserInfoFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UserInfoFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/userinfo'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  UserInfoFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-userinfo-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  UserInfoFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-userinfo-logout-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref UserInfoFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-userinfo-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  UserInfoFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-userinfo-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: UserInfoFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: UserInfoFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  UserInfoFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-userinfo-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref UserInfoFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref UserInfoFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  AuthCodeFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthCodeFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref AuthCodeFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
+              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: "kms:Decrypt"
+            Resource: !GetAtt MainKmsKey.Arn
+          - Sid: AllowClientRegistryTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowUserProfileTableReadAndWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowUserProfileTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  AuthCodeFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthCodeFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/auth-code'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  AuthCodeFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-auth-code-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  AuthCodeFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-auth-code-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref AuthCodeFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-auth-code-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthCodeFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-auth-code-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: AuthCodeFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: AuthCodeFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthCodeFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-auth-code-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref AuthCodeFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref AuthCodeFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  #region Update Client Config Lambda
+
+  UpdateClientConfigFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-UpdateClientConfigFunction
+      AutoPublishAlias: latest
+      CodeUri: ./client-registry-api
+      Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref UpdateClientConfigFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        Statement:
+          - Sid: AllowClientRegistryAccess
+            Effect: "Allow"
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowClientRegistryTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  UpdateClientConfigFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UpdateClientConfigFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/PUT/connect/register/{clientId}'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  UpdateClientConfigFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-update-client-config-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  UpdateClientConfigFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-update-client-config-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref UpdateClientConfigFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-update-client-config-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  UpdateClientConfigFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} update client config lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-update-client-config-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: UpdateClientConfigFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: UpdateClientConfigFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  UpdateClientConfigFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-update-client-config-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} update client config lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref UpdateClientConfigFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref UpdateClientConfigFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   ClientRegistrationFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
@@ -2393,6 +3017,168 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Ref IpvCallbackFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region SPOT Response Lambda
+
+  SpotResponseFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-SpotResponseFunction
+      AutoPublishAlias: latest
+      CodeUri: ./ipv-api
+      Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref SpotResponseFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        - !Ref SpotResponseQueueArnSecretAccessPolicy
+        - !Ref SpotResponseQueueKeyArnSecretAccessPolicy
+        - Statement:
+          - Sid: AllowIdentityCredentialsTableReadWriteAndDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:DeleteItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowIdentityCredentialsTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
+          - Sid: AllowSpotResponseQueueReadAccess
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+            Resource: !Ref SpotResponseQueueArnSecret
+          - Sid: AllowSpotResponseQueueKms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !Ref SpotResponseQueueKeyArnSecret
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  SpotResponseQueueEventMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: IdentityEnabled
+    Properties:
+      EventSourceArn: !Sub
+        - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+        - SecretArn: !Ref SpotResponseQueueKeyArnSecret
+      FunctionName: !Ref SpotResponseFunction.Alias
+
+  SpotResponseFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  SpotResponseFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-spot-response-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref SpotResponseFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-spot-response-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  SpotResponseFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-spot-response-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: SpotResponseFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: SpotResponseFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  SpotResponseFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref SpotResponseFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref SpotResponseFunction.Alias
             Period: 60
             Stat: Sum
             Unit: Count

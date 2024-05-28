@@ -14,8 +14,6 @@ lockout_duration                     = 7200
 reduced_lockout_duration             = 900
 incorrect_password_lockout_count_ttl = 7200
 
-orch_openid_configuration_name = "staging-OpenIdConfigurationFunction"
-
 orch_account_id                                  = "590183975515"
 back_channel_logout_cross_account_access_enabled = true
 kms_cross_account_access_enabled                 = true
@@ -29,9 +27,27 @@ phone_checker_with_retry = false
 oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
 
-orch_doc_app_callback_enabled        = false
+orch_openid_configuration_enabled    = true
+orch_openid_configuration_name       = "staging-OpenIdConfigurationFunction"
+orch_doc_app_callback_enabled        = true
 orch_doc_app_callback_name           = "staging-DocAppCallbackFunction"
+orch_token_enabled                   = true
+orch_token_name                      = "staging-TokenFunction"
+orch_jwks_enabled                    = true
+orch_jwks_name                       = "staging-JwksFunction"
+orch_authorisation_enabled           = true
+orch_authorisation_name              = "staging-AuthorisationFunction"
+orch_logout_enabled                  = true
+orch_logout_name                     = "staging-LogoutFunction"
+orch_ipv_callback_enabled            = true
+orch_ipv_callback_name               = "staging-IpvCallbackFunction"
 orch_register_enabled                = true
 orch_register_name                   = "staging-ClientRegistrationFunction"
 orch_authentication_callback_enabled = true
 orch_authentication_callback_name    = "staging-AuthenticationCallbackFunction"
+auth_backchannel_logout_disabled     = true
+auth_spot_response_disabled          = true
+orch_auth_code_enabled               = true
+orch_auth_code_name                  = "staging-AuthCodeFunction"
+orch_userinfo_enabled                = true
+orch_userinfo_name                   = "staging-UserInfoFunction"

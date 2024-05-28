@@ -65,4 +65,5 @@ kms_cross_account_access_enabled                                    = true
 doc_app_cross_account_access_enabled                                = true
 user_profile_table_cross_account_access_enabled                     = true
 client_registry_table_cross_account_access_enabled                  = true
+identity_credentials_cross_account_access_enabled                   = true
 authentication_callback_userinfo_table_cross_account_access_enabled = true

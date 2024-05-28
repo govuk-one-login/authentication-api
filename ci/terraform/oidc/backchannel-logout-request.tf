@@ -71,6 +71,7 @@ resource "aws_lambda_alias" "backchannel_logout_request_lambda_active" {
 }
 
 resource "aws_lambda_event_source_mapping" "backchannel_logout_lambda_sqs_mapping" {
+  count            = var.auth_backchannel_logout_disabled ? 0 : 1
   event_source_arn = aws_sqs_queue.back_channel_logout_queue.arn
   function_name    = aws_lambda_function.backchannel_logout_request_lambda.arn
 
