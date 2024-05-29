@@ -16,3 +16,5 @@ bulk_user_email_email_sending_enabled = false
 bulk_user_email_batch_query_limit     = 25
 bulk_user_email_max_batch_count       = 100
 bulk_user_email_batch_pause_duration  = 0
+
+support_email_check_enabled = true

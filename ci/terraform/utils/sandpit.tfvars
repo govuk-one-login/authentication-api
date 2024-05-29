@@ -15,3 +15,4 @@ performance_tuning = {
     timeout = 300
   }
 }
+support_email_check_enabled = true
