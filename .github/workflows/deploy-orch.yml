@@ -42,8 +42,14 @@ jobs:
           distribution: 'corretto'
           cache: gradle
 
+      - name: Cache SAM
+        uses: actions/cache@v4
+        with:
+          path: .aws-sam/cache
+          key: orch-sam
+
       - name: SAM build
-        run: sam build
+        run: sam build --cached --parallel
 
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@v3.8

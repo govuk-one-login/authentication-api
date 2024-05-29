@@ -17,6 +17,7 @@ ci/terraform/**/*.tfstate*
 logs/
 .vscode/
 .venv/
+.aws-sam
 
 # Approval Tests
 *.received.txt
