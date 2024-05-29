@@ -104,7 +104,7 @@ Mappings:
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
-      authExternalApiId: "fag06zqnve"
+      authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
@@ -134,7 +134,7 @@ Mappings:
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
-      authExternalApiId: "fag06zqnve"
+      authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
@@ -164,7 +164,7 @@ Mappings:
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
-      authExternalApiId: "fag06zqnve"
+      authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
       authEnvironment: production
       serviceDomain: account.gov.uk
