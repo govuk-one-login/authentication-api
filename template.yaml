@@ -42,6 +42,7 @@ Mappings:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "dfwubyergf"
+      authFrontendApiId: "81spniu4i3"
       authExternalApiId: "48oqh70cm7"
       authAccountId: "761723964695"
       authEnvironment: sandpit
@@ -71,6 +72,7 @@ Mappings:
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
+      authFrontendApiId: "cf4ak5kk3c"
       authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
       authEnvironment: build
@@ -100,6 +102,7 @@ Mappings:
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
+      authFrontendApiId: "jqbiq2ncxj"
       authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
       authEnvironment: staging
@@ -129,6 +132,7 @@ Mappings:
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
+      authFrontendApiId: "kos9181mak"
       authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
       authEnvironment: integration
@@ -158,6 +162,7 @@ Mappings:
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
+      authFrontendApiId: "601dr60xr2"
       authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
       authEnvironment: production
@@ -2488,9 +2493,9 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/identity-progress'
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${FrontendApiId}/*/GET/identity-progress'
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+          FrontendApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authFrontendApiId ]
 
   IdentityProgressFunctionLogGroup:
     Type: AWS::Logs::LogGroup
