@@ -702,7 +702,7 @@ Resources:
           DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           LOGIN_URI: !Sub
             - https://signin.${ServiceDomain}/doc-app-callback
@@ -838,7 +838,7 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DYNAMO_ARN_PREFIX: !Sub
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
@@ -1064,7 +1064,7 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DYNAMO_ARN_PREFIX: !Sub
             - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
@@ -1308,12 +1308,12 @@ Resources:
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
           IDENTITY_ENABLED: !If [IsBuild, false, true]
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           IPV_AUDIENCE: !If
             - IdentityEnabled
             - !Sub
-              - https://identity.${ServiceDomain}/
+              - https://identity.${ServiceDomain}
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
@@ -1767,7 +1767,7 @@ Resources:
           EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           LOGIN_URI: !Sub
             - https://signin.${ServiceDomain}/
@@ -1987,7 +1987,7 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DYNAMO_ARN_PREFIX: !Sub
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
@@ -2262,7 +2262,7 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DYNAMO_ARN_PREFIX: !Sub
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
@@ -2789,7 +2789,7 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DYNAMO_ARN_PREFIX: !Sub
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
@@ -2810,7 +2810,7 @@ Resources:
           IPV_AUDIENCE: !If
             - IdentityEnabled
             - !Sub
-              - https://identity.${ServiceDomain}/
+              - https://identity.${ServiceDomain}
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CALLBACK_URI: !If
@@ -3085,7 +3085,7 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
+            - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DYNAMO_ARN_PREFIX: !Sub
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
