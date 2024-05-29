@@ -1091,6 +1091,19 @@ resource "aws_api_gateway_method" "orch_authorisation_method" {
   authorization = "NONE"
 }
 
+resource "aws_api_gateway_integration" "orch_authorisation_integration" {
+  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
+  http_method = aws_api_gateway_method.orch_authorisation_method[each.key].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_authorisation_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthorisationFunction:latest/invocations"
+}
+
 resource "aws_api_gateway_resource" "orch_auth_code_resource" {
   count       = var.orch_auth_code_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
@@ -1113,17 +1126,17 @@ resource "aws_api_gateway_method" "orch_auth_code_method" {
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_integration" "orch_authorisation_integration" {
-  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+resource "aws_api_gateway_integration" "orch_auth_code_integration" {
+  count       = var.orch_auth_code_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
-  http_method = aws_api_gateway_method.orch_authorisation_method[each.key].http_method
+  resource_id = aws_api_gateway_resource.orch_auth_code_resource[0].id
+  http_method = aws_api_gateway_method.orch_auth_code_method[0].http_method
   depends_on = [
-    aws_api_gateway_resource.orch_authorisation_resource
+    aws_api_gateway_resource.orch_auth_code_resource
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthorisationFunction:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthCodeFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_logout_resource" {
@@ -1304,20 +1317,6 @@ resource "aws_api_gateway_integration" "orch_authentication_callback_integration
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthenticationCallbackFunction:latest/invocations"
 }
-
-resource "aws_api_gateway_integration" "orch_auth_code_integration" {
-  count       = var.orch_auth_code_enabled ? 1 : 0
-  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_auth_code_resource[0].id
-  http_method = aws_api_gateway_method.orch_auth_code_method[0].http_method
-  depends_on = [
-    aws_api_gateway_resource.orch_auth_code_resource
-  ]
-  type                    = "AWS_PROXY"
-  integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthCodeFunction:latest/invocations"
-}
-
 
 resource "aws_api_gateway_resource" "orch_userinfo_resource" {
   count       = var.orch_userinfo_enabled ? 1 : 0

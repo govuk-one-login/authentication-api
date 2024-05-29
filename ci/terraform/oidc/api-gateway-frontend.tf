@@ -86,6 +86,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].integration_trigger_value : null,
       local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].method_trigger_value : null,
       local.account_modifiers_encryption_policy_arn,
+      var.orch_identity_progress_enabled,
     ]))
   }
 
@@ -110,6 +111,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.doc-app-authorize,
     module.orch_auth_code,
     module.check_reauth_user,
+    aws_api_gateway_integration.orch_identity_progress_integration,
   ]
 }
 
@@ -357,4 +359,39 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_
   depends_on = [
     aws_cloudwatch_log_group.frontend_waf_logs
   ]
+}
+
+resource "aws_api_gateway_resource" "orch_identity_progress_resource" {
+  count       = var.orch_identity_progress_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
+  path_part   = "identity-progress"
+  depends_on = [
+    module.identity_progress
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_identity_progress_method" {
+  count       = var.orch_identity_progress_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  resource_id = aws_api_gateway_resource.orch_identity_progress_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_identity_progress_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_identity_progress_integration" {
+  count       = var.orch_identity_progress_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  resource_id = aws_api_gateway_resource.orch_identity_progress_resource[0].id
+  http_method = aws_api_gateway_method.orch_identity_progress_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_identity_progress_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-IdentityProgressFunction:latest/invocations"
 }

@@ -18,7 +18,7 @@ module "identity_progress" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "identity-progress"
-  path_part       = "identity-progress"
+  path_part       = var.orch_identity_progress_enabled ? "identity-progress-auth" : "identity-progress"
   endpoint_method = ["GET"]
   environment     = var.environment
 

@@ -2374,6 +2374,209 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Identity Progress Lambda
+
+  IdentityProgressFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
+    IgnoreGlobals: [ VpcConfig ]
+    Properties:
+      FunctionName: !Sub ${Environment}-IdentityProgressFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.ipv.lambda.IdentityProgressFrontendHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      LoggingConfig:
+        LogGroup: !Ref IdentityProgressFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          REDIS_KEY: session
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
+            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+      Policies:
+        Statement:
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+          - Sid: AllowUserInfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - !Sub
+                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo/index/*'
+                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials'
+              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          - Sid: AllowDecryptUserInfoTable
+            Effect: Allow
+            Action: kms:Decrypt*
+            Resource:
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - "ssm:GetParameter"
+              - "ssm:GetParameters"
+            Resource:
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  IdentityProgressFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IdentityProgressFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/identity-progress'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  IdentityProgressFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-identity-progress-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  IdentityProgressSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref IdentityProgressFunctionLogGroup
+
+  IdentityProgressFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-identity-progress-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-identity-progress-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  IdentityProgressFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} identity progress lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-identity-progress-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: IdentityProgressFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: IdentityProgressFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  IdentityProgressFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-identity-progress-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} identity progress lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref IdentityProgressFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref IdentityProgressFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
   #region Back Channel Logout Queue
 
   BackChannelLogoutQueue:

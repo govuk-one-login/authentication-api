@@ -71,6 +71,7 @@ auth_spot_response_disabled          = true
 orch_auth_code_enabled               = true
 orch_userinfo_enabled                = true
 orch_storage_token_jwk_enabled       = true
+orch_identity_progress_enabled       = true
 
 orch_account_id                                 = "816047645251"
 kms_cross_account_access_enabled                = true

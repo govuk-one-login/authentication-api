@@ -583,6 +583,12 @@ variable "orch_storage_token_jwk_enabled" {
   default     = false
 }
 
+variable "orch_identity_progress_enabled" {
+  description = "Flag to enable routing identity progress traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool
