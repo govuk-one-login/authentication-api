@@ -10,6 +10,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -73,6 +74,9 @@ public class LogoutService {
                         .withPersistentSessionId(
                                 extractPersistentIdFromCookieHeader(input.getHeaders()))
                         .withSessionId(session.getSessionId())
+                        .withGovukSigninJourneyId(
+                                extractClientSessionIdFromCookieHeaders(input.getHeaders())
+                                        .orElse(null))
                         .withUserId(session.getInternalCommonSubjectIdentifier());
 
         destroySessions(session);
@@ -203,5 +207,10 @@ public class LogoutService {
                         .map(i -> new AuditService.MetadataPair[] {pair("rpPairwiseId", i)})
                         .orElse(new AuditService.MetadataPair[] {});
         auditService.submitAuditEvent(LOG_OUT_SUCCESS, auditClientId, auditUser, metadata);
+    }
+
+    private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
+        var sessionCookieIds = new CookieHelper().parseSessionCookie(headers);
+        return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
     }
 }
