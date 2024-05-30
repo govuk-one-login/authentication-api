@@ -40,4 +40,5 @@ phone_checker_with_retry = false
 
 orch_account_id = "058264132019"
 
-oidc_origin_domain_enabled = true
+oidc_origin_domain_enabled  = true
+oidc_cloudfront_dns_enabled = true
