@@ -39,3 +39,5 @@ contra_state_bucket      = "digital-identity-prod-tfstate"
 phone_checker_with_retry = false
 
 orch_account_id = "533266965190"
+
+oidc_origin_domain_enabled = true
