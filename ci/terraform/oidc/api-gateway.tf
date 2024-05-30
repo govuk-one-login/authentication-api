@@ -714,13 +714,14 @@ resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
 }
 
 data "aws_cloudformation_export" "oidc_origin_cloaking_waf_arn" {
-  name = local.oidc_origin_cloaking_waf_export_name
+  count = var.enforce_cloudfront ? 1 : 0
+  name  = local.oidc_origin_cloaking_waf_export_name
 }
 
 resource "aws_wafv2_web_acl_association" "oidc_origin_cloaking_waf" {
   count        = var.enforce_cloudfront ? 1 : 0
   resource_arn = aws_api_gateway_stage.endpoint_stage.arn
-  web_acl_arn  = data.aws_cloudformation_export.oidc_origin_cloaking_waf_arn.value
+  web_acl_arn  = data.aws_cloudformation_export.oidc_origin_cloaking_waf_arn[0].value
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api" {
