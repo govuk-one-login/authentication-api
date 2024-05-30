@@ -50,5 +50,3 @@ lambda_max_concurrency = 0
 lambda_min_concurrency = 1
 endpoint_memory_size   = 1536
 scaling_trigger        = 0.6
-
-support_email_check_enabled = true

@@ -58,7 +58,7 @@ class EmailCheckResultWriterIntegrationTest extends HandlerIntegrationTest<SQSEv
         if (doesMessageContainRequiredFields) {
             sqsMessage.setBody(
                     String.format(
-                            "{ \"Email\": \"%s\", \"Status\": \"%s\", \"TimeToExist\": \"%d\", \"ReferenceNumber\": \"%s\" }",
+                            "{ \"EmailAddress\": \"%s\", \"Status\": \"%s\", \"TimeToExist\": \"%d\", \"RequestReference\": \"%s\", \"TimeOfInitialRequest\":1000 }",
                             TEST_MSG_EMAIL,
                             status.toString(),
                             TEST_MSG_TIME_TO_EXIST,
