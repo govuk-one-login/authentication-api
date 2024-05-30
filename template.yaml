@@ -56,6 +56,7 @@ Mappings:
       userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
@@ -86,6 +87,7 @@ Mappings:
       userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
@@ -116,6 +118,7 @@ Mappings:
       userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
+      docAppDomain: https://api.review-b.staging.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.staging.account.gov.uk
       docAppAuthorisationUrl: https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize
@@ -146,6 +149,7 @@ Mappings:
       userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
+      docAppDomain: https://api.review-b.integration.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.integration.account.gov.uk
       docAppAuthorisationUrl: https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize
@@ -176,6 +180,7 @@ Mappings:
       userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
+      docAppDomain: https://api.review-b.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.account.gov.uk
       docAppAuthorisationUrl: https://www.review-b.account.gov.uk/dca/oauth2/authorize
@@ -1749,9 +1754,12 @@ Resources:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           CUSTOM_DOC_APP_CLAIM_ENABLED: true
           DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
+          DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/doc-app-callback
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           DOC_APP_AUTHORISATION_CLIENT_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppClientId ]
           DOC_APP_AUTHORISATION_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAuthorisationUrl ]
-          DOC_APP_DOMAIN: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
+          DOC_APP_DOMAIN: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppDomain ]
           DOC_APP_ENCRYPTION_KEY_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppEncryptionKeyId ]
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
