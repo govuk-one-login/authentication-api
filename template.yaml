@@ -1321,7 +1321,7 @@ Resources:
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !Sub
-            - https://${ServiceDomain}/oauth2/authorize
+            - https://identity.${ServiceDomain}/oauth2/authorize
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
           LOGIN_URI: !Sub
