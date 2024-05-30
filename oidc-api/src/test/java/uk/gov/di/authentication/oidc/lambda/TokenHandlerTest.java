@@ -47,7 +47,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -81,7 +80,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -616,7 +614,6 @@ public class TokenHandlerTest {
     }
 
     private UserProfile generateUserProfile() {
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         return new UserProfile()
                 .withEmail(TEST_EMAIL)
                 .withEmailVerified(true)
