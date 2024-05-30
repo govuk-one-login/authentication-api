@@ -31,7 +31,7 @@ ext {
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.39.2",
         junit: "5.10.2",
-        xray: "2.15.3",
+        xray: "2.16.0",
         pact: "4.6.9"
     ]
 
