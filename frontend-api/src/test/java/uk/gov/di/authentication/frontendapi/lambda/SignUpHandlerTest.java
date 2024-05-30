@@ -15,8 +15,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -45,10 +43,10 @@ import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -89,7 +87,10 @@ class SignUpHandlerTest {
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final ClientID CLIENT_ID = new ClientID();
+    public static final ClientRegistry CLIENT =
+            new ClientRegistry()
+                    .withClientID(IdGenerator.generate())
+                    .withSectorIdentifierUri("https://test.com");
     private static final String CLIENT_NAME = "client-name";
     private static final String EMAIL = CommonTestVariables.EMAIL;
 
@@ -126,7 +127,16 @@ class SignUpHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(user.getUserProfile()).thenReturn(userProfile);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(clientService.getClient(CLIENT.getClientID())).thenReturn(Optional.of(CLIENT));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
+
         handler =
                 new SignUpHandler(
                         configurationService,
@@ -139,35 +149,17 @@ class SignUpHandlerTest {
                         passwordValidator);
     }
 
-    private static Stream<Boolean> consentValues() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("consentValues")
-    void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired) throws Json.JsonException {
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+    @Test
+    void shouldReturn200IfSignUpIsSuccessful() {
+        Map<String, String> headers = getHeadersWithoutTxmaAuditEncoded();
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(authenticationService.signUp(
-                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
-                .thenReturn(user);
-        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
         usingValidClientSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        headers,
+                        format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService)
@@ -175,7 +167,8 @@ class SignUpHandlerTest {
         verify(sessionService).save(argThat((session) -> session.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
-        var signUpResponse = objectMapper.readValue(result.getBody(), SignUpResponse.class);
+        var signUpResponse =
+                objectMapper.readValueUnchecked(result.getBody(), SignUpResponse.class);
         assertThat(signUpResponse.isConsentRequired(), equalTo(false));
         verify(authenticationService)
                 .signUp(
@@ -189,14 +182,14 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        persistentId,
+                        "some-persistent-id-value",
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
@@ -212,29 +205,14 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws Json.JsonException {
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(true)));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
-        when(authenticationService.signUp(
-                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
-                .thenReturn(user);
-        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
+    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
         usingValidClientSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        getHeadersWithoutTxmaAuditEncoded(),
+                        format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -245,14 +223,14 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        persistentId,
+                        "some-persistent-id-value",
                         AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
@@ -260,11 +238,12 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfSessionIdMissing() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        Collections.emptyMap(),
+                        format(
+                                "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                                PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -276,9 +255,11 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        getHeadersWithoutTxmaAuditEncoded(),
+                        format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -290,10 +271,11 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn400IfPasswordInvalid() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase()));
+        String format =
+                format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase());
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(getHeadersWithoutTxmaAuditEncoded(), format);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -307,17 +289,15 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
 
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        var headers = getHeadersWithoutTxmaAuditEncoded();
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        headers,
+                        format(
+                                "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                                PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -326,32 +306,27 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         "joe.bloggs@test.com",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        "some-persistent-id-value",
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     @Test
-    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws Json.JsonException {
+    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
-        event.setBody(
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
-                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyRequestEvent event =
+                requestEvent(
+                        getHeadersWithoutTxmaAuditEncoded(),
+                        format(
+                                "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                                PASSWORD, EMAIL.toUpperCase()));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -360,14 +335,14 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
+                        CLIENT.getClientID(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         "joe.bloggs@test.com",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        "some-persistent-id-value",
                         AuditService.RestrictedSection.empty);
     }
 
@@ -377,16 +352,13 @@ class SignUpHandlerTest {
     }
 
     public static AuthenticationRequest generateAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        State state = new State();
-        Scope scope = new Scope();
-        Nonce nonce = new Nonce();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add("phone");
-        scope.add("email");
-        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                .state(state)
-                .nonce(nonce)
+        return new AuthenticationRequest.Builder(
+                        ResponseType.CODE,
+                        new Scope(OIDCScopeValue.OPENID),
+                        new ClientID(CLIENT.getClientID()),
+                        REDIRECT_URI)
+                .state(new State())
+                .nonce(new Nonce())
                 .build();
     }
 
@@ -395,12 +367,18 @@ class SignUpHandlerTest {
                 .thenReturn(Optional.of(clientSession));
     }
 
-    private ClientRegistry generateClientRegistry(boolean consentRequired) {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(consentRequired)
-                .withClientName("test-client")
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("pairwise");
+    private Map<String, String> getHeadersWithoutTxmaAuditEncoded() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, "some-persistent-id-value");
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        return headers;
+    }
+
+    private APIGatewayProxyRequestEvent requestEvent(Map<String, String> headers, String body) {
+        return new APIGatewayProxyRequestEvent()
+                .withRequestContext(contextWithSourceIp("123.123.123.123"))
+                .withHeaders(headers)
+                .withBody(body);
     }
 }
