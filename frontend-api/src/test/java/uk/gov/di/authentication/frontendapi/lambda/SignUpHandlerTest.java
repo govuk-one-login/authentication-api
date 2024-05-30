@@ -15,10 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -32,14 +29,12 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -48,11 +43,9 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -100,7 +93,6 @@ class SignUpHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    private static final Json objectMapper = SerializationService.getInstance();
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
@@ -139,13 +131,8 @@ class SignUpHandlerTest {
                         passwordValidator);
     }
 
-    private static Stream<Boolean> consentValues() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("consentValues")
-    void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired) throws Json.JsonException {
+    @Test
+    void shouldReturn200IfSignUpIsSuccessful() {
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
@@ -155,7 +142,7 @@ class SignUpHandlerTest {
 
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
@@ -175,8 +162,6 @@ class SignUpHandlerTest {
         verify(sessionService).save(argThat((session) -> session.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
-        var signUpResponse = objectMapper.readValue(result.getBody(), SignUpResponse.class);
-        assertThat(signUpResponse.isConsentRequired(), equalTo(false));
         verify(authenticationService)
                 .signUp(
                         eq(EMAIL),
@@ -212,8 +197,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws Json.JsonException {
+    void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
@@ -222,7 +206,7 @@ class SignUpHandlerTest {
 
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry(true)));
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
@@ -338,8 +322,7 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws Json.JsonException {
+    void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -395,10 +378,9 @@ class SignUpHandlerTest {
                 .thenReturn(Optional.of(clientSession));
     }
 
-    private ClientRegistry generateClientRegistry(boolean consentRequired) {
+    private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(consentRequired)
                 .withClientName("test-client")
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");

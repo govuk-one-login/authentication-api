@@ -8,9 +8,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -18,7 +16,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
-import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -156,8 +153,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                                     .getValue())
                             .orElse(AuditService.UNKNOWN);
 
-            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
-
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
                     userContext
@@ -185,11 +180,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                     internalCommonSubjectIdentifier.getValue()));
 
             LOG.info("Successfully processed request");
-            try {
-                return generateApiGatewayProxyResponse(200, new SignUpResponse(consentRequired));
-            } catch (JsonException e) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-            }
+            return generateApiGatewayProxyResponse(200, "");
         } else {
             LOG.info("Error message: {}", passwordValidationError.get().getMessage());
             return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
