@@ -41,7 +41,7 @@ orch_redirect_uri                  = "https://oidc.build.account.gov.uk/orchestr
 authorize_protected_subnet_enabled = true
 
 contra_state_bucket      = "digital-identity-dev-tfstate"
-phone_checker_with_retry = true
+phone_checker_with_retry = false
 
 orch_openid_configuration_name = "build-OpenIdConfigurationFunction"
 

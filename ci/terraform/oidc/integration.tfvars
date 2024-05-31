@@ -36,7 +36,7 @@ orch_redirect_uri                  = "https://oidc.integration.account.gov.uk/or
 authorize_protected_subnet_enabled = true
 
 contra_state_bucket      = "digital-identity-dev-tfstate"
-phone_checker_with_retry = false
+phone_checker_with_retry = true
 
 orch_account_id = "058264132019"
 
