@@ -56,6 +56,7 @@ module "authentication_callback" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     STORAGE_TOKEN_SIGNING_KEY_ALIAS             = aws_kms_alias.storage_token_signing_key_alias.name
     SEND_STORAGE_TOKEN_TO_IPV_ENABLED           = var.send_storage_token_to_ipv_enabled
+    TXMA_AUDIT_ENCODED_ENABLED                  = var.txma_audit_encoded_enabled
   }
 
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"
