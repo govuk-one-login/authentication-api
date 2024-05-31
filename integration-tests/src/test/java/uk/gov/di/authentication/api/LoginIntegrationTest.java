@@ -202,42 +202,16 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
-        var response1 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response1, hasStatus(401));
-        var response2 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response2, hasStatus(401));
-        var response3 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response3, hasStatus(401));
-        var response4 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response4, hasStatus(401));
-        var response5 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response5, hasStatus(401));
-        var response6 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response6, hasStatus(400));
+        var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+
+        for (int i = 0; i < 5; i++) {
+            var response = makeRequest(Optional.of(request), headers, Map.of());
+            assertThat(response, hasStatus(401));
+        }
+
+        var response = makeRequest(Optional.of(request), headers, Map.of());
+        assertThat(response, hasStatus(400));
+
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
@@ -262,42 +236,16 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
-        var response1 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response1, hasStatus(401));
-        var response2 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response2, hasStatus(401));
-        var response3 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response3, hasStatus(401));
-        var response4 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response4, hasStatus(401));
-        var response5 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response5, hasStatus(401));
-        var response6 =
-                makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
-                        Map.of());
-        assertThat(response6, hasStatus(400));
+        var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+
+        for (int i = 0; i < 5; i++) {
+            var response = makeRequest(Optional.of(request), headers, Map.of());
+            assertThat(response, hasStatus(401));
+        }
+
+        var response = makeRequest(Optional.of(request), headers, Map.of());
+        assertThat(response, hasStatus(400));
+
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
