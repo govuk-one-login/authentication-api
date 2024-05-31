@@ -221,8 +221,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                 "http://example.com",
                 String.valueOf(uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY),
                 sectorIdentifierUri,
-                "pairwise",
-                true);
+                "pairwise");
     }
 
     private Map<String, String> createHeaders(String sessionId) {

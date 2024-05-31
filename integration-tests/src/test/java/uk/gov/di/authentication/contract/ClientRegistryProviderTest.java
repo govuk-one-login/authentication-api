@@ -27,7 +27,6 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final String SERVICE_TYPE = "MANDATORY";
     private static final String SECTOR_IDENTIFIER_URI = "http://gov.uk";
     private static final String SUBJECT_TYPE = "pairwise";
-    private static final boolean CONSENT_REQUIRED = false;
     private static final boolean JAR_VALIDATION_REQUIRED = false;
     private static final List<String> CLAIMS = List.of();
     private static final String CLIENT_TYPE = "web";
@@ -76,7 +75,6 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 SERVICE_TYPE,
                 SECTOR_IDENTIFIER_URI,
                 SUBJECT_TYPE,
-                CONSENT_REQUIRED,
                 JAR_VALIDATION_REQUIRED,
                 CLAIMS,
                 CLIENT_TYPE,

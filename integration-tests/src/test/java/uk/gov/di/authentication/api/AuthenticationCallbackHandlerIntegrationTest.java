@@ -815,7 +815,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
                 ClientType.APP,
                 identityVerificationSupport);
     }

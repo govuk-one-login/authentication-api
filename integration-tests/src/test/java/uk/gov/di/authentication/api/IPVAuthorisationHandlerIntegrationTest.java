@@ -91,7 +91,6 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
                 ClientType.WEB,
                 true);
 

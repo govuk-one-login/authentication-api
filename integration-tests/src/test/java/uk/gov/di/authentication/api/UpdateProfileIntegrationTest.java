@@ -10,20 +10,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -93,14 +88,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
+                "public");
         userStore.signUp(EMAIL_ADDRESS, "password");
-        userStore.updateConsent(
-                EMAIL_ADDRESS,
-                new ClientConsent(
-                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
         return authRequest;
     }
 }

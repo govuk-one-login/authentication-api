@@ -104,7 +104,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -165,7 +165,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
@@ -214,7 +214,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -261,7 +261,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(keyPair, ClientType.APP, true);
+        registerClient(keyPair, ClientType.APP);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -298,7 +298,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = redis.createSession(true);
         redis.addEmailToSession(sessionId, userEmail);
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, false);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -314,7 +314,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
-    private void registerClient(KeyPair keyPair, ClientType clientType, boolean consentRequired) {
+    private void registerClient(KeyPair keyPair, ClientType clientType) {
         clientStore.registerClient(
                 CLIENT_ID,
                 TEST_CLIENT_NAME,
@@ -327,7 +327,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                consentRequired,
                 clientType,
                 true);
     }

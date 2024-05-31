@@ -486,7 +486,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true,
                 ClientType.WEB,
                 identitySupported);
     }
@@ -505,8 +504,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                false,
-                ClientType.APP);
+                ClientType.APP,
+                false);
     }
 
     private static class UserInfoConfigurationService extends IntegrationTestConfigurationService {

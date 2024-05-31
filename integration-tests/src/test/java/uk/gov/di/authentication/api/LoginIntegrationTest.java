@@ -111,8 +111,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);

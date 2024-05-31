@@ -971,8 +971,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
     }
 
     private Scope withScope() {
