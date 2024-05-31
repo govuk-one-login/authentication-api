@@ -24,6 +24,7 @@ locals {
 
 resource "aws_lambda_function" "authorizer" {
   function_name = "${var.environment}-api_gateway_authorizer"
+  description   = "This is Auth 5 lambda"
   role          = module.account_management_api_authorizer_role.arn
   handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
   runtime       = "java17"

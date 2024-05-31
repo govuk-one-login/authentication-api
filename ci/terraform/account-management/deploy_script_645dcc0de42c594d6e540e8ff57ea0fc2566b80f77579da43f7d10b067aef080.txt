@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ '41' == '41' ]; then
+  echo "Skipping deployment because target version (41) is already the current version"
+  exit 0
+fi
+
+ID=$(aws deploy create-deployment \
+    --application-name authdev2-update_password-auth  \
+    --deployment-group-name authDeploymentGroup  \
+    --revision '{"revisionType": "AppSpecContent", "appSpecContent": {"content": "{\"Resources\":[{\"authdev2-update-password-lambda\":{\"Properties\":{\"Alias\":\"authdev2-update-password-lambda-active\",\"CurrentVersion\":\"41\",\"Name\":\"authdev2-update-password-lambda\",\"TargetVersion\":\"41\"},\"Type\":\"AWS::Lambda::Function\"}}],\"version\":\"0.0\"}", "sha256": "645dcc0de42c594d6e540e8ff57ea0fc2566b80f77579da43f7d10b067aef080"}}' \
+    --output text \
+    --query '[deploymentId]')
+
+
+STATUS=$(aws deploy get-deployment \
+    --deployment-id $ID \
+    --output text \
+    --query '[deploymentInfo.status]')
+
+while [[ $STATUS == "Created" || $STATUS == "InProgress" || $STATUS == "Pending" || $STATUS == "Queued" || $STATUS == "Ready" ]]; do
+    echo "Status: $STATUS..."
+    STATUS=$(aws deploy get-deployment \
+        --deployment-id $ID \
+        --output text \
+        --query '[deploymentInfo.status]')
+
+    SLEEP_TIME=$((( $RANDOM % 5 ) + 60))
+
+    echo "Sleeping for: $SLEEP_TIME Seconds"
+    sleep $SLEEP_TIME
+done
+
+aws deploy get-deployment --deployment-id $ID
+
+if [[ $STATUS == "Succeeded" ]]; then
+    echo "Deployment succeeded."
+else
+    echo "Deployment failed!"
+    exit 1
+fi
+
+
