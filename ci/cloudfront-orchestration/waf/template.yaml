@@ -13,8 +13,18 @@ Parameters:
 Conditions:
   IsStaging:
     !Equals [ staging, !Ref Environment ]
-  IsProduction:
-    !Equals [ production, !Ref Environment ]
+  ApplySmokeTestException:
+    !Or [ !Equals [ dev, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+
+Rules:
+  productionSmokeTestExceptionConfigured:
+    RuleCondition: !Equals
+      - !Ref Environment
+      - production
+    Assertions:
+      - Assert: !Not [!Equals [!Ref SmokeTestClientId, none]]
+        AssertDescription: 'The SmokeTestClientId must be set in Production'
+
 
 Resources:
   WAF:
@@ -81,7 +91,7 @@ Resources:
             MetricName: !Sub "${Environment}OidcWafBadRuleSet"
             SampledRequestsEnabled: true
         - !If
-          - IsProduction
+          - ApplySmokeTestException
           - Name: "production-smoke-test-client-exception"
             Action:
               Block: {}

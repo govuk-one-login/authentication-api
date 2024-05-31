@@ -51,19 +51,29 @@ fi
 
 loginAws "$ENVIRONMENT"
 
+if [[ $ENVIRONMENT == dev ]]; then
+  SMOKETEST_CLIENT_ID=$(aws ssm get-parameter --name sandpit-smoke-in-client-id | jq --raw-output .Parameter.Value)
+  PARAMETERS=$(jq ". += [{\"ParameterKey\":\"SmokeTestClientId\",\"ParameterValue\":\"${SMOKETEST_CLIENT_ID}\"}] | tojson" -r "${PARAMETERS_FILE}")
+elif [[ $ENVIRONMENT == production ]]; then
+  SMOKETEST_CLIENT_ID=$(aws ssm get-parameter --name production-smoke-in-client-id | jq --raw-output .Parameter.Value)
+  PARAMETERS=$(jq ". += [{\"ParameterKey\":\"SmokeTestClientId\",\"ParameterValue\":\"${SMOKETEST_CLIENT_ID}\"}] | tojson" -r "${PARAMETERS_FILE}")
+else
+  PARAMETERS=$(jq '. | tojson' -r "${PARAMETERS_FILE}")
+fi
+
 if [[ $# == 2 ]] && [[ $2 == "--create" ]]; then
   aws cloudformation create-stack \
       --region us-east-1 \
       --enable-termination-protection \
       --stack-name="$ENVIRONMENT-oidc-cloudfront-waf" \
       --template-body file://template.yaml \
-      --parameters="$(jq '. | tojson' -r "${PARAMETERS_FILE}")" \
+      --parameters="$PARAMETERS" \
       --tags="$(jq '. | tojson' -r "${TAGS_FILE}")"
 else
     aws cloudformation update-stack \
         --region us-east-1 \
         --stack-name="$ENVIRONMENT-oidc-cloudfront-waf" \
         --template-body file://template.yaml \
-        --parameters="$(jq '. | tojson' -r "${PARAMETERS_FILE}")" \
+        --parameters="$PARAMETERS" \
         --tags="$(jq '. | tojson' -r "${TAGS_FILE}")"
 fi
