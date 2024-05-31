@@ -535,26 +535,8 @@ Resources:
           - https://oidc.${ServiceDomain}/
           - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Policies:
-        Statement:
-          - Sid: AllowIdTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          - Sid: AllowConsumeFromBackChannelLogoutQueue
-            Effect: Allow
-            Action:
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessage
-              - sqs:GetQueueAttributes
-            Resource: !GetAtt BackChannelLogoutQueue.Arn
-          - Sid: AllowDecryptBackChannelLogoutQueue
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref BackChannelLogoutQueueConsumePolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -709,67 +691,11 @@ Resources:
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
           TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
-        Statement:
-          - Sid: AllowGetParameters
-            Effect: "Allow"
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
-          - Sid: AllowDecryptOfParameters
-            Effect: "Allow"
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowDocAppCredentialTableAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowDocAppCredentialTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
-          - Sid: AllowDocAppSigningKey
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref DocAppCredentialTableReadAccessPolicy
+        - !Ref DocAppCredentialTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref DocAppSigningKmsAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -834,101 +760,13 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
-        Statement:
-          - Sid: AllowIdTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          - Sid: AllowIdTokenSigningKmsRsa
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
-          - Sid: AllowGetParameters
-            Effect: "Allow"
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
-          - Sid: AllowDecryptOfParameters
-            Effect: "Allow"
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowClientRegistryTableReadAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowUserProfileTableReadAndWriteAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowUserProfileTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1068,111 +906,14 @@ Resources:
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
-        Statement:
-          - Sid: AllowIdTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          - Sid: AllowIdTokenSigningKmsRsa
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
-          - Sid: AllowGetParameters
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowClientRegistryTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowUserProfileTableReadAndWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowUserProfileTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
-          - Sid: AllowBackChannelLogoutWriteAccess
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-              - sqs:ChangeMessageVisibility
-              - sqs:GetQueueAttributes
-            Resource: !GetAtt BackChannelLogoutQueue.Arn
-          - Sid: AllowBackChannelLogoutQueueKmsEncryptAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-              - kms:GenerateDataKey
-            Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource: !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
+        - !Ref BackChannelLogoutQueueWritePolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1341,137 +1082,17 @@ Resources:
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [ SendStorageToken, true, false ]
           TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
-        - Statement:
-          - Sid: AllowStorageTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
-          - Sid: AllowClientRegistryTableReadAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowUserInfoTableReadAndWriteAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:BatchWriteItem
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource:
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo/index/*'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowGetRedisParameters
-            Effect: "Allow"
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
-          - Sid: AllowDecryptOfParameters
-            Effect: "Allow"
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
-          - Sid: AllowIpvTokenSigningKms
-            Effect: "Allow"
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
-          - Sid: AllowGetIpvPublicParameters
-            Effect: "Allow"
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource: !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-public-encryption-key"
-          - Sid: AllowOrchToAuthSigningKms
-            Effect: "Allow"
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
-          - Sid: AllowDecrpytUserInfoTable
-            Effect: "Allow"
-            Action: "kms:Decrypt*"
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowUserProfileTableReadAndWriteAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeStream
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource:
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential/index/*'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref AuthenticationCallbackUserInfoTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref StorageTokenSigningKmsAccessPolicy
+        - !Ref IpvTokenSigningKmsAccessPolicy
+        - !Ref OrchToAuthSigningKmsAccessPolicy
+        - !Ref IpvPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
@@ -1593,35 +1214,9 @@ Resources:
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
           DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
       Policies:
-        Statement:
-          - Sid: AllowIdTokenKmsAccess
-            Effect: Allow
-            Action:
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          - Sid: AllowIdTokenKmsRsaAccess
-            Effect: Allow
-            Action:
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
-          - Sid: AllowDocAppSigningKey
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
-          - Sid: AllowDocAppCredentialTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
+        - !Ref DocAppSigningKmsAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1788,75 +1383,14 @@ Resources:
           TXMA_AUDIT_ENCODED_ENABLED: true
 
       Policies:
-        Statement:
-          - Sid: AllowGetParameters
-            Effect: "Allow"
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-capacity"
-          - Sid: AllowDecryptOfParameters
-            Effect: "Allow"
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowClientRegistryAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowDocAppAuthKmsKey
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
-          - Sid: AllowOrchToAuthTokenSigning
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref DocAppSigningKmsAccessPolicy
+        - !Ref OrchToAuthSigningKmsAccessPolicy
+        - !Ref AuthPublicEncryptionKeyAccessPolicy
+        - !Ref IpvCapacityAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1997,165 +1531,15 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
-        Statement:
-          - Sid: AllowIdTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          - Sid: AllowIdTokenSigningKmsRsa
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
-          - Sid: AllowGetParameters
-            Effect: Allow
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowClientRegistryTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowUserProfileTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource:
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*'
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowUserProfileTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
-          - Sid: AllowIdentityCredentialsTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowIdentityCredentialsTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
-          - Sid: AllowAuthenticationCallbackUserinfoTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowAuthenticationCallbackUserinfoTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
-          - Sid: AllowDocAppCredentialTableReadAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowDocAppCredentialTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref DocAppCredentialTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -2280,87 +1664,11 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
-        Statement:
-          - Sid: AllowGetParameters
-            Effect: Allow
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password"
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowClientRegistryTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowUserProfileTableReadAndWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-              - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowUserProfileTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -2485,47 +1793,9 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
-        Statement:
-          - Sid: AllowClientRegistryAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref ClientRegistryTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -2647,47 +1917,9 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
-        Statement:
-          - Sid: AllowClientRegistryTableReadWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref ClientRegistryTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -2879,127 +2111,15 @@ Resources:
             - !Ref AWS::NoValue
           TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
-        - Statement:
-          - Sid: AllowGetParameters
-            Effect: Allow
-            Action:
-              - ssm:GetParameter
-              - ssm:GetParameters
-            Resource:
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
-              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
-          - Sid: AllowDecryptOfParameters
-            Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowClientRegistryTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowClientRegistryTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
-          - Sid: AllowUserProfileTableReadAndWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowUserProfileTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
-          - Sid: AllowIdentityCredentialsTableReadAndWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowIdentityCredentialsTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
-          - Sid: AllowIpvTokenAuthKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
-          - Sid: AllowWriteAccessToSpotQueue
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-              - sqs:ChangeMessageVisibility
-              - sqs:GetQueueAttributes
-            Resource: !Sub
-              - arn:aws:sqs:eu-west-2:${AccountId}:${AuthEnvironment}-spot-request-queue
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowEncryptionAccessToSpotQueueKey
-            Effect: Allow
-            Action:
-              - kms:GenerateDataKey
-              - kms:Decrypt
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, spotRequestQueueKmsArn ]
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref IdentityCredentialsTableWriteAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IpvTokenSigningKmsAccessPolicy
+        - !Ref SpotRequestQueueWritePolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
@@ -3134,66 +2254,11 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
       Policies:
-        - !Ref SpotResponseQueueArnSecretAccessPolicy
-        - !Ref SpotResponseQueueKeyArnSecretAccessPolicy
-        - Statement:
-          - Sid: AllowIdentityCredentialsTableReadWriteAndDeleteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-              - dynamodb:DeleteItem
-            Resource: !Sub
-              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowIdentityCredentialsTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
-          - Sid: AllowSpotResponseQueueReadAccess
-            Effect: Allow
-            Action:
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessage
-              - sqs:GetQueueAttributes
-              - sqs:ChangeMessageVisibility
-            Resource: !Sub
-              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
-              - SecretArn: !Ref SpotResponseQueueArnSecret
-          - Sid: AllowSpotResponseQueueKms
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource: !Sub
-              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
-              - SecretArn: !Ref SpotResponseQueueKeyArnSecret
-          - Sid: AllowTxMAEventKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
-          - Sid: AllowSQSTxMA
-            Effect: Allow
-            Action:
-              - sqs:SendMessage
-            Resource:
-              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref IdentityCredentialsTableWriteAccessPolicy
+        - !Ref IdentityCredentialsTableDeleteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref SpotResponseQueueConsumePolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -3339,39 +2404,11 @@ Resources:
       Name: spot_response_queue_arn
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
-  SpotResponseQueueArnSecretAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Ref SpotResponseQueueArnSecret
-          - Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
-
   SpotResponseQueueKeyArnSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
       Name: spot_response_queue_key_arn
       KmsKeyId: !GetAtt MainKmsKey.Arn
-
-  SpotResponseQueueKeyArnSecretAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Ref SpotResponseQueueKeyArnSecret
-          - Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
 
   HttpsEgressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -3683,7 +2720,7 @@ Resources:
               - dynamodb:Scan
             Resource:
               - !Sub
-                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-user-info
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
                 - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
                   AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
               - !Sub
@@ -3737,12 +2774,8 @@ Resources:
           - Sid: AllowTxMAEventKms
             Effect: Allow
             Action:
-              - kms:Encrypt
               - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
+              - kms:GenerateDataKey
             Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
           - Sid: AllowSQSTxMA
             Effect: Allow
@@ -3917,8 +2950,8 @@ Resources:
           - Sid: AllowConsumeFromBackChannelLogoutQueue
             Effect: Allow
             Action:
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessage
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
               - sqs:GetQueueAttributes
             Resource: !GetAtt BackChannelLogoutQueue.Arn
           - Sid: AllowDecryptBackChannelLogoutQueue
@@ -3949,6 +2982,7 @@ Resources:
 
   SpotResponseQueueConsumePolicy:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IpvExists
     Properties:
       PolicyDocument:
         Version: 2012-10-17
@@ -3970,17 +3004,6 @@ Resources:
             Resource: !Sub
               - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
               - SecretArn: !Ref SpotResponseQueueKeyArnSecret
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Ref SpotResponseQueueArnSecret
-          - Effect: Allow
-            Action:
-              - secretsmanager:GetSecretValue
-            Resource: !Ref SpotResponseQueueKeyArnSecret
-          - Effect: Allow
-            Action: kms:Decrypt
-            Resource: !GetAtt MainKmsKey.Arn
 
   SpotRequestQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
