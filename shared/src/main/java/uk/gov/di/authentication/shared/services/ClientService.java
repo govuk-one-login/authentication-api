@@ -23,7 +23,6 @@ public interface ClientService {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean consentRequired,
             List<String> claims,
             String clientType,
             boolean identityVerificationSupported,
