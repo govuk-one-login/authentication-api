@@ -51,12 +51,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     void setup() {
         var configurationService =
                 new IntegrationTestConfigurationService(
-                        auditTopic,
                         notificationsQueue,
-                        auditSigningKey,
                         tokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
                         docAppPrivateKeyJwtSigner,
                         configurationParameters) {
 

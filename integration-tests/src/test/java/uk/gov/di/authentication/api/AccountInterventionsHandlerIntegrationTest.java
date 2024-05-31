@@ -118,12 +118,8 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         public AccountInterventionsTestConfigurationService(
                 AccountInterventionsStubExtension accountInterventionsStubExtension) {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.accountInterventionsStubExtension = accountInterventionsStubExtension;

@@ -1,7 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.provider.Arguments;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
@@ -9,7 +8,6 @@ import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -31,30 +29,6 @@ class ConfigurationServiceTest {
     void getSessionCookieAttributesShouldEqualDefaultWhenEnvVarUnset() {
         ConfigurationService configurationService = new ConfigurationService();
         assertEquals("Secure; HttpOnly;", configurationService.getSessionCookieAttributes());
-    }
-
-    private static Stream<Arguments> commaSeparatedStringContains() {
-        return Stream.of(
-                Arguments.of("1234", null, false),
-                Arguments.of("1234", "", false),
-                Arguments.of("", "", false),
-                Arguments.of(null, "1234", false),
-                Arguments.of("1234", "1234", true),
-                Arguments.of("1234", "1234,4567", true),
-                Arguments.of("4567", "1234,4567", true),
-                Arguments.of("8901", "1234,4567,8901", true),
-                Arguments.of(
-                        "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9",
-                        "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9",
-                        true),
-                Arguments.of(
-                        "cc30aac4-4aae-4706-b147-9df40bd2feb8",
-                        "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9,cc30aac4-4aae-4706-b147-9df40bd2feb8",
-                        true),
-                Arguments.of(
-                        "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9",
-                        "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9,cc30aac4-4aae-4706-b147-9df40bd2feb8",
-                        true));
     }
 
     @Test

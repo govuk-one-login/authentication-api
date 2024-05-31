@@ -21,8 +21,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
-import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
@@ -68,13 +66,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void setup() throws JOSEException {
         var configurationService =
                 new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
-                        tokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner);
+                        notificationsQueue, tokenSigner, docAppPrivateKeyJwtSigner);
 
         handler = new TokenHandler(configurationService);
 
@@ -207,20 +199,12 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
     private static class TestConfigurationService extends IntegrationTestConfigurationService {
         public TestConfigurationService(
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
-                    auditEventTopic,
                     notificationQueue,
-                    auditSigningKey,
                     tokenSigningKey,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

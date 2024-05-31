@@ -393,12 +393,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         public TestConfigurationService() {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

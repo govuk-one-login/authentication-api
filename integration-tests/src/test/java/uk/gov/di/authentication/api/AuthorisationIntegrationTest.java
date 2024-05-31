@@ -37,7 +37,6 @@ import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
@@ -129,12 +128,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
-                }
-
-                @Override
-                public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
-                    return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
-                            || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
                 }
 
                 @Override
