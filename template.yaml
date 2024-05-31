@@ -49,7 +49,6 @@ Mappings:
       storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8447683f-8800-4920-b4fe-1f410bf52ce0
       ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/a12c7616-57d4-4d9b-b98a-d0df5ee583d7
       orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
-      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -65,7 +64,6 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
-      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/a12c7616-57d4-4d9b-b98a-d0df5ee583d7
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
     build:
@@ -80,7 +78,6 @@ Mappings:
       storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fcebbac-6a3a-4948-9700-e061ef3d308e
       ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/227f9cdd-3de3-4519-ab01-45302a10de95
       orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
-      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -96,7 +93,6 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
-      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/227f9cdd-3de3-4519-ab01-45302a10de95
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
     staging:
@@ -111,7 +107,6 @@ Mappings:
       storageTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/01d22c46-bccf-4a2f-bd3b-149fe03f5321
       ipvTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/91836141-8c92-43ac-99a8-a586c73b6683
       orchToAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
-      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppDomain: https://api.review-b.staging.account.gov.uk
@@ -127,7 +122,6 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
-      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/91836141-8c92-43ac-99a8-a586c73b6683
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
     integration:
@@ -142,7 +136,6 @@ Mappings:
       storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6dccb5b3-2754-4c66-ba66-c11f861ad55f
       ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/42a8b69b-9488-44d2-94b8-144b4ff3b35c
       orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
-      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppDomain: https://api.review-b.integration.account.gov.uk
@@ -158,7 +151,6 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
-      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/42a8b69b-9488-44d2-94b8-144b4ff3b35c
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
     production:
@@ -173,7 +165,6 @@ Mappings:
       storageTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0fce68a7-62bd-407d-919e-07f3fd621304
       ipvTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/b1897252-b34b-4094-9e0b-466feed2b7f1
       orchToAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
-      userInfoEncryptionKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppDomain: https://api.review-b.account.gov.uk
@@ -189,7 +180,6 @@ Mappings:
       txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
       orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
-      ipvTokenAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/b1897252-b34b-4094-9e0b-466feed2b7f1
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
 
@@ -1445,7 +1435,7 @@ Resources:
             Effect: "Allow"
             Action: "kms:Decrypt*"
             Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, userInfoEncryptionKeyArn ]
+              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
           - Sid: AllowClientRegistryTableKms
             Effect: Allow
             Action:
@@ -2825,8 +2815,6 @@ Resources:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
           IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
@@ -2881,7 +2869,7 @@ Resources:
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
             - !Ref AWS::NoValue
           IPV_NO_SESSION_RESPONSE_ENABLED: true
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenAuthKeyArn ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub
@@ -2979,7 +2967,7 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenAuthKeyArn ]
+            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
           - Sid: AllowWriteAccessToSpotQueue
             Effect: Allow
             Action:
