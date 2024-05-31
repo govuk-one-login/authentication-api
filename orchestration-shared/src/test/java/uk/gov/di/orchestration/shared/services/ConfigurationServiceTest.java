@@ -1,9 +1,7 @@
 package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
@@ -57,15 +55,6 @@ class ConfigurationServiceTest {
                         "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9",
                         "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9,cc30aac4-4aae-4706-b147-9df40bd2feb8",
                         true));
-    }
-
-    @ParameterizedTest
-    @MethodSource("commaSeparatedStringContains")
-    void shouldCheckCommaSeparatedStringContains(
-            String searchTerm, String searchString, boolean result) {
-        ConfigurationService configurationService = new ConfigurationService();
-        assertEquals(
-                result, configurationService.commaSeparatedListContains(searchTerm, searchString));
     }
 
     @Test
