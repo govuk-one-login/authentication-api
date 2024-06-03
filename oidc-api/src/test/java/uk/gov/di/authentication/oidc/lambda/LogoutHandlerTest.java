@@ -120,7 +120,11 @@ class LogoutHandlerTest {
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
-                        "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
+                        "client-id",
+                        SUBJECT,
+                        "http://localhost-rp",
+                        "id-token-client-session-id",
+                        ecSigningKey);
         SignedJWT idToken = SignedJWT.parse(signedIDToken.serialize());
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
     }
@@ -142,9 +146,8 @@ class LogoutHandlerTest {
         }
 
         @Test
-        void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
-            var idTokenHint = signedIDToken.serialize();
-
+        void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest()
+                throws ParseException {
             when(dynamoClientService.getClient("client-id"))
                     .thenReturn(Optional.of(createClientRegistry()));
             when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
@@ -165,22 +168,21 @@ class LogoutHandlerTest {
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.toString()),
                             Optional.empty(),
-                            getAuditUser(event),
+                            getAuditUserWhenCookieAndIdTokenHint(event, signedIDToken),
                             audience,
                             Optional.of(SUBJECT.getValue()));
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         }
 
         @Test
-        void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
+        void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() throws ParseException {
             when(dynamoClientService.getClient("client-id"))
                     .thenReturn(Optional.of(createClientRegistry()));
-            when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
-                    .thenReturn(true);
+            when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
             var event =
                     generateRequestEvent(
                             Map.of(
-                                    "id_token_hint", signedIDToken.serialize(),
+                                    "id_token_hint", idTokenHint,
                                     "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                                     "state", STATE.toString()));
             setupSessions();
@@ -194,7 +196,7 @@ class LogoutHandlerTest {
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.toString()),
                             Optional.empty(),
-                            getAuditUser(event),
+                            getAuditUserWhenCookieAndIdTokenHint(event, signedIDToken),
                             audience,
                             Optional.of(SUBJECT.getValue()));
             verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
@@ -211,11 +213,13 @@ class LogoutHandlerTest {
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.empty(), getAuditUser(event), Optional.empty());
+                            Optional.empty(),
+                            getAuditUserWhenCookieAndNoIdTokenHint(event),
+                            Optional.empty());
         }
 
         @Test
-        void shouldRedirectToClientLogoutUriWhenNoCookieExists() {
+        void shouldRedirectToClientLogoutUriWhenNoCookieExists() throws ParseException {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setQueryStringParameters(
                     Map.of(
@@ -234,7 +238,7 @@ class LogoutHandlerTest {
                             CLIENT_LOGOUT_URI,
                             Optional.of(STATE.getValue()),
                             Optional.empty(),
-                            getAuditUserWhenNoCookie(event),
+                            getAuditUserWhenIdTokenHintAndNoCookie(event, signedIDToken),
                             audience,
                             Optional.of(SUBJECT.getValue()));
             verifyNoInteractions(cloudwatchMetricsService);
@@ -262,7 +266,9 @@ class LogoutHandlerTest {
             verify(logoutService, times(1)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.of(STATE.toString()), getAuditUser(event), Optional.empty());
+                            Optional.of(STATE.toString()),
+                            getAuditUserWhenCookieAndNoIdTokenHint(event),
+                            Optional.empty());
         }
 
         @Test
@@ -316,7 +322,7 @@ class LogoutHandlerTest {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "unable to validate id_token_hint"),
-                            getAuditUser(event),
+                            getAuditUserWhenCookieAndNoIdTokenHint(event),
                             Optional.empty());
             verifyNoInteractions(cloudwatchMetricsService);
         }
@@ -356,7 +362,7 @@ class LogoutHandlerTest {
                             Optional.of(STATE.getValue()),
                             new ErrorObject(
                                     OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
-                            getAuditUser(event),
+                            getAuditUserWhenCookieAndNoIdTokenHint(event),
                             signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
@@ -387,13 +393,13 @@ class LogoutHandlerTest {
                             Optional.of(STATE.getValue()),
                             new ErrorObject(
                                     OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
-                            getAuditUserWhenNoCookie(event),
+                            getAuditUserWhenCookieAndNoIdTokenHint(event),
                             signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
 
         @Test
-        void shouldRedirectToDefaultUriWhenLogoutRedirectUriIsMissing() {
+        void shouldRedirectToDefaultUriWhenLogoutRedirectUriIsMissing() throws ParseException {
             session =
                     generateSession()
                             .setEmailAddress(EMAIL)
@@ -416,13 +422,14 @@ class LogoutHandlerTest {
             verify(logoutService)
                     .generateDefaultLogoutResponse(
                             Optional.of(STATE.toString()),
-                            getAuditUser(event),
+                            getAuditUserWhenCookieAndIdTokenHint(event, signedIDToken),
                             audience,
                             Optional.of(SUBJECT.getValue()));
         }
 
         @Test
-        void shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileLogoutRedirectUriIsMissing() {
+        void shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileLogoutRedirectUriIsMissing()
+                throws ParseException {
             var idTokenHint = signedIDToken.serialize();
 
             when(dynamoClientService.getClient("client-id"))
@@ -439,7 +446,7 @@ class LogoutHandlerTest {
             verify(logoutService)
                     .generateDefaultLogoutResponse(
                             Optional.of(STATE.toString()),
-                            getAuditUserWhenNoCookie(event),
+                            getAuditUserWhenIdTokenHintAndNoCookie(event, signedIDToken),
                             audience,
                             Optional.of(SUBJECT.getValue()));
         }
@@ -452,21 +459,28 @@ class LogoutHandlerTest {
                     generateSession()
                             .setEmailAddress(EMAIL)
                             .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
+            var idTokenHint = signedIDToken.serialize();
             ECKey ecSigningKey =
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             SignedJWT signedJWT =
                     TokenGeneratorHelper.generateIDToken(
-                            "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
-            when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
-                    .thenReturn(true);
+                            "client-id",
+                            SUBJECT,
+                            "http://localhost-rp",
+                            "id-token-client-session-id",
+                            ecSigningKey);
+            when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
             when(dynamoClientService.getClient("client-id"))
                     .thenReturn(Optional.of(createClientRegistry()));
             APIGatewayProxyRequestEvent event =
                     generateRequestEvent(
                             Map.of(
-                                    "id_token_hint", signedIDToken.serialize(),
-                                    "post_logout_redirect_uri", "http://localhost/invalidlogout",
-                                    "state", STATE.toString()));
+                                    "id_token_hint",
+                                    idTokenHint,
+                                    "post_logout_redirect_uri",
+                                    "http://localhost/invalidlogout",
+                                    "state",
+                                    STATE.toString()));
             session.getClientSessions().add(CLIENT_SESSION_ID);
             generateSessionFromCookie(session);
             handler.handleRequest(event, context);
@@ -478,7 +492,7 @@ class LogoutHandlerTest {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "client registry does not contain post_logout_redirect_uri"),
-                            getAuditUser(event),
+                            getAuditUserWhenCookieAndIdTokenHint(event, signedIDToken),
                             signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
@@ -486,22 +500,20 @@ class LogoutHandlerTest {
         @Test
         void
                 shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileLogoutUriInRequestDoesNotMatchClientRegistry()
-                        throws JOSEException, ParseException {
-            ECKey ecSigningKey =
-                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
-            SignedJWT signedJWT =
-                    TokenGeneratorHelper.generateIDToken(
-                            "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
-            when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
-                    .thenReturn(true);
+                        throws ParseException {
+            var idTokenHint = signedIDToken.serialize();
+            when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
             when(dynamoClientService.getClient("client-id"))
                     .thenReturn(Optional.of(createClientRegistry()));
             APIGatewayProxyRequestEvent event =
                     generateRequestEvent(
                             Map.of(
-                                    "id_token_hint", signedIDToken.serialize(),
-                                    "post_logout_redirect_uri", "http://localhost/invalidlogout",
-                                    "state", STATE.toString()));
+                                    "id_token_hint",
+                                    idTokenHint,
+                                    "post_logout_redirect_uri",
+                                    "http://localhost/invalidlogout",
+                                    "state",
+                                    STATE.toString()));
             handler.handleRequest(event, context);
 
             verify(logoutService, times(0)).destroySessions(session);
@@ -511,8 +523,8 @@ class LogoutHandlerTest {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "client registry does not contain post_logout_redirect_uri"),
-                            getAuditUserWhenNoCookie(event),
-                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst());
+                            getAuditUserWhenCookieAndIdTokenHint(event, signedIDToken),
+                            signedIDToken.getJWTClaimsSet().getAudience().stream().findFirst());
             verifyNoInteractions(cloudwatchMetricsService);
         }
     }
@@ -571,19 +583,66 @@ class LogoutHandlerTest {
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }
 
-    private TxmaAuditUser getAuditUser(APIGatewayProxyRequestEvent event) {
+    private TxmaAuditUser getAuditUserWhenCookieAndIdTokenHint(
+            APIGatewayProxyRequestEvent event, SignedJWT idToken) throws ParseException {
         return TxmaAuditUser.user()
                 .withIpAddress(extractIpAddress(event))
                 .withPersistentSessionId(extractPersistentIdFromCookieHeader(event.getHeaders()))
-                .withSessionId(session.getSessionId())
-                .withUserId(session.getInternalCommonSubjectIdentifier());
+                .withGovukSigninJourneyId(idToken.getJWTClaimsSet().getStringClaim("sid"))
+                .withSessionId(getSessionId(session))
+                .withUserId(getInternalCommonSubjectIdentifier(session));
+    }
+
+    private TxmaAuditUser getAuditUserWhenIdTokenHintAndNoCookie(
+            APIGatewayProxyRequestEvent event, SignedJWT idToken) throws ParseException {
+        return TxmaAuditUser.user()
+                .withIpAddress(extractIpAddress(event))
+                .withPersistentSessionId(extractPersistentIdFromCookieHeader(event.getHeaders()))
+                .withGovukSigninJourneyId(idToken.getJWTClaimsSet().getStringClaim("sid"))
+                .withSessionId(null)
+                .withUserId(null);
+    }
+
+    private TxmaAuditUser getAuditUserWhenCookieAndNoIdTokenHint(
+            APIGatewayProxyRequestEvent event) {
+        return TxmaAuditUser.user()
+                .withIpAddress(extractIpAddress(event))
+                .withPersistentSessionId(extractPersistentIdFromCookieHeader(event.getHeaders()))
+                .withGovukSigninJourneyId(
+                        extractClientSessionIdFromCookieHeaders(event.getHeaders()).orElse(null))
+                .withSessionId(getSessionId(session))
+                .withUserId(getInternalCommonSubjectIdentifier(session));
     }
 
     private TxmaAuditUser getAuditUserWhenNoCookie(APIGatewayProxyRequestEvent event) {
         return TxmaAuditUser.user()
                 .withIpAddress(extractIpAddress(event))
                 .withPersistentSessionId(extractPersistentIdFromCookieHeader(event.getHeaders()))
+                .withGovukSigninJourneyId(
+                        extractClientSessionIdFromCookieHeaders(event.getHeaders()).orElse(null))
                 .withSessionId(null)
                 .withUserId(null);
+    }
+
+    private String getSessionId(uk.gov.di.orchestration.shared.entity.Session session) {
+        try {
+            return session.getSessionId();
+        } catch (NullPointerException e) {
+            return null;
+        }
+    }
+
+    private String getInternalCommonSubjectIdentifier(
+            uk.gov.di.orchestration.shared.entity.Session session) {
+        try {
+            return session.getInternalCommonSubjectIdentifier();
+        } catch (NullPointerException e) {
+            return null;
+        }
+    }
+
+    private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
+        var sessionCookieIds = new CookieHelper().parseSessionCookie(headers);
+        return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
     }
 }

@@ -26,6 +26,7 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import java.net.URI;
 import java.text.ParseException;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -102,6 +103,7 @@ public class LogoutHandler
 
         var subjectId = sessionFromSessionCookie.map(Session::getInternalCommonSubjectIdentifier);
         var sessionId = sessionFromSessionCookie.map(Session::getSessionId);
+        var journeyId = extractClientSessionIdFromCookieHeaders(input.getHeaders());
 
         var auditUser =
                 TxmaAuditUser.user()
@@ -109,6 +111,7 @@ public class LogoutHandler
                         .withPersistentSessionId(
                                 extractPersistentIdFromCookieHeader(input.getHeaders()))
                         .withSessionId(sessionId.orElse(null))
+                        .withGovukSigninJourneyId(journeyId.orElse(null))
                         .withUserId(subjectId.orElse(null));
 
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
@@ -148,6 +151,11 @@ public class LogoutHandler
             SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
             audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
             rpPairwiseId = idToken.getJWTClaimsSet().getSubject();
+            var clientSessionId = idToken.getJWTClaimsSet().getStringClaim("sid");
+            auditUser =
+                    Objects.nonNull(clientSessionId)
+                            ? auditUser.withGovukSigninJourneyId(clientSessionId)
+                            : auditUser;
         } catch (ParseException e) {
             LOG.warn("Unable to extract JWTClaimsSet to get the audience");
             return logoutService.generateErrorLogoutResponse(
@@ -198,6 +206,7 @@ public class LogoutHandler
                     Optional.of(clientID));
         }
 
+        var finalAuditUser = auditUser;
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
                     "logoutWhenSessionExists",
@@ -207,7 +216,7 @@ public class LogoutHandler
                                     clientID,
                                     postLogoutRedirectUri.get(),
                                     state,
-                                    auditUser,
+                                    finalAuditUser,
                                     rpPairwiseId));
 
         } else {
@@ -218,7 +227,7 @@ public class LogoutHandler
                                     URI.create(postLogoutRedirectUri.get()),
                                     state,
                                     Optional.empty(),
-                                    auditUser,
+                                    finalAuditUser,
                                     Optional.of(clientID),
                                     Optional.of(rpPairwiseId)));
         }
@@ -228,13 +237,17 @@ public class LogoutHandler
             Optional<Session> sessionFromSessionCookie, Map<String, String> headers) {
         if (sessionFromSessionCookie.isPresent()) {
             Session session = sessionFromSessionCookie.get();
-            CookieHelper.SessionCookieIds sessionCookieIds =
-                    cookieHelper.parseSessionCookie(headers).orElseThrow();
+            var clientSessionId = extractClientSessionIdFromCookieHeaders(headers);
 
             attachSessionIdToLogs(session);
-            attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId.orElse(null));
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId.orElse(null));
         }
+    }
+
+    private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
+        var sessionCookieIds = cookieHelper.parseSessionCookie(headers);
+        return sessionCookieIds.map(CookieHelper.SessionCookieIds::getClientSessionId);
     }
 
     private Optional<String> getSessionAndDestroyIfExists(
