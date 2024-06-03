@@ -1,0 +1,26 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc.staging.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "arn:aws:acm:us-east-1:758531536632:certificate/56a88729-5b5e-4eff-b131-23f8dfc91c66"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "CloudFrontWafACL",
+    "ParameterValue": "arn:aws:wafv2:us-east-1:758531536632:global/webacl/staging-oidc-cloudfront-waf/0a9c88b9-7a82-4294-9fb1-883b8a155af3"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue":  "csls_cw_logs_destination_prodpython"
+  }
+]

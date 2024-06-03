@@ -754,6 +754,12 @@ variable "previous_oidc_origin_cloaking_header" {
   description = "Used in rotation of the origin cloaking header. Set using secrets manager and the read secrets script."
 }
 
+variable "enforce_cloudfront" {
+  type        = bool
+  default     = false
+  description = "Feature flag to switch the WAF on the OIDC API Gateway to the Origin Cloaking WAF to mandate CloudFront"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

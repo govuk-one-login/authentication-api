@@ -54,7 +54,4 @@ phone_checker_with_retry = false
 orch_redirect_uri                  = "https://oidc.authdev2.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
-support_email_check_enabled = true
-
-
 oidc_origin_domain_enabled = true

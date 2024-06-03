@@ -131,6 +131,7 @@ resource "aws_api_gateway_deployment" "auth_ext_api_deployment" {
     redeployment = sha1(jsonencode([
       module.auth_userinfo.integration_trigger_value,
       module.auth_userinfo.method_trigger_value,
+      local.api_vpc_endpoints
     ]))
   }
   lifecycle {

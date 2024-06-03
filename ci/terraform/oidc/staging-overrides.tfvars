@@ -91,3 +91,5 @@ logging_endpoint_arns = [
 ]
 
 shared_state_bucket = "di-auth-staging-tfstate"
+
+support_email_check_enabled = true

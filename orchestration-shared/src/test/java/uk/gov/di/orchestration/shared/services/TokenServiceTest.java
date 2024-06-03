@@ -39,10 +39,8 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.helper.SubjectHelper;
@@ -51,8 +49,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
@@ -60,7 +56,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -146,8 +141,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
@@ -157,12 +150,6 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -220,8 +207,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
@@ -231,12 +216,6 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
@@ -294,8 +273,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -304,12 +281,6 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -329,8 +300,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -339,12 +308,6 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,

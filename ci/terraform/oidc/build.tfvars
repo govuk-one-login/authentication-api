@@ -8,6 +8,7 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "digital-identity-dev-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.build.account.gov.uk"
+ipv_api_enabled                      = true
 
 # lockout config
 lockout_duration                     = 60
@@ -40,8 +41,10 @@ orch_redirect_uri                  = "https://oidc.build.account.gov.uk/orchestr
 authorize_protected_subnet_enabled = true
 
 contra_state_bucket      = "digital-identity-dev-tfstate"
-phone_checker_with_retry = true
+phone_checker_with_retry = false
 
 orch_openid_configuration_name = "build-OpenIdConfigurationFunction"
 
 orch_account_id = "767397776536"
+
+oidc_origin_domain_enabled = true

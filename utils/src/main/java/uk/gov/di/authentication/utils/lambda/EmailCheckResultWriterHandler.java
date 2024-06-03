@@ -58,14 +58,14 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                         objectMapper.readValue(msg.getBody(), EmailCheckResultSqsMessage.class);
 
                 db.saveEmailCheckResult(
-                        emailCheckResult.email(),
-                        emailCheckResult.emailCheckResultStatus(),
+                        emailCheckResult.emailAddress(),
+                        emailCheckResult.status(),
                         emailCheckResult.timeToExist(),
-                        emailCheckResult.referenceNumber());
+                        emailCheckResult.requestReference());
 
                 LOG.info(
                         "Message for email check reference {} written to database",
-                        emailCheckResult.referenceNumber());
+                        emailCheckResult.requestReference());
                 var duration = now().getTime() - emailCheckResult.timeOfInitialRequest();
 
                 cloudwatchMetricsService.logEmailCheckDuration(duration);
