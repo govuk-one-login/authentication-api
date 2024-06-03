@@ -1202,6 +1202,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
 
+  LogoutFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref LogoutFunctionLogGroup
+
   LogoutFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -2175,6 +2183,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
 
+  UserInfoFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UserInfoFunctionLogGroup
+
   UserInfoFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -2372,6 +2388,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
 
+  AuthCodeFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthCodeFunctionLogGroup
+
   AuthCodeFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -2529,6 +2553,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
 
+  UpdateClientConfigFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UpdateClientConfigFunctionLogGroup
+
   UpdateClientConfigFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -2682,6 +2714,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-register-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  ClientRegistrationFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref ClientRegistrationFunctionLogGroup
 
   ClientRegistrationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
@@ -2989,6 +3029,14 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
 
+  IpvCallbackFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref IpvCallbackFunctionLogGroup
+
   IpvCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
@@ -3172,6 +3220,14 @@ Resources:
       LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 14
+
+  SpotResponseFunctionSubscriptionFilter:
+    Condition: IpvExists
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref SpotResponseFunctionLogGroup
 
   SpotResponseFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
