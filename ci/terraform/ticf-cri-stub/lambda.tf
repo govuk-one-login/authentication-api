@@ -43,3 +43,13 @@ module "ticf_cri_stub_lambda" {
 
   use_localstack = false
 }
+
+module "codedeploy_ticf_cri_stub_" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "ticf_cri_stub"
+  environment          = var.environment
+  lambda_function_name = module.ticf_cri_stub_lambda.lambda_function_name
+  lambda_version       = module.ticf_cri_stub_lambda.lambda_version
+  lambda_alias_name    = module.ticf_cri_stub_lambda.lambda_alias_name
+  lambda_alias_version = module.ticf_cri_stub_lambda.lambda_alias_version
+}
