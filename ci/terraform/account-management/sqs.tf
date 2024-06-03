@@ -161,7 +161,6 @@ resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
 
 resource "aws_lambda_function" "email_sqs_lambda" {
   function_name = "${var.environment}-account-management-sqs-lambda"
-  description   = "This is Auth 6 lambda"
   role          = module.account_management_sqs_role.arn
   handler       = "uk.gov.di.accountmanagement.lambda.NotificationHandler::handleRequest"
   timeout       = 30
