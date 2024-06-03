@@ -317,7 +317,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 RP_SECTOR_URI,
                 "public",
-                false,
                 ClientType.WEB,
                 identitySupported);
     }

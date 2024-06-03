@@ -96,8 +96,8 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                false,
-                ClientType.APP);
+                ClientType.APP,
+                false);
 
         var response =
                 makeRequest(

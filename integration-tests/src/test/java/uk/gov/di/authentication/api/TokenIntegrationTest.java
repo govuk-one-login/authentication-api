@@ -43,11 +43,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -61,8 +59,6 @@ import java.net.URI;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
@@ -71,7 +67,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
@@ -122,7 +117,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest = constructBaseTokenRequest(scope, vtr, Optional.empty(), clientId);
@@ -160,7 +155,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientSecretClient(
                 clientSecret.getValue(), ClientAuthenticationMethod.CLIENT_SECRET_POST, scope);
         var baseTokenRequest =
@@ -198,7 +193,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest =
@@ -225,7 +220,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PUBLIC);
         var baseTokenRequest =
@@ -263,7 +258,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest =
@@ -300,7 +295,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest =
@@ -347,7 +342,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
-        registerUser(scope, new Subject());
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         var baseTokenRequest =
@@ -381,7 +376,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Subject internalSubject = new Subject();
         Subject internalPairwiseSubject = new Subject();
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        registerUser(scope, internalSubject);
+        userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
@@ -440,7 +435,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Subject publicSubject = new Subject();
         Subject internalSubject = new Subject();
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        registerUser(scope, internalSubject);
+        userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         registerClientWithPrivateKeyJwtAuthentication(
                 keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
@@ -517,7 +512,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 subjectType.toString(),
-                true,
                 ClientType.WEB,
                 true,
                 null,
@@ -540,20 +534,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
                 ClientType.WEB,
                 true,
                 clientSecret,
                 clientAuthenticationMethod.getValue());
-    }
-
-    private void registerUser(Scope scope, Subject internalSubject) {
-        userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
-        ClientConsent clientConsent =
-                new ClientConsent(
-                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-        userStore.updateConsent(TEST_EMAIL, clientConsent);
     }
 
     private AuthenticationRequest generateAuthRequest(

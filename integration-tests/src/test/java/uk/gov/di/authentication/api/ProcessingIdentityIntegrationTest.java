@@ -216,7 +216,6 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 String.valueOf(ServiceType.MANDATORY),
                 CLIENT_SECTOR,
                 "pairwise",
-                true,
                 ClientType.WEB,
                 true);
     }

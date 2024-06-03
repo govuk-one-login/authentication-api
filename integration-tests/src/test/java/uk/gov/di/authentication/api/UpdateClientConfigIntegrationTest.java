@@ -51,8 +51,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
         var expectedClientName = "new-client-name";

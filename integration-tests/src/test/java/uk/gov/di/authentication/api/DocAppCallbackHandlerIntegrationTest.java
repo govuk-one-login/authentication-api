@@ -126,8 +126,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
-                ClientType.APP);
+                ClientType.APP,
+                true);
         txmaAuditQueue.clear();
     }
 

@@ -27,14 +27,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
@@ -50,14 +48,11 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
@@ -435,7 +430,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldRedirectToLoginUriWhenUserHasPreviousSessionButHasNotConsented() throws Exception {
+    void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
@@ -472,47 +467,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldRedirectToLoginUriWhenUserHasPreviousSessionButHasConsented() throws Exception {
-        setupForAuthJourney();
-        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(new Scope(OPENID));
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-
-        var cookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertThat(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent(),
-                equalTo(true));
-        assertThat(cookie.isPresent(), equalTo(true));
-        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
     void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(new Scope(OPENID));
+        registerUser();
 
         var response =
                 makeRequest(
@@ -549,7 +508,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(new Scope(OPENID));
+        registerUser();
 
         var response =
                 makeRequest(
@@ -597,7 +556,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(new Scope(OPENID));
+        registerUser();
 
         var response =
                 makeRequest(
@@ -677,46 +636,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(LOW_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        registerUserWithConsentedScope(new Scope(OPENID));
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(
-                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
-                        Optional.of("GET"));
-
-        assertThat(response, hasStatus(302));
-
-        var cookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
-        assertThat(
-                getHttpCookieFromMultiValueResponseHeaders(
-                                response.getMultiValueHeaders(), "di-persistent-session-id")
-                        .isPresent(),
-                equalTo(true));
-        assertThat(cookie.isPresent(), equalTo(true));
-        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
-
-        String redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(
-                        AUTHORISATION_REQUEST_RECEIVED,
-                        AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldRequireConsentWhenUserAuthenticatedAndConsentIsNotGiven() throws Exception {
-        setupForAuthJourney();
-        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         registerUser();
 
         var response =
@@ -726,7 +645,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, NONE.toString(), OPENID.getValue(), null),
+                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
                         Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
@@ -1009,15 +928,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return response.getHeaders().get(ResponseHeaders.LOCATION);
     }
 
-    private void registerUserWithConsentedScope(Scope scope) {
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
-        ClientConsent clientConsent =
-                new ClientConsent(
-                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-        userStore.updateConsent(TEST_EMAIL_ADDRESS, clientConsent);
-    }
-
     private void registerUser() {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
@@ -1041,7 +951,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 clientType,
-                true,
                 jarValidationRequired,
                 List.of(
                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),

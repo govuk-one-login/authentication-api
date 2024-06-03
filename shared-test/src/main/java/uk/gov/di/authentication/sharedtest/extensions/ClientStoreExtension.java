@@ -38,6 +38,34 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
+            String subjectType) {
+        registerClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                false,
+                ClientType.WEB);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
             String subjectType,
             boolean consentRequired) {
         registerClient(
@@ -122,6 +150,40 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 identityVerificationSupported,
                 clientSecret,
                 clientAuthMethod);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            ClientType clientType,
+            boolean identityVerificationSupported) {
+        dynamoClientService.addClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                false,
+                Collections.emptyList(),
+                clientType.getValue(),
+                identityVerificationSupported,
+                null,
+                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
     }
 
     public void registerClient(

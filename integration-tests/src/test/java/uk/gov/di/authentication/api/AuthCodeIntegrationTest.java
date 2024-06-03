@@ -177,7 +177,6 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
     }
 }

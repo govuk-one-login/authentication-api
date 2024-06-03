@@ -527,7 +527,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
                 List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
 

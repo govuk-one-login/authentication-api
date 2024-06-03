@@ -253,8 +253,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
 
         return signedJWT;
     }
