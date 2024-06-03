@@ -28,16 +28,12 @@ Conditions:
     !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
   IsNotDevEnvironment:
     !Not [ !Equals [!Ref Environment, 'dev'] ]
-  IsBuild:
-    !Equals [ build, !Ref Environment ]
   AisAbortOnError:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
-  IdentityEnabled:
+  IpvExists:
     !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
   SendStorageToken:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
-  IsNotBuild:
-    !Not [ !Equals [ !Ref Environment, build ]  ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1308,12 +1304,12 @@ Resources:
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          IDENTITY_ENABLED: !If [IsBuild, false, true]
+          IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           IPV_AUDIENCE: !If
-            - IdentityEnabled
+            - IpvExists
             - !Sub
               - https://identity.${ServiceDomain}
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
@@ -2784,7 +2780,7 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          IDENTITY_ENABLED: !If [IsBuild, false, true] # Note that this sets whether the ipv api is turned on or not. It is true for sandpit for testing even though identity is not available in sandpit
+          IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
           EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
           OIDC_API_BASE_URL: !Sub
@@ -2813,29 +2809,29 @@ Resources:
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
           IPV_AUDIENCE: !If
-            - IdentityEnabled
+            - IpvExists
             - !Sub
               - https://identity.${ServiceDomain}
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CALLBACK_URI: !If
-            - IdentityEnabled
+            - IpvExists
             - !Sub
               - https://oidc.${ServiceDomain}/ipv-callback
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CLIENT_ID: !If
-            - IdentityEnabled
+            - IpvExists
             - authOrchestrator
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_URI: !If
-            - IdentityEnabled
+            - IpvExists
             - !Sub
               - https://identity.${ServiceDomain}/oauth2/authorize
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
             - !Ref AWS::NoValue
           IPV_BACKEND_URI: !If
-            - IdentityEnabled
+            - IpvExists
             - !Sub
               - https://api.identity.${ServiceDomain}/
               - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
@@ -2843,7 +2839,7 @@ Resources:
           IPV_NO_SESSION_RESPONSE_ENABLED: true
           IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenAuthKeyArn ]
           SPOT_QUEUE_URL: !If
-            - IdentityEnabled
+            - IpvExists
             - !Sub
               - https://sqs.eu-west-2.amazonaws.com/${AccountId}/${AuthEnvironment}-spot-request-queue
               - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
@@ -3066,7 +3062,7 @@ Resources:
 
   SpotResponseFunction:
     Type: AWS::Serverless::Function
-    Condition: IsNotBuild
+    Condition: IpvExists
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: VPC settings are global
@@ -3162,7 +3158,7 @@ Resources:
 
   SpotResponseQueueEventMapping:
     Type: AWS::Lambda::EventSourceMapping
-    Condition: IdentityEnabled
+    Condition: IpvExists
     Properties:
       EventSourceArn: !Sub
         - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
@@ -3171,7 +3167,7 @@ Resources:
 
   SpotResponseFunctionLogGroup:
     Type: AWS::Logs::LogGroup
-    Condition: IsNotBuild
+    Condition: IpvExists
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
@@ -3179,7 +3175,7 @@ Resources:
 
   SpotResponseFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
-    Condition: IsNotBuild
+    Condition: IpvExists
     Properties:
       FilterName: !Sub ${Environment}-spot-response-request-errors
       FilterPattern: "{($.level = \"ERROR\")}"
@@ -3191,7 +3187,7 @@ Resources:
 
   SpotResponseFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: IsNotBuild
+    Condition: IpvExists
     Properties:
       ActionsEnabled: true
       AlarmActions:
@@ -3208,7 +3204,7 @@ Resources:
 
   SpotResponseFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
-    Condition: IsNotBuild
+    Condition: IpvExists
     Properties:
       AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
