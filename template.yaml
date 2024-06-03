@@ -1504,7 +1504,7 @@ Resources:
   AuthenticationCallbackFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-authentication-callback-logout-request-errors
+      FilterName: !Sub ${Environment}-authentication-callback-request-errors
       FilterPattern: "{($.level = \"ERROR\")}"
       LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
       MetricTransformations:
@@ -2178,7 +2178,7 @@ Resources:
   UserInfoFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
-      FilterName: !Sub ${Environment}-userinfo-logout-request-errors
+      FilterName: !Sub ${Environment}-userinfo-request-errors
       FilterPattern: "{($.level = \"ERROR\")}"
       LogGroupName: !Ref UserInfoFunctionLogGroup
       MetricTransformations:
