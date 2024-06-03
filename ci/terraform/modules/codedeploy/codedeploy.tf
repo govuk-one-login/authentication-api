@@ -17,6 +17,12 @@ resource "aws_codedeploy_deployment_group" "auth" {
     deployment_option = "WITH_TRAFFIC_CONTROL"
     deployment_type   = "BLUE_GREEN"
   }
+
+  auto_rollback_configuration {
+    enabled = true
+    events  = var.auto_rollback_events
+  }
+
 }
 
 # ----------------------------------------------------------
@@ -30,7 +36,7 @@ resource "null_resource" "run_codedeploy" {
   }
 
   provisioner "local-exec" {
-    
+
     interpreter = var.interpreter
     command     = <<EOT
 #!/bin/bash
@@ -89,7 +95,7 @@ EOT
 ####Simple deployment this will be errored if lambda changes every deployment 
 #resource "null_resource" "run_codedeploy" {
 #  triggers = {
-    # Run codedeploy when lambda version is updated
+# Run codedeploy when lambda version is updated
 #    lambda_version = var.lambda_version
 #  }
 

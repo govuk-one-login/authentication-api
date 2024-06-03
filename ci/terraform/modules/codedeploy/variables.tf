@@ -58,3 +58,9 @@ variable "current_version" {
   type        = string
   default     = ""
 }
+
+variable "auto_rollback_events" {
+  description = "List of event types that trigger a rollback. Supported types are DEPLOYMENT_FAILURE and DEPLOYMENT_STOP_ON_ALARM."
+  type        = list(string)
+  default     = ["DEPLOYMENT_FAILURE"]
+}
