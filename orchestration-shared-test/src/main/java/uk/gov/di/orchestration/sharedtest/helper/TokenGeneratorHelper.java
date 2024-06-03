@@ -31,18 +31,29 @@ public class TokenGeneratorHelper {
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey) {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate, null);
+        return generateIDToken(clientId, subject, issuerUrl, signingKey, null, expiryDate, null);
     }
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey, Date expiryDate) {
-        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate, null);
+        return generateIDToken(clientId, subject, issuerUrl, signingKey, null, expiryDate, null);
+    }
+
+    public static SignedJWT generateIDToken(
+            String clientId,
+            Subject subject,
+            String issuerUrl,
+            String clientSessionId,
+            JWK signingKey) {
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+        return generateIDToken(
+                clientId, subject, issuerUrl, signingKey, clientSessionId, expiryDate, null);
     }
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey, String vot) {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate, vot);
+        return generateIDToken(clientId, subject, issuerUrl, signingKey, null, expiryDate, vot);
     }
 
     public static SignedJWT generateIDToken(
@@ -50,6 +61,7 @@ public class TokenGeneratorHelper {
             Subject subject,
             String issuerUrl,
             JWK signingKey,
+            String clientSessionId,
             Date expiryDate,
             String vot) {
         IDTokenClaimsSet idTokenClaims =
@@ -59,6 +71,7 @@ public class TokenGeneratorHelper {
                         List.of(new Audience(clientId)),
                         expiryDate,
                         new Date());
+        if (Objects.nonNull(clientSessionId)) idTokenClaims.setClaim("sid", clientSessionId);
         if (Objects.nonNull(vot)) idTokenClaims.setClaim("vot", vot);
 
         try {
