@@ -12,11 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistrryConfigValidationException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -25,7 +25,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -36,6 +35,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -88,9 +88,6 @@ class ClientRegistrationHandlerTest {
 
     @Test
     void shouldReturn200IfClientRegistrationRequestIsSuccessful() throws Json.JsonException {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.empty());
         when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -132,9 +129,6 @@ class ClientRegistrationHandlerTest {
 
     @Test
     void shouldAllowBackChannelLogoutUriToBeAbsent() {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.empty());
         when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -181,10 +175,11 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    void shouldReturn400ResponseIfRequestFailsValidation() {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
+    void shouldReturn400ResponseIfRequestFailsValidation()
+            throws ClientRegistrryConfigValidationException {
+        doThrow(new ClientRegistrryConfigValidationException(INVALID_PUBLIC_KEY))
+                .when(configValidationService)
+                .validateClientRegistrationConfig(any());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\", \"identity_verification_required\": \"false\"}");
@@ -197,10 +192,11 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
-    void shouldReturn400ResponseIfRequestHasPrivateScope() {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.of(INVALID_SCOPE));
+    void shouldReturn400ResponseIfRequestHasPrivateScope()
+            throws ClientRegistrryConfigValidationException {
+        doThrow(new ClientRegistrryConfigValidationException(INVALID_SCOPE))
+                .when(configValidationService)
+                .validateClientRegistrationConfig(any());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\", \"identity_verification_required\": \"false\"}");
@@ -219,9 +215,6 @@ class ClientRegistrationHandlerTest {
     @ParameterizedTest
     @MethodSource("clientTypes")
     void shouldReturnExpectedClientTypeInResponse(String clientType) throws Json.JsonException {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.empty());
         when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
 
         var event = new APIGatewayProxyRequestEvent();

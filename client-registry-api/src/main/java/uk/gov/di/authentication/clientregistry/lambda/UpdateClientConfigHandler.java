@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,6 +12,7 @@ import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationSe
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistrryConfigValidationException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -21,8 +21,6 @@ import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
-
-import java.util.Optional;
 
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_ERROR;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
@@ -76,8 +74,9 @@ public class UpdateClientConfigHandler
 
         auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_RECEIVED, UNKNOWN, user);
 
+        String clientId = UNKNOWN;
         try {
-            String clientId = input.getPathParameters().get("clientId");
+            clientId = input.getPathParameters().get("clientId");
 
             attachLogFieldToLogs(CLIENT_ID, clientId);
 
@@ -91,17 +90,9 @@ public class UpdateClientConfigHandler
                 return generateApiGatewayProxyResponse(
                         400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
             }
-            Optional<ErrorObject> errorResponse =
-                    validationService.validateClientUpdateConfig(updateClientConfigRequest);
-            if (errorResponse.isPresent()) {
-                LOG.warn(
-                        "Failed validation. ErrorCode: {}. ErrorDescription: {}",
-                        errorResponse.get().getCode(),
-                        errorResponse.get().getDescription());
-                auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, clientId, user);
-                return generateApiGatewayProxyResponse(
-                        400, errorResponse.get().toJSONObject().toJSONString());
-            }
+
+            validationService.validateClientConfig(updateClientConfigRequest);
+
             ClientRegistry clientRegistry =
                     clientService.updateClient(clientId, updateClientConfigRequest);
             ClientRegistrationResponse clientRegistrationResponse =
@@ -123,10 +114,19 @@ public class UpdateClientConfigHandler
             LOG.info("Client updated");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException | NullPointerException e) {
-            auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, UNKNOWN, user);
+            auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, clientId, user);
             LOG.warn("Invalid Client registration request. Missing parameters from request");
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
+        } catch (ClientRegistrryConfigValidationException e) {
+            var errorResponse = e.getErrorObject();
+            LOG.warn(
+                    "Failed validation. ErrorCode: {}. ErrorDescription: {}",
+                    errorResponse.getCode(),
+                    errorResponse.getDescription());
+            auditService.submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, clientId, user);
+            return generateApiGatewayProxyResponse(
+                    400, errorResponse.toJSONObject().toJSONString());
         }
     }
 }

@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
-public class UpdateClientConfigRequest {
+public class UpdateClientConfigRequest implements ClientConfigRequest {
 
     @SerializedName("client_id")
     @Expose

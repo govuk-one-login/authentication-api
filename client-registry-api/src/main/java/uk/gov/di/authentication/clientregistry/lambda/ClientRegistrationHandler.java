@@ -13,6 +13,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistrryConfigValidationException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -80,18 +81,8 @@ public class ClientRegistrationHandler
             LOG.info("Client registration request received");
             var clientRegistrationRequest =
                     objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
-            var errorResponse =
-                    validationService.validateClientRegistrationConfig(clientRegistrationRequest);
-            if (errorResponse.isPresent()) {
-                LOG.warn(
-                        "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
-                        errorResponse.get().getCode(),
-                        errorResponse.get().getDescription());
-                auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, UNKNOWN, user);
 
-                return generateApiGatewayProxyResponse(
-                        400, errorResponse.get().toJSONObject().toJSONString());
-            }
+            validationService.validateClientRegistrationConfig(clientRegistrationRequest);
 
             var clientID = clientService.generateClientID().toString();
 
@@ -142,6 +133,15 @@ public class ClientRegistrationHandler
 
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
+        } catch (ClientRegistrryConfigValidationException e) {
+            var error = e.getErrorObject();
+            LOG.warn(
+                    "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
+                    error.getCode(),
+                    error.getDescription());
+            auditService.submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, UNKNOWN, user);
+
+            return generateApiGatewayProxyResponse(400, error.toJSONObject().toJSONString());
         }
     }
 

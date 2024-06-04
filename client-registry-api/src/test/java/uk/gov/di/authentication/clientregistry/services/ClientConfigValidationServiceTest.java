@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.clientregistry.services;
 
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -12,15 +12,16 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistrryConfigValidationException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLAIM;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_LOCS;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_TYPE;
@@ -69,159 +70,185 @@ class ClientConfigValidationServiceTest {
             String backChannelLogoutUri,
             List<String> claims,
             String serviceType,
-            String clientType) {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                postlogoutUris,
-                                backChannelLogoutUri,
-                                serviceType,
-                                "http://test.com",
-                                "public",
-                                claims,
-                                clientType,
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.empty()));
+            String clientType)
+            throws ClientRegistrryConfigValidationException {
+        validationService.validateClientRegistrationConfig(
+                generateClientRegRequest(
+                        singletonList("http://localhost:1000/redirect"),
+                        VALID_PUBLIC_CERT,
+                        singletonList("openid"),
+                        postlogoutUris,
+                        backChannelLogoutUri,
+                        serviceType,
+                        "http://test.com",
+                        "public",
+                        claims,
+                        clientType,
+                        JWSAlgorithm.ES256.getName()));
     }
 
     @Test
-    void shouldReturnErrorForInvalidPostLogoutUriInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("invalid-logout-uri"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                emptyList(),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
+    void shouldThrowExceptionForInvalidPostLogoutUriInRegistrationRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                singletonList("openid"),
+                                                singletonList("invalid-logout-uri"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                emptyList(),
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_POST_LOGOUT_URI));
     }
 
     @Test
-    void shouldReturnErrorForInvalidRedirectUriInRegistrationequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("invalid-redirect-uri"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                emptyList(),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
+    void shouldThrowExceptionForInvalidRedirectUriInRegistrationequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("invalid-redirect-uri"),
+                                                VALID_PUBLIC_CERT,
+                                                singletonList("openid"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                emptyList(),
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(RegistrationError.INVALID_REDIRECT_URI));
     }
 
     @Test
-    void shouldReturnErrorForInvalidPublicKeyInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                "invalid-public-cert",
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                emptyList(),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
+    void shouldThrowExceptionForInvalidPublicKeyInRegistrationRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                "invalid-public-cert",
+                                                singletonList("openid"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                emptyList(),
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_PUBLIC_KEY));
     }
 
     @Test
-    void shouldReturnErrorForInvalidScopesInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "email", "fax"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                emptyList(),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
+    void shouldThrowExceptionForInvalidScopesInRegistrationRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                List.of("openid", "email", "fax"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                emptyList(),
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_SCOPE));
     }
 
     @Test
-    void shouldReturnErrorForPrivateScopeInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "am"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                emptyList(),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
+    void shouldThrowExceptionForPrivateScopeInRegistrationRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                List.of("openid", "am"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                emptyList(),
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_SCOPE));
     }
 
     @Test
-    void shouldReturnErrorForInvalidClaimsInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                List.of("name", "email"),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLAIM)));
+    void shouldThrowExceptionForInvalidClaimsInRegistrationRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                singletonList("openid"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                List.of("name", "email"),
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_CLAIM));
     }
 
     @Test
-    void shouldReturnErrorForInvalidClientTypeInRegistrationRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                "public",
-                                emptyList(),
-                                "Mobile",
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
+    void shouldThrowExceptionForInvalidClientTypeInRegistrationRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientRegistrationConfig(
+                                        generateClientRegRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                singletonList("openid"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                "http://example.com",
+                                                String.valueOf(MANDATORY),
+                                                "http://test.com",
+                                                "public",
+                                                emptyList(),
+                                                "Mobile",
+                                                JWSAlgorithm.ES256.getName())));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_CLIENT_TYPE));
     }
 
     @Test
-    void shouldReturnErrorForInvalidClientLoCsInRegistrationRequest() {
+    void shouldThrowExceptionForInvalidClientLoCsInRegistrationRequest() {
         ClientRegistrationRequest regReq =
                 new ClientRegistrationRequest(
                         "",
@@ -240,14 +267,16 @@ class ClientConfigValidationServiceTest {
                         JWSAlgorithm.ES256.getName(),
                         List.of("Unsupported_LoC"));
 
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(regReq);
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_LOCS)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () -> validationService.validateClientRegistrationConfig(regReq));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_CLIENT_LOCS));
     }
 
     @ParameterizedTest
     @MethodSource("invalidAlgorithmSource")
-    void shouldReturnErrorForInvalidIdTokenSigningAlgorithmInInRegistrationRequest(
+    void shouldThrowExceptionForInvalidIdTokenSigningAlgorithmInInRegistrationRequest(
             String invalidIdTokenSource) {
         ClientRegistrationRequest regReq =
                 new ClientRegistrationRequest(
@@ -267,191 +296,238 @@ class ClientConfigValidationServiceTest {
                         invalidIdTokenSource,
                         List.of("Unsupported_LoC"));
 
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(regReq);
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () -> validationService.validateClientRegistrationConfig(regReq));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_ID_TOKEN_SIGNING_ALGORITHM));
     }
 
     @ParameterizedTest
     @MethodSource("subjectTypes")
     void shouldCorrectlyValidateSubjectTypeInRegistrationRequest(
-            String subjectType, Optional<ErrorObject> expectedResult) {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientRegistrationConfig(
-                        generateClientRegRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                "http://example.com",
-                                String.valueOf(MANDATORY),
-                                "http://test.com",
-                                subjectType,
-                                emptyList(),
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName()));
-        assertThat(errorResponse, equalTo(expectedResult));
+            String subjectType, boolean isValid) throws Throwable {
+
+        Executable exec =
+                () ->
+                        validationService.validateClientRegistrationConfig(
+                                generateClientRegRequest(
+                                        singletonList("http://localhost:1000/redirect"),
+                                        VALID_PUBLIC_CERT,
+                                        singletonList("openid"),
+                                        singletonList("http://localhost/post-redirect-logout"),
+                                        "http://example.com",
+                                        String.valueOf(MANDATORY),
+                                        "http://test.com",
+                                        subjectType,
+                                        emptyList(),
+                                        ClientType.WEB.getValue(),
+                                        JWSAlgorithm.ES256.getName()));
+
+        if (isValid) {
+            exec.execute();
+        } else {
+            var exception = assertThrows(ClientRegistrryConfigValidationException.class, exec);
+            assertThat(exception.getErrorObject(), equalTo(INVALID_SUBJECT_TYPE));
+        }
     }
 
     private static Stream<Arguments> subjectTypes() {
         return Stream.of(
-                Arguments.of("public", Optional.empty()),
-                Arguments.of("pairwise", Optional.empty()),
-                Arguments.of("PUBLIC", Optional.of(INVALID_SUBJECT_TYPE)),
-                Arguments.of("PAIRWISE", Optional.of(INVALID_SUBJECT_TYPE)));
+                Arguments.of("public", true),
+                Arguments.of("pairwise", true),
+                Arguments.of("PUBLIC", false),
+                Arguments.of("PAIRWISE", false));
     }
 
     @Test
-    void shouldPassValidationForValidUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                "http://localhost/sector-id",
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.empty()));
+    void shouldPassValidationForValidUpdateRequest()
+            throws ClientRegistrryConfigValidationException {
+        validationService.validateClientConfig(
+                generateClientUpdateRequest(
+                        singletonList("http://localhost:1000/redirect"),
+                        VALID_PUBLIC_CERT,
+                        singletonList("openid"),
+                        singletonList("http://localhost/post-redirect-logout"),
+                        String.valueOf(MANDATORY),
+                        false,
+                        "http://localhost/sector-id",
+                        ClientType.WEB.getValue(),
+                        JWSAlgorithm.ES256.getName(),
+                        List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
     }
 
     @Test
-    void shouldReturnOptionalEmptyForEmptyUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(new UpdateClientConfigRequest());
-        assertThat(errorResponse, equalTo(Optional.empty()));
+    void shouldPassValidationForEmptyUpdateRequest()
+            throws ClientRegistrryConfigValidationException {
+        validationService.validateClientConfig(new UpdateClientConfigRequest());
     }
 
     @Test
-    void shouldReturnErrorForInvalidPostLogoutUriInUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("invalid-logout-uri"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
+    void shouldThrowExceptionForInvalidPostLogoutUriInUpdateRequest() {
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                singletonList("openid"),
+                                                singletonList("invalid-logout-uri"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName(),
+                                                List.of(
+                                                        LevelOfConfidence.MEDIUM_LEVEL
+                                                                .getValue()))));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_POST_LOGOUT_URI));
     }
 
     @Test
     void shouldReturnErrorForInvalidRedirectUriInUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("invalid-redirect-uri"),
-                                VALID_PUBLIC_CERT,
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("invalid-redirect-uri"),
+                                                VALID_PUBLIC_CERT,
+                                                singletonList("openid"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName(),
+                                                List.of(
+                                                        LevelOfConfidence.MEDIUM_LEVEL
+                                                                .getValue()))));
+        assertThat(exception.getErrorObject(), equalTo(RegistrationError.INVALID_REDIRECT_URI));
     }
 
     @Test
     void shouldReturnErrorForInvalidPublicKeyInUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                "invalid-public-cert",
-                                singletonList("openid"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                JWSAlgorithm.ES256.getName(),
-                                ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                "invalid-public-cert",
+                                                singletonList("openid"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                JWSAlgorithm.ES256.getName(),
+                                                ClientType.WEB.getValue(),
+                                                List.of(
+                                                        LevelOfConfidence.MEDIUM_LEVEL
+                                                                .getValue()))));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_PUBLIC_KEY));
     }
 
     @Test
     void shouldReturnErrorForInvalidScopesInUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "email", "fax"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                List.of("openid", "email", "fax"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName(),
+                                                List.of(
+                                                        LevelOfConfidence.MEDIUM_LEVEL
+                                                                .getValue()))));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_SCOPE));
     }
 
     @Test
     void shouldReturnErrorForInvalidClientTypeInUpdateRequest() {
-        var errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "email"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                JWSAlgorithm.ES256.getName(),
-                                "rubbish-client-type",
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                List.of("openid", "email"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                JWSAlgorithm.ES256.getName(),
+                                                "rubbish-client-type",
+                                                List.of(
+                                                        LevelOfConfidence.MEDIUM_LEVEL
+                                                                .getValue()))));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_CLIENT_TYPE));
     }
 
     @Test
     void shouldReturnErrorForInvalidClientLoCsInUpdateRequest() {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "email", "fax"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                ClientType.WEB.getValue(),
-                                JWSAlgorithm.ES256.getName(),
-                                List.of("Unsupported_LoC")));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_LOCS)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                List.of("openid", "email", "fax"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                ClientType.WEB.getValue(),
+                                                JWSAlgorithm.ES256.getName(),
+                                                List.of("Unsupported_LoC"))));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_CLIENT_LOCS));
     }
 
     @ParameterizedTest
     @MethodSource("invalidAlgorithmSource")
     void shouldReturnErrorForInvalidIdTokenSigningAlgorithmInUpdateRequest(
             String invalidIdTokenSource) {
-        Optional<ErrorObject> errorResponse =
-                validationService.validateClientUpdateConfig(
-                        generateClientUpdateRequest(
-                                singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
-                                List.of("openid", "email", "fax"),
-                                singletonList("http://localhost/post-redirect-logout"),
-                                String.valueOf(MANDATORY),
-                                false,
-                                null,
-                                ClientType.WEB.getValue(),
-                                invalidIdTokenSource,
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
-        assertThat(errorResponse, equalTo(Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM)));
+        var exception =
+                assertThrows(
+                        ClientRegistrryConfigValidationException.class,
+                        () ->
+                                validationService.validateClientConfig(
+                                        generateClientUpdateRequest(
+                                                singletonList("http://localhost:1000/redirect"),
+                                                VALID_PUBLIC_CERT,
+                                                List.of("openid", "email", "fax"),
+                                                singletonList(
+                                                        "http://localhost/post-redirect-logout"),
+                                                String.valueOf(MANDATORY),
+                                                false,
+                                                null,
+                                                ClientType.WEB.getValue(),
+                                                invalidIdTokenSource,
+                                                List.of(
+                                                        LevelOfConfidence.MEDIUM_LEVEL
+                                                                .getValue()))));
+        assertThat(exception.getErrorObject(), equalTo(INVALID_ID_TOKEN_SIGNING_ALGORITHM));
     }
 
     static Stream<Arguments> invalidAlgorithmSource() {

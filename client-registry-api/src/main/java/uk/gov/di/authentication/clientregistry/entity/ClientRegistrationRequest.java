@@ -2,6 +2,7 @@ package uk.gov.di.authentication.clientregistry.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.orchestration.shared.entity.ClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.validation.Required;
@@ -10,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class ClientRegistrationRequest {
+public class ClientRegistrationRequest implements ClientConfigRequest {
 
     @SerializedName("client_name")
     @Expose

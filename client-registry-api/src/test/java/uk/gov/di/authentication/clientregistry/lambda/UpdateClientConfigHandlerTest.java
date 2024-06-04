@@ -14,6 +14,7 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistrryConfigValidationException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
@@ -22,7 +23,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -32,6 +32,7 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -81,9 +82,6 @@ class UpdateClientConfigHandlerTest {
     @Test
     public void shouldReturn200ForAValidRequest() throws Json.JsonException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
-        when(clientValidationService.validateClientUpdateConfig(
-                        any(UpdateClientConfigRequest.class)))
-                .thenReturn(Optional.empty());
         when(clientService.updateClient(eq(CLIENT_ID), any(UpdateClientConfigRequest.class)))
                 .thenReturn(createClientRegistry());
 
@@ -126,7 +124,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, "", USER);
+        verify(auditService).submitAuditEvent(UPDATE_CLIENT_REQUEST_ERROR, CLIENT_ID, USER);
     }
 
     @Test
@@ -144,11 +142,12 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestFailsValidation() {
+    public void shouldReturn400WhenRequestFailsValidation()
+            throws ClientRegistrryConfigValidationException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
-        when(clientValidationService.validateClientUpdateConfig(
-                        any(UpdateClientConfigRequest.class)))
-                .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
+        doThrow(new ClientRegistrryConfigValidationException(INVALID_PUBLIC_KEY))
+                .when(clientValidationService)
+                .validateClientConfig(any());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -165,11 +164,12 @@ class UpdateClientConfigHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestHasInvalidScope() {
+    public void shouldReturn400WhenRequestHasInvalidScope()
+            throws ClientRegistrryConfigValidationException {
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
-        when(clientValidationService.validateClientUpdateConfig(
-                        any(UpdateClientConfigRequest.class)))
-                .thenReturn(Optional.of(INVALID_SCOPE));
+        doThrow(new ClientRegistrryConfigValidationException(INVALID_SCOPE))
+                .when(clientValidationService)
+                .validateClientConfig(any());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{\"client_name\": \"%s\"}", CLIENT_NAME));

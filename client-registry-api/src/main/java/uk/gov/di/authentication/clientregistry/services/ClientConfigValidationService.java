@@ -4,12 +4,14 @@ import com.nimbusds.jose.Algorithm;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
+import software.amazon.awssdk.annotations.NotNull;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.orchestration.shared.entity.ClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistrryConfigValidationException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -18,14 +20,13 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.jose.JWSAlgorithm.RS256;
-import static java.util.Collections.singletonList;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
 
@@ -55,170 +56,192 @@ public class ClientConfigValidationService {
     public static final Set<String> VALID_ID_TOKEN_SIGNING_ALGORITHMS =
             Stream.of(ES256, RS256).map(Algorithm::getName).collect(Collectors.toSet());
 
-    public Optional<ErrorObject> validateClientRegistrationConfig(
-            ClientRegistrationRequest registrationRequest) {
-        if (!Optional.ofNullable(registrationRequest.getPostLogoutRedirectUris())
-                .map(this::areUrisValid)
-                .orElse(true)) {
-            return Optional.of(INVALID_POST_LOGOUT_URI);
-        }
-        if (!areUrisValid(registrationRequest.getRedirectUris())) {
-            return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
-        }
-        if (!Optional.ofNullable(registrationRequest.getSectorIdentifierUri())
-                .map(t -> areUrisValid(singletonList(t)))
-                .orElse(true)) {
-            return Optional.of(INVALID_SECTOR_IDENTIFIER_URI);
-        }
-        if (!Optional.ofNullable(registrationRequest.getBackChannelLogoutUri())
-                .map(t -> areUrisValid(singletonList(t)))
-                .orElse(true)) {
-            return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
-        }
-        if (!isPublicKeyValid(registrationRequest.getPublicKey())) {
-            return Optional.of(INVALID_PUBLIC_KEY);
-        }
-        if (!areScopesValid(registrationRequest.getScopes())) {
-            return Optional.of(INVALID_SCOPE);
-        }
-        if (!isValidServiceType(registrationRequest.getServiceType())) {
-            return Optional.of(INVALID_SERVICE_TYPE);
-        }
-        if (!isValidSubjectType(registrationRequest.getSubjectType())) {
-            return Optional.of(INVALID_SUBJECT_TYPE);
-        }
-        if (!Optional.ofNullable(registrationRequest.getClaims())
-                .map(this::areClaimsValid)
-                .orElse(true)) {
-            return Optional.of(INVALID_CLAIM);
-        }
-        if (Arrays.stream(ClientType.values())
-                .noneMatch(t -> t.getValue().equals(registrationRequest.getClientType()))) {
-            return Optional.of(INVALID_CLIENT_TYPE);
-        }
-        if (!areClientLoCsValid(registrationRequest.getClientLoCs())) {
-            return Optional.of(INVALID_CLIENT_LOCS);
-        }
-        if (!Optional.ofNullable(registrationRequest.getIdTokenSigningAlgorithm())
-                .map(this::isValidIdTokenSigningAlgorithm)
-                .orElse(true)) {
-            return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
-        }
-        return Optional.empty();
+    public void validateClientRegistrationConfig(ClientRegistrationRequest registrationRequest)
+            throws ClientRegistrryConfigValidationException {
+        validateClientConfig(registrationRequest);
+        validateSubjectType(registrationRequest);
     }
 
-    public Optional<ErrorObject> validateClientUpdateConfig(
-            UpdateClientConfigRequest updateRequest) {
-        if (!Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
-                .map(this::areUrisValid)
-                .orElse(true)) {
-            return Optional.of(INVALID_POST_LOGOUT_URI);
-        }
-        if (!Optional.ofNullable(updateRequest.getRedirectUris())
-                .map(this::areUrisValid)
-                .orElse(true)) {
-            return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
-        }
-        if (!Optional.ofNullable(updateRequest.getPublicKey())
-                .map(this::isPublicKeyValid)
-                .orElse(true)) {
-            return Optional.of(INVALID_PUBLIC_KEY);
-        }
-        if (!Optional.ofNullable(updateRequest.getScopes())
-                .map(this::areScopesValid)
-                .orElse(true)) {
-            return Optional.of(INVALID_SCOPE);
-        }
-        if (!Optional.ofNullable(updateRequest.getServiceType())
-                .map(this::isValidServiceType)
-                .orElse(true)) {
-            return Optional.of(INVALID_SERVICE_TYPE);
-        }
-        if (!Optional.ofNullable(updateRequest.getSectorIdentifierUri())
-                .map(t -> areUrisValid(singletonList(t)))
-                .orElse(true)) {
-            return Optional.of(INVALID_SECTOR_IDENTIFIER_URI);
-        }
-        if (!Optional.ofNullable(updateRequest.getClientType())
-                .map(c -> Arrays.stream(ClientType.values()).anyMatch(t -> t.getValue().equals(c)))
-                .orElse(true)) {
-            return Optional.of(INVALID_CLIENT_TYPE);
-        }
-        if (!Optional.ofNullable(updateRequest.getClientLoCs())
-                .map(this::areClientLoCsValid)
-                .orElse(true)) {
-            return Optional.of(INVALID_CLIENT_LOCS);
-        }
-        if (!Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
-                .map(this::isValidIdTokenSigningAlgorithm)
-                .orElse(true)) {
-            return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
-        }
-        return Optional.empty();
+    public void validateClientConfig(ClientConfigRequest configRequest)
+            throws IllegalArgumentException, ClientRegistrryConfigValidationException {
+        validatePostLogoutRedirectURIs(configRequest);
+        validateRedirectURIs(configRequest);
+        validatePublicKey(configRequest);
+        validateScopes(configRequest);
+        validateServiceType(configRequest);
+        validateSectorIdentifierURI(configRequest);
+        validateClientType(configRequest);
+        validateClaims(configRequest);
+        validateClientLoCs(configRequest);
+        validateTokenSigningAlgorithm(configRequest);
     }
 
-    private boolean areUrisValid(List<String> uris) {
+    private void validateClientType(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getClientType,
+                ct -> {
+                    if (!Arrays.stream(ClientType.values())
+                            .map(ClientType::getValue)
+                            .toList()
+                            .contains(ct)) {
+                        throw new ClientRegistrryConfigValidationException(INVALID_CLIENT_TYPE);
+                    }
+                });
+    }
+
+    private void validatePostLogoutRedirectURIs(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getPostLogoutRedirectUris,
+                plrs -> {
+                    for (var uri : plrs) {
+                        validateUri(uri, INVALID_POST_LOGOUT_URI);
+                    }
+                });
+    }
+
+    private void validateRedirectURIs(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getRedirectUris,
+                rs -> {
+                    for (var uri : rs) {
+                        validateUri(uri, RegistrationError.INVALID_REDIRECT_URI);
+                    }
+                });
+    }
+
+    private void validateSectorIdentifierURI(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getSectorIdentifierUri,
+                si -> validateUri(si, INVALID_SECTOR_IDENTIFIER_URI));
+    }
+
+    private void validateUri(String uri, ErrorObject errorObject)
+            throws ClientRegistrryConfigValidationException {
         try {
-            for (String uri : uris) {
-                new URL(uri);
-            }
+            new URL(uri);
         } catch (MalformedURLException e) {
-            return false;
+            throw new ClientRegistrryConfigValidationException(errorObject);
         }
-        return true;
     }
 
-    private boolean isPublicKeyValid(String publicKey) {
-        try {
-            byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-            X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            kf.generatePublic(x509publicKey);
-        } catch (Exception e) {
-            return false;
+    private void validatePublicKey(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getPublicKey,
+                pk -> {
+                    try {
+                        byte[] decodedKey = Base64.getMimeDecoder().decode(pk);
+                        X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
+                        KeyFactory kf = KeyFactory.getInstance("RSA");
+                        kf.generatePublic(x509publicKey);
+                    } catch (Exception e) {
+                        throw new ClientRegistrryConfigValidationException(INVALID_PUBLIC_KEY);
+                    }
+                });
+    }
+
+    private void validateScopes(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getScopes,
+                ss -> {
+                    for (String scope : ss) {
+                        if (!ValidScopes.getPublicValidScopes().contains(scope)) {
+                            throw new ClientRegistrryConfigValidationException(INVALID_SCOPE);
+                        }
+                    }
+                });
+    }
+
+    private void validateServiceType(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getServiceType,
+                st -> {
+                    if (!(st.equalsIgnoreCase(String.valueOf(MANDATORY))
+                            || st.equalsIgnoreCase(String.valueOf(OPTIONAL)))) {
+                        throw new ClientRegistrryConfigValidationException(INVALID_SERVICE_TYPE);
+                    }
+                });
+    }
+
+    private void validateSubjectType(ClientRegistrationRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientRegistrationRequest::getSubjectType,
+                st -> {
+                    if (!List.of(SubjectType.PUBLIC.toString(), SubjectType.PAIRWISE.toString())
+                            .contains(st)) {
+                        throw new ClientRegistrryConfigValidationException(INVALID_SUBJECT_TYPE);
+                    }
+                });
+    }
+
+    private void validateClaims(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getClaims,
+                cs -> {
+                    for (String claim : cs) {
+                        if (!ValidClaims.getAllValidClaims().contains(claim)) {
+                            throw new ClientRegistrryConfigValidationException(INVALID_CLAIM);
+                        }
+                    }
+                });
+    }
+
+    private void validateClientLoCs(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getClientLoCs,
+                locs -> {
+                    for (String loc : locs) {
+                        if (!LevelOfConfidence.getAllSupportedLevelOfConfidenceValues()
+                                .contains(loc)) {
+                            throw new ClientRegistrryConfigValidationException(INVALID_CLIENT_LOCS);
+                        }
+                    }
+                });
+    }
+
+    private void validateTokenSigningAlgorithm(ClientConfigRequest request)
+            throws ClientRegistrryConfigValidationException {
+        validateIfPresent(
+                request,
+                ClientConfigRequest::getIdTokenSigningAlgorithm,
+                itsa -> {
+                    if (!VALID_ID_TOKEN_SIGNING_ALGORITHMS.contains(itsa)) {
+                        throw new ClientRegistrryConfigValidationException(
+                                INVALID_ID_TOKEN_SIGNING_ALGORITHM);
+                    }
+                });
+    }
+
+    private <C, F> void validateIfPresent(
+            C clientConfig, Function<C, F> getter, ClientConfigFieldValidator<F> validator)
+            throws ClientRegistrryConfigValidationException {
+        var field = getter.apply(clientConfig);
+        if (field != null) {
+            validator.validate(field);
         }
-        return true;
     }
 
-    private boolean areScopesValid(List<String> scopes) {
-        for (String scope : scopes) {
-            if (ValidScopes.getPublicValidScopes().stream().noneMatch((t) -> t.equals(scope))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isValidServiceType(String serviceType) {
-        return serviceType.equalsIgnoreCase(String.valueOf(MANDATORY))
-                || serviceType.equalsIgnoreCase(String.valueOf(OPTIONAL));
-    }
-
-    private boolean isValidSubjectType(String subjectType) {
-        return List.of(SubjectType.PUBLIC.toString(), SubjectType.PAIRWISE.toString())
-                .contains(subjectType);
-    }
-
-    private boolean areClaimsValid(List<String> claims) {
-        for (String claim : claims) {
-            if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean areClientLoCsValid(List<String> clientLoCs) {
-        for (String clientLoC : clientLoCs) {
-            if (LevelOfConfidence.getAllSupportedLevelOfConfidenceValues().stream()
-                    .noneMatch(t -> t.equals(clientLoC))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isValidIdTokenSigningAlgorithm(String idTokenSigningAlgorithm) {
-        return VALID_ID_TOKEN_SIGNING_ALGORITHMS.contains(idTokenSigningAlgorithm);
+    @FunctionalInterface()
+    private interface ClientConfigFieldValidator<T> {
+        void validate(@NotNull T field) throws ClientRegistrryConfigValidationException;
     }
 }
