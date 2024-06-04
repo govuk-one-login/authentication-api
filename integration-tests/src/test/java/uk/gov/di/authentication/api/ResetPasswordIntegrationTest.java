@@ -245,12 +245,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         public ResetPasswordTestConfigurationService() {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

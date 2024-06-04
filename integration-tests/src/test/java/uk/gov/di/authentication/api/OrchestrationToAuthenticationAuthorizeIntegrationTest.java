@@ -18,7 +18,6 @@ import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -351,12 +350,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
-        }
-
-        @Override
-        public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
-            return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
-                    || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
         }
 
         @Override

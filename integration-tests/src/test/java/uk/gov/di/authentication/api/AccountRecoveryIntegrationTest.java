@@ -115,12 +115,8 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
         public AccountRecoveryTestConfigurationService() {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

@@ -33,8 +33,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
@@ -91,9 +89,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
                     criStub,
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
@@ -374,9 +369,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         public TestConfigurationService(
                 CriStubExtension criStubExtension,
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
@@ -412,11 +404,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public URI getDocAppAuthorisationCallbackURI() {
             return URI.create("http://localhost/redirect");
-        }
-
-        @Override
-        public String getDocAppCriDataEndpoint() {
-            return "/userinfo/v2";
         }
 
         @Override

@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
 import java.time.Clock;
@@ -125,10 +124,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Clock.systemDefaultZone();
     }
 
-    public String getBulkEmailLoaderLambdaName() {
-        return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
-    }
-
     public URI getAuthenticationAuthCallbackURI() {
         return URI.create(
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
@@ -179,10 +174,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getDocAppTokenSigningKeyAlias() {
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getDocAppCriDataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_ENDPOINT");
     }
 
     public String getDocAppCriV2DataEndpoint() {
@@ -262,11 +253,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
-        return supportedLanguage.equals(SupportedLanguage.EN)
-                || supportedLanguage.equals(SupportedLanguage.CY);
-    }
-
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
@@ -328,14 +314,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
 
         return notifyCallbackBearerToken;
-    }
-
-    boolean commaSeparatedListContains(String searchTerm, String stringToSearch) {
-        return (searchTerm != null
-                && !searchTerm.isBlank()
-                && stringToSearch != null
-                && !stringToSearch.isBlank()
-                && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
     }
 
     public Optional<String> getOidcApiBaseURL() {

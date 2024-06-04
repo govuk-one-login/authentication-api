@@ -49,12 +49,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     void setup() {
         var configuration =
                 new IntegrationTestConfigurationService(
-                        auditTopic,
                         notificationsQueue,
-                        auditSigningKey,
                         tokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
                         docAppPrivateKeyJwtSigner,
                         configurationParameters,
                         new SystemService()) {

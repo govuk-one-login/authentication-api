@@ -279,12 +279,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     private static IntegrationTestConfigurationService configWithSendMode(String sendMode) {
         SecureRandom secureRandom = new SecureRandom();
         return new IntegrationTestConfigurationService(
-                auditTopic,
                 notificationsQueue,
-                auditSigningKey,
                 tokenSigner,
-                ipvPrivateKeyJwtSigner,
-                spotQueue,
                 docAppPrivateKeyJwtSigner,
                 configurationParameters) {
 
