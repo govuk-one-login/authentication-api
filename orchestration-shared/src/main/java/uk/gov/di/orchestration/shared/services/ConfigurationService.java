@@ -50,6 +50,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         this.ssmClient = ssmClient;
     }
 
+    protected ConfigurationService(SystemService systemService) {
+        this.systemService = systemService;
+    }
+
     public void setSystemService(SystemService systemService) {
         this.systemService = systemService;
     }
