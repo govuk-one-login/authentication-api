@@ -13,7 +13,6 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
-import uk.gov.di.authentication.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
@@ -207,16 +206,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
     }
 
-    public URI getDefaultLogoutURI() {
-        return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
-    }
-
     public URI getDocAppAuthorisationURI() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
-    }
-
-    public URI getDocAppBackendURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
     }
 
     public URI getDocAppAuthorisationCallbackURI() {
@@ -239,20 +230,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public String getDocAppCriDataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_ENDPOINT");
-    }
-
-    public String getDocAppCriV2DataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_V2_ENDPOINT");
-    }
-
     public URI getDocAppDomain() {
         return URI.create(System.getenv("DOC_APP_DOMAIN"));
-    }
-
-    public String getDomainName() {
-        return System.getenv("DOMAIN_NAME");
     }
 
     public Optional<String> getDynamoEndpointUri() {
@@ -279,29 +258,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
-    public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
     public String getOrchestrationToAuthenticationSigningPublicKey() {
         return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
-    }
-
-    public String getOrchestrationToAuthenticationEncryptionPublicKey() {
-        var paramName = format("{0}-auth-public-encryption-key", getEnvironment());
-        try {
-            var request =
-                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
-        } catch (ParameterNotFoundException e) {
-            String message = String.format("No parameter exists with name: %s", paramName);
-            LOG.error(message);
-            throw new SSMParameterNotFoundException(message, e);
-        }
-    }
-
-    public String getOrchestrationRedirectUri() {
-        return System.getenv().getOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
     public String getOrchestrationClientId() {
@@ -320,63 +278,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }
 
-    public boolean isIPVNoSessionResponseEnabled() {
-        return System.getenv()
-                .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
-                .equals("true");
-    }
-
     public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
         return supportedLanguage.equals(SupportedLanguage.EN)
                 || supportedLanguage.equals(SupportedLanguage.CY);
     }
 
-    public long getIDTokenExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
-    }
-
-    public URI getIPVAuthorisationURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_URI", ""));
-    }
-
-    public URI getIPVBackendURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_BACKEND_URI", ""));
-    }
-
-    public String getIPVAudience() {
-        return System.getenv().getOrDefault("IPV_AUDIENCE", "");
-    }
-
-    public URI getIPVAuthorisationCallbackURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_CALLBACK_URI", ""));
-    }
-
-    public String getIPVAuthorisationClientId() {
-        return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
-    }
-
-    public String getIPVTokenSigningKeyAlias() {
-        return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getIPVAuthEncryptionPublicKey() {
-        var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
-        try {
-            var request =
-                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
-        } catch (ParameterNotFoundException e) {
-            LOG.error("No parameter exists with name: {}", paramName);
-            throw new RuntimeException(e);
-        }
-    }
-
     public String getInternalSectorUri() {
         return System.getenv("INTERNAl_SECTOR_URI");
-    }
-
-    public URI getLoginURI() {
-        return URI.create(System.getenv("LOGIN_URI"));
     }
 
     public String getNotifyApiKey() {
@@ -485,16 +393,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "3600"));
     }
 
-    public int getPersistentCookieMaxAge() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("PERSISTENT_COOKIE_MAX_AGE", "47340000"));
-    }
-
-    public int getLanguageCookieMaxAge() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("LANGUAGE_COOKIE_MAX_AGE", "31536000"));
-    }
-
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
@@ -527,10 +425,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
     }
 
-    public boolean isPhoneCheckerWithReplyEnabled() {
-        return System.getenv().getOrDefault("PHONE_CHECKER_WITH_RETRY", "false").equals("true");
-    }
-
     public String getSyntheticsUsers() {
         return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
     }
@@ -553,19 +447,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getAuditHmacSecret() {
         return System.getenv("AUDIT_HMAC_SECRET");
-    }
-
-    public Optional<String> getIPVCapacity() {
-        try {
-            var request =
-                    GetParameterRequest.builder()
-                            .withDecryption(true)
-                            .name(format("{0}-ipv-capacity", getEnvironment()))
-                            .build();
-            return Optional.of(getSsmClient().getParameter(request).parameter().value());
-        } catch (ParameterNotFoundException e) {
-            return Optional.empty();
-        }
     }
 
     private Map<String, String> getSsmRedisParameters() {

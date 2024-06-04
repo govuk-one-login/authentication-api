@@ -340,11 +340,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         @Override
-        public String getIPVTokenSigningKeyAlias() {
-            return ipvPrivateKeyJwtSigner.getKeyAlias();
-        }
-
-        @Override
         public String getDocAppTokenSigningKeyAlias() {
             return docAppPrivateKeyJwtSigner.getKeyAlias();
         }
@@ -352,16 +347,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         @Override
         public String getFrontendBaseUrl() {
             return "http://localhost:3000/reset-password?code=";
-        }
-
-        @Override
-        public String getSpotQueueUri() {
-            return spotQueue.getQueueUrl();
-        }
-
-        @Override
-        public Optional<String> getIPVCapacity() {
-            return Optional.of("1");
         }
     }
 }
