@@ -47,4 +47,5 @@ orch_openid_configuration_name = "build-OpenIdConfigurationFunction"
 
 orch_account_id = "767397776536"
 
-oidc_origin_domain_enabled = true
+oidc_origin_domain_enabled  = true
+oidc_cloudfront_dns_enabled = true

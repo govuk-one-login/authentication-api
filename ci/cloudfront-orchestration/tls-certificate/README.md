@@ -30,3 +30,11 @@ Note that the `dev` environment refers to the `oidc.sandpit.account.gov.uk` doma
 ```
 ./deploy.sh <env>
 ```
+
+
+## Parameters
+
+| Parameter Name | Description                                                                    |
+|----------------|--------------------------------------------------------------------------------|
+| HostedZoneID   | ID of the Route 53 hosted zone containing the OIDC domain for this environment |
+| DomainName     | The OIDC domain name for this environment to create a certificate for          |
