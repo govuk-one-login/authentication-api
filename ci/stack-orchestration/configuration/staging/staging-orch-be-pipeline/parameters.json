@@ -1,5 +1,9 @@
 [
   {
+    "ParameterKey": "AccessCrossAccountSQS",
+    "ParameterValue": "761723964695"
+  },
+  {
     "ParameterKey": "AccessDynamoDBAccounts",
     "ParameterValue": "758531536632"
   },
