@@ -715,7 +715,7 @@ resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
 
 data "aws_cloudformation_export" "oidc_origin_cloaking_waf_arn" {
   count = var.enforce_cloudfront ? 1 : 0
-  name  = local.oidc_origin_cloaking_waf_export_name
+  name  = "${local.secure_pipelines_environment}-oidc-cloudfront-CloakingOriginWebACLArn"
 }
 
 resource "aws_wafv2_web_acl_association" "oidc_origin_cloaking_waf" {
@@ -864,8 +864,6 @@ data "aws_cloudformation_stack" "orch_frontend_stack" {
 locals {
   nlb_dns_name = length(data.aws_cloudformation_stack.orch_frontend_stack) > 0 ? data.aws_cloudformation_stack.orch_frontend_stack[0].outputs["OrchFrontendNlbDnsName"] : null
   nlb_arn      = length(data.aws_cloudformation_stack.orch_frontend_stack) > 0 ? data.aws_cloudformation_stack.orch_frontend_stack[0].outputs["OrchFrontendNlbArn"] : null
-
-  oidc_origin_cloaking_waf_export_name = var.environment == "sandpit" ? "dev-oidc-cloudfront-CloakingOriginWebACLArn" : "${var.environment}-oidc-cloudfront-CloakingOriginWebACLArn"
 }
 
 resource "aws_api_gateway_vpc_link" "orch_frontend_nlb_vpc_link" {
@@ -925,7 +923,7 @@ resource "aws_api_gateway_integration" "orch_openid_configuration_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_openid_configuration_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-OpenIdConfigurationFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_trustmark_resource" {
@@ -960,7 +958,7 @@ resource "aws_api_gateway_integration" "orch_trustmark_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_trustmark_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-TrustmarkFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
@@ -995,7 +993,7 @@ resource "aws_api_gateway_integration" "orch_doc_app_callback_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_doc_app_callback_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-DocAppCallbackFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_token_resource" {
@@ -1030,7 +1028,7 @@ resource "aws_api_gateway_integration" "orch_token_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_token_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-TokenFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_jwks_resource" {
@@ -1066,7 +1064,7 @@ resource "aws_api_gateway_integration" "orch_jwks_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_jwks_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-JwksFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_authorisation_resource" {
@@ -1123,7 +1121,7 @@ resource "aws_api_gateway_integration" "orch_authorisation_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_authorisation_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthorisationFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_logout_resource" {
@@ -1158,7 +1156,7 @@ resource "aws_api_gateway_integration" "orch_logout_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_logout_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-LogoutFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_ipv_callback_resource" {
@@ -1193,7 +1191,7 @@ resource "aws_api_gateway_integration" "orch_ipv_callback_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_ipv_callback_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-IpvCallbackFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_register_resource" {
@@ -1229,7 +1227,7 @@ resource "aws_api_gateway_integration" "orch_register_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_register_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-ClientRegistrationFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_update_client_resource" {
@@ -1267,7 +1265,7 @@ resource "aws_api_gateway_integration" "orch_update_client_integration" {
   request_parameters      = { "integration.request.path.clientId" = "method.request.path.clientId" }
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_update_client_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-UpdateClientConfigFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {
@@ -1302,7 +1300,7 @@ resource "aws_api_gateway_integration" "orch_authentication_callback_integration
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_authentication_callback_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthenticationCallbackFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_integration" "orch_auth_code_integration" {
@@ -1315,7 +1313,7 @@ resource "aws_api_gateway_integration" "orch_auth_code_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_auth_code_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthCodeFunction:latest/invocations"
 }
 
 
@@ -1351,5 +1349,5 @@ resource "aws_api_gateway_integration" "orch_userinfo_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_userinfo_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-UserInfoFunction:latest/invocations"
 }
