@@ -172,7 +172,7 @@ class IPVCallbackHelperTest {
                         anyString(), anyString(), any(ClientSession.class)))
                 .thenReturn(AUTH_CODE);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
     }
 
     @Test

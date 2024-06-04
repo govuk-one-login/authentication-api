@@ -119,12 +119,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getAccountStatusBlockedURI() {
         return getURIOrDefault(
-                "ACCOUNT_STATUS_BLOCKED_URI", getFrontendBaseUrl() + "unavailable-permanent");
+                "ACCOUNT_STATUS_BLOCKED_URI", getFrontendBaseURL() + "unavailable-permanent");
     }
 
     public URI getAccountStatusSuspendedURI() {
         return getURIOrDefault(
-                "ACCOUNT_STATUS_SUSPENDED_URI", getFrontendBaseUrl() + "unavailable-temporary");
+                "ACCOUNT_STATUS_SUSPENDED_URI", getFrontendBaseURL() + "unavailable-temporary");
     }
 
     public long getAuthCodeExpiry() {
@@ -189,7 +189,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return env.getOrDefault("DOC_APP_ENCRYPTION_KEY_ID", "");
     }
 
-    public URI getDocAppJwksUri() {
+    public URI getDocAppJwksURI() {
         return getURIOrEmpty("DOC_APP_JWKS_URL");
     }
 
@@ -225,15 +225,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(env.get("DYNAMO_ARN_PREFIX"));
     }
 
-    public Optional<String> getDynamoEndpointUri() {
+    public Optional<String> getDynamoEndpointURI() {
         return Optional.ofNullable(env.get("DYNAMO_ENDPOINT"));
     }
 
-    public String getSpotQueueUri() {
+    public String getSpotQueueURI() {
         return env.get("SPOT_QUEUE_URL");
     }
 
-    public String getFrontendBaseUrl() {
+    public String getFrontendBaseURL() {
         return env.getOrDefault("FRONTEND_BASE_URL", "");
     }
 
@@ -254,7 +254,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getOrchestrationRedirectUri() {
+    public String getOrchestrationRedirectURI() {
         return env.getOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
@@ -319,7 +319,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getInternalSectorUri() {
+    public String getInternalSectorURI() {
         return env.get("INTERNAl_SECTOR_URI");
     }
 
@@ -407,7 +407,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("SEND_STORAGE_TOKEN_TO_IPV_ENABLED");
     }
 
-    public Optional<String> getSqsEndpointUri() {
+    public Optional<String> getSqsEndpointURI() {
         return Optional.ofNullable(env.get("SQS_ENDPOINT"));
     }
 
@@ -497,7 +497,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return env.get("REDIS_KEY");
     }
 
-    public String getBackChannelLogoutQueueUri() {
+    public String getBackChannelLogoutQueueURI() {
         return env.get("BACK_CHANNEL_LOGOUT_QUEUE_URI");
     }
 

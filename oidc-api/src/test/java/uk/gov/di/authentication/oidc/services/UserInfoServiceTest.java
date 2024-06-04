@@ -120,7 +120,7 @@ class UserInfoServiceTest {
                         cloudwatchMetricsService,
                         configurationService,
                         userInfoStorageService);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn("test");
     }
 

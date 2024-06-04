@@ -126,10 +126,10 @@ public class LogoutServiceTest {
                 .thenReturn(PERSISTENT_SESSION_ID);
 
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(configurationService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configurationService.getFrontendBaseURL()).thenReturn(FRONTEND_BASE_URL);
         when(configurationService.getAccountStatusBlockedURI()).thenCallRealMethod();
         when(configurationService.getAccountStatusSuspendedURI()).thenCallRealMethod();
         logoutService =

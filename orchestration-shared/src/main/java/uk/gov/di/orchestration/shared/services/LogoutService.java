@@ -97,7 +97,7 @@ public class LogoutService {
                                     backChannelLogoutService.sendLogoutMessage(
                                             clientRegistry,
                                             session.getEmailAddress(),
-                                            configurationService.getInternalSectorUri()));
+                                            configurationService.getInternalSectorURI()));
             LOG.info("Deleting Client Session");
             clientSessionService.deleteStoredClientSession(clientSessionId);
         }

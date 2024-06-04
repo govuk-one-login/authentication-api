@@ -78,8 +78,8 @@ public class IPVCallbackHelper {
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueUri(),
-                        configurationService.getSqsEndpointUri());
+                        configurationService.getSpotQueueURI(),
+                        configurationService.getSqsEndpointURI());
         this.authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
     }

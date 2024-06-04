@@ -133,7 +133,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 }
 
                 @Override
-                public URI getDocAppJwksUri() {
+                public URI getDocAppJwksURI() {
                     try {
                         return new URIBuilder()
                                 .setHost("localhost")
