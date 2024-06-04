@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "CloudfrontDistribution",
+    "ParameterValue": "E26KHUPDNH7E2X"
+  },
+  {
+    "ParameterKey": "CloudFrontAdditionaldMetricsEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "CacheHitAlarmSNSTopicARN",
+    "ParameterValue": "arn:aws:sns:us-east-1:761723964695:integration-oidc-cloudfront-alerts"
+  }
+]
