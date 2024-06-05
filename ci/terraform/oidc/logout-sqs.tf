@@ -25,38 +25,6 @@ resource "aws_sqs_queue" "back_channel_logout_dead_letter_queue" {
   tags = local.default_tags
 }
 
-data "aws_iam_policy_document" "back_channel_logout_queue_policy_document" {
-  statement {
-    sid    = "AllowOrchAccountSendSQS-${var.environment}"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.orch_account_id}:root"]
-    }
-
-    actions = [
-      "sqs:SendMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:GetQueueAttributes",
-    ]
-
-    resources = [
-      aws_sqs_queue.back_channel_logout_queue.arn
-    ]
-  }
-}
-
-resource "aws_sqs_queue_policy" "back_channel_logout_queue_policy" {
-  count = var.back_channel_logout_cross_account_access_enabled ? 1 : 0
-  depends_on = [
-    data.aws_iam_policy_document.back_channel_logout_queue_policy_document,
-  ]
-
-  queue_url = aws_sqs_queue.back_channel_logout_queue.id
-  policy    = data.aws_iam_policy_document.back_channel_logout_queue_policy_document.json
-}
-
 data "aws_iam_policy_document" "back_channel_logout_dlq_queue_policy_document" {
   statement {
     sid    = "SendAndReceive"
@@ -81,10 +49,6 @@ data "aws_iam_policy_document" "back_channel_logout_dlq_queue_policy_document" {
 }
 
 resource "aws_sqs_queue_policy" "back_channel_logout_dlq_queue_policy" {
-  depends_on = [
-    data.aws_iam_policy_document.back_channel_logout_queue_policy_document,
-  ]
-
   queue_url = aws_sqs_queue.back_channel_logout_dead_letter_queue.id
   policy    = data.aws_iam_policy_document.back_channel_logout_dlq_queue_policy_document.json
 }
@@ -96,7 +60,7 @@ resource "aws_kms_key" "back_channel_logout_queue_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
 
-  policy = var.back_channel_logout_cross_account_access_enabled ? data.aws_iam_policy_document.back_channel_logout_queue_encryption_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.back_channel_logout_queue_encryption_key_access_policy.json
+  policy = data.aws_iam_policy_document.back_channel_logout_queue_encryption_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -104,39 +68,6 @@ resource "aws_kms_key" "back_channel_logout_queue_encryption_key" {
 resource "aws_kms_alias" "back_channel_logout_queue_encryption_key_alias" {
   name          = "alias/${var.environment}-back-channel-logout-queue-kms-alias"
   target_key_id = aws_kms_key.back_channel_logout_queue_encryption_key.id
-}
-
-data "aws_iam_policy_document" "back_channel_logout_queue_encryption_key_access_policy_with_orch_access" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-
-  statement {
-    sid    = "AllowOrchAccessToBackChannelLogoutEncryptionKey-${var.environment}"
-    effect = "Allow"
-
-    actions = [
-      "kms:Decrypt",
-      "kms:GenerateDataKey"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.orch_account_id}:root"]
-    }
-  }
 }
 
 data "aws_iam_policy_document" "back_channel_logout_queue_encryption_key_access_policy" {

@@ -535,12 +535,6 @@ variable "orch_authorisation_enabled" {
   default     = false
 }
 
-variable "auth_backchannel_logout_disabled" {
-  description = "Flag to disable routing back channel logout traffic to the authentication account"
-  type        = bool
-  default     = false
-}
-
 variable "auth_spot_response_disabled" {
   description = "Flag to disable routing spot response traffic to the authentication account"
   type        = bool
@@ -635,12 +629,6 @@ variable "send_storage_token_to_ipv_enabled" {
 variable "orch_account_id" {
   type    = string
   default = ""
-}
-
-variable "back_channel_logout_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by orchestration to the back channel logout queue"
 }
 
 variable "cmk_for_back_channel_logout_enabled" {

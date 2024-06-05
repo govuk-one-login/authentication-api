@@ -14,12 +14,11 @@ lockout_duration                     = 7200
 reduced_lockout_duration             = 900
 incorrect_password_lockout_count_ttl = 7200
 
-orch_account_id                                  = "590183975515"
-back_channel_logout_cross_account_access_enabled = true
-kms_cross_account_access_enabled                 = true
-cmk_for_back_channel_logout_enabled              = true
-spot_request_queue_cross_account_access_enabled  = true
-txma_audit_encoded_enabled                       = true
+orch_account_id                                 = "590183975515"
+kms_cross_account_access_enabled                = true
+cmk_for_back_channel_logout_enabled             = true
+spot_request_queue_cross_account_access_enabled = true
+txma_audit_encoded_enabled                      = true
 
 contra_state_bucket      = "di-auth-staging-tfstate"
 phone_checker_with_retry = true
@@ -37,7 +36,6 @@ orch_logout_enabled                  = true
 orch_ipv_callback_enabled            = true
 orch_register_enabled                = true
 orch_authentication_callback_enabled = true
-auth_backchannel_logout_disabled     = true
 auth_spot_response_disabled          = true
 orch_auth_code_enabled               = true
 orch_userinfo_enabled                = true
