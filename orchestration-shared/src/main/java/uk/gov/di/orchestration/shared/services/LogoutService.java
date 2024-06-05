@@ -132,7 +132,7 @@ public class LogoutService {
             Optional<ErrorObject> errorObject,
             TxmaAuditUser auditUser,
             Optional<String> clientId) {
-        LOG.info("Generating Logout Response using URI: {}", logoutUri);
+        LOG.info("Generating logout response using URI: {}", logoutUri);
         URIBuilder uriBuilder = new URIBuilder(logoutUri);
         state.ifPresent(s -> uriBuilder.addParameter("state", s));
         errorObject.ifPresent(e -> uriBuilder.addParameter("error_code", e.getCode()));
@@ -143,7 +143,7 @@ public class LogoutService {
             uri = uriBuilder.build();
         } catch (URISyntaxException e) {
             LOG.error("Unable to generate logout response", e);
-            throw new RuntimeException("Unable to build URI");
+            throw new RuntimeException("Unable to build URI for logout response");
         }
 
         sendAuditEvent(clientId, auditUser);

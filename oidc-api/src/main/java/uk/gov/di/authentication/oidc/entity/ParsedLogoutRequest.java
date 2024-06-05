@@ -70,13 +70,14 @@ public class ParsedLogoutRequest {
 
         queryStringParameters = Optional.ofNullable(input.getQueryStringParameters());
         if (queryStringParameters.isEmpty()) {
-            LOG.info("Returning default logout as no input parameters");
+            LOG.info("No input parameters present in logout request");
             return;
         }
 
         state = Optional.ofNullable(queryStringParameters.get().get("state"));
         idTokenHint = Optional.ofNullable(queryStringParameters.get().get("id_token_hint"));
         if (idTokenHint.isEmpty()) {
+            LOG.info("No ID token hint present in logout request");
             return;
         }
 
@@ -116,11 +117,11 @@ public class ParsedLogoutRequest {
             return;
         }
 
-        LOG.info("Validating ClientID");
+        LOG.info("Validating client ID");
         attachLogFieldToLogs(CLIENT_ID, clientId.get());
         clientRegistry = dynamoClientService.getClient(clientId.get());
         if (clientRegistry.isEmpty()) {
-            LOG.warn("Client not found in ClientRegistry");
+            LOG.warn("Client not found in client registry");
             errorObject =
                     Optional.of(
                             new ErrorObject(
@@ -131,8 +132,7 @@ public class ParsedLogoutRequest {
         postLogoutRedirectUri =
                 Optional.ofNullable(queryStringParameters.get().get("post_logout_redirect_uri"));
         if (postLogoutRedirectUri.isEmpty()) {
-            LOG.info(
-                    "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
+            LOG.info("Post logout redirect URI not present in logout request");
             return;
         }
 
@@ -151,12 +151,12 @@ public class ParsedLogoutRequest {
                         uri -> {
                             if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
                                 LOG.warn(
-                                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
+                                        "Client registry does not contain the post logout redirect URI which was sent in the logout request. Value is {}",
                                         uri);
                                 return false;
                             } else {
                                 LOG.info(
-                                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
+                                        "Post logout redirect URI is present in logout request and client registry. Value is {}",
                                         uri);
                                 return true;
                             }

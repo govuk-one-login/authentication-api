@@ -104,12 +104,14 @@ public class LogoutHandler
         URI logoutUri = configurationService.getDefaultLogoutURI();
         if (logoutRequest.errorObject().isPresent()) {
             LOG.info(
-                    "Generating Logout Error Response with code: {} and description: {}",
+                    "Parsed logout request contains an error object. Generating logout error response with code: {} and description: {}",
                     logoutRequest.errorObject().get().getCode(),
                     logoutRequest.errorObject().get().getDescription());
         } else if (logoutRequest.postLogoutRedirectUri().isEmpty()) {
-            LOG.info("Generating default Logout Response");
+            LOG.info(
+                    "Parsed logout request is missing a valid redirect URI. Generating logout response with default redirect URI.");
         } else {
+            LOG.info("Parsed logout request contains a valid redirect URI and no error object.");
             logoutUri = URI.create(logoutRequest.postLogoutRedirectUri().get());
         }
 
