@@ -166,7 +166,7 @@ public class IPVAuthorisationHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
-        when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
     }

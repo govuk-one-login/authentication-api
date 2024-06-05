@@ -109,7 +109,7 @@ class LogoutHandlerTest {
                         cloudwatchMetricsService,
                         logoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(logoutService.generateErrorLogoutResponse(any(), any(), any(), any()))

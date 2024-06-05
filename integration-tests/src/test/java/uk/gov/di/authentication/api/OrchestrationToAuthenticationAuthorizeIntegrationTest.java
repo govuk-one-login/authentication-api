@@ -358,7 +358,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         }
 
         @Override
-        public String getOrchestrationRedirectUri() {
+        public String getOrchestrationRedirectURI() {
             return ORCHESTRATION_REDIRECT_URI;
         }
 
