@@ -77,7 +77,7 @@ class WellknownHandlerTest {
 
     private APIGatewayProxyResponseEvent getWellKnown() {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
-        when(configService.getFrontendBaseUrl()).thenReturn("http://localhost:8081");
+        when(configService.getFrontendBaseURL()).thenReturn("http://localhost:8081");
 
         WellknownHandler handler = new WellknownHandler(configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

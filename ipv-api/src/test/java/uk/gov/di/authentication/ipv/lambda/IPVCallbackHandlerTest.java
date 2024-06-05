@@ -265,7 +265,7 @@ class IPVCallbackHandlerTest {
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
-        when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
@@ -332,7 +332,7 @@ class IPVCallbackHandlerTest {
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
         var expectedInternalPairwiseSubjectId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorUri(), dynamoService)
+                                userProfile, configService.getInternalSectorURI(), dynamoService)
                         .getValue();
         verify(accountInterventionService)
                 .getAccountIntervention(
@@ -676,7 +676,7 @@ class IPVCallbackHandlerTest {
 
         var expectedInternalPairwiseSubjectId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile, configService.getInternalSectorUri(), dynamoService)
+                                userProfile, configService.getInternalSectorURI(), dynamoService)
                         .getValue();
 
         assertThat(response, hasStatus(302));

@@ -27,7 +27,7 @@ public class DynamoTestConfiguration extends ConfigurationService {
     }
 
     @Override
-    public Optional<String> getDynamoEndpointUri() {
+    public Optional<String> getDynamoEndpointURI() {
         return Optional.of(dynamoDbUri);
     }
 }

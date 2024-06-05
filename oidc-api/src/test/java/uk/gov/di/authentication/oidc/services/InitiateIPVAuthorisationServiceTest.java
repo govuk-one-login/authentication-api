@@ -134,7 +134,7 @@ public class InitiateIPVAuthorisationServiceTest {
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
 
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
-        when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);

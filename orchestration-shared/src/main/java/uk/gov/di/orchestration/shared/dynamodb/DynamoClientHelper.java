@@ -16,7 +16,7 @@ public class DynamoClientHelper {
                         .credentialsProvider(DefaultCredentialsProvider.create())
                         .region(Region.of(configurationService.getAwsRegion()));
         configurationService
-                .getDynamoEndpointUri()
+                .getDynamoEndpointURI()
                 .ifPresent(
                         endpoint -> dynamoDbClientBuilder.endpointOverride(URI.create(endpoint)));
         return dynamoDbClientBuilder.build();

@@ -298,12 +298,12 @@ public class IntegrationTest {
         }
 
         @Override
-        public String getFrontendBaseUrl() {
+        public String getFrontendBaseURL() {
             return "http://localhost:3000/reset-password?code=";
         }
 
         @Override
-        public String getSpotQueueUri() {
+        public String getSpotQueueURI() {
             return spotQueue.getQueueUrl();
         }
 

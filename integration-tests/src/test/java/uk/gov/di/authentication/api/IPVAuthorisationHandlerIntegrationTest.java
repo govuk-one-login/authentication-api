@@ -194,7 +194,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         }
 
         @Override
-        public String getInternalSectorUri() {
+        public String getInternalSectorURI() {
             return INTERNAl_SECTOR_URI;
         }
 
