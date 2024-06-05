@@ -69,6 +69,53 @@ public class LogoutService {
         this.dynamoService = dynamoService;
     }
 
+    public APIGatewayProxyResponseEvent generateLogoutResponse(
+            URI logoutUri,
+            Optional<String> state,
+            Optional<ErrorObject> errorObject,
+            TxmaAuditUser auditUser,
+            Optional<String> clientId) {
+        LOG.info("Generating logout response using URI: {}", logoutUri);
+        URIBuilder uriBuilder = new URIBuilder(logoutUri);
+        state.ifPresent(s -> uriBuilder.addParameter("state", s));
+        errorObject.ifPresent(e -> uriBuilder.addParameter("error_code", e.getCode()));
+        errorObject.ifPresent(
+                e -> uriBuilder.addParameter("error_description", e.getDescription()));
+        URI uri;
+        try {
+            uri = uriBuilder.build();
+        } catch (URISyntaxException e) {
+            LOG.error("Unable to generate logout response", e);
+            throw new RuntimeException("Unable to build URI for logout response");
+        }
+
+        sendAuditEvent(clientId, auditUser);
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
+    }
+
+    public void destroySessions(Session session) {
+        for (String clientSessionId : session.getClientSessions()) {
+            clientSessionService
+                    .getClientSession(clientSessionId)
+                    .flatMap(
+                            t ->
+                                    t.getAuthRequestParams().get("client_id").stream()
+                                            .findFirst()
+                                            .flatMap(dynamoClientService::getClient))
+                    .ifPresent(
+                            clientRegistry ->
+                                    backChannelLogoutService.sendLogoutMessage(
+                                            clientRegistry,
+                                            session.getEmailAddress(),
+                                            configurationService.getInternalSectorURI()));
+            LOG.info("Deleting Client Session");
+            clientSessionService.deleteStoredClientSession(clientSessionId);
+        }
+        LOG.info("Deleting Session");
+        sessionService.deleteSessionFromRedis(session.getSessionId());
+    }
+
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
             Session session,
             APIGatewayProxyRequestEvent input,
@@ -104,51 +151,23 @@ public class LogoutService {
                 redirectURI, Optional.empty(), Optional.empty(), auditUser, Optional.of(clientId));
     }
 
-    public void destroySessions(Session session) {
-        for (String clientSessionId : session.getClientSessions()) {
-            clientSessionService
-                    .getClientSession(clientSessionId)
-                    .flatMap(
-                            t ->
-                                    t.getAuthRequestParams().get("client_id").stream()
-                                            .findFirst()
-                                            .flatMap(dynamoClientService::getClient))
-                    .ifPresent(
-                            clientRegistry ->
-                                    backChannelLogoutService.sendLogoutMessage(
-                                            clientRegistry,
-                                            session.getEmailAddress(),
-                                            configurationService.getInternalSectorURI()));
-            LOG.info("Deleting Client Session");
-            clientSessionService.deleteStoredClientSession(clientSessionId);
+    private void sendAuditEvent(Optional<String> clientId, TxmaAuditUser auditUser) {
+        if (clientId.isPresent()) {
+            Optional<String> rpPairwiseId = getRpPairwiseId(auditUser.userId(), clientId.get());
+            if (rpPairwiseId.isPresent()) {
+                auditService.submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        clientId.orElse(AuditService.UNKNOWN),
+                        auditUser,
+                        pair("rpPairwiseId", rpPairwiseId.get()));
+            } else {
+                auditService.submitAuditEvent(
+                        LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
+            }
+        } else {
+            auditService.submitAuditEvent(
+                    LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
         }
-        LOG.info("Deleting Session");
-        sessionService.deleteSessionFromRedis(session.getSessionId());
-    }
-
-    public APIGatewayProxyResponseEvent generateLogoutResponse(
-            URI logoutUri,
-            Optional<String> state,
-            Optional<ErrorObject> errorObject,
-            TxmaAuditUser auditUser,
-            Optional<String> clientId) {
-        LOG.info("Generating logout response using URI: {}", logoutUri);
-        URIBuilder uriBuilder = new URIBuilder(logoutUri);
-        state.ifPresent(s -> uriBuilder.addParameter("state", s));
-        errorObject.ifPresent(e -> uriBuilder.addParameter("error_code", e.getCode()));
-        errorObject.ifPresent(
-                e -> uriBuilder.addParameter("error_description", e.getDescription()));
-        URI uri;
-        try {
-            uri = uriBuilder.build();
-        } catch (URISyntaxException e) {
-            LOG.error("Unable to generate logout response", e);
-            throw new RuntimeException("Unable to build URI for logout response");
-        }
-
-        sendAuditEvent(clientId, auditUser);
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
     }
 
     private Optional<String> getRpPairwiseId(String subject, String clientId) {
@@ -168,30 +187,11 @@ public class LogoutService {
                                     userProfile,
                                     client.get(),
                                     dynamoService,
-                                    configurationService.getInternalSectorUri())
+                                    configurationService.getInternalSectorURI())
                             .getValue());
         } catch (Exception e) {
             LOG.warn("Exception caught while getting RP pairwise ID for audit event");
             return Optional.empty();
-        }
-    }
-
-    private void sendAuditEvent(Optional<String> clientId, TxmaAuditUser auditUser) {
-        if (clientId.isPresent()) {
-            Optional<String> rpPairwiseId = getRpPairwiseId(auditUser.userId(), clientId.get());
-            if (rpPairwiseId.isPresent()) {
-                auditService.submitAuditEvent(
-                        LOG_OUT_SUCCESS,
-                        clientId.orElse(AuditService.UNKNOWN),
-                        auditUser,
-                        pair("rpPairwiseId", rpPairwiseId.get()));
-            } else {
-                auditService.submitAuditEvent(
-                        LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
-            }
-        } else {
-            auditService.submitAuditEvent(
-                    LOG_OUT_SUCCESS, clientId.orElse(AuditService.UNKNOWN), auditUser);
         }
     }
 
