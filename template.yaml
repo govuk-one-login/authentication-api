@@ -2392,6 +2392,117 @@ Resources:
       EnableKeyRotation: true
   #endregion
 
+  #region Storage Token Jwk Lambda
+
+  StorageTokenJwkFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: VPC settings are global
+    Properties:
+      FunctionName: !Sub ${Environment}-StorageTokenJwkFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref StorageTokenJwkFunctionLogGroup
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
+      Policies:
+        - !Ref StorageTokenSigningKmsAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  StorageTokenJwkFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StorageTokenJwkFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/storage-token-jwk.json
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+
+  StorageTokenJwkFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-storage-token-jwk-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 14
+
+  StorageTokenJwkFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-storage-token-jwk-request-errors
+      FilterPattern: "{($.level = \"ERROR\")}"
+      LogGroupName: !Ref StorageTokenJwkFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-storage-token-jwk-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  StorageTokenJwkFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-storage-token-jwk-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: StorageTokenJwkFunctionErrorMetricFilter.MetricTransformations[0].MetricName
+      Namespace: StorageTokenJwkFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  StorageTokenJwkFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-storage-token-jwk-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref StorageTokenJwkFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Ref StorageTokenJwkFunction.Alias
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   AccountInterventionsServiceUriSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
