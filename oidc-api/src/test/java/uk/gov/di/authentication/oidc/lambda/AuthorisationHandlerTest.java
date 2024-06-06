@@ -1278,7 +1278,7 @@ class AuthorisationHandlerTest {
                                     SUBJECT,
                                     "http://localhost-rp",
                                     EC_SIGNING_KEY,
-                                    "[PCL200.Cl]")
+                                    "[PCL200.Cl.Cm]")
                             .serialize();
             var jwtClaimsSet =
                     buildjwtClaimsSet(
@@ -1301,7 +1301,7 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(argument.getValue().getClaim("confidence"), equalTo("Cl"));
+            assertThat(argument.getValue().getClaim("confidence"), equalTo("Cl.Cm"));
         }
 
         @Test

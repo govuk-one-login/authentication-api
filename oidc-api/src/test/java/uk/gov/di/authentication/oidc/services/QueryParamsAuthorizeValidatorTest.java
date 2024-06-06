@@ -122,7 +122,6 @@ class QueryParamsAuthorizeValidatorTest {
         return Stream.of(
                 Arguments.of(jsonArrayOf("Cm")),
                 Arguments.of(jsonArrayOf("Cl.Cm.P3")),
-                Arguments.of(jsonArrayOf("Cl.P0", "Cl.Cm.P2")),
                 Arguments.of(jsonArrayOf("Cm.Cl.P1", "P1.Cl")),
                 Arguments.of(jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
     }

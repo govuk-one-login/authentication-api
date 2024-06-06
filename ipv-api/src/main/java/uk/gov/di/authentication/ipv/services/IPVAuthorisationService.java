@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -157,7 +158,7 @@ public class IPVAuthorisationService {
             ClaimsSetRequest claims,
             String clientSessionId,
             String emailAddress,
-            List<String> vtr,
+            List<LevelOfConfidence> vtr,
             Boolean reproveIdentity) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
@@ -182,7 +183,7 @@ public class IPVAuthorisationService {
                         .claim("client_id", configurationService.getIPVAuthorisationClientId())
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", scope.toString())
-                        .claim("vtr", vtr);
+                        .claim("vtr", vtr.stream().map(LevelOfConfidence::getValue).toList());
         if (configurationService.isAccountInterventionServiceActionEnabled()
                 && reproveIdentity != null) {
             claimsBuilder.claim("reprove_identity", reproveIdentity);

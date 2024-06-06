@@ -121,7 +121,7 @@ public class RedisExtension
                         new ClientSession(
                                 authRequest,
                                 LocalDateTime.now(),
-                                List.of(VectorOfTrust.getDefaults()),
+                                VtrList.DEFAULT_VTR_LIST,
                                 clientName)),
                 3600);
     }
@@ -177,7 +177,7 @@ public class RedisExtension
             String clientSessionId,
             String email,
             Map<String, List<String>> authRequest,
-            List<VectorOfTrust> vtrList,
+            VtrList vtrList,
             String clientName)
             throws Json.JsonException {
         var clientSession =
@@ -205,7 +205,10 @@ public class RedisExtension
                         new ClientSession(
                                 authRequest,
                                 LocalDateTime.now(),
-                                List.of(VectorOfTrust.getDefaults()),
+                                VtrList.of(
+                                        new VectorOfTrust(
+                                                CredentialTrustLevel.MEDIUM_LEVEL,
+                                                LevelOfConfidence.MEDIUM_LEVEL)),
                                 clientName)),
                 300);
     }

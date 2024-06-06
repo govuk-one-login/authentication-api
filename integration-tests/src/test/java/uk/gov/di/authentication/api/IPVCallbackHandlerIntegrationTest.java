@@ -26,6 +26,7 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
+import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -527,7 +528,10 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                List.of("https://vocab.account.gov.uk/v1/returnCode"));
+                ClientType.WEB,
+                List.of("https://vocab.account.gov.uk/v1/returnCode"),
+                false,
+                List.of("P0", "P2"));
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {

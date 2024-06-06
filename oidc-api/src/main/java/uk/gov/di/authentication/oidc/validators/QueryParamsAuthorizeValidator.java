@@ -9,9 +9,10 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.ClientRegistryValidationException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -104,9 +105,13 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
-            var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
+            var vtrList = VtrList.parseFromAuthRequestAttribute(authRequestVtr);
+            var levelOfConfidenceValues = vtrList.getLevelsOfConfidence();
+            if (!client.getClientLoCs()
+                    .containsAll(
+                            levelOfConfidenceValues.stream()
+                                    .map(LevelOfConfidence::getValue)
+                                    .toList())) {
                 LOG.error(
                         "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
                         levelOfConfidenceValues);
@@ -118,7 +123,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                 redirectURI,
                                 state));
             }
-            if (vtrList.get(0).containsLevelOfConfidence()
+            if (vtrList.identityRequired()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
                 return Optional.of(

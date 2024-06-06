@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
@@ -724,9 +725,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 clientSession.getVtrList(),
                 equalTo(
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
+                        VtrList.of(
+                                new VectorOfTrust(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                new VectorOfTrust(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
 
         JsonElement actualClaims =
                 JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
@@ -946,6 +947,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 clientType,
                 jarValidationRequired,
                 List.of(
+                        LevelOfConfidence.NONE.getValue(),
                         LevelOfConfidence.MEDIUM_LEVEL.getValue(),
                         LevelOfConfidence.HMRC200.getValue()));
     }

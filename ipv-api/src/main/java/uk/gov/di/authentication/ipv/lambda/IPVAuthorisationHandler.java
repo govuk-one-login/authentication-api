@@ -23,7 +23,6 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -159,7 +158,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             claimsSetRequest,
                             Optional.ofNullable(clientSessionId).orElse("unknown"),
                             userContext.getUserProfile().map(UserProfile::getEmail).orElseThrow(),
-                            VectorOfTrust.getRequestedLevelsOfConfidence(vtrList),
+                            vtrList.getLevelsOfConfidence(),
                             false);
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(

@@ -25,7 +25,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -347,7 +347,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        List.of(VectorOfTrust.getDefaults()),
+                        VtrList.DEFAULT_VTR_LIST,
                         CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
