@@ -16,6 +16,56 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pr-data:
+    name: Get job metadata
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      # These are not relevant for dev triggers, but are included to ensure all S3 metadata is populated
+      pr_number: "-1"
+      pr_title: "dev trigger"
+      pr_merged_at: "-1"
+      pr_merge_commit_sha: ${{ github.sha }}
+      pr_api_url: "-1"
+      pr_html_url: "-1"
+
+      commit_api_url: ${{ steps.data.outputs.commit_api_url }}
+
+      repo_full_name: ${{ steps.data.outputs.repo_full_name }}
+      repo_owner: ${{ steps.data.outputs.repo_owner }}
+      repo_name: ${{ steps.data.outputs.repo_name }}
+
+      repository: ${{ steps.data.outputs.repo_full_name }}
+      commitsha: ${{ github.sha }}
+      commitmessage: "dev trigger"
+
+    steps:
+      - name: Get commit data
+        uses: actions/github-script@v7
+        id: get_commit_data
+        with:
+          script: |
+            return await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.sha
+              });
+      - name: Output data
+        id: data
+        run: |
+          echo "Exporting commit data to \$GITHUB_OUTPUT"
+          {
+            echo 'commit_api_url=${{ fromJson(steps.get_commit_data.outputs.result).url }}'
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Exporting repo data to \$GITHUB_OUTPUT"
+          {
+            echo 'repo_full_name=${{ github.repository }}'
+            echo 'repo_owner=${{ github.repository_owner }}'
+            echo 'repo_name=${{ github.event.repository.name }}'
+          } >> "$GITHUB_OUTPUT"
+
   set-up:
     name: Set up environment
     runs-on: ubuntu-latest
@@ -131,6 +181,7 @@ jobs:
   gather-and-trigger-codepipeline:
     name: Gather and trigger CodePipeline
     needs:
+      - pr-data
       - set-up
       - create-promotion-artifact-shared
       - create-promotion-artifacts-simple-modules
@@ -168,7 +219,7 @@ jobs:
             --bucket ${{ needs.set-up.outputs.artifact_bucket }} \
             --key authentication-api.zip \
             --body authentication-api.zip \
-            --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG" \
+            --metadata '${{ toJson(needs.pr-data.outputs) }}' \
             --query VersionId --output text)"
 
           echo "Uploaded object version: $OBJECT_VERSION"

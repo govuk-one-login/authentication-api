@@ -12,6 +12,83 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pr-data:
+    name: Get data for merged PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      pr_number: ${{ steps.data.outputs.pr_number }}
+      pr_title: ${{ steps.data.outputs.pr_title }}
+      pr_merged_at: ${{ steps.data.outputs.pr_merged_at }}
+      pr_merge_commit_sha: ${{ steps.data.outputs.pr_merge_commit_sha }}
+      pr_api_url: ${{ steps.data.outputs.pr_api_url }}
+      pr_html_url: ${{ steps.data.outputs.pr_html_url }}
+
+      commit_api_url: ${{ steps.data.outputs.commit_api_url }}
+
+      repo_full_name: ${{ steps.data.outputs.repo_full_name }}
+      repo_owner: ${{ steps.data.outputs.repo_owner }}
+      repo_name: ${{ steps.data.outputs.repo_name }}
+
+      repository: ${{ steps.data.outputs.repo_full_name }}
+      commitsha: ${{ github.sha }}
+      commitmessage: ${{ steps.data.outputs.pr_title }}
+
+    steps:
+      - name: Get PR data
+        uses: actions/github-script@v7
+        id: get_pr_data
+        with:
+          script: |
+            return (
+              await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                commit_sha: context.sha,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              })
+            ).data[0];
+      - name: Exit with sensible message if no PR found
+        if: ${{ failure() && steps.get_pr_data.conclusion == 'failure' }}
+        run:
+          echo "::error title=No PR found!::No PR found for commit ${{ github.sha }}. All commits to main must be associated with a PR."
+          exit 1
+      - name: Get commit data
+        uses: actions/github-script@v7
+        id: get_commit_data
+        with:
+          script: |
+            return await github.rest.repos.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.sha
+              });
+      - name: Output data
+        id: data
+        run: |
+          echo "Exporting PR data to \$GITHUB_OUTPUT"
+          {
+            echo 'pr_number=${{ fromJson(steps.get_pr_data.outputs.result).number }}'
+            echo 'pr_title=${{ fromJson(steps.get_pr_data.outputs.result).title }}'
+            echo 'pr_merged_at=${{ fromJson(steps.get_pr_data.outputs.result).merged_at }}'
+            echo 'pr_merge_commit_sha=${{ fromJson(steps.get_pr_data.outputs.result).merge_commit_sha }}'
+            echo 'pr_api_url=${{ fromJson(steps.get_pr_data.outputs.result).url }}'
+            echo 'pr_html_url=${{ fromJson(steps.get_pr_data.outputs.result).html_url }}'
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Exporting commit data to \$GITHUB_OUTPUT"
+          {
+            echo 'commit_api_url=${{ fromJson(steps.get_commit_data.outputs.result).url }}'
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Exporting repo data to \$GITHUB_OUTPUT"
+          {
+            echo 'repo_full_name=${{ github.repository }}'
+            echo 'repo_owner=${{ github.repository_owner }}'
+            echo 'repo_name=${{ github.event.repository.name }}'
+          } >> "$GITHUB_OUTPUT"
+
   set-up:
     name: Set up environment
     runs-on: ubuntu-latest
@@ -127,6 +204,7 @@ jobs:
   gather-and-trigger-codepipeline:
     name: Gather and trigger CodePipeline
     needs:
+      - pr-data
       - set-up
       - create-promotion-artifact-shared
       - create-promotion-artifacts-simple-modules
@@ -164,7 +242,7 @@ jobs:
             --bucket ${{ needs.set-up.outputs.artifact_bucket }} \
             --key authentication-api.zip \
             --body authentication-api.zip \
-            --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG" \
+            --metadata '${{ toJson(needs.pr-data.outputs) }}' \
             --query VersionId --output text)"
 
           echo "Uploaded object version: $OBJECT_VERSION"
