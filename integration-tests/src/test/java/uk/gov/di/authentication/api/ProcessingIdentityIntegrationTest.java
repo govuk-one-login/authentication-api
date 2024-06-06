@@ -17,7 +17,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
@@ -195,7 +195,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        List.of(VectorOfTrust.getDefaults()),
+                        VtrList.DEFAULT_VTR_LIST,
                         CLIENT_NAME);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);

@@ -33,7 +33,7 @@ import uk.gov.di.authentication.oidc.exceptions.InvalidJWEException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidPublicKeyException;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -45,7 +45,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -199,8 +198,8 @@ public class OrchestrationAuthorizationService {
         return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
     }
 
-    public List<VectorOfTrust> getVtrList(AuthenticationRequest authenticationRequest) {
-        return VectorOfTrust.parseFromAuthRequestAttribute(
+    public VtrList getVtrList(AuthenticationRequest authenticationRequest) {
+        return VtrList.parseFromAuthRequestAttribute(
                 authenticationRequest.getCustomParameter(VTR_PARAM));
     }
 

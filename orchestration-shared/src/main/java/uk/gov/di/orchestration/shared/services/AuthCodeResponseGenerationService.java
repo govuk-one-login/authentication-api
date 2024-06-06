@@ -4,9 +4,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -14,6 +12,7 @@ import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
@@ -71,13 +70,14 @@ public class AuthCodeResponseGenerationService {
     }
 
     public void processVectorOfTrust(ClientSession clientSession, Map<String, String> dimensions) {
-        CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-        var mfaNotRequired =
-                lowestRequestedCredentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL);
+        var vtrList = clientSession.getVtrList();
+        var mfaNotRequired = !clientSession.getVtrList().mfaRequired();
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
         dimensions.put(
-                "RequestedLevelOfConfidence", clientSession.getVtrLocsAsCommaSeparatedString());
+                "RequestedLevelOfConfidence",
+                vtrList.getLevelsOfConfidence().stream()
+                        .map(loc -> loc.getValue())
+                        .collect(Collectors.joining(",")));
     }
 
     public String getSubjectId(Session session) throws UserNotFoundException {
