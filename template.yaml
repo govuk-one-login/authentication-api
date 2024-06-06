@@ -209,6 +209,9 @@ Globals:
     MemorySize: 1536
     Timeout: 30
     Runtime: java17
+    KmsKeyArn: !GetAtt MainKmsKey.Arn
+    SnapStart:
+      ApplyOn: PublishedVersions
     Architectures:
       - x86_64
     PermissionsBoundary: !If
