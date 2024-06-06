@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -81,7 +82,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "public",
                         false,
                         claims,
-                        ClientType.WEB.getValue());
+                        ClientType.WEB.getValue(),
+                        JWSAlgorithm.ES256.getName());
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 

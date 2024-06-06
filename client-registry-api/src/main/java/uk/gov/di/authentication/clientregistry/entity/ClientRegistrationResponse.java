@@ -79,6 +79,10 @@ public class ClientRegistrationResponse {
     @Expose
     private String clientType;
 
+    @SerializedName("id_token_signing_algorithm")
+    @Expose
+    private String idTokenSigningAlgorithm;
+
     public ClientRegistrationResponse(
             String clientName,
             String clientId,
@@ -92,7 +96,8 @@ public class ClientRegistrationResponse {
             boolean jarValidationRequired,
             List<String> claims,
             String sectorIdentifierUri,
-            String clientType) {
+            String clientType,
+            String idTokenSigningAlgorithm) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -106,6 +111,7 @@ public class ClientRegistrationResponse {
         this.claims = claims;
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.clientType = clientType;
+        this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
     }
 
     public ClientRegistrationResponse() {}
@@ -174,5 +180,9 @@ public class ClientRegistrationResponse {
 
     public String getClientType() {
         return clientType;
+    }
+
+    public String getIdTokenSigningAlgorithm() {
+        return idTokenSigningAlgorithm;
     }
 }
