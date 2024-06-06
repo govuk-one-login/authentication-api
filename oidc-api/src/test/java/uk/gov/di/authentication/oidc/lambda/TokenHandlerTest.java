@@ -264,7 +264,8 @@ public class TokenHandlerTest {
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, CLIENT_ID).withIdTokenSigningAlgorithm("RSA256");
+                generateClientRegistry(keyPair, CLIENT_ID)
+                        .withIdTokenSigningAlgorithm(JWSAlgorithm.RS256.getName());
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))

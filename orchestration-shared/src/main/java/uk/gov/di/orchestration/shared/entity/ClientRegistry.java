@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.entity;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
@@ -7,6 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @DynamoDbBean
 public class ClientRegistry {
@@ -38,6 +40,9 @@ public class ClientRegistry {
     private String idTokenSigningAlgorithm = "ES256";
     private boolean smokeTest = false;
     private List<String> clientLoCs = new ArrayList<>();
+
+    private static final Set<String> RS256_MAPPINGS =
+            Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
 
     public ClientRegistry() {}
 
@@ -325,7 +330,9 @@ public class ClientRegistry {
 
     @DynamoDbAttribute("IdTokenSigningAlgorithm")
     public String getIdTokenSigningAlgorithm() {
-        return idTokenSigningAlgorithm;
+        return idTokenSigningAlgorithm != null && RS256_MAPPINGS.contains(idTokenSigningAlgorithm)
+                ? JWSAlgorithm.RS256.getName()
+                : idTokenSigningAlgorithm;
     }
 
     public void setIdTokenSigningAlgorithm(String algorithm) {
