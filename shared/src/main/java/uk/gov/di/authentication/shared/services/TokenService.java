@@ -252,6 +252,36 @@ public class TokenService {
         }
     }
 
+    public AccessToken generateStorageTokenForMfaReset(Subject internalPairwiseSubject) {
+
+        LOG.info("Generating storage token");
+        Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
+        var jwtID = UUID.randomUUID().toString();
+
+        LOG.info("Storage token being created with JWTID: {}", jwtID);
+
+        List<String> aud =
+                List.of(
+                        configService.getCredentialStoreURI().toString(),
+                        configService.getIPVAudience());
+
+        JWTClaimsSet.Builder claimSetBuilder =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", "reverification")
+                        .issuer(configService.getFrontendBaseUrl())
+                        .audience(aud)
+                        .expirationTime(expiryDate)
+                        .issueTime(NowHelper.now())
+                        .subject(internalPairwiseSubject.getValue())
+                        .jwtID(jwtID);
+
+        SignedJWT signedJWT =
+                generateSignedJwtUsingStorageKey(claimSetBuilder.build(), Optional.empty());
+
+        return new BearerAccessToken(
+                signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
+    }
+
     private AccessToken generateAndStoreAccessToken(
             String clientId,
             Subject internalSubject,
