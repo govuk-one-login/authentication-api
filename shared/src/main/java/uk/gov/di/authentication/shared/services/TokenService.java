@@ -244,7 +244,7 @@ public class TokenService {
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 
         try {
-            return generateSignedJWT(
+            return generateSignedJwtUsingExternalKey(
                     idTokenClaims.toJWTClaimsSet(), Optional.empty(), signingAlgorithm);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
@@ -290,7 +290,8 @@ public class TokenService {
         }
 
         SignedJWT signedJWT =
-                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
+                generateSignedJwtUsingExternalKey(
+                        claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
         AccessToken accessToken =
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
@@ -331,7 +332,8 @@ public class TokenService {
                         .subject(rpPairwiseSubject.getValue())
                         .jwtID(jwtId)
                         .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), signingAlgorithm);
+        SignedJWT signedJWT =
+                generateSignedJwtUsingExternalKey(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
@@ -352,13 +354,29 @@ public class TokenService {
         return refreshToken;
     }
 
-    public SignedJWT generateSignedJWT(
+    private SignedJWT generateSignedJwtUsingExternalKey(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
-
-        var signingKey =
+        String alias =
                 algorithm == JWSAlgorithm.ES256
                         ? configService.getTokenSigningKeyAlias()
                         : configService.getTokenSigningKeyRsaAlias();
+        return generateSignedJWT(claimsSet, type, algorithm, alias);
+    }
+
+    private SignedJWT generateSignedJwtUsingStorageKey(
+            JWTClaimsSet claimsSet, Optional<String> type) {
+        return generateSignedJWT(
+                claimsSet,
+                type,
+                JWSAlgorithm.ES256,
+                configService.getStorageTokenSigningKeyAlias());
+    }
+
+    private SignedJWT generateSignedJWT(
+            JWTClaimsSet claimsSet,
+            Optional<String> type,
+            JWSAlgorithm algorithm,
+            String signingKey) {
 
         var signingKeyId =
                 kmsConnectionService
