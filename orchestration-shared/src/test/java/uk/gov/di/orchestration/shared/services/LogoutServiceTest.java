@@ -26,7 +26,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -556,7 +556,7 @@ class LogoutServiceTest {
                                 "state",
                                 List.of("some-state")),
                         LocalDateTime.now(),
-                        List.of(mock(VectorOfTrust.class)),
+                        VtrList.DEFAULT_VTR_LIST,
                         "client_name");
         clientSession.setIdTokenHint(idToken.serialize());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
@@ -571,7 +571,7 @@ class LogoutServiceTest {
                                 new ClientSession(
                                         Map.of("client_id", List.of(clientId)),
                                         LocalDateTime.now(),
-                                        List.of(VectorOfTrust.getDefaults()),
+                                        VtrList.DEFAULT_VTR_LIST,
                                         "client_name")));
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));

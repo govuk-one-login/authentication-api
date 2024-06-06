@@ -664,7 +664,10 @@ class RequestObjectAuthorizeValidatorTest {
                 .withRedirectUrls(singletonList(REDIRECT_URI))
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise")
-                .withClientLoCs(singletonList(LevelOfConfidence.MEDIUM_LEVEL.getValue()))
+                .withClientLoCs(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()))
                 .withClientType(clientType);
     }
 
