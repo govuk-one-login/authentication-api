@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
@@ -51,7 +52,7 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid ID Token Signing Algorithm");
 
     private static final Set<String> VALID_ID_TOKEN_SIGNING_ALGORITHMS =
-            Stream.of(ES256.getName(), "RSA256").collect(Collectors.toSet());
+            Stream.of(ES256.getName(), RS256.getName()).collect(Collectors.toSet());
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {

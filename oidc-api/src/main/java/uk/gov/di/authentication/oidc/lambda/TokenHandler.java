@@ -314,7 +314,9 @@ public class TokenHandler
 
     private JWSAlgorithm getSigningAlgorithm(ClientRegistry clientRegistry) {
         return configurationService.isRsaSigningAvailable()
-                        && "RSA256".equals(clientRegistry.getIdTokenSigningAlgorithm())
+                        && clientRegistry
+                                .getIdTokenSigningAlgorithm()
+                                .equals(JWSAlgorithm.RS256.getName())
                 ? JWSAlgorithm.RS256
                 : JWSAlgorithm.ES256;
     }

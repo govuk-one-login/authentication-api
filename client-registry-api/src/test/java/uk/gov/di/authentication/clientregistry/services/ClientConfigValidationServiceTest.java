@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -62,7 +63,7 @@ class ClientConfigValidationServiceTest {
                                 ValidClaims.PASSPORT.getValue()),
                         String.valueOf(OPTIONAL),
                         ClientType.APP.getValue(),
-                        "RSA256")); // Unclear why but currently we expect RSA256 instead of RS256.
+                        RS256.getName()));
     }
 
     @ParameterizedTest
@@ -325,10 +326,7 @@ class ClientConfigValidationServiceTest {
     }
 
     static Stream<Arguments> validAlgorithmSource() {
-        return Stream.of(
-                Arguments.of(ES256.getName()),
-                Arguments.of(
-                        "RSA256")); // Unclear why but currently we expect RSA256 instead of RS256.
+        return Stream.of(Arguments.of(ES256.getName()), Arguments.of(RS256.getName()));
     }
 
     @Test
@@ -468,12 +466,7 @@ class ClientConfigValidationServiceTest {
 
     static Stream<Arguments> invalidAlgorithmSource() {
         return Stream.of(
-                Arguments.of("NOT_AN_ALGORITHM"),
-                Arguments.of(JWSAlgorithm.PS256.getName()),
-                Arguments.of(
-                        JWSAlgorithm.RS256
-                                .getName())); // Unclear why but currently we expect RSA256 instead
-        // of RS256.
+                Arguments.of("NOT_AN_ALGORITHM"), Arguments.of(JWSAlgorithm.PS256.getName()));
     }
 
     private ClientRegistrationRequest generateClientRegRequest(
