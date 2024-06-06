@@ -37,6 +37,93 @@ jobs:
             echo "ARTIFACT_LOOKUP_TABLE=${{ secrets.ARTIFACT_LOOKUP_TABLE }}"
           } >> "$GITHUB_OUTPUT"
 
+  pr-data:
+    name: Get data for merged PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      data: ${{ steps.get_pr_data.outputs.result }}
+    steps:
+      - name: Get PR data
+        uses: actions/github-script@v7
+        id: get_pr_data
+        with:
+          script: |
+            const query = `query($owner: String!, $name: String!, $oid: GitObjectID!) {
+                repository(owner: $owner, name: $name) {
+                  object(oid: $oid) {
+                    ... on Commit {
+                      oid
+                      message
+                      associatedPullRequests(first: 1) {
+                        nodes {
+                          number
+                          title
+                          merged
+                          mergedAt
+                          mergeCommit {
+                            oid
+                          }
+                        }
+                      }
+                    }
+                  }
+                  owner {
+                    login
+                  }
+                  name
+                  nameWithOwner
+                }
+              }`
+            const variables = {
+                owner: context.repo.owner,
+                name: context.repo.repo,
+                oid: context.sha,
+            }
+
+            const result = await github.graphql(query, variables).then((response) => {
+                const sanitisedCommitMessage = response.repository.object.message.replace(/\n/g, "\\n")
+                const res = {
+                    pr_number: null,
+                    pr_title: null,
+                    pr_merged_at: null,
+                    pr_merge_commit_sha: null,
+
+                    commit_message: sanitisedCommitMessage,
+
+                    repo_full_name: response.repository.nameWithOwner,
+                    repo_owner: response.repository.owner.login,
+                    repo_name: response.repository.name,
+
+                    repository: response.repository.nameWithOwner,
+                    commitsha: context.sha,
+                    commitmessage: sanitisedCommitMessage,
+                }
+
+                if (response.repository.object.associatedPullRequests.nodes.length > 0 && response.repository.object.associatedPullRequests.nodes[0].merged) {
+                    const prData = response.repository.object.associatedPullRequests.nodes[0];
+                    res.pr_number = prData.number.toString();
+                    res.pr_title = prData.title;
+                    res.pr_merged_at = prData.mergedAt;
+                    res.pr_merge_commit_sha = prData.mergeCommit.oid;
+                    res.commitmessage = prData.title;
+                }
+                return res;
+            }).catch((error) => {
+                throw error;
+            });
+
+            for (const key in result) {
+                if (result[key] == null) {
+                    result[key] = "";
+                }
+            }
+
+            console.log(result);
+            return result;
+
   build:
     name: Build modules
     needs: set-up
@@ -127,6 +214,7 @@ jobs:
   gather-and-trigger-codepipeline:
     name: Gather and trigger CodePipeline
     needs:
+      - pr-data
       - set-up
       - create-promotion-artifact-shared
       - create-promotion-artifacts-simple-modules
@@ -165,7 +253,7 @@ jobs:
             --bucket ${{ needs.set-up.outputs.artifact_bucket }} \
             --key authentication-api.zip \
             --body authentication-api.zip \
-            --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG" \
+            --metadata '${{ toJson(fromJson(needs.pr-data.outputs.data)) }}' \
             --query VersionId --output text)"
 
           echo "Uploaded object version: $OBJECT_VERSION"
