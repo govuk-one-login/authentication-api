@@ -11,29 +11,6 @@ public interface ClientService {
 
     boolean isValidClient(String clientId);
 
-    // TODO: Remove once all uses with consentRequired have been deleted
-    void addClient(
-            String clientID,
-            String clientName,
-            List<String> redirectUris,
-            List<String> contacts,
-            List<String> scopes,
-            String publicKey,
-            List<String> postLogoutRedirectUris,
-            String backChannelLogoutUri,
-            String serviceType,
-            String sectorIdentifierUri,
-            String subjectType,
-            boolean consentRequired,
-            boolean jarValidationRequired,
-            List<String> claims,
-            String clientType,
-            boolean identityVerificationSupported,
-            String clientSecret,
-            String tokenAuthMethod,
-            String idTokenSigningAlgorithm,
-            List<String> clientLoCs);
-
     void addClient(
             String clientID,
             String clientName,
