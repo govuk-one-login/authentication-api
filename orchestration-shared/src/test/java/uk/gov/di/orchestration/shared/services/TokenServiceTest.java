@@ -100,7 +100,7 @@ class TokenServiceTest {
     private static final String JOURNEY_ID = "client-session-id";
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-    private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+    private static final CredentialTrustLevel VOT = CredentialTrustLevel.MEDIUM_LEVEL;
     private static final Scope SCOPES_OFFLINE_ACCESS =
             new Scope(
                     OIDCScopeValue.OPENID,

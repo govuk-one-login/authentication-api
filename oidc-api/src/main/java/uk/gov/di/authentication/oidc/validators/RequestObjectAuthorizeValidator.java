@@ -14,8 +14,9 @@ import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
@@ -212,9 +213,13 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         List<String> authRequestVtr = new ArrayList<>();
         try {
             authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
-            var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
+            var vtrList = VtrList.parseFromAuthRequestAttribute(authRequestVtr);
+            var levelOfConfidenceValues = vtrList.getLevelsOfConfidence();
+            if (!client.getClientLoCs()
+                    .containsAll(
+                            levelOfConfidenceValues.stream()
+                                    .map(LevelOfConfidence::getValue)
+                                    .toList())) {
                 LOG.error(
                         "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
                         levelOfConfidenceValues);
@@ -222,8 +227,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr is not permitted"));
             }
-            if (vtrList.get(0).containsLevelOfConfidence()
-                    && !ipvCapacityService.isIPVCapacityAvailable()) {
+            if (vtrList.identityRequired() && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return Optional.of(OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }
         } catch (IllegalArgumentException e) {

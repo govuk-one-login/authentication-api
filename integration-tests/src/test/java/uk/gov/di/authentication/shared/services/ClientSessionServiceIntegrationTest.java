@@ -4,12 +4,9 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,8 +22,6 @@ public class ClientSessionServiceIntegrationTest {
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     private static final String CLIENT_NAME = "CLIENT_NAME";
-    private static List<VectorOfTrust> VTR_LIST =
-            List.of(VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE));
     private static final Subject SUBJECT_ID = new Subject("SUBJECT_ID");
     private static final String ID_TOKEN_HINT = "TOKEN_ID_HINT";
 
@@ -59,7 +54,8 @@ public class ClientSessionServiceIntegrationTest {
         // Create Orch Client Session and store in Redis.
         var clientSessionId = orchClientSessionService.generateClientSessionId();
         var orchClientSession =
-                new ClientSession(Map.of(), LocalDateTime.now(), VTR_LIST, CLIENT_NAME);
+                new ClientSession(
+                        Map.of(), LocalDateTime.now(), VtrList.DEFAULT_VTR_LIST, CLIENT_NAME);
         orchClientSessionService.storeClientSession(clientSessionId, orchClientSession);
 
         // Get Auth Client Session from Redis, set Subject ID, and update in Redis.
@@ -78,7 +74,7 @@ public class ClientSessionServiceIntegrationTest {
         // Check fields have expected values in Orch copy.
         assertThat(orchClientSession.getClientName(), is(equalTo(CLIENT_NAME)));
         assertThat(orchClientSession.getDocAppSubjectId(), is(equalTo(SUBJECT_ID)));
-        assertThat(orchClientSession.getVtrList(), is(equalTo(VTR_LIST)));
+        assertThat(orchClientSession.getVtrList(), is(equalTo(VtrList.DEFAULT_VTR_LIST)));
 
         // Check fields have expected values in Auth copy.
         assertThat(authClientSession.getClientName(), is(equalTo(CLIENT_NAME)));
@@ -90,7 +86,8 @@ public class ClientSessionServiceIntegrationTest {
         // Create Orch client session, set ID Token Hint and Subject ID and store in Redis.
         var clientSessionId = orchClientSessionService.generateClientSessionId();
         var orchClientSession =
-                new ClientSession(Map.of(), LocalDateTime.now(), VTR_LIST, CLIENT_NAME);
+                new ClientSession(
+                        Map.of(), LocalDateTime.now(), VtrList.DEFAULT_VTR_LIST, CLIENT_NAME);
         orchClientSession.setIdTokenHint(ID_TOKEN_HINT);
         orchClientSession.setDocAppSubjectId(SUBJECT_ID);
         orchClientSessionService.storeClientSession(clientSessionId, orchClientSession);

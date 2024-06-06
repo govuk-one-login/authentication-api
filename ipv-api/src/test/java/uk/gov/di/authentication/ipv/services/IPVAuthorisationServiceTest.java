@@ -30,6 +30,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -263,7 +264,7 @@ class IPVAuthorisationServiceTest {
                                 claims,
                                 "journey-id",
                                 "test@test.com",
-                                List.of("P2", "PCL200"),
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
                                 true);
             }
 

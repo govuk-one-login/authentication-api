@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -41,7 +42,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -160,10 +160,9 @@ public class IPVCallbackHelper {
     }
 
     public Optional<ErrorObject> validateUserIdentityResponse(
-            UserInfo userIdentityUserInfo, List<VectorOfTrust> vtrList)
-            throws IpvCallbackException {
+            UserInfo userIdentityUserInfo, VtrList vtrList) throws IpvCallbackException {
         LOG.info("Validating userinfo response");
-        for (VectorOfTrust vtr : vtrList) {
+        for (VectorOfTrust vtr : vtrList.getVtr()) {
             if (vtr.getLevelOfConfidence()
                     .getValue()
                     .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {

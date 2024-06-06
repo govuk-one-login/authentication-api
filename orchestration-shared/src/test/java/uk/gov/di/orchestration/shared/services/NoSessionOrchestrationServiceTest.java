@@ -12,6 +12,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
 import java.net.URI;
@@ -19,7 +20,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -253,6 +253,6 @@ class NoSessionOrchestrationServiceTest {
                         .state(new State())
                         .nonce(new Nonce())
                         .build();
-        return new ClientSession(authRequest.toParameters(), null, emptyList(), null);
+        return new ClientSession(authRequest.toParameters(), null, VtrList.DEFAULT_VTR_LIST, null);
     }
 }

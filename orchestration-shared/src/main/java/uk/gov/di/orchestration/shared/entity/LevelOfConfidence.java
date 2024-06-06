@@ -45,7 +45,7 @@ public enum LevelOfConfidence {
     }
 
     public static LevelOfConfidence getDefault() {
-        return MEDIUM_LEVEL;
+        return NONE;
     }
 
     public static List<String> getDefaultLevelOfConfidenceValues() {
