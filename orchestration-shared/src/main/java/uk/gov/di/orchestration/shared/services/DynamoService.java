@@ -13,7 +13,6 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.TermsAndConditions;
 import uk.gov.di.orchestration.shared.entity.User;
@@ -112,17 +111,6 @@ public class DynamoService implements AuthenticationService {
         dynamoUserCredentialsTable.putItem(userCredentials);
         dynamoUserProfileTable.putItem(userProfile);
         return new User(userProfile, userCredentials);
-    }
-
-    @Override
-    public void updateConsent(String email, ClientConsent clientConsent) {
-        dynamoUserProfileTable.updateItem(
-                dynamoUserProfileTable
-                        .getItem(
-                                Key.builder()
-                                        .partitionValue(email.toLowerCase(Locale.ROOT))
-                                        .build())
-                        .withClientConsent(clientConsent));
     }
 
     @Override

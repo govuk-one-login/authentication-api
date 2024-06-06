@@ -56,58 +56,6 @@ public class DynamoClientService implements ClientService {
                 != null;
     }
 
-    // TODO: Remove once all uses have been deleted
-    @Override
-    public void addClient(
-            String clientID,
-            String clientName,
-            List<String> redirectUris,
-            List<String> contacts,
-            List<String> scopes,
-            String publicKey,
-            List<String> postLogoutRedirectUris,
-            String backChannelLogoutUri,
-            String serviceType,
-            String sectorIdentifierUri,
-            String subjectType,
-            boolean consentRequired,
-            boolean jarValidationRequired,
-            List<String> claims,
-            String clientType,
-            boolean identityVerificationSupported,
-            String clientSecret,
-            String tokenAuthMethod,
-            String idTokenSigningAlgorithm,
-            List<String> clientLoCs) {
-        var clientRegistry =
-                new ClientRegistry()
-                        .withClientID(clientID)
-                        .withClientName(clientName)
-                        .withRedirectUrls(redirectUris)
-                        .withContacts(contacts)
-                        .withScopes(scopes)
-                        .withPublicKey(publicKey)
-                        .withPostLogoutRedirectUrls(postLogoutRedirectUris)
-                        .withBackChannelLogoutUri(backChannelLogoutUri)
-                        .withServiceType(serviceType)
-                        .withSectorIdentifierUri(sectorIdentifierUri)
-                        .withSubjectType(subjectType)
-                        .withConsentRequired(consentRequired)
-                        .withJarValidationRequired(jarValidationRequired)
-                        .withClaims(claims)
-                        .withClientType(clientType)
-                        .withIdentityVerificationSupported(identityVerificationSupported)
-                        .withIdTokenSigningAlgorithm(idTokenSigningAlgorithm)
-                        .withTokenAuthMethod(tokenAuthMethod);
-        if (Objects.nonNull(clientSecret)) {
-            clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
-        }
-        if (Objects.nonNull(clientLoCs)) {
-            clientRegistry.withClientLoCs(clientLoCs);
-        }
-        dynamoClientRegistryTable.putItem(clientRegistry);
-    }
-
     @Override
     public void addClient(
             String clientID,
