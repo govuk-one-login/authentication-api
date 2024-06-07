@@ -60,7 +60,11 @@ class AuthAppCodeProcessorTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private final int MAX_RETRIES = 5;
+
+    private static final AuditService.RestrictedSection restrictedSection =
+            new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     void setUp() {
@@ -180,6 +184,7 @@ class AuthAppCodeProcessorTest {
 
     @Test
     void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
+        when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -204,13 +209,14 @@ class AuthAppCodeProcessorTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false));
     }
 
     @Test
     void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
+        when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -235,7 +241,7 @@ class AuthAppCodeProcessorTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", true));
     }

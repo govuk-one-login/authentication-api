@@ -68,6 +68,11 @@ public abstract class MfaCodeProcessor {
             String ipAddress,
             String persistentSessionId,
             boolean accountRecovery) {
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext
@@ -81,7 +86,7 @@ public abstract class MfaCodeProcessor {
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                AuditService.RestrictedSection.empty,
+                restrictedSection,
                 pair("mfa-type", mfaMethodType.getValue()),
                 pair("account-recovery", accountRecovery));
     }
