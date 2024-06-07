@@ -11,12 +11,12 @@ import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
-public class AuthFrontend {
+public class AuthFrontend implements CommonFrontend {
 
     private final URI frontendBaseUri;
 
     public AuthFrontend(ConfigurationService configurationService) {
-        frontendBaseUri = configurationService.getFrontendBaseURL();
+        frontendBaseUri = configurationService.getAuthFrontendBaseURL();
     }
 
     public URI baseURI() {

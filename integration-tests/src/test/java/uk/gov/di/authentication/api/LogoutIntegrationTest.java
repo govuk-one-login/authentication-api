@@ -135,7 +135,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(
                                         buildURI(
-                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL(),
                                                 DEFAULT_LOGOUT_PATH)),
                                 queryParameters(hasEntry("state", STATE)))));
 
@@ -170,7 +170,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(
                                         buildURI(
-                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL(),
                                                 DEFAULT_LOGOUT_PATH)),
                                 queryParameters(hasEntry("error_code", "invalid_request")))));
 
@@ -195,7 +195,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(
                                         buildURI(
-                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL(),
                                                 DEFAULT_LOGOUT_PATH)),
                                 queryParameters(hasEntry("state", STATE)))));
 
@@ -226,7 +226,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         allOf(
                                 baseUri(
                                         buildURI(
-                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL(),
                                                 DEFAULT_LOGOUT_PATH)),
                                 queryParameters(hasEntry("state", STATE)),
                                 queryParameters(hasEntry("error_code", "invalid_request")))));
