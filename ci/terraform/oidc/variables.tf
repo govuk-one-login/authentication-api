@@ -594,6 +594,12 @@ variable "orch_storage_token_jwk_enabled" {
   default     = false
 }
 
+variable "orch_frontend_enabled" {
+  description = "Flag to enable redirecting to orch frontend instead of auth frontend"
+  type        = bool
+  default     = false
+}
+
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool

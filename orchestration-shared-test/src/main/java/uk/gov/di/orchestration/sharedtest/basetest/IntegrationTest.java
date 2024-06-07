@@ -313,7 +313,7 @@ public class IntegrationTest {
         }
 
         @Override
-        public URI getFrontendBaseURL() {
+        public URI getAuthFrontendBaseURL() {
             return URI.create("http://localhost:3000/");
         }
 

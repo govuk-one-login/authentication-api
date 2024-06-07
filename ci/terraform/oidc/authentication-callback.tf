@@ -50,7 +50,7 @@ module "authentication_callback" {
     REDIS_KEY                                   = local.redis_key
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                           = local.api_base_url
-    FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
+    AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     STORAGE_TOKEN_SIGNING_KEY_ALIAS             = aws_kms_alias.storage_token_signing_key_alias.name

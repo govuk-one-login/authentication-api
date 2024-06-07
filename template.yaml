@@ -531,7 +531,7 @@ Resources:
                   serviceDomain,
                 ]
           ENVIRONMENT: !Sub ${Environment}
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [
@@ -1028,7 +1028,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [
@@ -1390,7 +1390,7 @@ Resources:
                   authEnvironment,
                 ]
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [
@@ -1658,7 +1658,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [
@@ -2078,7 +2078,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [
@@ -3027,7 +3027,7 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [
@@ -3268,7 +3268,7 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain:
                 !FindInMap [

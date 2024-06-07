@@ -54,7 +54,8 @@ module "ipv-callback" {
     REDIS_KEY                                   = local.redis_key
     SPOT_QUEUE_URL                              = aws_sqs_queue.spot_request_queue.id
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
-    FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
+    AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
+    ORCH_FRONTEND_ENABLED                       = var.orch_frontend_enabled
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 

@@ -234,7 +234,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         var redirectUri = getLocationResponseHeader(response);
         assertThat(
                 redirectUri,
-                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
         var authorizationRequest = AuthorizationRequest.parse(URI.create(redirectUri));
         assertThat(authorizationRequest.getClientID().getValue(), equalTo(AUTH_INTERNAL_CLIENT_ID));
         assertThat(authorizationRequest.getResponseType(), equalTo(ResponseType.CODE));
