@@ -704,7 +704,7 @@ Resources:
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           LOGIN_URI: !Sub
-            - https://signin.${ServiceDomain}/doc-app-callback
+            - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
