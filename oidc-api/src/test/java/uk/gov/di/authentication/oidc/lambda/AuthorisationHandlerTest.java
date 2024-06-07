@@ -57,6 +57,7 @@ import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -142,6 +143,7 @@ class AuthorisationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final AuthFrontend authFrontend = mock(AuthFrontend.class);
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
@@ -161,7 +163,13 @@ class AuthorisationHandlerTest {
             EXPECTED_BASE_PERSISTENT_COOKIE_VALUE + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final String EXPECTED_LANGUAGE_COOKIE_STRING =
             "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
-    private static final URI LOGIN_URL = URI.create("https://example.com");
+    private static final URI FRONT_END_BASE_URI = URI.create("https://example.com");
+    private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
+    private static final URI FRONT_END_AUTHORIZE_URI = URI.create("https://example.com/authorize");
+    private static final URI FRONT_END_AUTHORIZE_LOGIN_URI =
+            URI.create("https://example.com/authorize?prompt=login");
+    private static final URI FRONT_END_AUTHORIZE_SIGN_IN_URI =
+            URI.create("https://example.com/authorize?result=sign-in");
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
@@ -216,12 +224,21 @@ class AuthorisationHandlerTest {
     public void setUp() {
         when(configService.getEnvironment()).thenReturn("test-env");
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
-        when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOrchestrationClientId()).thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
         when(configService.isIdentityEnabled()).thenReturn(true);
+        when(authFrontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
+        when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
+        when(authFrontend.authorizeURI(Optional.empty(), Optional.empty()))
+                .thenReturn(FRONT_END_AUTHORIZE_URI);
+        when(authFrontend.authorizeURI(Optional.of(Prompt.Type.LOGIN), Optional.empty()))
+                .thenReturn(FRONT_END_AUTHORIZE_LOGIN_URI);
+        when(authFrontend.authorizeURI(Optional.of(Prompt.Type.LOGIN), Optional.empty()))
+                .thenReturn(FRONT_END_AUTHORIZE_LOGIN_URI);
+        when(authFrontend.authorizeURI(Optional.empty(), Optional.of("sign-in")))
+                .thenReturn(FRONT_END_AUTHORIZE_SIGN_IN_URI);
         when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
@@ -242,7 +259,8 @@ class AuthorisationHandlerTest {
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
-                        tokenValidationService);
+                        tokenValidationService,
+                        authFrontend);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -268,7 +286,7 @@ class AuthorisationHandlerTest {
 
             assertThat(response, hasStatus(302));
             assertThat(uri.getQuery(), not(containsString("cookie_consent")));
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
@@ -394,7 +412,7 @@ class AuthorisationHandlerTest {
 
             assertThat(response, hasStatus(302));
             assertThat(uri.getQuery(), not(containsString("cookie_consent")));
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
@@ -442,7 +460,7 @@ class AuthorisationHandlerTest {
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(response, hasStatus(302));
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
             assertThat(uri.getQuery(), containsString("prompt=login"));
 
             assertTrue(
@@ -489,7 +507,7 @@ class AuthorisationHandlerTest {
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(response, hasStatus(302));
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
             assertThat(uri.getQuery(), containsString("result=sign-in"));
             assertThat(
                     uri.getQuery(), not(containsString("an-irrelevant-key=an-irrelevant-value")));
@@ -511,7 +529,7 @@ class AuthorisationHandlerTest {
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(response, hasStatus(302));
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
 
             assertTrue(
                     response.getMultiValueHeaders()
@@ -552,7 +570,7 @@ class AuthorisationHandlerTest {
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(response, hasStatus(302));
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
 
             assertTrue(
                     response.getMultiValueHeaders()
@@ -865,7 +883,7 @@ class AuthorisationHandlerTest {
             assertThat(response.getStatusCode(), equalTo(302));
             assertThat(
                     response.getHeaders().get(ResponseHeaders.LOCATION),
-                    equalTo(LOGIN_URL + "/" + ERROR_PAGE_REDIRECT_PATH));
+                    equalTo(FRONT_END_BASE_URI + "/" + ERROR_PAGE_REDIRECT_PATH));
 
             assertThat(
                     logging.events(),
@@ -900,7 +918,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
@@ -946,7 +964,7 @@ class AuthorisationHandlerTest {
             assertThat(response, hasStatus(302));
             var uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)

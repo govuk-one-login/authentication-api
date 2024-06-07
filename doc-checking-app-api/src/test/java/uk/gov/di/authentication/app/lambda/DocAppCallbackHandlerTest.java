@@ -22,7 +22,6 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -31,6 +30,7 @@ import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -49,7 +49,6 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -94,8 +93,11 @@ class DocAppCallbackHandlerTest {
             mock(AuthorisationCodeService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
 
-    private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
+    private final AuthFrontend authFrontend = mock(AuthFrontend.class);
+
+    private static final URI EXPECTED_ERROR_REDIRECT_URI = URI.create("https://example.com/error");
+
     private static final URI CRI_URI = URI.create("http://cri/");
     private static final String ENVIRONMENT = "test-environment";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -143,8 +145,9 @@ class DocAppCallbackHandlerTest {
                         authorisationCodeService,
                         cookieHelper,
                         cloudwatchMetricsService,
-                        noSessionOrchestrationService);
-        when(configService.getLoginURI()).thenReturn(LOGIN_URL);
+                        noSessionOrchestrationService,
+                        authFrontend);
+        when(authFrontend.errorURI()).thenReturn(EXPECTED_ERROR_REDIRECT_URI);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
@@ -207,15 +210,16 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
         var response = handler.handleRequest(event, context);
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
@@ -223,8 +227,7 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenNoDocAppSubjectIdIsPresentInClientSession()
-            throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenNoDocAppSubjectIdIsPresentInClientSession() {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
@@ -234,8 +237,9 @@ class DocAppCallbackHandlerTest {
 
         var response = handler.handleRequest(event, context);
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
@@ -296,8 +300,7 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
-            throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
         usingValidSession();
         usingValidClientSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
@@ -317,8 +320,9 @@ class DocAppCallbackHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Doc App TokenResponse was not successful: ")));
@@ -344,7 +348,7 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenCRIRequestIsNotSuccessful()
-            throws URISyntaxException, UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -366,8 +370,9 @@ class DocAppCallbackHandlerTest {
         var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Doc App sendCriDataRequest was not successful: ")));
@@ -452,7 +457,7 @@ class DocAppCallbackHandlerTest {
     @Test
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
-                    throws URISyntaxException, NoSessionException {
+                    throws NoSessionException {
         usingValidSession();
         usingValidClientSession();
 
@@ -472,9 +477,10 @@ class DocAppCallbackHandlerTest {
                                 .withQueryStringParameters(queryParameters),
                         context);
 
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(EXPECTED_ERROR_REDIRECT_URI.toString()));
         assertThat(
                 logging.events(),
                 hasItem(

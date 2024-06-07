@@ -232,7 +232,9 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
             APIGatewayProxyResponseEvent response) throws ParseException {
         assertThat(response, hasStatus(302));
         var redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         var authorizationRequest = AuthorizationRequest.parse(URI.create(redirectUri));
         assertThat(authorizationRequest.getClientID().getValue(), equalTo(AUTH_INTERNAL_CLIENT_ID));
         assertThat(authorizationRequest.getResponseType(), equalTo(ResponseType.CODE));

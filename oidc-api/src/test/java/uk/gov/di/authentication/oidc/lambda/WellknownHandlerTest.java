@@ -9,9 +9,11 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.approvaltests.Approvals;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +29,7 @@ class WellknownHandlerTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
+    private final AuthFrontend authFrontend = mock(AuthFrontend.class);
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() {
@@ -67,7 +70,7 @@ class WellknownHandlerTest {
         var expectedException =
                 assertThrows(
                         RuntimeException.class,
-                        () -> new WellknownHandler(configService),
+                        () -> new WellknownHandler(authFrontend, configService),
                         "Expected to throw exception");
 
         assertThat(
@@ -77,9 +80,12 @@ class WellknownHandlerTest {
 
     private APIGatewayProxyResponseEvent getWellKnown() {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
-        when(configService.getFrontendBaseURL()).thenReturn("http://localhost:8081");
+        when(authFrontend.privacyNoticeURI())
+                .thenReturn(URI.create("http://localhost:8081/privacy-notice"));
+        when(authFrontend.termsOfServiceURI())
+                .thenReturn(URI.create("http://localhost:8081/terms-and-conditions"));
 
-        WellknownHandler handler = new WellknownHandler(configService);
+        WellknownHandler handler = new WellknownHandler(authFrontend, configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         return handler.handleRequest(event, context);
     }

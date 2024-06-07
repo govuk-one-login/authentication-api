@@ -39,7 +39,6 @@ public class LogoutHandler
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final ConfigurationService configurationService;
     private final CookieHelper cookieHelper;
 
     private final LogoutService logoutService;
@@ -60,7 +59,6 @@ public class LogoutHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
-        this.configurationService = configurationService;
     }
 
     public LogoutHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -75,7 +73,6 @@ public class LogoutHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
-        this.configurationService = configurationService;
     }
 
     public LogoutHandler(
@@ -83,15 +80,13 @@ public class LogoutHandler
             DynamoClientService dynamoClientService,
             TokenValidationService tokenValidationService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            LogoutService logoutService,
-            ConfigurationService configurationService) {
+            LogoutService logoutService) {
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.cookieHelper = new CookieHelper();
         this.logoutService = logoutService;
-        this.configurationService = configurationService;
     }
 
     @Override
@@ -117,24 +112,10 @@ public class LogoutHandler
             cloudwatchMetricsService.incrementLogout(logoutRequest.clientId());
         }
 
-        URI logoutUri = configurationService.getDefaultLogoutURI();
-        if (logoutRequest.errorObject().isPresent()) {
-            LOG.info(
-                    "Logout request contains an error object. Generating logout error response with code: {} and description: {}",
-                    logoutRequest.errorObject().get().getCode(),
-                    logoutRequest.errorObject().get().getDescription());
-        } else if (logoutRequest.postLogoutRedirectUri().isEmpty()) {
-            LOG.info(
-                    "Logout request is missing a valid redirect URI. Generating logout response with default redirect URI.");
-        } else if (logoutRequest.postLogoutRedirectUri().isPresent()) {
-            LOG.info("Logout request contains a valid redirect URI and no error object.");
-            logoutUri = URI.create(logoutRequest.postLogoutRedirectUri().get());
-        }
-
-        return logoutService.generateLogoutResponse(
-                logoutUri,
-                logoutRequest.state(),
+        return logoutService.handleLogout(
                 logoutRequest.errorObject(),
+                logoutRequest.postLogoutRedirectUri().map(URI::create),
+                logoutRequest.state(),
                 logoutRequest.auditUser(),
                 logoutRequest.clientId(),
                 logoutRequest.rpPairwiseId());

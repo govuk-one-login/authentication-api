@@ -28,6 +28,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -104,7 +105,7 @@ public class AuthenticationCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final CookieHelper cookieHelper;
     private final LogoutService logoutService;
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
+    private final AuthFrontend authFrontend;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -143,6 +144,7 @@ public class AuthenticationCallbackHandler
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     public AuthenticationCallbackHandler(
@@ -185,6 +187,7 @@ public class AuthenticationCallbackHandler
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService, redisConnectionService);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     public AuthenticationCallbackHandler(
@@ -201,7 +204,8 @@ public class AuthenticationCallbackHandler
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
             AccountInterventionService accountInterventionService,
-            LogoutService logoutService) {
+            LogoutService logoutService,
+            AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -216,6 +220,7 @@ public class AuthenticationCallbackHandler
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
         this.accountInterventionService = accountInterventionService;
         this.logoutService = logoutService;
+        this.authFrontend = authFrontend;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -298,8 +303,7 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
 
             try {
@@ -484,17 +488,14 @@ public class AuthenticationCallbackHandler
                 LOG.error(
                         "Orchestration to Authentication userinfo request was not successful: {}",
                         e.getMessage());
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
         } catch (AuthenticationCallbackException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         }
     }
 

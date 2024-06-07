@@ -820,7 +820,7 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          LOGIN_URI: !Sub
+          FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           REDIS_KEY: session
@@ -1074,9 +1074,6 @@ Resources:
             - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          DEFAULT_LOGOUT_URI: !Sub
-            - https://signin.${ServiceDomain}/signed-out
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
@@ -1256,9 +1253,6 @@ Resources:
             - https://identity.${ServiceDomain}/oauth2/authorize
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
-          LOGIN_URI: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
           REDIS_KEY: session
@@ -1581,7 +1575,7 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          LOGIN_URI: !Sub
+          FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           OIDC_API_BASE_URL: !Sub
@@ -2350,9 +2344,6 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
           FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          LOGIN_URI: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true

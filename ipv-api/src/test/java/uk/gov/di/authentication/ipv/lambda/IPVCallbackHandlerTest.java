@@ -10,7 +10,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
-import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -27,7 +26,6 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -41,6 +39,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -75,7 +74,6 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
@@ -130,8 +128,13 @@ class IPVCallbackHandlerTest {
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
-    private static final URI LOGIN_URL = URI.create("https://example.com");
-    private static final String OIDC_BASE_URL = "https://base-url.com";
+    private final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
+    private static final URI FRONT_END_IPV_CALLBACK_ERROR_URI =
+            URI.create("https://example.com/ipv-callback-session-expiry-error");
+    private static final URI FRONT_END_IPV_CALLBACK_URI =
+            URI.create("https://example.com/ipv-callback");
+    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -261,9 +264,11 @@ class IPVCallbackHandlerTest {
                         accountInterventionService,
                         cookieHelper,
                         noSessionOrchestrationService,
-                        ipvCallbackHelper);
-        when(configService.getLoginURI()).thenReturn(LOGIN_URL);
-        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+                        ipvCallbackHelper,
+                        authFrontend);
+        when(authFrontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
+        when(authFrontend.errorIpvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_ERROR_URI);
+        when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
@@ -287,14 +292,14 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
-            throws URISyntaxException, UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException {
         when(configService.isIdentityEnabled()).thenReturn(false);
         usingValidSession();
         usingValidClientSession();
 
-        var event = getApiGatewayProxyRequestEvent(null, clientRegistry);
-
-        assertDoesRedirectToFrontendErrorPage(event, "error");
+        var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
 
         verifyNoInteractions(auditService);
     }
@@ -388,7 +393,6 @@ class IPVCallbackHandlerTest {
     @Test
     void shouldReturnAuthCodeToRPWhenP0AndReturnCodePresentPermittedAndRequested()
             throws UnsuccessfulCredentialResponseException,
-                    URISyntaxException,
                     IpvCallbackException,
                     UserNotFoundException {
         usingValidSession();
@@ -438,21 +442,13 @@ class IPVCallbackHandlerTest {
                         any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(
                         new AuthenticationSuccessResponse(
-                                new URIBuilder(LOGIN_URL).setPath("ipv-callback").build(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null));
+                                FRONT_END_IPV_CALLBACK_URI, null, null, null, null, null, null));
 
         var response =
                 makeHandlerRequest(
                         getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry));
 
-        var expectedURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build().toString();
-        assertThat(response, hasStatus(302));
-        assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
     }
 
     @Test
@@ -496,7 +492,7 @@ class IPVCallbackHandlerTest {
     @MethodSource("additionalClaims")
     void shouldInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2(
             Map<String, String> additionalClaims)
-            throws URISyntaxException, Json.JsonException, UnsuccessfulCredentialResponseException {
+            throws Json.JsonException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
 
@@ -527,9 +523,7 @@ class IPVCallbackHandlerTest {
                         getApiGatewayProxyRequestEvent(
                                 new UserInfo(new JSONObject(claims)), clientRegistry));
 
-        assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
-        assertEquals(expectedRedirectURI.toString(), response.getHeaders().get("Location"));
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
         var expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
                         userProfile, clientRegistry, dynamoService, INTERNAL_SECTOR_URI);
@@ -553,9 +547,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTAndShouldRedirectToFrontendErrorPageWhenVTMMismatch()
-            throws URISyntaxException,
-                    UnsuccessfulCredentialResponseException,
-                    IpvCallbackException {
+            throws UnsuccessfulCredentialResponseException, IpvCallbackException {
         usingValidSession();
         usingValidClientSession();
         var userIdentityUserInfo =
@@ -569,9 +561,10 @@ class IPVCallbackHandlerTest {
                 .when(ipvCallbackHelper)
                 .validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST);
 
-        var event = getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry);
+        var request = getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry);
 
-        assertDoesRedirectToFrontendErrorPage(event, "error");
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -582,19 +575,20 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() throws URISyntaxException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(Collections.emptyMap());
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() {
+        var request = new APIGatewayProxyRequestEvent();
+        request.setQueryStringParameters(Collections.emptyMap());
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
 
         when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.empty());
 
-        assertDoesRedirectToFrontendErrorPage(event, "ipv-callback-session-expiry-error");
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
         verifyNoInteractions(auditService);
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() {
         usingValidSession();
         usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
@@ -607,11 +601,12 @@ class IPVCallbackHandlerTest {
         when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        request.setQueryStringParameters(responseHeaders);
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        assertDoesRedirectToFrontendErrorPage(event, "error");
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
@@ -619,7 +614,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails()
-            throws URISyntaxException, UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
 
@@ -637,7 +632,7 @@ class IPVCallbackHandlerTest {
                                 IdentityClaims.CREDENTIAL_JWT.getValue(),
                                 CREDENTIAL_JWT_CLAIM));
 
-        var event =
+        var request =
                 getApiGatewayProxyRequestEvent(
                         new UserInfo(new JSONObject(claims)), clientRegistry);
 
@@ -646,7 +641,9 @@ class IPVCallbackHandlerTest {
                                 "Error when attempting to parse http response to UserInfoResponse"))
                 .when(ipvTokenService)
                 .sendIpvUserIdentityRequest(any(UserInfoRequest.class));
-        assertDoesRedirectToFrontendErrorPage(event, "error");
+
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
     }
 
     @Test
@@ -727,18 +724,19 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() {
         usingValidSession();
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        event.setQueryStringParameters(responseHeaders);
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
+        request.setQueryStringParameters(responseHeaders);
 
-        assertDoesRedirectToFrontendErrorPage(event, "ipv-callback-session-expiry-error");
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(auditService);
@@ -747,15 +745,16 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound()
-            throws URISyntaxException, UnsuccessfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
 
-        var event = getApiGatewayProxyRequestEvent(null, clientRegistry);
+        var request = getApiGatewayProxyRequestEvent(null, clientRegistry);
 
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
 
-        assertDoesRedirectToFrontendErrorPage(event, "error");
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(auditService);
@@ -763,8 +762,7 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
-            throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
         var userProfile = generateUserProfile();
@@ -772,7 +770,6 @@ class IPVCallbackHandlerTest {
         usingValidClientSession();
         var unsuccessfulTokenResponse =
                 new TokenErrorResponse(new ErrorObject("Test error response"));
-        var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -785,11 +782,12 @@ class IPVCallbackHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.getToken(AUTH_CODE.getValue())).thenReturn(unsuccessfulTokenResponse);
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        var request = new APIGatewayProxyRequestEvent();
+        request.setQueryStringParameters(responseHeaders);
+        request.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        assertDoesRedirectToFrontendErrorPage(event, "error");
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToFrontendPage(response, FRONT_END_ERROR_URI);
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -842,7 +840,7 @@ class IPVCallbackHandlerTest {
     @Test
     void
             shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
-                    throws NoSessionException, URISyntaxException {
+                    throws NoSessionException {
         usingValidSession();
         usingValidClientSession();
 
@@ -862,10 +860,7 @@ class IPVCallbackHandlerTest {
                                 .withQueryStringParameters(queryParameters),
                         context);
 
-        var expectedRedirectURI =
-                new URIBuilder(LOGIN_URL).setPath("ipv-callback-session-expiry-error").build();
-        assertThat(response, hasStatus(302));
-        assertEquals(expectedRedirectURI.toString(), response.getHeaders().get("Location"));
+        assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_ERROR_URI);
         assertThat(
                 logging.events(),
                 hasItem(
@@ -963,7 +958,6 @@ class IPVCallbackHandlerTest {
             throws UnsuccessfulCredentialResponseException {
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-        var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -984,12 +978,10 @@ class IPVCallbackHandlerTest {
         return event;
     }
 
-    private void assertDoesRedirectToFrontendErrorPage(
-            APIGatewayProxyRequestEvent event, String errorPagePath) throws URISyntaxException {
-        var response = handler.handleRequest(event, context);
+    private void assertDoesRedirectToFrontendPage(
+            APIGatewayProxyResponseEvent response, URI frontEndPage) {
         assertThat(response, hasStatus(302));
-
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath(errorPagePath).build();
+        var expectedRedirectURI = frontEndPage;
         assertEquals(expectedRedirectURI.toString(), response.getHeaders().get("Location"));
     }
 }

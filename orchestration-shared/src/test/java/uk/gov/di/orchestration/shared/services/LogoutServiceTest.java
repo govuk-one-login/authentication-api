@@ -13,20 +13,19 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -35,8 +34,6 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -68,7 +65,7 @@ public class LogoutServiceTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final AuthFrontend authFrontend = mock(AuthFrontend.class);
 
     private final APIGatewayProxyRequestEvent event = mock(APIGatewayProxyRequestEvent.class);
 
@@ -90,10 +87,17 @@ public class LogoutServiceTest {
     private static final String PERSISTENT_SESSION_ID =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final URI DEFAULT_LOGOUT_URI =
-            URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
+            URI.create("https://signin.test.account.gov.uk/signed-out");
+    private static final ErrorObject ERROR_OBJECT =
+            new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
+    private static final URI ERROR_LOGOUT_URI =
+            URI.create(
+                    "https://signin.test.account.gov.uk/signed-out?error_code=invalid_request&error_description=invalid%20session");
+    private static final URI SUSPENDED_LOGOUT_URI =
+            URI.create("https://signin.test.account.gov.uk/unavailable-temporary");
+    private static final URI BLOCKED_LOGOUT_URI =
+            URI.create("https://signin.test.account.gov.uk/unavailable-permanent");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
-    private static final URI AI_LOGOUT_URI =
-            URI.create("https://oidc.sandpit.account.gov.uk/orch-frontend/not-available");
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
@@ -102,9 +106,6 @@ public class LogoutServiceTest {
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
 
     private static final String ENVIRONMENT = "test";
-
-    private static final UserProfile USER_PROFILE =
-            new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
 
     private SignedJWT signedIDToken;
     private Optional<String> audience;
@@ -133,13 +134,15 @@ public class LogoutServiceTest {
         when(PersistentIdHelper.extractPersistentIdFromCookieHeader(event.getHeaders()))
                 .thenReturn(PERSISTENT_SESSION_ID);
 
-        when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(configurationService.getFrontendBaseURL()).thenReturn(FRONTEND_BASE_URL);
-        when(configurationService.getAccountStatusBlockedURI()).thenCallRealMethod();
-        when(configurationService.getAccountStatusSuspendedURI()).thenCallRealMethod();
+
+        when(authFrontend.defaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
+        when(authFrontend.errorLogoutURI(ERROR_OBJECT)).thenReturn(ERROR_LOGOUT_URI);
+        when(authFrontend.accountSuspendedURI()).thenReturn(SUSPENDED_LOGOUT_URI);
+        when(authFrontend.accountBlockedURI()).thenReturn(BLOCKED_LOGOUT_URI);
+
         logoutService =
                 new LogoutService(
                         configurationService,
@@ -148,7 +151,8 @@ public class LogoutServiceTest {
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        backChannelLogoutService);
+                        backChannelLogoutService,
+                        authFrontend);
 
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -175,10 +179,10 @@ public class LogoutServiceTest {
     @Test
     void successfullyReturnsClientLogoutResponse() {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateLogoutResponse(
-                        CLIENT_LOGOUT_URI,
-                        Optional.of(STATE.getValue()),
+                logoutService.handleLogout(
                         Optional.empty(),
+                        Optional.of(CLIENT_LOGOUT_URI),
+                        Optional.of(STATE.getValue()),
                         auditUser,
                         Optional.of(audience.get()),
                         rpPairwiseId);
@@ -199,12 +203,12 @@ public class LogoutServiceTest {
     @Test
     void successfullyReturnsLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateLogoutResponse(
-                        configurationService.getDefaultLogoutURI(),
+                logoutService.handleLogout(
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.empty(),
                         auditUser,
-                        Optional.of(audience.get()),
+                        audience,
                         rpPairwiseId);
 
         verify(auditService)
@@ -223,12 +227,12 @@ public class LogoutServiceTest {
     @Test
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
-                logoutService.generateLogoutResponse(
-                        configurationService.getDefaultLogoutURI(),
-                        Optional.of(STATE.getValue()),
+                logoutService.handleLogout(
                         Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(STATE.getValue()),
                         auditUser,
-                        Optional.of(audience.get()),
+                        audience,
                         rpPairwiseId);
 
         verify(auditService)
@@ -245,14 +249,13 @@ public class LogoutServiceTest {
     }
 
     @Test
-    void successfullyReturnsErrorLogoutResponse() throws URISyntaxException {
+    void successfullyReturnsErrorLogoutResponse() {
+        var errorObject = new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
         APIGatewayProxyResponseEvent response =
-                logoutService.generateLogoutResponse(
-                        configurationService.getDefaultLogoutURI(),
+                logoutService.handleLogout(
+                        Optional.of(errorObject),
                         Optional.empty(),
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE, "invalid session")),
+                        Optional.empty(),
                         auditUser,
                         Optional.empty(),
                         rpPairwiseId);
@@ -266,15 +269,10 @@ public class LogoutServiceTest {
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
+
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
+                equalTo(ERROR_LOGOUT_URI.toString()));
     }
 
     @Test
@@ -329,10 +327,10 @@ public class LogoutServiceTest {
                         STATE.toString()));
         input.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
-        logoutService.generateLogoutResponse(
-                CLIENT_LOGOUT_URI,
-                Optional.of(STATE.getValue()),
+        logoutService.handleLogout(
                 Optional.empty(),
+                Optional.of(CLIENT_LOGOUT_URI),
+                Optional.of(STATE.getValue()),
                 auditUserWhenNoCookie,
                 Optional.empty(),
                 rpPairwiseId);
@@ -389,10 +387,10 @@ public class LogoutServiceTest {
     @Test
     void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
 
-        logoutService.generateLogoutResponse(
-                CLIENT_LOGOUT_URI,
-                Optional.of(STATE.getValue()),
+        logoutService.handleLogout(
                 Optional.empty(),
+                Optional.of(CLIENT_LOGOUT_URI),
+                Optional.of(STATE.getValue()),
                 auditUser,
                 Optional.of(audience.get()),
                 rpPairwiseId);
