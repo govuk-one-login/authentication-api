@@ -17,7 +17,6 @@ stub_rp_clients = [
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "0"
-    consent_required                = "0"
     client_type                     = "web"
     identity_verification_supported = "0"
     scopes = [
@@ -39,7 +38,6 @@ stub_rp_clients = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
-    consent_required                = "0"
     client_type                     = "app"
     identity_verification_supported = "1"
     scopes = [
