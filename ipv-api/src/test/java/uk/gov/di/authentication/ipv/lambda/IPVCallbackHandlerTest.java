@@ -39,7 +39,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.api.AuthFrontend;
+import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -128,7 +128,7 @@ class IPVCallbackHandlerTest {
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
-    private final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private final CommonFrontend frontend = mock(CommonFrontend.class);
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI FRONT_END_IPV_CALLBACK_ERROR_URI =
             URI.create("https://example.com/ipv-callback-session-expiry-error");
@@ -265,10 +265,10 @@ class IPVCallbackHandlerTest {
                         cookieHelper,
                         noSessionOrchestrationService,
                         ipvCallbackHelper,
-                        authFrontend);
-        when(authFrontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
-        when(authFrontend.errorIpvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_ERROR_URI);
-        when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
+                        frontend);
+        when(frontend.ipvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_URI);
+        when(frontend.errorIpvCallbackURI()).thenReturn(FRONT_END_IPV_CALLBACK_ERROR_URI);
+        when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
