@@ -110,7 +110,7 @@ public class LogoutHandler
         } else if (logoutRequest.postLogoutRedirectUri().isEmpty()) {
             LOG.info(
                     "Parsed logout request is missing a valid redirect URI. Generating logout response with default redirect URI.");
-        } else {
+        } else if (logoutRequest.postLogoutRedirectUri().isPresent()) {
             LOG.info("Parsed logout request contains a valid redirect URI and no error object.");
             logoutUri = URI.create(logoutRequest.postLogoutRedirectUri().get());
         }
