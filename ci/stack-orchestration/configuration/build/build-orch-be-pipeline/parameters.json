@@ -70,5 +70,13 @@
   {
     "ParameterKey": "VpcStackName",
     "ParameterValue": "vpc"
+  },
+  {
+    "ParameterKey": "TestImageRepositoryUri",
+    "ParameterValue": "767397776536.dkr.ecr.eu-west-2.amazonaws.com/pipeline-test-image"
+  },
+  {
+    "ParameterKey": "TestReportFormat",
+    "ParameterValue": "CUCUMBERJSON"
   }
 ]
