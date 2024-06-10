@@ -206,7 +206,7 @@ Globals:
           - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}'
           - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
-    MemorySize: 1536
+    MemorySize: 2048
     Timeout: 30
     Runtime: java17
     KmsKeyArn: !GetAtt MainKmsKey.Arn
