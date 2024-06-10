@@ -1932,7 +1932,7 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/connect/*/POST/register'
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/connect/register'
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
           ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
 
