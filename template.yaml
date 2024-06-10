@@ -866,6 +866,8 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  #endregion
+
   #region Logout Lambda
 
   LogoutFunction:
@@ -1501,6 +1503,10 @@ Resources:
             Stat: Sum
             Unit: Count
 
+  #endregion
+
+  #region User Info Function
+
   UserInfoFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
@@ -1638,6 +1644,10 @@ Resources:
             Period: 60
             Stat: Sum
             Unit: Count
+
+  #endregion
+
+  #region Auth Code Function
 
   AuthCodeFunction:
     Type: AWS::Serverless::Function
@@ -1896,6 +1906,7 @@ Resources:
             Unit: Count
   #endregion
 
+  #region Client Registration Function
   ClientRegistrationFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
