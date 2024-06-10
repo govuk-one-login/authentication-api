@@ -221,6 +221,7 @@ Globals:
     Runtime: java17
     Architectures:
       - x86_64
+    KmsKeyArn: !GetAtt MainKmsKey.Arn
     PermissionsBoundary: !If
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
