@@ -63,10 +63,15 @@ class PhoneNumberCodeProcessorTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
+
+    private static final AuditService.RestrictedSection restrictedSection =
+            new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     void setup() {
         when(configurationService.getCodeMaxRetries()).thenReturn(3);
+        when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
     }
 
     @ParameterizedTest
@@ -258,7 +263,7 @@ class PhoneNumberCodeProcessorTest {
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false));
     }
@@ -292,7 +297,7 @@ class PhoneNumberCodeProcessorTest {
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        restrictedSection,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", true));
     }
