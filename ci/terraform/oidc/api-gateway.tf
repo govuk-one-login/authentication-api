@@ -167,6 +167,7 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_authentication_callback_enabled,
       var.orch_auth_code_enabled,
       var.orch_userinfo_enabled,
+      var.orch_storage_token_jwk_enabled,
     ]))
   }
 
@@ -200,7 +201,8 @@ resource "aws_api_gateway_deployment" "deployment" {
     aws_api_gateway_integration.orch_authentication_callback_integration,
     aws_api_gateway_integration.orch_auth_code_integration,
     aws_api_gateway_integration.orch_userinfo_integration,
-    aws_api_gateway_integration.orch_update_client_integration
+    aws_api_gateway_integration.orch_update_client_integration,
+    aws_api_gateway_integration.orch_storage_token_jwk_integration
   ]
 }
 
@@ -1350,4 +1352,40 @@ resource "aws_api_gateway_integration" "orch_userinfo_integration" {
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
   uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-UserInfoFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_storage_token_jwk_resource" {
+  count       = var.orch_storage_token_jwk_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.wellknown_resource.id
+  path_part   = "storage-token-jwk.json"
+  depends_on = [
+    aws_api_gateway_resource.wellknown_resource,
+    module.storage_token_jwk
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_storage_token_jwk_method" {
+  count       = var.orch_storage_token_jwk_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_storage_token_jwk_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_storage_token_jwk_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_storage_token_jwk_integration" {
+  count       = var.orch_storage_token_jwk_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_storage_token_jwk_resource[0].id
+  http_method = aws_api_gateway_method.orch_storage_token_jwk_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_storage_token_jwk_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-StorageTokenJwkFunction:latest/invocations"
 }

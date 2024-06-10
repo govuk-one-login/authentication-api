@@ -13,7 +13,7 @@ module "storage_token_jwk" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "storage-token-jwk.json"
-  path_part       = "storage-token-jwk.json"
+  path_part       = var.orch_storage_token_jwk_enabled ? "storage-token-jwk-auth.json" : "storage-token-jwk.json"
   endpoint_method = ["GET"]
   environment     = var.environment
 
