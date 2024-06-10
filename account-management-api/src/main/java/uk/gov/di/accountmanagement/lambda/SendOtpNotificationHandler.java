@@ -184,11 +184,16 @@ public class SendOtpNotificationHandler
                     if (dynamoService.userExists(email)) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
-
+                    var userId =
+                            dynamoService
+                                    .getUserProfileByEmailMaybe(email)
+                                    .map(UserProfile::getSubjectID)
+                                    .orElse(AuditService.UNKNOWN);
                     if (configurationService.isEmailCheckEnabled()) {
                         pendingEmailCheckSqsClient.send(
                                 objectMapper.writeValueAsString(
                                         new PendingEmailCheckRequest(
+                                                userId,
                                                 UUID.randomUUID(),
                                                 email,
                                                 sessionId,

@@ -282,6 +282,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 pendingEmailCheckSqsClient.send(
                         objectMapper.writeValueAsString(
                                 new PendingEmailCheckRequest(
+                                        AuditService.UNKNOWN,
                                         UUID.randomUUID(),
                                         destination,
                                         sessionId,
