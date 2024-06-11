@@ -27,11 +27,10 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractP
 
 public class LogoutRequest {
     private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
-    private Optional<Session> session;
-    private Optional<String> subjectId;
-    private Optional<String> sessionId;
-    private Optional<String> journeyId;
-    private Optional<Map<String, String>> queryStringParameters;
+    private final Optional<Session> session;
+    private final Optional<String> subjectId;
+    private final Optional<String> sessionId;
+    private final Optional<Map<String, String>> queryStringParameters;
     private Optional<String> state = Optional.empty();
     private Optional<String> idTokenHint = Optional.empty();
     private boolean isTokenSignatureValid = false;
@@ -55,7 +54,7 @@ public class LogoutRequest {
 
         subjectId = session.map(Session::getInternalCommonSubjectIdentifier);
         sessionId = session.map(Session::getSessionId);
-        journeyId = extractClientSessionIdFromCookieHeaders(input.getHeaders());
+        Optional<String> journeyId = extractClientSessionIdFromCookieHeaders(input.getHeaders());
 
         auditUser =
                 TxmaAuditUser.user()
