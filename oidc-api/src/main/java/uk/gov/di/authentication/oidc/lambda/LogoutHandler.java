@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.oidc.entity.ParsedLogoutRequest;
+import uk.gov.di.authentication.oidc.entity.LogoutRequest;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -90,8 +90,8 @@ public class LogoutHandler
         LOG.info("Logout request received");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, input);
 
         if (logoutRequest.session().isPresent()) {
@@ -104,14 +104,14 @@ public class LogoutHandler
         URI logoutUri = configurationService.getDefaultLogoutURI();
         if (logoutRequest.errorObject().isPresent()) {
             LOG.info(
-                    "Parsed logout request contains an error object. Generating logout error response with code: {} and description: {}",
+                    "Logout request contains an error object. Generating logout error response with code: {} and description: {}",
                     logoutRequest.errorObject().get().getCode(),
                     logoutRequest.errorObject().get().getDescription());
         } else if (logoutRequest.postLogoutRedirectUri().isEmpty()) {
             LOG.info(
-                    "Parsed logout request is missing a valid redirect URI. Generating logout response with default redirect URI.");
+                    "Logout request is missing a valid redirect URI. Generating logout response with default redirect URI.");
         } else if (logoutRequest.postLogoutRedirectUri().isPresent()) {
-            LOG.info("Parsed logout request contains a valid redirect URI and no error object.");
+            LOG.info("Logout request contains a valid redirect URI and no error object.");
             logoutUri = URI.create(logoutRequest.postLogoutRedirectUri().get());
         }
 

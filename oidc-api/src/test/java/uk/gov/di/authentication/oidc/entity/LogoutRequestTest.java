@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-class ParsedLogoutRequestTest {
+class LogoutRequestTest {
 
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -71,8 +71,7 @@ class ParsedLogoutRequestTest {
     private uk.gov.di.orchestration.shared.entity.Session session;
 
     @RegisterExtension
-    public final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(ParsedLogoutRequest.class);
+    public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutRequest.class);
 
     @AfterEach
     void tearDown() {
@@ -122,8 +121,8 @@ class ParsedLogoutRequestTest {
                                 "state", STATE.toString()));
         setupSessions();
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -147,8 +146,8 @@ class ParsedLogoutRequestTest {
         APIGatewayProxyRequestEvent event = generateRequestEvent(null);
         setupSessions();
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -179,8 +178,8 @@ class ParsedLogoutRequestTest {
                         STATE.toString()));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.empty(), logoutRequest.session());
@@ -215,8 +214,8 @@ class ParsedLogoutRequestTest {
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -256,8 +255,8 @@ class ParsedLogoutRequestTest {
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -306,8 +305,8 @@ class ParsedLogoutRequestTest {
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -345,8 +344,8 @@ class ParsedLogoutRequestTest {
                 generateRequestEvent(
                         Map.of("id_token_hint", idTokenHint, "state", STATE.toString()));
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -385,8 +384,8 @@ class ParsedLogoutRequestTest {
         session.getClientSessions().add(CLIENT_SESSION_ID);
         generateSessionFromCookie(session);
 
-        ParsedLogoutRequest logoutRequest =
-                new ParsedLogoutRequest(
+        LogoutRequest logoutRequest =
+                new LogoutRequest(
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
@@ -435,7 +434,7 @@ class ParsedLogoutRequestTest {
         return format(
                 "gs=%s.%s; %s=%s; Max-Age=%d; %s",
                 SESSION_ID,
-                ParsedLogoutRequestTest.CLIENT_SESSION_ID,
+                LogoutRequestTest.CLIENT_SESSION_ID,
                 CookieHelper.PERSISTENT_COOKIE_NAME,
                 PERSISTENT_SESSION_ID,
                 3600,

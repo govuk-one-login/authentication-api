@@ -25,8 +25,8 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromCookieHeader;
 
-public class ParsedLogoutRequest {
-    private static final Logger LOG = LogManager.getLogger(ParsedLogoutRequest.class);
+public class LogoutRequest {
+    private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
     private Optional<Session> session = Optional.empty();
     private Optional<String> subjectId = Optional.empty();
     private Optional<String> sessionId = Optional.empty();
@@ -42,9 +42,9 @@ public class ParsedLogoutRequest {
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
     private final CookieHelper cookieHelper = new CookieHelper();
 
-    private ParsedLogoutRequest() {}
+    private LogoutRequest() {}
 
-    public ParsedLogoutRequest(
+    public LogoutRequest(
             SessionService sessionService,
             TokenValidationService tokenValidationService,
             DynamoClientService dynamoClientService,
