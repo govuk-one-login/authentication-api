@@ -1,5 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
 
 Parameters:
   Environment:
@@ -68,6 +70,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
+      defaultProvisionedConcurrency: 0
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -97,6 +100,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
+      defaultProvisionedConcurrency: 1
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -126,6 +130,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
+      defaultProvisionedConcurrency: 3
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -155,6 +160,7 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
+      defaultProvisionedConcurrency: 1
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -184,6 +190,12 @@ Mappings:
       identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
+      defaultProvisionedConcurrency: 3
+  ProvisionedConcurrency:
+    staging:
+      TrustmarkFunction: 1
+    production:
+      TrustmarkFunction: 1
 
 Globals:
   Function:
@@ -278,6 +290,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - OpenIdConfigurationFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -400,6 +421,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - TrustmarkFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -648,6 +678,15 @@ Resources:
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - DocAppCallbackFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -742,6 +781,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TokenFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - TokenFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -882,6 +930,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref LogoutFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - LogoutFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1030,6 +1087,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - AuthenticationCallbackFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1210,6 +1276,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref JwksFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - JwksFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1334,6 +1409,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthorisationFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - AuthorisationFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -1519,6 +1603,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UserInfoFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - UserInfoFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -1662,6 +1755,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthCodeFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - AuthCodeFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
@@ -2048,6 +2150,15 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - IpvCallbackFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -2421,6 +2532,15 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - IsNotDevEnvironment
+        - ProvisionedConcurrentExecutions: !FindInMap
+          - ProvisionedConcurrency
+          - !Ref Environment
+          - StorageTokenJwkFunction
+          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
