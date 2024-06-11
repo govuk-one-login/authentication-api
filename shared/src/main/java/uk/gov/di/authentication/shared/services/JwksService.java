@@ -61,6 +61,14 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
     }
 
+    public JWK getPublicStorageTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving storage token public key");
+        // TODO: this is not available until ATO-661 is deployed
+        //        return
+        // getPublicJWKWithKeyId(configurationService.getStorageTokenSigningKeyAlias());
+        return getPublicJWKWithKeyId("some-alias");
+    }
+
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
         JWKSource<SecurityContext> jwkSource =
