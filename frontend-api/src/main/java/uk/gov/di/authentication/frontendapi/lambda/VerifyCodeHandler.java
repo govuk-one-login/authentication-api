@@ -138,7 +138,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             codeRequest.code(),
                             codeStorageService,
                             session.getEmailAddress(),
-                            configurationService.getCodeMaxRetries());
+                            configurationService);
 
             if (errorResponse.stream().anyMatch(ErrorResponse.ERROR_1002::equals)) {
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());

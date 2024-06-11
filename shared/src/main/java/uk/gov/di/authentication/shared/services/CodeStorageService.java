@@ -67,6 +67,13 @@ public class CodeStorageService {
                 configurationService.getLockoutCountTTL());
     }
 
+    public void increaseIncorrectMfaCodeAttemptsCountAccountCreation(String email) {
+        increaseCount(
+                email,
+                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX,
+                configurationService.getAccountCreationLockoutCountTTL());
+    }
+
     public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
         String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
         increaseCount(email, prefix, configurationService.getLockoutCountTTL());

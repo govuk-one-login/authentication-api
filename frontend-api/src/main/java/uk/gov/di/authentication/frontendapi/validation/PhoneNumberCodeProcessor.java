@@ -127,7 +127,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         codeRequest.getCode(),
                         codeStorageService,
                         emailAddress,
-                        configurationService.getCodeMaxRetries());
+                        configurationService);
 
         if (errorResponse.isEmpty()) {
             codeStorageService.deleteOtpCode(emailAddress, notificationType);
