@@ -126,7 +126,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -151,7 +151,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(Optional.empty(), logoutRequest.queryStringParameters());
         assertEquals(Optional.empty(), logoutRequest.state());
@@ -183,7 +183,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.empty(), logoutRequest.session());
-        assertEquals(Optional.empty(), logoutRequest.subjectId());
+        assertEquals(Optional.empty(), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.empty(), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -219,7 +219,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -260,7 +260,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -310,7 +310,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -349,7 +349,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),
@@ -389,7 +389,7 @@ class LogoutRequestTest {
                         sessionService, tokenValidationService, dynamoClientService, event);
 
         assertEquals(Optional.of(session), logoutRequest.session());
-        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.subjectId());
+        assertEquals(Optional.of(SUBJECT.getValue()), logoutRequest.internalCommonSubjectId());
         assertEquals(Optional.of(SESSION_ID), logoutRequest.sessionId());
         assertEquals(
                 Optional.of(event.getQueryStringParameters()),

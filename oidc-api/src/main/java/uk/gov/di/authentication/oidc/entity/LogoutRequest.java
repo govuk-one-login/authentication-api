@@ -28,7 +28,7 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractP
 public class LogoutRequest {
     private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
     private final Optional<Session> session;
-    private final Optional<String> subjectId;
+    private final Optional<String> internalCommonSubjectId;
     private final Optional<String> sessionId;
     private final Optional<Map<String, String>> queryStringParameters;
     private Optional<String> state = Optional.empty();
@@ -52,7 +52,7 @@ public class LogoutRequest {
                         "getSessionFromSessionCookie",
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
 
-        subjectId = session.map(Session::getInternalCommonSubjectIdentifier);
+        internalCommonSubjectId = session.map(Session::getInternalCommonSubjectIdentifier);
         sessionId = session.map(Session::getSessionId);
         Optional<String> journeyId = extractClientSessionIdFromCookieHeaders(input.getHeaders());
 
@@ -63,7 +63,7 @@ public class LogoutRequest {
                                 extractPersistentIdFromCookieHeader(input.getHeaders()))
                         .withSessionId(sessionId.orElse(null))
                         .withGovukSigninJourneyId(journeyId.orElse(null))
-                        .withUserId(subjectId.orElse(null));
+                        .withUserId(internalCommonSubjectId.orElse(null));
 
         queryStringParameters = Optional.ofNullable(input.getQueryStringParameters());
         if (queryStringParameters.isEmpty()) {
@@ -170,8 +170,8 @@ public class LogoutRequest {
         return session;
     }
 
-    public Optional<String> subjectId() {
-        return subjectId;
+    public Optional<String> internalCommonSubjectId() {
+        return internalCommonSubjectId;
     }
 
     public Optional<String> sessionId() {
