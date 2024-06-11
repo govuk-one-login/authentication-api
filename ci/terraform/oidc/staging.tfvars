@@ -13,6 +13,7 @@ authorize_protected_subnet_enabled   = true
 lockout_duration                     = 7200
 reduced_lockout_duration             = 900
 incorrect_password_lockout_count_ttl = 7200
+support_account_creation_count_ttl   = true
 
 orch_account_id                                 = "590183975515"
 kms_cross_account_access_enabled                = true

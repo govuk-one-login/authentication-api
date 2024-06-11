@@ -11,11 +11,14 @@ internal_sector_uri                  = "https://identity.build.account.gov.uk"
 ipv_api_enabled                      = true
 
 # lockout config
-lockout_duration                     = 60
-reduced_lockout_duration             = 30
-incorrect_password_lockout_count_ttl = 60
-lockout_count_ttl                    = 60
-otp_code_ttl_duration                = 60
+lockout_duration                          = 60
+reduced_lockout_duration                  = 30
+incorrect_password_lockout_count_ttl      = 60
+lockout_count_ttl                         = 60
+otp_code_ttl_duration                     = 60
+account_creation_lockout_count_ttl        = 60
+support_account_creation_count_ttl        = true
+email_acct_creation_otp_code_ttl_duration = 60
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
