@@ -27,10 +27,10 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractP
 
 public class LogoutRequest {
     private static final Logger LOG = LogManager.getLogger(LogoutRequest.class);
-    private Optional<Session> session = Optional.empty();
-    private Optional<String> subjectId = Optional.empty();
-    private Optional<String> sessionId = Optional.empty();
-    private Optional<String> journeyId = Optional.empty();
+    private Optional<Session> session;
+    private Optional<String> subjectId;
+    private Optional<String> sessionId;
+    private Optional<String> journeyId;
     private Optional<Map<String, String>> queryStringParameters;
     private Optional<String> state = Optional.empty();
     private Optional<String> idTokenHint = Optional.empty();
@@ -41,8 +41,6 @@ public class LogoutRequest {
     Optional<String> postLogoutRedirectUri = Optional.empty();
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
     private final CookieHelper cookieHelper = new CookieHelper();
-
-    private LogoutRequest() {}
 
     public LogoutRequest(
             SessionService sessionService,
