@@ -114,22 +114,17 @@ public class AuditService {
     public void submitAuditEvent(
             AuditableEvent event,
             AuditContext auditContext,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
             RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
 
         var user =
                 TxmaAuditUser.user()
-                        .withUserId(subjectId)
-                        .withPhone(phoneNumber)
-                        .withEmail(email)
-                        .withIpAddress(ipAddress)
+                        .withUserId(auditContext.subjectId())
+                        .withPhone(auditContext.phoneNumber())
+                        .withEmail(auditContext.email())
+                        .withIpAddress(auditContext.ipAddress())
                         .withSessionId(auditContext.sessionId())
-                        .withPersistentSessionId(persistentSessionId)
+                        .withPersistentSessionId(auditContext.persistentSessionId())
                         .withGovukSigninJourneyId(auditContext.clientSessionId());
 
         submitAuditEvent(event, auditContext.clientId(), user, restrictedSection, metadataPairs);
