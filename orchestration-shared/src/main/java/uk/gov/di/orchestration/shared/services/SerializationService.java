@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.LocalDateTimeAdapter;
+import uk.gov.di.orchestration.shared.serialization.OptionalAdapter;
 import uk.gov.di.orchestration.shared.serialization.StateAdapter;
 import uk.gov.di.orchestration.shared.serialization.SubjectAdapter;
 import uk.gov.di.orchestration.shared.validation.RequiredFieldValidator;
@@ -37,6 +38,7 @@ public class SerializationService implements Json {
                         .registerTypeAdapter(State.class, new StateAdapter())
                         .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                         .registerTypeAdapter(Subject.class, new SubjectAdapter())
+                        .registerTypeAdapterFactory(OptionalAdapter.FACTORY)
                         .create();
     }
 
