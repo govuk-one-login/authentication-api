@@ -88,9 +88,7 @@ data "aws_iam_policy_document" "interventions_api_stub_policy" {
     condition {
       test     = "StringNotEquals"
       variable = "aws:SourceVpce"
-      values = [
-        data.aws_vpc_endpoint.auth_api_vpc_endpoint.id
-      ]
+      values   = local.vpc_endpoint_ids
     }
   }
 }
@@ -137,7 +135,10 @@ resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
   rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
 
   triggers = {
-    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.interventions_api_stub.body))
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_rest_api.interventions_api_stub.body,
+      local.vpc_endpoint_ids
+    ]))
   }
   lifecycle {
     create_before_destroy = true
