@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "ci/terraform/**"
+      - "**/template.yaml"
   pull_request:
     branches:
       - main
+    paths:
+      - "ci/terraform/**"
+      - "**/template.yaml"
 
   workflow_dispatch:
 
