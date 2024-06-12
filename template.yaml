@@ -307,7 +307,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-openid-configuration-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   OpenIdConfigurationSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -429,7 +429,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-trustmark-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   TrustmarkSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -555,7 +555,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-backchannel-logout-request-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   BackChannelLogoutRequestSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -706,7 +706,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-doc-app-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   DocAppSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -788,7 +788,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-token-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   TokenSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -937,7 +937,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-logout-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   LogoutFunctionSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1117,7 +1117,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-authentication-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   AuthenticationCallbackSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1240,7 +1240,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-jwks-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   JwksSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1425,7 +1425,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-authorisation-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   AuthorisationSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1568,7 +1568,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-userinfo-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   UserInfoFunctionSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1701,7 +1701,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-auth-code-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   AuthCodeFunctionSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1828,7 +1828,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-update-client-config-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   UpdateClientConfigFunctionSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -1953,7 +1953,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-register-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   ClientRegistrationFunctionSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -2154,7 +2154,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-ipv-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   IpvCallbackFunctionSubscriptionFilter:
     Condition: IsNotDevEnvironment
@@ -2292,7 +2292,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   SpotResponseFunctionSubscriptionFilter:
     Condition: IpvExists
@@ -2447,7 +2447,7 @@ Resources:
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-storage-token-jwk-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
 
   StorageTokenJwkFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
