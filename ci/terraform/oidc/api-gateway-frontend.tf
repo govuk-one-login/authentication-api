@@ -36,6 +36,12 @@ resource "aws_api_gateway_usage_plan_key" "di_auth_frontend_usage_plan_key" {
   usage_plan_id = aws_api_gateway_usage_plan.di_auth_frontend_usage_plan.id
 }
 
+resource "aws_api_gateway_resource" "auth_frontend_wellknown_resource" {
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
+  path_part   = ".well-known"
+}
+
 locals {
   frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.environment}/_user_request_" : "https://${local.frontend_api_fqdn}/"
 }
@@ -79,6 +85,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.orch_auth_code.method_trigger_value,
       module.identity_progress.integration_trigger_value,
       module.identity_progress.method_trigger_value,
+      module.mfa_reset_storage_token_jwk.integration_trigger_value,
+      module.mfa_reset_storage_token_jwk.method_trigger_value,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].integration_trigger_value : null,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].method_trigger_value : null,
       local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].integration_trigger_value : null,
@@ -110,6 +118,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.doc-app-authorize,
     module.orch_auth_code,
     module.check_reauth_user,
+    module.mfa_reset_storage_token_jwk,
   ]
 }
 
@@ -210,6 +219,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.orch_auth_code,
     module.check_reauth_user,
     module.check_email_fraud_block,
+    module.mfa_reset_storage_token_jwk,
     aws_api_gateway_deployment.deployment,
   ]
 }
