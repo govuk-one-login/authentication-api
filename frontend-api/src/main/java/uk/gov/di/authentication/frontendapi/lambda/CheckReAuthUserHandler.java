@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.exceptions.AccountLockedException;
@@ -104,19 +105,23 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     new AuditService.RestrictedSection(
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
+            AuditContext auditContext =
+                    new AuditContext(
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getClientID)
+                                    .orElse(AuditService.UNKNOWN),
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            AuditService.UNKNOWN,
+                            request.email(),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    AuditService.UNKNOWN,
-                    request.email(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    auditContext,
                     restrictedSection,
                     e.getErrorResponse() == ErrorResponse.ERROR_1045
                             ? AuditService.MetadataPair.pair(
@@ -125,6 +130,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                             : AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxEmailReAuthRetries()));
+
             LOG.error("Account is locked due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }

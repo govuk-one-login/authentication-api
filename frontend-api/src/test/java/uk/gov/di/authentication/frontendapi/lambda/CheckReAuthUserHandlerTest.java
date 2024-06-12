@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -235,9 +236,8 @@ class CheckReAuthUserHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+        AuditContext testAuditContext =
+                new AuditContext(
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -245,7 +245,12 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", 5));

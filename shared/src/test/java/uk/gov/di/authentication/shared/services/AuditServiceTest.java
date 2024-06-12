@@ -100,19 +100,19 @@ class AuditServiceTest {
 
     @Test
     void checkSimplifiedMethodCall() {
-        var myContext = new AuditContext("client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id");
+        var myContext =
+                new AuditContext(
+                        "client-id",
+                        "request-id",
+                        "session-id",
+                        "subject-id",
+                        "email",
+                        "ip-address",
+                        "phone-number",
+                        "persistent-session-id");
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                myContext,
-                AuditService.RestrictedSection.empty);
+                TEST_EVENT_ONE, myContext, AuditService.RestrictedSection.empty);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 

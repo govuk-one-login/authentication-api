@@ -128,7 +128,6 @@ public class AuditService {
                         .withGovukSigninJourneyId(auditContext.clientSessionId());
 
         submitAuditEvent(event, auditContext.clientId(), user, restrictedSection, metadataPairs);
-
     }
 
     public void submitAuditEvent(
