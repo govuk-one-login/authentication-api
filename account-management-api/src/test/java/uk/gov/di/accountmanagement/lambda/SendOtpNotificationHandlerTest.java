@@ -157,7 +157,8 @@ class SendOtpNotificationHandlerTest {
                 verify(pendingEmailCheckSqsClient)
                         .send(
                                 format(
-                                        "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
+                                        "{\"userId\":\"%s\",\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
+                                        AuditService.UNKNOWN,
                                         mockedUUID,
                                         TEST_EMAIL_ADDRESS,
                                         "some-session-id",
