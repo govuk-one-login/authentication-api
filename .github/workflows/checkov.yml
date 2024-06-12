@@ -3,10 +3,10 @@ name: checkov
 on:
   push:
     branches:
-    - main
+      - main
   pull_request:
     branches:
-    - main
+      - main
 
   workflow_dispatch:
 
@@ -15,12 +15,12 @@ jobs:
     strategy:
       matrix:
         module:
-        - account-management
-        - delivery-receipts
-        - oidc
-        - shared
-        - test-services
-        - utils
+          - account-management
+          - delivery-receipts
+          - oidc
+          - shared
+          - test-services
+          - utils
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
