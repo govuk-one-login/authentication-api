@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -108,6 +109,31 @@ public class AuditService {
 
     public record RestrictedSection(Optional<String> encoded) {
         public static final RestrictedSection empty = new RestrictedSection(Optional.empty());
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
+            AuditContext auditContext,
+            String subjectId,
+            String email,
+            String ipAddress,
+            String phoneNumber,
+            String persistentSessionId,
+            RestrictedSection restrictedSection,
+            MetadataPair... metadataPairs) {
+
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId(subjectId)
+                        .withPhone(phoneNumber)
+                        .withEmail(email)
+                        .withIpAddress(ipAddress)
+                        .withSessionId(auditContext.sessionId())
+                        .withPersistentSessionId(persistentSessionId)
+                        .withGovukSigninJourneyId(auditContext.clientSessionId());
+
+        submitAuditEvent(event, auditContext.clientId(), user, restrictedSection, metadataPairs);
+
     }
 
     public void submitAuditEvent(
