@@ -17,9 +17,17 @@ on:
       - reopened
       - ready_for_review
       - synchronize
+    paths:
+      - "oidc-api/**"
+      - "doc-checking-app-api/**"
+      - "ipv-api/**"
   push:
     branches:
       - main
+    paths:
+      - "oidc-api/**"
+      - "doc-checking-app-api/**"
+      - "ipv-api/**"
 
 jobs:
   contract-testing:
