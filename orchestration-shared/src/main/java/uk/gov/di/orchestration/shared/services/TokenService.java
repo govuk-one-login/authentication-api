@@ -273,7 +273,8 @@ public class TokenService {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .subject(internalPairwiseSubject.getValue())
-                        .jwtID(jwtID);
+                        .jwtID(jwtID)
+                        .claim("scope", "proving");
 
         SignedJWT signedJWT =
                 generateSignedJwtUsingStorageKey(claimSetBuilder.build(), Optional.empty());

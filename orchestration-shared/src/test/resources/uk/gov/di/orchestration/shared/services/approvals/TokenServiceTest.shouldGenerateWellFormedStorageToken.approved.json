@@ -1,0 +1,12 @@
+{
+  "aud": [
+    "https://credential-store.account.gov.uk",
+    "https://identity.test.account.gov.uk"
+  ],
+  "sub": "urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0",
+  "scope": "proving",
+  "iss": "https://oidc.test.account.gov.uk",
+  "exp": 1700000000,
+  "iat": 1700000000,
+  "jti": "guid_1"
+}

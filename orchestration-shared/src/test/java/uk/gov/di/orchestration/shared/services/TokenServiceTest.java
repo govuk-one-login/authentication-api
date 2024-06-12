@@ -27,6 +27,11 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
+import org.approvaltests.JsonApprovals;
+import org.approvaltests.core.Options;
+import org.approvaltests.scrubbers.GuidScrubber;
+import org.approvaltests.scrubbers.RegExScrubber;
+import org.approvaltests.scrubbers.Scrubbers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,6 +92,8 @@ class TokenServiceTest {
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final Subject FIXED_INTERNAL_PAIRWISE_SUBJECT =
+            new Subject("urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0");
     private static final String JOURNEY_ID = "client-session-id";
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
@@ -101,7 +108,7 @@ class TokenServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String BASE_URL = "https://example.com";
+    private static final String BASE_URL = "https://oidc.test.account.gov.uk";
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
@@ -179,18 +186,23 @@ class TokenServiceTest {
     }
 
     @Test
-    void shouldGenerateWellFormedStorageToken() throws JOSEException {
+    void shouldGenerateWellFormedStorageToken() throws JOSEException, ParseException {
         when(configurationService.getCredentialStoreURI())
                 .thenReturn(URI.create(CREDENTIAL_STORE_URI));
         when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
         createSignedStorageToken();
 
-        AccessToken token = tokenService.generateStorageToken(new Subject());
-        String[] splitToken = token.toString().split("\\.");
+        AccessToken token = tokenService.generateStorageToken(FIXED_INTERNAL_PAIRWISE_SUBJECT);
+        var parsedToken = SignedJWT.parse(token.getValue());
 
         verify(configurationService).getStorageTokenSigningKeyAlias();
-        assertEquals(3, splitToken.length);
+        assertEquals(3, parsedToken.getParsedParts().length);
         assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
+        var unixTimestampScrubber = new RegExScrubber("\\d{10}", "1700000000");
+        var guidScrubber = new GuidScrubber();
+        JsonApprovals.verifyAsJson(
+                parsedToken.getJWTClaimsSet().toJSONObject(),
+                new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
     }
 
     @Test
