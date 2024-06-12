@@ -77,6 +77,20 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
         LOG.info("Processing CheckReAuthUser request");
 
+        AuditContext auditContext =
+                new AuditContext(
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        AuditService.UNKNOWN,
+                        request.email(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
         try {
             return authenticationService
                     .getUserProfileByEmailMaybe(request.email())
@@ -96,28 +110,20 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 }
 
                                 return verifyReAuthentication(
-                                        userProfile, userContext, request.rpPairwiseId(), input);
+                                        userProfile,
+                                        userContext,
+                                        request.rpPairwiseId(),
+                                        auditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(() -> generateErrorResponse(request.email(), userContext, input));
+                    .orElseGet(
+                            () ->
+                                    generateErrorResponse(
+                                            request.email(), userContext, auditContext));
         } catch (AccountLockedException e) {
             var restrictedSection =
                     new AuditService.RestrictedSection(
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
-            AuditContext auditContext =
-                    new AuditContext(
-                            userContext
-                                    .getClient()
-                                    .map(ClientRegistry::getClientID)
-                                    .orElse(AuditService.UNKNOWN),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
-                            AuditService.UNKNOWN,
-                            request.email(),
-                            IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -140,7 +146,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserProfile userProfile,
             UserContext userContext,
             String rpPairwiseId,
-            APIGatewayProxyRequestEvent input) {
+            AuditContext auditContext) {
         var client = userContext.getClient().orElseThrow();
         var calculatedPairwiseId =
                 ClientSubjectHelper.getSubject(
@@ -157,17 +163,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    AuditService.UNKNOWN,
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    auditContext,
                     restrictedSection);
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
@@ -186,7 +182,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String email, UserContext userContext, APIGatewayProxyRequestEvent input) {
+            String email, UserContext userContext, AuditContext auditContext) {
         if (hasEnteredIncorrectEmailTooManyTimes(email)) {
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
@@ -196,19 +192,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
-                AuditService.UNKNOWN,
-                email,
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                restrictedSection);
+                FrontendAuditableEvent.REAUTHENTICATION_INVALID, auditContext, restrictedSection);
         LOG.info("User not found or no match");
         codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);

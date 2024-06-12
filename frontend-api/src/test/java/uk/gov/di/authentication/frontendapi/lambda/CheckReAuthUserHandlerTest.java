@@ -126,9 +126,8 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(200, result.getStatusCode());
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+        AuditContext testAuditContext =
+                new AuditContext(
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -136,7 +135,12 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -169,9 +173,9 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(200, result.getStatusCode());
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+
+        AuditContext testAuditContext =
+                new AuditContext(
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -179,7 +183,12 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+                        testAuditContext,
                         AuditService.RestrictedSection.empty);
     }
 
@@ -202,9 +211,8 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+        AuditContext testAuditContext =
+                new AuditContext(
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -212,7 +220,12 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -297,9 +310,8 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+        AuditContext testAuditContext =
+                new AuditContext(
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -307,7 +319,12 @@ class CheckReAuthUserHandlerTest {
                         EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_SESSION_ID);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
