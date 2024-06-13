@@ -61,9 +61,9 @@ public class ClientRegistrationRequest {
     @Required
     private String subjectType;
 
-    @SerializedName("identity_verification_required")
+    @SerializedName("identity_verification_supported")
     @Expose
-    private boolean identityVerificationRequired;
+    private boolean identityVerificationSupported;
 
     @SerializedName("claims")
     @Expose
@@ -98,7 +98,7 @@ public class ClientRegistrationRequest {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean identityVerificationRequired,
+            boolean identityVerificationSupported,
             List<String> claims,
             String clientType,
             String idTokenSigningAlgorithm) {
@@ -113,7 +113,7 @@ public class ClientRegistrationRequest {
                 serviceType,
                 sectorIdentifierUri,
                 subjectType,
-                identityVerificationRequired,
+                identityVerificationSupported,
                 claims,
                 clientType,
                 idTokenSigningAlgorithm,
@@ -131,7 +131,7 @@ public class ClientRegistrationRequest {
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean identityVerificationRequired,
+            boolean identityVerificationSupported,
             List<String> claims,
             String clientType,
             String idTokenSigningAlgorithm,
@@ -151,7 +151,7 @@ public class ClientRegistrationRequest {
         this.serviceType = serviceType;
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.subjectType = subjectType;
-        this.identityVerificationRequired = identityVerificationRequired;
+        this.identityVerificationSupported = identityVerificationSupported;
         if (Objects.nonNull(claims)) {
             this.claims = claims;
         }
@@ -205,8 +205,8 @@ public class ClientRegistrationRequest {
         return subjectType;
     }
 
-    public boolean isIdentityVerificationRequired() {
-        return identityVerificationRequired;
+    public boolean isIdentityVerificationSupported() {
+        return identityVerificationSupported;
     }
 
     public List<String> getClaims() {

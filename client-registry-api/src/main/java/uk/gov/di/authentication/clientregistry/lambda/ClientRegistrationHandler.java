@@ -112,7 +112,7 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.isJarValidationRequired(),
                     clientRegistrationRequest.getClaims(),
                     clientRegistrationRequest.getClientType(),
-                    clientRegistrationRequest.isIdentityVerificationRequired(),
+                    clientRegistrationRequest.isIdentityVerificationSupported(),
                     null,
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                     clientRegistrationRequest.getIdTokenSigningAlgorithm(),
