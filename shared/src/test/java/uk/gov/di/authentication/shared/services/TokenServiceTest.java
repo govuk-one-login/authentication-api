@@ -16,6 +16,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -47,6 +48,7 @@ import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.URI;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -63,6 +65,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -103,6 +106,10 @@ public class TokenServiceTest {
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
+    private static final String STORAGE_TOKEN_PREFIX =
+            "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
+    private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
+    private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
 
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -132,7 +139,7 @@ public class TokenServiceTest {
             throws ParseException, JOSEException, Json.JsonException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -175,6 +182,21 @@ public class TokenServiceTest {
     }
 
     @Test
+    void shouldGenerateWellFormedStorageTokenForMfaReset() throws JOSEException {
+        when(configurationService.getCredentialStoreURI())
+                .thenReturn(URI.create(CREDENTIAL_STORE_URI));
+        when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
+        createSignedToken();
+
+        AccessToken token = tokenService.generateStorageTokenForMfaReset(new Subject());
+        String[] splitToken = token.toString().split("\\.");
+
+        verify(configurationService).getStorageTokenSigningKeyAlias();
+        assertEquals(3, splitToken.length);
+        assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
+    }
+
+    @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
             throws ParseException,
                     JOSEException,
@@ -185,7 +207,7 @@ public class TokenServiceTest {
 
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -253,7 +275,7 @@ public class TokenServiceTest {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -282,7 +304,7 @@ public class TokenServiceTest {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -456,7 +478,7 @@ public class TokenServiceTest {
                 CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, ecSigningKey, expiryDate);
     }
 
-    private void createSignedAccessToken() throws JOSEException {
+    private void createSignedToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
@@ -471,16 +493,15 @@ public class TokenServiceTest {
                         signer,
                         PUBLIC_SUBJECT,
                         ecSigningKey.getKeyID());
-        byte[] accessTokenSignatureDer =
-                ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        SignResponse accessTokenResult =
+        byte[] tokenSignatureDer = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+        SignResponse tokenResult =
                 SignResponse.builder()
-                        .signature(SdkBytes.fromByteArray(accessTokenSignatureDer))
+                        .signature(SdkBytes.fromByteArray(tokenSignatureDer))
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .keyId(KEY_ID)
                         .build();
 
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(tokenResult);
     }
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)

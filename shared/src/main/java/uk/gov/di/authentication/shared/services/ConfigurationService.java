@@ -514,4 +514,26 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getAccountInterventionsErrorMetricName() {
         return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }
+
+    public String getIPVAudience() {
+        return System.getenv().getOrDefault("IPV_AUDIENCE", "");
+    }
+
+    public String getStorageTokenSigningKeyAlias() {
+        return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public URI getCredentialStoreURI() {
+        return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
+    }
+
+    private URI getURIOrDefault(String envVar, String defaultUri) {
+        return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
+    }
+
+    private Optional<URI> getOptionalURI(String envVar) {
+        return System.getenv().containsKey(envVar)
+                ? Optional.of(URI.create(System.getenv(envVar)))
+                : Optional.empty();
+    }
 }
