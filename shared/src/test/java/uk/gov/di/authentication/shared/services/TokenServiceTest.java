@@ -191,7 +191,7 @@ public class TokenServiceTest {
         AccessToken token = tokenService.generateStorageTokenForMfaReset(new Subject());
         String[] splitToken = token.toString().split("\\.");
 
-        verify(configurationService).getStorageTokenSigningKeyAlias();
+        verify(configurationService).getMfaResetStorageTokenSigningKeyAlias();
         assertEquals(3, splitToken.length);
         assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
     }

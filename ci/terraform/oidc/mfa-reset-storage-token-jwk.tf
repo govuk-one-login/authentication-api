@@ -18,9 +18,9 @@ module "mfa_reset_storage_token_jwk" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                     = var.environment
-    DOC_APP_TOKEN_SIGNING_KEY_ALIAS = local.doc_app_auth_key_alias_name
-    STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_signing_key_alias.name
+    ENVIRONMENT                               = var.environment
+    DOC_APP_TOKEN_SIGNING_KEY_ALIAS           = local.doc_app_auth_key_alias_name
+    MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_signing_key_alias.name
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetStorageTokenJwkHandler::handleRequest"
 
