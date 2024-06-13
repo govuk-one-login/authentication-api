@@ -1,5 +1,9 @@
 [
   {
+    "ParameterKey": "AllowedDomains",
+    "ParameterValue": "*.account.gov.uk"
+  },
+  {
     "ParameterKey": "DynatraceApiEnabled",
     "ParameterValue": "Yes"
   },
