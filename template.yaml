@@ -29,7 +29,7 @@ Conditions:
   UseCodeSigning:
     !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
   IsNotDevEnvironment:
-    !Not [ !Equals [!Ref Environment, 'dev'] ]
+    !Not [ !Equals [!Ref Environment, dev] ]
   AisAbortOnError:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
   IpvExists:
@@ -38,6 +38,8 @@ Conditions:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
   SpotResponseEventMappingDisabled:
     !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+  EnableProvisionedConcurrency:
+    !Equals [!Ref Environment, staging]
 
 Mappings:
   EnvironmentConfiguration:
@@ -293,7 +295,7 @@ Resources:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -424,7 +426,7 @@ Resources:
         LogGroup: !Ref TrustmarkFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -681,7 +683,7 @@ Resources:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -784,7 +786,7 @@ Resources:
         LogGroup: !Ref TokenFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -933,7 +935,7 @@ Resources:
         LogGroup: !Ref LogoutFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -1090,7 +1092,7 @@ Resources:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -1279,7 +1281,7 @@ Resources:
         LogGroup: !Ref JwksFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -1412,7 +1414,7 @@ Resources:
         LogGroup: !Ref AuthorisationFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -1606,7 +1608,7 @@ Resources:
         LogGroup: !Ref UserInfoFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -1758,7 +1760,7 @@ Resources:
         LogGroup: !Ref AuthCodeFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -2153,7 +2155,7 @@ Resources:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
@@ -2535,7 +2537,7 @@ Resources:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
       ProvisionedConcurrencyConfig:
         !If
-        - IsNotDevEnvironment
+        - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
           - ProvisionedConcurrency
           - !Ref Environment
