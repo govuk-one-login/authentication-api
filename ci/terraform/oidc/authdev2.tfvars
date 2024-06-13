@@ -48,8 +48,7 @@ email_acct_creation_otp_code_ttl_duration = 60
 
 orch_client_id = "orchestrationAuth"
 
-contra_state_bucket      = "di-auth-development-tfstate"
-phone_checker_with_retry = false
+contra_state_bucket = "di-auth-development-tfstate"
 
 orch_redirect_uri                  = "https://oidc.authdev2.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true

@@ -328,7 +328,7 @@ variable "ipv_no_session_response_enabled" {
 
 variable "phone_checker_with_retry" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "internal_sector_uri" {

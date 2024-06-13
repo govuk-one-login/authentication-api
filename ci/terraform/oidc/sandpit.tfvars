@@ -56,7 +56,6 @@ support_email_check_enabled = true
 
 txma_audit_encoded_enabled = true
 contra_state_bucket        = "digital-identity-dev-tfstate"
-phone_checker_with_retry   = false
 
 orch_openid_configuration_enabled    = true
 orch_doc_app_callback_enabled        = true

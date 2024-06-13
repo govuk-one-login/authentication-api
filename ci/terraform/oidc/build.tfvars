@@ -40,8 +40,7 @@ orch_client_id                     = "orchestrationAuth"
 orch_redirect_uri                  = "https://oidc.build.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
-contra_state_bucket      = "digital-identity-dev-tfstate"
-phone_checker_with_retry = false
+contra_state_bucket = "digital-identity-dev-tfstate"
 
 orch_account_id = "767397776536"
 

@@ -49,8 +49,7 @@ email_acct_creation_otp_code_ttl_duration = 60
 
 orch_client_id = "orchestrationAuth"
 
-contra_state_bucket      = "di-auth-development-tfstate"
-phone_checker_with_retry = false
+contra_state_bucket = "di-auth-development-tfstate"
 
 orch_frontend_api_gateway_integration_enabled = false
 
