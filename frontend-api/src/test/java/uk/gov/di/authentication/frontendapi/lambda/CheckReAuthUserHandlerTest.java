@@ -63,15 +63,16 @@ class CheckReAuthUserHandlerTest {
 
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
-    private final AuditContext testAuditContext = new AuditContext(
-            CLIENT_ID,
-            CLIENT_SESSION_ID,
-            session.getSessionId(),
-            AuditService.UNKNOWN,
-            EMAIL_ADDRESS,
-            AuditService.UNKNOWN,
-            AuditService.UNKNOWN,
-            PERSISTENT_SESSION_ID);
+    private final AuditContext testAuditContext =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    AuditService.UNKNOWN,
+                    EMAIL_ADDRESS,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    PERSISTENT_SESSION_ID);
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final byte[] SALT = SaltHelper.generateNewSalt();

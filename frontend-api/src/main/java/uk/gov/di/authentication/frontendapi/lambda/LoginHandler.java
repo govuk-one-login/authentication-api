@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
@@ -126,15 +125,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        TxmaAuditUser auditUser =
-                new TxmaAuditUser()
-                        .withGovukSigninJourneyId(userContext.getClientSessionId())
-                        .withSessionId(userContext.getSession().getSessionId())
-                        .withUserId(AuditService.UNKNOWN)
-                        .withEmail(request.getEmail())
-                        .withPhone(AuditService.UNKNOWN)
-                        .withIpAddress(IpAddressHelper.extractIpAddress(input));
-
         var restrictedSection =
                 new AuditService.RestrictedSection(
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
@@ -145,16 +135,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         try {
             var clientId = userContext.getClientId();
 
-            auditUser.withPersistentSessionId(persistentSessionId);
-
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        clientId,
-                        auditUser,
+                        auditContext,
                         restrictedSection);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
@@ -162,8 +149,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             UserProfile userProfile = userProfileMaybe.get();
             UserCredentials userCredentials = userContext.getUserCredentials().get();
-
-            auditUser.withPhone(userProfile.getPhoneNumber());
             auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
             var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
@@ -177,8 +162,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userProfile,
                             configurationService.getInternalSectorUri(),
                             authenticationService);
-
-            auditUser.withUserId(internalCommonSubjectIdentifier.getValue());
             auditContext = auditContext.withUserId(internalCommonSubjectIdentifier.getValue());
 
             int incorrectPasswordCount =
@@ -193,8 +176,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        clientId,
-                        auditUser,
+                        auditContext,
                         restrictedSection,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
@@ -214,8 +196,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        clientId,
-                        auditUser,
+                        auditContext,
                         restrictedSection,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
@@ -226,8 +207,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                            clientId,
-                            auditUser,
+                            auditContext,
                             restrictedSection,
                             pair("internalSubjectId", userProfile.getSubjectID()),
                             pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
