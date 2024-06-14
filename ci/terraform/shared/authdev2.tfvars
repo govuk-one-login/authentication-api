@@ -32,3 +32,5 @@ stub_rp_clients = [
 
 logging_endpoint_enabled = false
 enforce_code_signing     = false
+
+enable_user_profile_stream = false
