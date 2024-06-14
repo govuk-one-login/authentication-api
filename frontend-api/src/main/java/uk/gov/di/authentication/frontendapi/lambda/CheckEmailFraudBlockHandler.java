@@ -5,17 +5,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
-import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
-import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.helpers.AuditHelper;
-import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -84,53 +76,20 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
             var emailCheckResult =
                     dynamoEmailCheckResultService.getEmailCheckStore(request.getEmail());
-            var status =
-                    emailCheckResult
-                            .map(EmailCheckResultStore::getStatus)
-                            .orElse(EmailCheckResultStatus.PENDING);
 
-            var checkEmailFraudBlockResponse = createResponse(request.getEmail(), status);
-
-            if (status.equals(EmailCheckResultStatus.PENDING)) {
-                submitAuditEvent(input, userContext, request);
+            if (emailCheckResult.isPresent()) {
+                var checkEmailFraudBlockResponse =
+                        new CheckEmailFraudBlockResponse(
+                                request.getEmail(), emailCheckResult.get().getStatus().getValue());
+                return generateApiGatewayProxyResponse(200, checkEmailFraudBlockResponse);
             }
-
-            return generateApiGatewayProxyResponse(200, checkEmailFraudBlockResponse);
+            return generateApiGatewayProxyResponse(
+                    200,
+                    new CheckEmailFraudBlockResponse(
+                            request.getEmail(), EmailCheckResultStatus.PENDING.getValue()));
         } catch (Json.JsonException e) {
             LOG.error("Unable to serialize check email fraud block response", e);
             throw new RuntimeException(e);
         }
-    }
-
-    private CheckEmailFraudBlockResponse createResponse(
-            String email, EmailCheckResultStatus status) {
-        return new CheckEmailFraudBlockResponse(email, status.getValue());
-    }
-
-    private void submitAuditEvent(
-            APIGatewayProxyRequestEvent input,
-            UserContext userContext,
-            CheckEmailFraudBlockRequest request) {
-
-        String clientId =
-                input.getRequestContext()
-                        .getAuthorizer()
-                        .getOrDefault("clientId", AuditService.UNKNOWN)
-                        .toString();
-
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
-                clientId,
-                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                userContext.getClientSessionId(),
-                AuditService.UNKNOWN,
-                request.getEmail(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                AuditHelper.buildRestrictedSection(input.getHeaders()),
-                AuditService.MetadataPair.pair("journeyType", JourneyType.REGISTRATION.getValue()),
-                AuditService.MetadataPair.pair("assessmentCheckedAtTimestamp", NowHelper.now()),
-                AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
     }
 }

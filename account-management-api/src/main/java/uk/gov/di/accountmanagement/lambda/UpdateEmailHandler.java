@@ -17,14 +17,12 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -117,36 +115,6 @@ public class UpdateEmailHandler
         try {
             UpdateEmailRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
-
-            boolean isValidOtpCode =
-                    codeStorageService.isValidOtpCode(
-                            updateInfoRequest.getReplacementEmailAddress(),
-                            updateInfoRequest.getOtp(),
-                            NotificationType.VERIFY_EMAIL);
-            if (!isValidOtpCode) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
-            }
-
-            Optional<ErrorResponse> emailValidationErrors =
-                    ValidationHelper.validateEmailAddressUpdate(
-                            updateInfoRequest.getExistingEmailAddress(),
-                            updateInfoRequest.getReplacementEmailAddress());
-            if (emailValidationErrors.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
-            }
-
-            if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
-            }
-
-            var userProfile =
-                    dynamoService
-                            .getUserProfileByEmailMaybe(updateInfoRequest.getExistingEmailAddress())
-                            .orElseThrow(
-                                    () ->
-                                            new UserNotFoundException(
-                                                    "User not found with given email"));
-
             AtomicReference<EmailCheckResultStatus> resultStatus =
                     new AtomicReference<>(EmailCheckResultStatus.PENDING);
             dynamoEmailCheckResultService
@@ -155,27 +123,31 @@ public class UpdateEmailHandler
             LOG.info(
                     "UpdateEmailHandler: Experian email verification status: {}",
                     resultStatus.get());
-            if (resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
-                auditService.submitAuditEvent(
-                        AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
-                        input.getRequestContext()
-                                .getAuthorizer()
-                                .getOrDefault("clientId", AuditService.UNKNOWN)
-                                .toString(),
-                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                        sessionId,
-                        userProfile.getSubjectID(),
-                        updateInfoRequest.getReplacementEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        userProfile.getPhoneNumber(),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.buildRestrictedSection(input.getHeaders()),
-                        AuditService.MetadataPair.pair(
-                                "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                        AuditService.MetadataPair.pair(
-                                "assessment_checked_at_timestamp", NowHelper.now()),
-                        AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
+            boolean isValidOtpCode =
+                    codeStorageService.isValidOtpCode(
+                            updateInfoRequest.getReplacementEmailAddress(),
+                            updateInfoRequest.getOtp(),
+                            NotificationType.VERIFY_EMAIL);
+            if (!isValidOtpCode) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
+            Optional<ErrorResponse> emailValidationErrors =
+                    ValidationHelper.validateEmailAddressUpdate(
+                            updateInfoRequest.getExistingEmailAddress(),
+                            updateInfoRequest.getReplacementEmailAddress());
+            if (emailValidationErrors.isPresent()) {
+                return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
+            }
+            if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
+            }
+            var userProfile =
+                    dynamoService
+                            .getUserProfileByEmailMaybe(updateInfoRequest.getExistingEmailAddress())
+                            .orElseThrow(
+                                    () ->
+                                            new UserNotFoundException(
+                                                    "User not found with given email"));
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
             if (PrincipalValidationHelper.principleIsInvalid(
