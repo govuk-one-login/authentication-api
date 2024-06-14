@@ -63,6 +63,15 @@ class CheckReAuthUserHandlerTest {
 
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
+    private final AuditContext testAuditContext = new AuditContext(
+            CLIENT_ID,
+            CLIENT_SESSION_ID,
+            session.getSessionId(),
+            AuditService.UNKNOWN,
+            EMAIL_ADDRESS,
+            AuditService.UNKNOWN,
+            AuditService.UNKNOWN,
+            PERSISTENT_SESSION_ID);
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
@@ -126,17 +135,6 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(200, result.getStatusCode());
 
-        AuditContext testAuditContext =
-                new AuditContext(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
@@ -174,17 +172,6 @@ class CheckReAuthUserHandlerTest {
 
         assertEquals(200, result.getStatusCode());
 
-        AuditContext testAuditContext =
-                new AuditContext(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
@@ -210,17 +197,6 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
-
-        AuditContext testAuditContext =
-                new AuditContext(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -248,17 +224,6 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
-
-        AuditContext testAuditContext =
-                new AuditContext(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -309,17 +274,6 @@ class CheckReAuthUserHandlerTest {
                         userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
-
-        AuditContext testAuditContext =
-                new AuditContext(
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
 
         verify(auditService)
                 .submitAuditEvent(

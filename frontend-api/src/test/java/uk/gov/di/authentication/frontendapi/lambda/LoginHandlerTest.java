@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
@@ -93,6 +94,7 @@ class LoginHandlerTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    public static final String TEST_IP_ADDRESS = "123.123.123.123";
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
@@ -160,7 +162,7 @@ class LoginHandlerTest {
                     .withPhone(CommonTestVariables.UK_MOBILE_NUMBER)
                     .withPersistentSessionId(PERSISTENT_ID)
                     .withSessionId(session.getSessionId())
-                    .withIpAddress("123.123.123.123")
+                    .withIpAddress(TEST_IP_ADDRESS)
                     .withGovukSigninJourneyId(CLIENT_SESSION_ID);
 
     private final TxmaAuditUser auditUserWithoutUserInfo =
@@ -170,7 +172,7 @@ class LoginHandlerTest {
                     .withUserId(AuditService.UNKNOWN)
                     .withEmail(EMAIL)
                     .withPhone(AuditService.UNKNOWN)
-                    .withIpAddress("123.123.123.123")
+                    .withIpAddress(TEST_IP_ADDRESS)
                     .withPersistentSessionId(PERSISTENT_ID);
 
     @RegisterExtension
@@ -208,6 +210,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
+        // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -223,8 +226,23 @@ class LoginHandlerTest {
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
+        AuditContext expectedAuditContext = new AuditContext(
+                CLIENT_ID.getValue(),
+                CLIENT_SESSION_ID,
+                session.getSessionId(),
+                expectedCommonSubject,
+                EMAIL,
+                TEST_IP_ADDRESS,
+                CommonTestVariables.UK_MOBILE_NUMBER,
+                PERSISTENT_ID
+        );
+
+        var expectedRestrictedSection = new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
+
+        // Act
         var result = handler.handleRequest(event, context);
 
+        // Assert
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
@@ -236,13 +254,12 @@ class LoginHandlerTest {
                                 CommonTestVariables.UK_MOBILE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_ID.getValue(),
-                        auditUserWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        verify(auditService).submitAuditEvent(
+                FrontendAuditableEvent.LOG_IN_SUCCESS,
+                expectedAuditContext,
+                expectedRestrictedSection,
+                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue())
+        );
 
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
@@ -812,7 +829,7 @@ class LoginHandlerTest {
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
             Map<String, String> headers, String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(TEST_IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(body);
         return event;

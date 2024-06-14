@@ -8,5 +8,29 @@ public record AuditContext(
         String email,
         String ipAddress,
         String phoneNumber,
-        String persistentSessionId) {}
-;
+        String persistentSessionId) {
+
+    public AuditContext withPhoneNumber(String phoneNumber) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId);
+    }
+
+    public AuditContext withUserId(String subjectId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId);
+    }
+}
