@@ -3196,17 +3196,18 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowConsumeFromBackChannelLogoutQueue
+          - Sid: AllowBackChannelLogoutQueueWrite
             Effect: Allow
             Action:
               - sqs:SendMessage
               - sqs:ChangeMessageVisibility
               - sqs:GetQueueAttributes
             Resource: !GetAtt BackChannelLogoutQueue.Arn
-          - Sid: AllowDecryptBackChannelLogoutQueue
+          - Sid: AllowEncryptBackChannelLogoutQueue
             Effect: Allow
             Action:
               - kms:Decrypt
+              - kms:GenerateDataKey
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
 
   BackChannelLogoutQueueConsumePolicy:
@@ -3215,18 +3216,17 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowBackChannelLogoutWriteAccess
+          - Sid: AllowConsumeFromBackChannelLogout
             Effect: Allow
             Action:
               - sqs:ReceiveMessage
               - sqs:DeleteMessage
               - sqs:GetQueueAttributes
             Resource: !GetAtt BackChannelLogoutQueue.Arn
-          - Sid: AllowEncryptBackChannelLogoutQueue
+          - Sid: AllowDecryptBackChannelLogoutQueue
             Effect: Allow
             Action:
               - kms:Decrypt
-              - kms:GenerateDataKey
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
 
   SpotResponseQueueConsumePolicy:
