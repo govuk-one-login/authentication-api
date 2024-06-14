@@ -3190,7 +3190,7 @@ Resources:
             Resource:
               - !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
 
-  BackChannelLogoutQueueConsumePolicy:
+  BackChannelLogoutQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
@@ -3209,7 +3209,7 @@ Resources:
               - kms:Decrypt
             Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
 
-  BackChannelLogoutQueueWritePolicy:
+  BackChannelLogoutQueueConsumePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
