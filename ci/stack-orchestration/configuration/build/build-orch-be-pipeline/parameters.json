@@ -78,5 +78,13 @@
   {
     "ParameterKey": "TestReportFormat",
     "ParameterValue": "CUCUMBERJSON"
+  },
+  {
+    "ParameterKey": "BuildNotificationStackName",
+    "ParameterValue": "build-notifications"
+  },
+  {
+    "ParameterKey": "SlackNotificationType",
+    "ParameterValue": "Failures"
   }
 ]
