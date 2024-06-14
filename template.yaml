@@ -73,6 +73,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
       defaultProvisionedConcurrency: 0
+      aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -103,6 +104,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
       defaultProvisionedConcurrency: 1
+      aisUriSecretId: 1bd7d184-d4c1-47a0-9f7c-b0521e6a1d7c
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -133,6 +135,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       defaultProvisionedConcurrency: 3
+      aisUriSecretId: daea90b7-b7a9-45b1-98fb-7d9ce8da5a72
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -163,6 +166,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       defaultProvisionedConcurrency: 1
+      aisUriSecretId: ''
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -193,6 +197,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       defaultProvisionedConcurrency: 3
+      aisUriSecretId: ''
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
@@ -440,9 +445,6 @@ Resources:
             - https://oidc.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ENVIRONMENT: !Sub ${Environment}
-          FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
@@ -1106,8 +1108,9 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}'
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
+              SecretId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, aisUriSecretId ]
           AUTHENTICATION_BACKEND_URI: !Sub
             - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
             - AuthExternalApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authExternalApiId ]
@@ -1465,7 +1468,7 @@ Resources:
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_REDIRECT_URI: !Sub
-            - https://oidc.${ServiceDomain}/orchestration-redirect/
+            - https://oidc.${ServiceDomain}/orchestration-redirect
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
           REDIS_KEY: session
@@ -2197,8 +2200,9 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}'
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
+              SecretId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, aisUriSecretId ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
           IPV_AUDIENCE: !If
             - IpvExists
