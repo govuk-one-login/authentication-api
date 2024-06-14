@@ -52,3 +52,4 @@ txma_audit_encoded_enabled  = true
 
 kms_cross_account_access_enabled                = true
 spot_request_queue_cross_account_access_enabled = true
+orch_storage_token_jwk_enabled                  = true
