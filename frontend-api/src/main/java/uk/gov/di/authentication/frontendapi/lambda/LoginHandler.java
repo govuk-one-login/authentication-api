@@ -40,6 +40,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
@@ -136,8 +137,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL, auditContext);
+                auditService.submitAuditEvent(NO_ACCOUNT_WITH_EMAIL, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
