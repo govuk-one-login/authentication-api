@@ -44,7 +44,7 @@ public class AuditService {
     }
 
     private static void addRestrictedSectionToAuditEvent(
-            RestrictedSection restrictedSection,
+            Optional<String> txmaAuditEncoded,
             TxmaAuditEvent txmaAuditEvent,
             MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
@@ -55,21 +55,15 @@ public class AuditService {
                             }
                         });
 
-        restrictedSection
-                .encoded()
-                .ifPresentOrElse(
-                        s -> {
-                            if (!s.isEmpty()) {
-                                txmaAuditEvent.addRestricted(
-                                        "device_information", Map.of("encoded", s));
-                            } else {
-                                LOG.warn(
-                                        "Encoded device information for audit event present but empty.");
-                            }
-                        },
-                        () ->
-                                LOG.warn(
-                                        "Encoded device information for audit event is not present."));
+        txmaAuditEncoded.ifPresentOrElse(
+                s -> {
+                    if (!s.isEmpty()) {
+                        txmaAuditEvent.addRestricted("device_information", Map.of("encoded", s));
+                    } else {
+                        LOG.warn("Encoded device information for audit event present but empty.");
+                    }
+                },
+                () -> LOG.warn("Encoded device information for audit event is not present."));
     }
 
     private static void addExtensionSectionToAuditEvent(
@@ -113,9 +107,7 @@ public class AuditService {
                         .withUser(user);
 
         addRestrictedSectionToAuditEvent(
-                new RestrictedSection(auditContext.txmaAuditEncoded()),
-                txmaAuditEvent,
-                metadataPairs);
+                auditContext.txmaAuditEncoded(), txmaAuditEvent, metadataPairs);
         addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
