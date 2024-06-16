@@ -89,7 +89,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         request.email(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         try {
             return authenticationService

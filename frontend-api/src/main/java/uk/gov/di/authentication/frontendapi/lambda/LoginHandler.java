@@ -123,7 +123,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         var restrictedSection =
                 new AuditService.RestrictedSection(

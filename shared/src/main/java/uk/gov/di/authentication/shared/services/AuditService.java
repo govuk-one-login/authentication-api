@@ -143,7 +143,8 @@ public class AuditService {
                         email,
                         ipAddress,
                         phoneNumber,
-                        persistentSessionId);
+                        persistentSessionId,
+                        restrictedSection.encoded);
 
         submitAuditEvent(event, auditContext, restrictedSection, metadataPairs);
     }
