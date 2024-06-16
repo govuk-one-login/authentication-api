@@ -117,19 +117,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         auditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(
-                            () ->
-                                    generateErrorResponse(
-                                            request.email(), userContext, auditContext));
+                    .orElseGet(() -> generateErrorResponse(request.email(), auditContext));
         } catch (AccountLockedException e) {
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
-                    restrictedSection,
                     e.getErrorResponse() == ErrorResponse.ERROR_1045
                             ? AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login",
@@ -158,14 +151,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         .getValue();
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                    auditContext,
-                    restrictedSection);
+                    FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL, auditContext);
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
             return Optional.of(rpPairwiseId);
@@ -183,17 +170,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String email, UserContext userContext, AuditContext auditContext) {
+            String email, AuditContext auditContext) {
         if (hasEnteredIncorrectEmailTooManyTimes(email)) {
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
-        var restrictedSection =
-                new AuditService.RestrictedSection(
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.REAUTHENTICATION_INVALID, auditContext, restrictedSection);
+                FrontendAuditableEvent.REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
         codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);

@@ -94,10 +94,7 @@ public class AuditService {
     }
 
     public void submitAuditEvent(
-            AuditableEvent event,
-            AuditContext auditContext,
-            RestrictedSection restrictedSection,
-            MetadataPair... metadataPairs) {
+            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 
         var user =
                 TxmaAuditUser.user()
@@ -115,7 +112,10 @@ public class AuditService {
                         .withComponentId(COMPONENT_ID)
                         .withUser(user);
 
-        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);
+        addRestrictedSectionToAuditEvent(
+                new RestrictedSection(auditContext.txmaAuditEncoded()),
+                txmaAuditEvent,
+                metadataPairs);
         addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
@@ -146,7 +146,7 @@ public class AuditService {
                         persistentSessionId,
                         restrictedSection.encoded);
 
-        submitAuditEvent(event, auditContext, restrictedSection, metadataPairs);
+        submitAuditEvent(event, auditContext, metadataPairs);
     }
 
     public static class MetadataPair {

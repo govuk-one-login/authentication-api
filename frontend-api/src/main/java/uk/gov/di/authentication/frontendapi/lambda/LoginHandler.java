@@ -126,10 +126,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
         attachSessionIdToLogs(userContext.getSession().getSessionId());
 
         LOG.info("Request received");
@@ -141,9 +137,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        auditContext,
-                        restrictedSection);
+                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
@@ -178,7 +172,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         auditContext,
-                        restrictedSection,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
@@ -198,7 +191,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         auditContext,
-                        restrictedSection,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
@@ -209,7 +201,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                             auditContext,
-                            restrictedSection,
                             pair("internalSubjectId", userProfile.getSubjectID()),
                             pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
                             pair(
@@ -285,12 +276,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     userMfaDetail.getMfaMethodType().getValue(),
                     userMfaDetail.isMfaMethodVerified());
 
-            auditService.submitAuditEvent(
-                    LOG_IN_SUCCESS,
-                    auditContext,
-                    new AuditService.RestrictedSection(
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded())),
-                    pairs);
+            auditService.submitAuditEvent(LOG_IN_SUCCESS, auditContext, pairs);
 
             if (!userMfaDetail.isMfaRequired()) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(

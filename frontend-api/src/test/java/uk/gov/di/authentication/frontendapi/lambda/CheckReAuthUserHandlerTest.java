@@ -76,15 +76,7 @@ class CheckReAuthUserHandlerTest {
                     Optional.empty());
 
     private final AuditContext testAuditContextWithAuditEncoded =
-            new AuditContext(
-                    CLIENT_ID,
-                    CLIENT_SESSION_ID,
-                    session.getSessionId(),
-                    AuditService.UNKNOWN,
-                    EMAIL_ADDRESS,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    PERSISTENT_SESSION_ID,
+            testAuditContextWithoutAuditEncoded.withTxmaAuditEncoded(
                     Optional.of(ENCODED_DEVICE_DETAILS));
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
@@ -152,8 +144,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                        testAuditContextWithAuditEncoded,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        testAuditContextWithAuditEncoded);
     }
 
     @Test
@@ -189,8 +180,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                        testAuditContextWithoutAuditEncoded,
-                        AuditService.RestrictedSection.empty);
+                        testAuditContextWithoutAuditEncoded);
     }
 
     @Test
@@ -215,8 +205,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        testAuditContextWithAuditEncoded);
     }
 
     @Test
@@ -243,7 +232,6 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         testAuditContextWithAuditEncoded,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", 5));
     }
@@ -292,8 +280,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        testAuditContextWithAuditEncoded);
     }
 
     private UserProfile generateUserProfile() {
