@@ -803,7 +803,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(userInfoDbEntry.get().getUserInfo(), containsString("new_account"));
     }
 
-    private void setupClientReg(boolean identityVerificationSupport) {
+    private void setupClientReg(boolean identityVerificationSupported) {
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -818,7 +818,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 "pairwise",
                 ClientType.APP,
                 ES256.getName(),
-                identityVerificationSupport);
+                identityVerificationSupported);
     }
 
     private void setupClientRegWithIdentityVerificationSupported() {

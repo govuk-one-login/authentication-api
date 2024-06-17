@@ -67,6 +67,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private String idTokenSigningAlgorithm;
 
+    @SerializedName("identity_verification_supported")
+    @Expose
+    private Boolean identityVerificationSupported;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -127,6 +131,10 @@ public class UpdateClientConfigRequest {
 
     public String getIdTokenSigningAlgorithm() {
         return idTokenSigningAlgorithm;
+    }
+
+    public Boolean getidentityVerificationSupported() {
+        return identityVerificationSupported;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -201,6 +209,12 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setIdTokenSigningAlgorithm(String idTokenSigningAlgorithm) {
         this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setIdentityVerificationSupported(
+            Boolean identityVerificationSupported) {
+        this.identityVerificationSupported = identityVerificationSupported;
         return this;
     }
 }

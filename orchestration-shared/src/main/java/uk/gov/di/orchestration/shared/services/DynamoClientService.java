@@ -120,6 +120,8 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::withPublicKey);
         Optional.ofNullable(updateRequest.getServiceType())
                 .ifPresent(clientRegistry::withServiceType);
+        Optional.ofNullable(updateRequest.getClientType())
+                .ifPresent(clientRegistry::withClientType);
         Optional.ofNullable(updateRequest.getSectorIdentifierUri())
                 .ifPresent(clientRegistry::withSectorIdentifierUri);
         Optional.of(updateRequest.getJarValidationRequired())
@@ -131,6 +133,8 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withBackChannelLogoutUri);
         Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
                 .ifPresent(clientRegistry::withIdTokenSigningAlgorithm);
+        Optional.ofNullable(updateRequest.getidentityVerificationSupported())
+                .ifPresent(clientRegistry::withIdentityVerificationSupported);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }
