@@ -20,8 +20,7 @@ cmk_for_back_channel_logout_enabled             = true
 spot_request_queue_cross_account_access_enabled = true
 txma_audit_encoded_enabled                      = true
 
-contra_state_bucket      = "di-auth-staging-tfstate"
-phone_checker_with_retry = true
+contra_state_bucket = "di-auth-staging-tfstate"
 
 oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true

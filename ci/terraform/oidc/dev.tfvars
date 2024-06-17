@@ -41,5 +41,4 @@ authorize_protected_subnet_enabled = true
 
 orch_account_id = "767397776536"
 
-contra_state_bucket      = "di-auth-development-tfstate"
-phone_checker_with_retry = false
+contra_state_bucket = "di-auth-development-tfstate"
