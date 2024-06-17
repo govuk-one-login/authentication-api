@@ -108,6 +108,7 @@ public class LogoutServiceTest {
 
     private SignedJWT signedIDToken;
     private Optional<String> audience;
+    private Optional<String> rpPairwiseId;
     private Session session;
     private LogoutService logoutService;
     private final TxmaAuditUser auditUser =
@@ -147,8 +148,7 @@ public class LogoutServiceTest {
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        backChannelLogoutService,
-                        dynamoService);
+                        backChannelLogoutService);
 
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -157,6 +157,7 @@ public class LogoutServiceTest {
                         CLIENT_ID, SUBJECT, "http://localhost-rp", ecSigningKey);
         SignedJWT idToken = SignedJWT.parse(signedIDToken.serialize());
         audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+        rpPairwiseId = Optional.of(idToken.getJWTClaimsSet().getSubject());
 
         session =
                 generateSession()
@@ -179,9 +180,15 @@ public class LogoutServiceTest {
                         Optional.of(STATE.getValue()),
                         Optional.empty(),
                         auditUser,
-                        Optional.of(audience.get()));
+                        Optional.of(audience.get()),
+                        rpPairwiseId);
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -197,9 +204,15 @@ public class LogoutServiceTest {
                         Optional.empty(),
                         Optional.empty(),
                         auditUser,
-                        Optional.of(audience.get()));
+                        Optional.of(audience.get()),
+                        rpPairwiseId);
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -215,9 +228,15 @@ public class LogoutServiceTest {
                         Optional.of(STATE.getValue()),
                         Optional.empty(),
                         auditUser,
-                        Optional.of(audience.get()));
+                        Optional.of(audience.get()),
+                        rpPairwiseId);
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, CLIENT_ID, auditUser);
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -235,9 +254,15 @@ public class LogoutServiceTest {
                                 new ErrorObject(
                                         OAuth2Error.INVALID_REQUEST_CODE, "invalid session")),
                         auditUser,
-                        Optional.empty());
+                        Optional.empty(),
+                        rpPairwiseId);
 
-        verify(auditService).submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUser);
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        AuditService.UNKNOWN,
+                        auditUser,
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         assertThat(response, hasStatus(302));
@@ -309,12 +334,17 @@ public class LogoutServiceTest {
                 Optional.of(STATE.getValue()),
                 Optional.empty(),
                 auditUserWhenNoCookie,
-                Optional.empty());
+                Optional.empty(),
+                rpPairwiseId);
 
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
-                .submitAuditEvent(LOG_OUT_SUCCESS, AuditService.UNKNOWN, auditUserWhenNoCookie);
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        AuditService.UNKNOWN,
+                        auditUserWhenNoCookie,
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
     @Test
@@ -358,25 +388,21 @@ public class LogoutServiceTest {
 
     @Test
     void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
-        Subject rpSubject = new Subject();
-        when(dynamoClientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(new ClientRegistry().withClientID(CLIENT_ID)));
-        when(dynamoService.getUserProfileFromSubject(any())).thenReturn(USER_PROFILE);
-        when(ClientSubjectHelper.getSubject(any(), any(), any(), any())).thenReturn(rpSubject);
 
         logoutService.generateLogoutResponse(
                 CLIENT_LOGOUT_URI,
                 Optional.of(STATE.getValue()),
                 Optional.empty(),
                 auditUser,
-                Optional.of(audience.get()));
+                Optional.of(audience.get()),
+                rpPairwiseId);
 
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
-                        AuditService.MetadataPair.pair("rpPairwiseId", rpSubject.getValue()));
+                        AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
     private Session generateSession() {

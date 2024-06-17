@@ -27,6 +27,7 @@ import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.text.ParseException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -68,6 +69,7 @@ class LogoutRequestTest {
     private static final String EMAIL = "joe.bloggs@test.com";
     private final ClientRegistry clientRegistry = createClientRegistry();
     private String idTokenHint;
+    private String rpPairwiseId;
     private uk.gov.di.orchestration.shared.entity.Session session;
 
     @RegisterExtension
@@ -100,12 +102,13 @@ class LogoutRequestTest {
     }
 
     @BeforeEach
-    void sessionExistsSetup() {
+    void sessionExistsSetup() throws ParseException {
         session =
                 generateSession()
                         .setEmailAddress(EMAIL)
                         .setInternalCommonSubjectIdentifier(SUBJECT.getValue());
         idTokenHint = signedIDToken.serialize();
+        rpPairwiseId = signedIDToken.getJWTClaimsSet().getSubject();
     }
 
     @Test
@@ -136,6 +139,7 @@ class LogoutRequestTest {
         assertTrue(logoutRequest.isTokenSignatureValid());
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
+        assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
         assertEquals(
                 Optional.of(CLIENT_LOGOUT_URI.toString()), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
@@ -159,6 +163,7 @@ class LogoutRequestTest {
         assertFalse(logoutRequest.isTokenSignatureValid());
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.empty(), logoutRequest.clientId());
+        assertEquals(Optional.empty(), logoutRequest.rpPairwiseId());
         assertEquals(Optional.empty(), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.empty(), logoutRequest.clientRegistry());
     }
@@ -193,6 +198,7 @@ class LogoutRequestTest {
         assertTrue(logoutRequest.isTokenSignatureValid());
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
+        assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
         assertEquals(
                 Optional.of(CLIENT_LOGOUT_URI.toString()), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
@@ -229,6 +235,7 @@ class LogoutRequestTest {
         assertFalse(logoutRequest.isTokenSignatureValid());
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.empty(), logoutRequest.clientId());
+        assertEquals(Optional.empty(), logoutRequest.rpPairwiseId());
         assertEquals(Optional.empty(), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.empty(), logoutRequest.clientRegistry());
     }
@@ -275,6 +282,7 @@ class LogoutRequestTest {
                                 "unable to validate id_token_hint")),
                 logoutRequest.errorObject());
         assertEquals(Optional.empty(), logoutRequest.clientId());
+        assertEquals(Optional.empty(), logoutRequest.rpPairwiseId());
         assertEquals(Optional.empty(), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.empty(), logoutRequest.clientRegistry());
     }
@@ -323,6 +331,7 @@ class LogoutRequestTest {
                         new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found")),
                 logoutRequest.errorObject());
         assertEquals(Optional.of("invalid-client-id"), logoutRequest.clientId());
+        assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
         assertEquals(Optional.empty(), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.empty(), logoutRequest.clientRegistry());
     }
@@ -359,6 +368,7 @@ class LogoutRequestTest {
         assertTrue(logoutRequest.isTokenSignatureValid());
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
+        assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
         assertEquals(Optional.empty(), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
     }
@@ -404,6 +414,7 @@ class LogoutRequestTest {
                                 "client registry does not contain post_logout_redirect_uri")),
                 logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
+        assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
         assertEquals(
                 Optional.of("http://localhost/invalidlogout"),
                 logoutRequest.postLogoutRedirectUri());

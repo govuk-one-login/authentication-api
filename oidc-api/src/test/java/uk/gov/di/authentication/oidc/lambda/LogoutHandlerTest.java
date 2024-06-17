@@ -117,7 +117,7 @@ class LogoutHandlerTest {
 
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any()))
+        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(dynamoClientService.getClient("client-id"))
@@ -157,7 +157,8 @@ class LogoutHandlerTest {
                         Optional.of(STATE.toString()),
                         Optional.empty(),
                         auditUser,
-                        Optional.of("client-id"));
+                        Optional.of("client-id"),
+                        Optional.of(SUBJECT.getValue()));
     }
 
     @Test
@@ -187,7 +188,8 @@ class LogoutHandlerTest {
                         Optional.of(STATE.toString()),
                         Optional.empty(),
                         auditUser,
-                        Optional.of("client-id"));
+                        Optional.of("client-id"),
+                        Optional.of(SUBJECT.getValue()));
     }
 
     @Test
@@ -226,7 +228,8 @@ class LogoutHandlerTest {
                         Optional.of(STATE.toString()),
                         Optional.empty(),
                         auditUser,
-                        Optional.of("client-id"));
+                        Optional.of("client-id"),
+                        Optional.of(SUBJECT.getValue()));
     }
 
     private uk.gov.di.orchestration.shared.entity.Session generateSession() {

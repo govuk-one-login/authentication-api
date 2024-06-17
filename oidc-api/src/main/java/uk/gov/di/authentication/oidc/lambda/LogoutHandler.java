@@ -120,7 +120,8 @@ public class LogoutHandler
                 logoutRequest.state(),
                 logoutRequest.errorObject(),
                 logoutRequest.auditUser(),
-                logoutRequest.clientId());
+                logoutRequest.clientId(),
+                logoutRequest.rpPairwiseId());
     }
 
     private void attachSessionToLogs(Session session, Map<String, String> headers) {

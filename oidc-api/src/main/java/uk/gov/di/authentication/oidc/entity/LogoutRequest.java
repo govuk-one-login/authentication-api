@@ -37,6 +37,7 @@ public class LogoutRequest {
     private TxmaAuditUser auditUser;
     private Optional<ErrorObject> errorObject = Optional.empty();
     private Optional<String> clientId = Optional.empty();
+    private Optional<String> rpPairwiseId = Optional.empty();
     Optional<String> postLogoutRedirectUri = Optional.empty();
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
     private final CookieHelper cookieHelper = new CookieHelper();
@@ -96,6 +97,7 @@ public class LogoutRequest {
         try {
             SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
             clientId = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+            rpPairwiseId = Optional.ofNullable(idToken.getJWTClaimsSet().getSubject());
             var clientSessionId = idToken.getJWTClaimsSet().getStringClaim("sid");
             auditUser =
                     Objects.nonNull(clientSessionId)
@@ -110,7 +112,7 @@ public class LogoutRequest {
             return;
         }
 
-        if (clientId.isEmpty()) {
+        if (clientId.isEmpty() || rpPairwiseId.isEmpty()) {
             return;
         }
 
@@ -204,6 +206,10 @@ public class LogoutRequest {
 
     public Optional<String> clientId() {
         return clientId;
+    }
+
+    public Optional<String> rpPairwiseId() {
+        return rpPairwiseId;
     }
 
     public Optional<String> postLogoutRedirectUri() {
