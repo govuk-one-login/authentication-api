@@ -151,6 +151,8 @@ public class MfaHandlerTest {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_CODE_RETRIES);
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+        when(authenticationService.getPhoneNumber(EMAIL))
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         handler =
                 new MfaHandler(
                         configurationService,
@@ -168,9 +170,6 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn204ForSuccessfulMfaRequestWhenNonResendCode() throws Json.JsonException {
         usingValidSession();
-
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
@@ -205,7 +204,6 @@ public class MfaHandlerTest {
         headers.putAll(validHeaders);
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
 
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(headers, body);
 
@@ -233,8 +231,6 @@ public class MfaHandlerTest {
     void shouldReturn204ForSuccessfulMfaRequestWhenResendingCode() throws Json.JsonException {
         usingValidSession();
 
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeStorageService.getOtpCode(EMAIL, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
         NotifyRequest verifyPhoneNumberNotifyRequest =
@@ -278,8 +274,6 @@ public class MfaHandlerTest {
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
         usingValidSession();
 
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -309,8 +303,6 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         var body = format("{ \"email\": \"%s\"}", "wrong.email@gov.uk");
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -365,9 +357,6 @@ public class MfaHandlerTest {
     @Test
     void
             shouldReturn204IfUserHasReachedTheOtpRequestLimitsInADifferentLambdaButNotSmsSignInOtpRequestLimit() {
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         for (int i = 0; i < MAX_CODE_RETRIES; i++) {
@@ -385,9 +374,6 @@ public class MfaHandlerTest {
 
     @Test
     void shouldReturn204IfUserIsBlockedForRequestingADifferentOtpTypeThanSmsSignInOtpRequest() {
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-
         usingValidSession();
 
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
@@ -483,8 +469,6 @@ public class MfaHandlerTest {
     @MethodSource("smsJourneyTypes")
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(JourneyType journeyType) {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
@@ -519,8 +503,6 @@ public class MfaHandlerTest {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -548,13 +530,10 @@ public class MfaHandlerTest {
 
     @Test
     void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
-
         usingValidSession();
 
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(CODE));
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
@@ -574,13 +553,10 @@ public class MfaHandlerTest {
 
     @Test
     void shouldGenerateAndSaveOtpCodeIfExistingOneNotFound() throws Json.JsonException {
-
         usingValidSession();
 
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.empty());
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
