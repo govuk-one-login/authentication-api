@@ -27,6 +27,11 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
+import org.approvaltests.JsonApprovals;
+import org.approvaltests.core.Options;
+import org.approvaltests.scrubbers.GuidScrubber;
+import org.approvaltests.scrubbers.RegExScrubber;
+import org.approvaltests.scrubbers.Scrubbers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,6 +94,8 @@ public class TokenServiceTest {
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final Subject FIXED_INTERNAL_PAIRWISE_SUBJECT =
+            new Subject("urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
@@ -182,18 +189,24 @@ public class TokenServiceTest {
     }
 
     @Test
-    void shouldGenerateWellFormedStorageTokenForMfaReset() throws JOSEException {
+    void shouldGenerateWellFormedStorageTokenForMfaReset() throws JOSEException, ParseException {
         when(configurationService.getCredentialStoreURI())
                 .thenReturn(URI.create(CREDENTIAL_STORE_URI));
         when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
         createSignedToken();
 
-        AccessToken token = tokenService.generateStorageTokenForMfaReset(new Subject());
-        String[] splitToken = token.toString().split("\\.");
+        AccessToken token =
+                tokenService.generateStorageTokenForMfaReset(FIXED_INTERNAL_PAIRWISE_SUBJECT);
+        var parsedToken = SignedJWT.parse(token.getValue());
 
-        verify(configurationService).getStorageTokenSigningKeyAlias();
-        assertEquals(3, splitToken.length);
+        verify(configurationService).getMfaResetStorageTokenSigningKeyAlias();
+        assertEquals(3, parsedToken.getParsedParts().length);
         assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
+        var unixTimestampScrubber = new RegExScrubber("\\d{10}", "1700000000");
+        var guidScrubber = new GuidScrubber();
+        JsonApprovals.verifyAsJson(
+                parsedToken.getJWTClaimsSet().toJSONObject(),
+                new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
     }
 
     @Test

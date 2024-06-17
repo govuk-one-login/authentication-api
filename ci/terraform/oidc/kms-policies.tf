@@ -160,7 +160,7 @@ resource "aws_iam_policy" "authentication_callback_userinfo_encryption_key_kms_p
   policy = data.aws_iam_policy_document.authentication_callback_userinfo_encryption_key_policy_document.json
 }
 
-### Storage Token signing key access
+### Encrypted VC storage token signing key access
 
 data "aws_iam_policy_document" "storage_token_kms_signing_policy_document" {
   statement {
@@ -183,4 +183,28 @@ resource "aws_iam_policy" "storage_token_kms_signing_policy" {
   description = "IAM policy for managing KMS connection for a lambda which allows signing of storage token payloads"
 
   policy = data.aws_iam_policy_document.storage_token_kms_signing_policy_document.json
+}
+
+### MFA reset storage token signing key access
+
+data "aws_iam_policy_document" "mfa_reset_storage_token_kms_signing_policy_document" {
+  statement {
+    sid    = "AllowAccessToMfaResetStorageTokenKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      aws_kms_key.mfa_reset_signing_key_ecc.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "mfa_reset_storage_token_kms_signing_policy" {
+  name_prefix = "kms-mfa-reset-storage-token-signing-policy"
+  path        = "/${var.environment}/mfa-reset-storage-token/"
+  description = "IAM policy for managing KMS connection for a lambda which allows signing of MFA reset storage token payloads"
+
+  policy = data.aws_iam_policy_document.mfa_reset_storage_token_kms_signing_policy_document.json
 }

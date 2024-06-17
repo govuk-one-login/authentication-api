@@ -519,8 +519,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IPV_AUDIENCE", "");
     }
 
-    public String getStorageTokenSigningKeyAlias() {
-        return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
+    public String getMfaResetStorageTokenSigningKeyAlias() {
+        return System.getenv("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
     public URI getCredentialStoreURI() {

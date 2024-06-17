@@ -399,7 +399,7 @@ public class TokenService {
                 claimsSet,
                 type,
                 JWSAlgorithm.ES256,
-                configService.getStorageTokenSigningKeyAlias());
+                configService.getMfaResetStorageTokenSigningKeyAlias());
     }
 
     private SignedJWT generateSignedJWT(
