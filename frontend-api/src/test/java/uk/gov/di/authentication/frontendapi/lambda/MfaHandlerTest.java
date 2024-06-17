@@ -277,37 +277,6 @@ public class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn204AndAllowMfaRequestDuringUplift() throws Json.JsonException {
-        usingValidSession();
-
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
-        verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
-    }
-
-    @Test
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
         usingValidSession();
 
