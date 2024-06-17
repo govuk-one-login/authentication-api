@@ -133,6 +133,10 @@ public class MfaHandlerTest {
                                     EMAIL,
                                     "jb2@digital.cabinet-office.gov.uk"));
 
+    private static final NotifyRequest notifyRequest =
+            new NotifyRequest(
+                    CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
 
@@ -169,9 +173,7 @@ public class MfaHandlerTest {
 
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -237,7 +239,7 @@ public class MfaHandlerTest {
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeStorageService.getOtpCode(EMAIL, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
-        NotifyRequest notifyRequest =
+        NotifyRequest verifyPhoneNumberNotifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
@@ -248,7 +250,7 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(verifyPhoneNumberNotifyRequest));
         verify(codeGeneratorService, never()).sixDigitCode();
         verify(codeStorageService, never())
                 .saveOtpCode(
@@ -280,9 +282,6 @@ public class MfaHandlerTest {
 
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -556,9 +555,6 @@ public class MfaHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -599,11 +595,6 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
         verify(codeGeneratorService, never()).sixDigitCode();
         verify(codeStorageService, never())
                 .saveOtpCode(
@@ -611,7 +602,7 @@ public class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(sqsClient).send(serialisedRequest);
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         assertThat(result, hasStatus(204));
     }
 
@@ -630,9 +621,6 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService).sixDigitCode();
