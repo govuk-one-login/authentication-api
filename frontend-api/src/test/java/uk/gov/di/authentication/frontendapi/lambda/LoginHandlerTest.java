@@ -18,7 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import uk.gov.di.audit.TxmaAuditUser;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
@@ -93,6 +93,7 @@ class LoginHandlerTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    public static final String TEST_IP_ADDRESS = "123.123.123.123";
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
@@ -153,25 +154,27 @@ class LoginHandlerTest {
                     EMAIL.toUpperCase(),
                     JourneyType.REAUTHENTICATION);
 
-    private final TxmaAuditUser auditUserWithAllUserInfo =
-            new TxmaAuditUser()
-                    .withUserId(expectedCommonSubject)
-                    .withEmail(EMAIL)
-                    .withPhone(CommonTestVariables.UK_MOBILE_NUMBER)
-                    .withPersistentSessionId(PERSISTENT_ID)
-                    .withSessionId(session.getSessionId())
-                    .withIpAddress("123.123.123.123")
-                    .withGovukSigninJourneyId(CLIENT_SESSION_ID);
+    private final AuditContext auditContextWithAllUserInfo =
+            new AuditContext(
+                    CLIENT_ID.getValue(),
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    expectedCommonSubject,
+                    EMAIL,
+                    TEST_IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    PERSISTENT_ID);
 
-    private final TxmaAuditUser auditUserWithoutUserInfo =
-            new TxmaAuditUser()
-                    .withGovukSigninJourneyId(CLIENT_SESSION_ID)
-                    .withSessionId(session.getSessionId())
-                    .withUserId(AuditService.UNKNOWN)
-                    .withEmail(EMAIL)
-                    .withPhone(AuditService.UNKNOWN)
-                    .withIpAddress("123.123.123.123")
-                    .withPersistentSessionId(PERSISTENT_ID);
+    private final AuditContext auditContextWithoutUserInfo =
+            new AuditContext(
+                    CLIENT_ID.getValue(),
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    AuditService.UNKNOWN,
+                    EMAIL,
+                    TEST_IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    PERSISTENT_ID);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -208,6 +211,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
+        // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -223,8 +227,24 @@ class LoginHandlerTest {
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
+        AuditContext expectedAuditContext =
+                new AuditContext(
+                        CLIENT_ID.getValue(),
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        expectedCommonSubject,
+                        EMAIL,
+                        TEST_IP_ADDRESS,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        PERSISTENT_ID);
+
+        var expectedRestrictedSection =
+                new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
+
+        // Act
         var result = handler.handleRequest(event, context);
 
+        // Assert
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
@@ -239,9 +259,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_ID.getValue(),
-                        auditUserWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        expectedAuditContext,
+                        expectedRestrictedSection,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -288,8 +307,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_ID.getValue(),
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
@@ -399,8 +417,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        CLIENT_ID.getValue(),
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
@@ -445,6 +462,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
@@ -464,8 +482,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        AuditService.UNKNOWN,
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
@@ -479,6 +496,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
                 .thenReturn(maxRetriesAllowed - 1);
@@ -496,8 +514,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        AuditService.UNKNOWN,
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", maxRetriesAllowed),
@@ -506,8 +523,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        AuditService.UNKNOWN,
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
@@ -523,6 +539,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
@@ -537,8 +554,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        "",
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
@@ -580,6 +596,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
         usingValidSession();
@@ -591,8 +608,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        "",
-                        auditUserWithAllUserInfo,
+                        auditContextWithAllUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
@@ -686,6 +702,7 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingDefaultVectorOfTrust();
 
@@ -695,8 +712,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        "",
-                        auditUserWithoutUserInfo,
+                        auditContextWithoutUserInfo,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
 
         assertThat(result, hasStatus(400));
@@ -812,7 +828,7 @@ class LoginHandlerTest {
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
             Map<String, String> headers, String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(TEST_IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(body);
         return event;

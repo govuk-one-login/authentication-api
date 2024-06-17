@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
@@ -66,6 +67,52 @@ class AuditServiceTest {
                 "phone-number",
                 "persistent-session-id",
                 AuditService.RestrictedSection.empty);
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        var expected =
+                """
+                {
+                "timestamp":1630534200,
+                "event_timestamp_ms":1630534200012,
+                "event_name":"AUTH_TEST_EVENT_ONE",
+                "client_id":"client-id",
+                "component_id":"AUTH",
+                "user": {
+                    "user_id":"subject-id",
+                    "transaction_id":null,
+                    "email":"email",
+                    "phone":"phone-number",
+                    "ip_address":"ip-address",
+                    "session_id":"session-id",
+                    "persistent_session_id":"persistent-session-id",
+                    "govuk_signin_journey_id":"request-id"
+                },
+                "platform":null,
+                "restricted":null,
+                "extensions":null}
+                """;
+
+        assertEquals(asJson(expected), txmaMessage);
+    }
+
+    @Test
+    void checkSimplifiedMethodCall() {
+        var myContext =
+                new AuditContext(
+                        "client-id",
+                        "request-id",
+                        "session-id",
+                        "subject-id",
+                        "email",
+                        "ip-address",
+                        "phone-number",
+                        "persistent-session-id");
+
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE, myContext, AuditService.RestrictedSection.empty);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 

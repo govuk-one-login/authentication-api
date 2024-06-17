@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -62,6 +63,16 @@ class CheckReAuthUserHandlerTest {
 
     private final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
+    private final AuditContext testAuditContext =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    session.getSessionId(),
+                    AuditService.UNKNOWN,
+                    EMAIL_ADDRESS,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    PERSISTENT_SESSION_ID);
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
@@ -128,14 +139,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -168,17 +172,11 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(200, result.getStatusCode());
+
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        testAuditContext,
                         AuditService.RestrictedSection.empty);
     }
 
@@ -204,14 +202,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -238,14 +229,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", 5));
@@ -295,14 +279,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        testAuditContext,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -40,24 +41,6 @@ public class AuditService {
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
                         configurationService.getLocalstackEndpointUri());
-    }
-
-    public void submitAuditEvent(
-            AuditableEvent event,
-            String clientId,
-            TxmaAuditUser user,
-            RestrictedSection restrictedSection,
-            MetadataPair... metadataPairs) {
-        var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
-                        .withClientId(clientId)
-                        .withComponentId(COMPONENT_ID)
-                        .withUser(user);
-
-        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);
-        addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
-
-        txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
     private static void addRestrictedSectionToAuditEvent(
@@ -112,6 +95,34 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event,
+            AuditContext auditContext,
+            RestrictedSection restrictedSection,
+            MetadataPair... metadataPairs) {
+
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId(auditContext.subjectId())
+                        .withPhone(auditContext.phoneNumber())
+                        .withEmail(auditContext.email())
+                        .withIpAddress(auditContext.ipAddress())
+                        .withSessionId(auditContext.sessionId())
+                        .withPersistentSessionId(auditContext.persistentSessionId())
+                        .withGovukSigninJourneyId(auditContext.clientSessionId());
+
+        var txmaAuditEvent =
+                auditEventWithTime(event, () -> Date.from(clock.instant()))
+                        .withClientId(auditContext.clientId())
+                        .withComponentId(COMPONENT_ID)
+                        .withUser(user);
+
+        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);
+        addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
+
+        txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
             String clientId,
             String clientSessionId,
             String sessionId,
@@ -123,17 +134,18 @@ public class AuditService {
             RestrictedSection restrictedSection,
             MetadataPair... metadataPairs) {
 
-        var user =
-                TxmaAuditUser.user()
-                        .withUserId(subjectId)
-                        .withPhone(phoneNumber)
-                        .withEmail(email)
-                        .withIpAddress(ipAddress)
-                        .withSessionId(sessionId)
-                        .withPersistentSessionId(persistentSessionId)
-                        .withGovukSigninJourneyId(clientSessionId);
+        var auditContext =
+                new AuditContext(
+                        clientId,
+                        clientSessionId,
+                        sessionId,
+                        subjectId,
+                        email,
+                        ipAddress,
+                        phoneNumber,
+                        persistentSessionId);
 
-        submitAuditEvent(event, clientId, user, restrictedSection, metadataPairs);
+        submitAuditEvent(event, auditContext, restrictedSection, metadataPairs);
     }
 
     public static class MetadataPair {
