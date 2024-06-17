@@ -1129,7 +1129,7 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}'
+            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}'
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
               SecretId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, aisUriSecretId ]
           AUTHENTICATION_BACKEND_URI: !Sub
@@ -2247,7 +2247,7 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}'
+            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}'
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
               SecretId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, aisUriSecretId ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
