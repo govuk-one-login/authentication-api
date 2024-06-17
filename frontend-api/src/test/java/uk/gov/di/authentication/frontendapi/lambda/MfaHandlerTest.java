@@ -110,6 +110,7 @@ public class MfaHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private static final int MAX_CODE_RETRIES = 5;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session =
             new Session("a-session-id")
@@ -146,7 +147,8 @@ public class MfaHandlerTest {
     void setUp() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_CODE_RETRIES);
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         handler =
                 new MfaHandler(
                         configurationService,
@@ -167,7 +169,6 @@ public class MfaHandlerTest {
 
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
@@ -205,7 +206,6 @@ public class MfaHandlerTest {
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
 
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(headers, body);
 
@@ -280,7 +280,6 @@ public class MfaHandlerTest {
 
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
@@ -315,7 +314,6 @@ public class MfaHandlerTest {
 
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -348,7 +346,6 @@ public class MfaHandlerTest {
         usingValidSession();
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         var body = format("{ \"email\": \"%s\"}", "wrong.email@gov.uk");
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
@@ -408,11 +405,10 @@ public class MfaHandlerTest {
 
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        for (int i = 0; i < MAX_CODE_RETRIES; i++) {
+            session.incrementCodeRequestCount(
+                    NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        }
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
@@ -452,11 +448,9 @@ public class MfaHandlerTest {
     void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(JourneyType journeyType) {
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        for (int i = 0; i < MAX_CODE_RETRIES; i++) {
+            session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        }
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
         var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
@@ -562,7 +556,6 @@ public class MfaHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
@@ -629,8 +622,6 @@ public class MfaHandlerTest {
 
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.empty());
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
