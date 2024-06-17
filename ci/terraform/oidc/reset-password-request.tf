@@ -25,18 +25,19 @@ module "reset-password-request" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    FRONTEND_BASE_URL    = "https://${local.frontend_fqdn}/"
-    RESET_PASSWORD_ROUTE = var.reset_password_route
-    LOCKOUT_DURATION     = var.lockout_duration
-    LOCKOUT_COUNT_TTL    = var.lockout_count_ttl
-    SQS_ENDPOINT         = var.use_localstack ? "http://localhost:45678/" : null
-    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-    TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY            = local.redis_key
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    ENVIRONMENT             = var.environment
+    FRONTEND_BASE_URL       = "https://${local.frontend_fqdn}/"
+    RESET_PASSWORD_ROUTE    = var.reset_password_route
+    LOCKOUT_DURATION        = var.lockout_duration
+    LOCKOUT_COUNT_TTL       = var.lockout_count_ttl
+    DEFAULT_OTP_CODE_EXPIRY = var.otp_code_ttl_duration
+    SQS_ENDPOINT            = var.use_localstack ? "http://localhost:45678/" : null
+    EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY               = local.redis_key
+    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    INTERNAl_SECTOR_URI     = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler::handleRequest"
 
