@@ -145,6 +145,7 @@ resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
   }
   depends_on = [
     module.account_interventions_stub_lambda,
+    aws_api_gateway_rest_api_policy.interventions_api_stub_policy,
   ]
 }
 
