@@ -82,6 +82,16 @@ public class OrchestrationAuthorizationService {
                 new RedisConnectionService(configurationService));
     }
 
+    public OrchestrationAuthorizationService(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this(
+                configurationService,
+                new DynamoClientService(configurationService),
+                new IPVCapacityService(configurationService),
+                new KmsConnectionService(configurationService),
+                redis);
+    }
+
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
             throws ClientNotFoundException {
         Optional<ClientRegistry> client = dynamoClientService.getClient(clientID.toString());

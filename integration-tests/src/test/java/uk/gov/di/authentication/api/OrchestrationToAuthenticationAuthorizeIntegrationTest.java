@@ -58,17 +58,17 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-    private final String publicKey =
+    private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())
                     + "\n-----END PUBLIC KEY-----\n";
 
-    private final ConfigurationService configurationService =
+    private static final ConfigurationService configurationService =
             new OrchestrationToAuthenticationAuthorizeIntegrationTest.TestConfigurationService();
 
     @BeforeEach
     void setup() {
-        handler = new AuthorisationHandler(configurationService);
+        handler = new AuthorisationHandler(configurationService, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -326,7 +326,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         return encryptedJWT.getPayload().toSignedJWT();
     }
 
-    private class TestConfigurationService extends IntegrationTestConfigurationService {
+    private static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         public TestConfigurationService() {
             super(

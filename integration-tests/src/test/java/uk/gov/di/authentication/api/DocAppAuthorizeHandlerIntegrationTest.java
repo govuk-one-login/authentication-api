@@ -61,7 +61,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     @RegisterExtension
     public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new DocAppTestConfigurationService(jwksExtension);
 
     @BeforeEach
@@ -72,7 +72,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
                         .keyID(ENCRYPTION_KEY_ID)
                         .build();
         jwksExtension.init(new JWKSet(jwkKey));
-        handler = new DocAppAuthorizeHandler(configurationService);
+        handler = new DocAppAuthorizeHandler(configurationService, redisConnectionService);
         redis.createSession(SESSION_ID);
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
@@ -153,7 +153,8 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         }
     }
 
-    private class DocAppTestConfigurationService extends IntegrationTestConfigurationService {
+    private static class DocAppTestConfigurationService
+            extends IntegrationTestConfigurationService {
 
         private final DocAppJwksExtension jwksExtension;
 

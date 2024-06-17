@@ -92,6 +92,15 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         this.clock = new NowClock(Clock.systemUTC());
     }
 
+    public AccountInterventionsHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(AccountInterventionsRequest.class, configurationService, redis);
+        accountInterventionsService = new AccountInterventionsService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.clock = new NowClock(Clock.systemUTC());
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {

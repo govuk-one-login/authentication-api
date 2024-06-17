@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -90,6 +91,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     public VerifyCodeHandler(ConfigurationService configurationService) {
         super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
+    }
+
+    public VerifyCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(VerifyCodeRequest.class, configurationService, redis);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);

@@ -53,21 +53,21 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
-    private final KeyPair keyPair = generateRsaKeyPair();
-    private final String publicKey =
+    private static final KeyPair keyPair = generateRsaKeyPair();
+    private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
                     + "\n-----END PUBLIC KEY-----\n";
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new IPVTestConfigurationService(ipvStub);
 
     @BeforeEach
     void setup() throws Json.JsonException {
         ipvStub.init();
-        handler = new IPVAuthorisationHandler(configurationService);
+        handler = new IPVAuthorisationHandler(configurationService, redisConnectionService);
         redis.createSession(SESSION_ID);
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
@@ -141,7 +141,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 .build();
     }
 
-    private KeyPair generateRsaKeyPair() {
+    private static KeyPair generateRsaKeyPair() {
         KeyPairGenerator kpg;
         try {
             kpg = KeyPairGenerator.getInstance("RSA");
@@ -152,7 +152,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         return kpg.generateKeyPair();
     }
 
-    private class IPVTestConfigurationService extends IntegrationTestConfigurationService {
+    private static class IPVTestConfigurationService extends IntegrationTestConfigurationService {
 
         private final IPVStubExtension ipvStubExtension;
 

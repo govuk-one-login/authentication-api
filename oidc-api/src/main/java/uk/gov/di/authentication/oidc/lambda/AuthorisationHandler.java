@@ -173,6 +173,30 @@ public class AuthorisationHandler
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
     }
 
+    public AuthorisationHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.orchestrationAuthorizationService =
+                new OrchestrationAuthorizationService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.queryParamsAuthorizeValidator =
+                new QueryParamsAuthorizeValidator(configurationService);
+        this.requestObjectAuthorizeValidator =
+                new RequestObjectAuthorizeValidator(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var jwksService = new JwksService(configurationService, kmsConnectionService);
+        this.docAppAuthorisationService =
+                new DocAppAuthorisationService(
+                        configurationService, redis, kmsConnectionService, jwksService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redis);
+        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
+    }
+
     public AuthorisationHandler() {
         this(ConfigurationService.getInstance());
     }

@@ -90,6 +90,30 @@ public class UserInfoHandler
         this.auditService = new AuditService(configurationService);
     }
 
+    public UserInfoHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this.configurationService = configurationService;
+        this.userInfoService =
+                new UserInfoService(
+                        new DynamoService(configurationService),
+                        new DynamoIdentityService(configurationService),
+                        new DynamoClientService(configurationService),
+                        new DynamoDocAppService(configurationService),
+                        new CloudwatchMetricsService(),
+                        configurationService,
+                        new AuthenticationUserInfoStorageService(configurationService));
+        this.accessTokenService =
+                new AccessTokenService(
+                        redis,
+                        new DynamoClientService(configurationService),
+                        new TokenValidationService(
+                                new JwksService(
+                                        configurationService,
+                                        new KmsConnectionService(configurationService)),
+                                configurationService));
+        this.auditService = new AuditService(configurationService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {

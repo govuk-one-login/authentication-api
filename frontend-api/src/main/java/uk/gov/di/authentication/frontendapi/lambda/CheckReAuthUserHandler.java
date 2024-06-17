@@ -60,6 +60,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.codeStorageService = new CodeStorageService(configurationService);
     }
 
+    public CheckReAuthUserHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(CheckReauthUserRequest.class, configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    }
+
     public CheckReAuthUserHandler() {
         this(ConfigurationService.getInstance());
     }

@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.NoSuchElementException;
@@ -71,6 +72,18 @@ public class StartHandler
     public StartHandler(ConfigurationService configurationService) {
         this.clientSessionService = new ClientSessionService(configurationService);
         this.sessionService = new SessionService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.startService =
+                new StartService(
+                        new DynamoClientService(configurationService),
+                        new DynamoService(configurationService),
+                        sessionService);
+        this.configurationService = configurationService;
+    }
+
+    public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.startService =
                 new StartService(

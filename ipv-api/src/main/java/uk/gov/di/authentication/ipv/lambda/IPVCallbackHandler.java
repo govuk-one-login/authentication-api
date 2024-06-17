@@ -150,6 +150,30 @@ public class IPVCallbackHandler
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
     }
 
+    public IPVCallbackHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.configurationService = configurationService;
+        this.ipvAuthorisationService =
+                new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
+        this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
+        this.sessionService = new SessionService(configurationService, redis);
+        this.dynamoService = new DynamoService(configurationService);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.dynamoClientService = new DynamoClientService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.logoutService = new LogoutService(configurationService, redis);
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService,
+                        new CloudwatchMetricsService(configurationService),
+                        auditService);
+        this.cookieHelper = new CookieHelper();
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redis);
+        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService, redis);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {

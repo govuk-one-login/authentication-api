@@ -16,6 +16,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
@@ -49,6 +50,21 @@ public class LogoutHandler
 
     public LogoutHandler(ConfigurationService configurationService) {
         this.sessionService = new SessionService(configurationService);
+        this.dynamoClientService = new DynamoClientService(configurationService);
+        this.tokenValidationService =
+                new TokenValidationService(
+                        new JwksService(
+                                configurationService,
+                                new KmsConnectionService(configurationService)),
+                        configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.cookieHelper = new CookieHelper();
+        this.logoutService = new LogoutService(configurationService);
+        this.configurationService = configurationService;
+    }
+
+    public LogoutHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        this.sessionService = new SessionService(configurationService, redis);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(

@@ -18,8 +18,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
@@ -90,18 +91,18 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     public static final State ORCH_TO_AUTH_STATE = new State();
 
     @RegisterExtension
-    public final AuthExternalApiStubExtension authExternalApiStub =
+    public static final AuthExternalApiStubExtension authExternalApiStub =
             new AuthExternalApiStubExtension();
 
     @RegisterExtension
-    protected final AuthenticationCallbackUserInfoStoreExtension userInfoStoreExtension =
+    protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStoreExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
 
     @RegisterExtension
-    public final AccountInterventionsStubExtension accountInterventionApiStub =
+    public static final AccountInterventionsStubExtension accountInterventionApiStub =
             new AccountInterventionsStubExtension();
 
-    protected ConfigurationService configurationService;
+    protected static ConfigurationService configurationService;
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -115,594 +116,559 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
                     + "\n-----END PUBLIC KEY-----\n";
 
-    @Nested
-    class AuthOnlyJourney {
-
-        @BeforeEach()
-        void authSetup() throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            setupSession();
-            setupClientRegWithoutIdentityVerificationSupported();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
-        }
-
-        @Test
-        void shouldStoreUserInfoAndRedirectToRpWhenSuccessfullyProcessedCallbackResponse() {
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertUserInfoStoredAndRedirectedToRp(response);
-        }
-
-        @Test
-        void shouldRedirectToRpWithErrorWhenStateIsInvalid() {
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            Map.of("code", "a-random-code", "state", new State().getValue()));
-
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    startsWith(REDIRECT_URI.toString()));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    containsString(OAuth2Error.SERVER_ERROR.getCode()));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    containsString(RP_STATE.getValue()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent
-                                    .AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
-
-            Optional<AuthenticationUserInfo> userInfoDbEntry =
-                    userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
-            assertFalse(userInfoDbEntry.isPresent());
-        }
-
-        @Test
-        void shouldRedirectToFrontendErrorPageIfUnsuccessfulResponseReceivedFromTokenEndpoint() {
-            authExternalApiStub.register(
-                    "/token", 400, "application/json", "{\"error\": \"invalid_request\"}");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-            assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED));
-        }
-
-        @Test
-        void shouldRedirectToFrontendErrorPageIfUnsuccessfulResponseReceivedFromUserInfoEndpoint() {
-            authExternalApiStub.register(
-                    "/userinfo", 400, "application/json", "{\"error\": \"invalid_request\"}");
-
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-            assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent
-                                    .AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED));
-        }
-
-        private void setupClientRegWithoutIdentityVerificationSupported() {
-            setupClientReg(false);
-        }
+    @BeforeAll
+    static void beforeAll() {
+        configurationService =
+                new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
+                        authExternalApiStub,
+                        auditTopic,
+                        notificationsQueue,
+                        auditSigningKey,
+                        externalTokenSigner,
+                        ipvPrivateKeyJwtSigner,
+                        spotQueue,
+                        docAppPrivateKeyJwtSigner,
+                        accountInterventionApiStub,
+                        false);
+        redisConnectionService = new RedisConnectionService(configurationService);
     }
 
-    @Nested
-    class IdentityJourney {
-
-        @BeforeEach()
-        void ipvSetup() throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            setupSession();
-            setupClientRegWithIdentityVerificationSupported();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
-        }
-
-        @Test
-        void shouldRedirectToIPVWhenIdentityRequired()
-                throws ParseException, JOSEException, java.text.ParseException {
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToIpv(response, false);
-        }
+    @BeforeEach()
+    void authSetup() throws Json.JsonException {
+        setupTestWithDefaultEnvVars();
+        setupSession();
+        setupClientRegWithoutIdentityVerificationSupported();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
     }
 
-    @Nested
-    class AccountInterventionsAuthOnlyJourney {
+    @Test
+    void shouldStoreUserInfoAndRedirectToRpWhenSuccessfullyProcessedCallbackResponse() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-        @BeforeEach()
-        void accountInterventionSetup() throws Json.JsonException {
-            setupSession();
-            setupClientRegWithoutIdentityVerificationSupported();
-        }
-
-        @Test
-        void shouldRedirectToRpWhenAccountStatusIsNoIntervention() throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertUserInfoStoredAndRedirectedToRp(response);
-        }
-
-        @Test
-        void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
-                throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), true, false, false, false);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToBlockedPage(response);
-        }
-
-        @Test
-        void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction()
-                throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, false);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToSuspendedPage(response);
-        }
-
-        @Test
-        void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
-                throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToSuspendedPage(response);
-        }
-
-        @Test
-        void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity()
-                throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, false);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertUserInfoStoredAndRedirectedToRp(response);
-        }
-
-        @Test
-        void
-                shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
-                        throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, true);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertRedirectToSuspendedPage(response);
-        }
-
-        @Test
-        void
-                shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                        throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertUserInfoStoredAndRedirectedToRp(response);
-        }
-
-        @Test
-        void
-                shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                        throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, true);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertUserInfoStoredAndRedirectedToRp(response);
-        }
-
-        @Test
-        void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            assertDoesNotThrow(
-                    () ->
-                            makeRequest(
-                                    Optional.of(TEST_EMAIL_ADDRESS),
-                                    constructHeaders(
-                                            Optional.of(
-                                                    buildSessionCookie(
-                                                            SESSION_ID, CLIENT_SESSION_ID))),
-                                    constructQueryStringParameters()));
-        }
-
-        @Test
-        void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
-            setupTestWithAbortOnAisErrorResponseFlagOn();
-            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            assertThrows(
-                    AccountInterventionException.class,
-                    () ->
-                            makeRequest(
-                                    Optional.of(TEST_EMAIL_ADDRESS),
-                                    constructHeaders(
-                                            Optional.of(
-                                                    buildSessionCookie(
-                                                            SESSION_ID, CLIENT_SESSION_ID))),
-                                    constructQueryStringParameters()));
-        }
-
-        @Test
-        void shouldRedirectToRpWhenFieldsAreMissingInResponse() throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithoutOptionalFields(
-                    SUBJECT_ID.getValue(), false, false, false, false);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertUserInfoStoredAndRedirectedToRp(response);
-        }
+        assertUserInfoStoredAndRedirectedToRp(response);
     }
 
-    @Nested
-    class AccountInterventionsIdentityJourney {
+    @Test
+    void shouldRedirectToRpWithErrorWhenStateIsInvalid() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        Map.of("code", "a-random-code", "state", new State().getValue()));
 
-        @BeforeEach()
-        void accountInterventionSetup() throws Json.JsonException {
-            setupSession();
-            setupClientRegWithIdentityVerificationSupported();
-        }
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(REDIRECT_URI.toString()));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                containsString(OAuth2Error.SERVER_ERROR.getCode()));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                containsString(RP_STATE.getValue()));
 
-        @Test
-        void shouldRedirectToIpvWhenAccountStatusIsNoIntervention()
-                throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED));
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        Optional<AuthenticationUserInfo> userInfoDbEntry =
+                userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
+        assertFalse(userInfoDbEntry.isPresent());
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldRedirectToFrontendErrorPageIfUnsuccessfulResponseReceivedFromTokenEndpoint() {
+        authExternalApiStub.register(
+                "/token", 400, "application/json", "{\"error\": \"invalid_request\"}");
 
-            assertRedirectToIpv(response, false);
-        }
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-        @Test
-        void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
-                throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), true, false, false, false);
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED));
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldRedirectToFrontendErrorPageIfUnsuccessfulResponseReceivedFromUserInfoEndpoint() {
+        authExternalApiStub.register(
+                "/userinfo", 400, "application/json", "{\"error\": \"invalid_request\"}");
 
-            assertRedirectToBlockedPage(response);
-        }
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-        @Test
-        void shouldRedirectToIpvpWhenAccountStatusIsSuspendedNoAction()
-                throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, false, false, false);
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED));
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldRedirectToIPVWhenIdentityRequired()
+            throws ParseException, JOSEException, java.text.ParseException, Json.JsonException {
+        setupTestWithDefaultEnvVars();
+        setupSession();
+        setupClientRegWithIdentityVerificationSupported();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
 
-            assertRedirectToIpv(response, false);
-        }
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-        @Test
-        void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
-                throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
+        assertRedirectToIpv(response, false);
+    }
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+    void accountInterventionSetup() throws Json.JsonException {
+        setupSession();
+        setupClientRegWithoutIdentityVerificationSupported();
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldRedirectToRpWhenAccountStatusIsNoIntervention() throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
 
-            assertRedirectToSuspendedPage(response);
-        }
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
 
-        @Test
-        void shouldRedirectToIpvWhenAccountStatusIsSuspendedReproveIdentity()
-                throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, false);
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertUserInfoStoredAndRedirectedToRp(response);
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
+            throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), true, false, false, false);
 
-            assertRedirectToIpv(response, true);
-        }
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
 
-        @Test
-        void
-                shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
-                        throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertRedirectToBlockedPage(response);
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction()
+            throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, false);
 
-            assertRedirectToSuspendedPage(response);
-        }
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
 
-        @Test
-        void
-                shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
-                        throws Json.JsonException,
-                                java.text.ParseException,
-                                ParseException,
-                                JOSEException {
-            setupTestWithDefaultEnvVars();
-            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, false, true);
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertRedirectToSuspendedPage(response);
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
+            throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, true);
 
-            assertRedirectToIpv(response, false);
-        }
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
 
-        @Test
-        void
-                shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
-                        throws Json.JsonException,
-                                java.text.ParseException,
-                                ParseException,
-                                JOSEException {
-            setupTestWithDefaultEnvVars();
-            authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
-            accountInterventionApiStub.initWithAccountStatus(
-                    SUBJECT_ID.getValue(), false, true, true, true);
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertRedirectToSuspendedPage(response);
+    }
 
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
+    @Test
+    void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity() throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, false);
 
-            assertRedirectToIpv(response, true);
-        }
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
 
-        @Test
-        void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
-            setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        assertUserInfoStoredAndRedirectedToRp(response);
+    }
 
-            assertDoesNotThrow(
-                    () ->
-                            makeRequest(
-                                    Optional.of(TEST_EMAIL_ADDRESS),
-                                    constructHeaders(
-                                            Optional.of(
-                                                    buildSessionCookie(
-                                                            SESSION_ID, CLIENT_SESSION_ID))),
-                                    constructQueryStringParameters()));
-        }
+    @Test
+    void
+            shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
+                    throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, true);
 
-        @Test
-        void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
-            setupTestWithAbortOnAisErrorResponseFlagOn();
-            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
 
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-            assertThrows(
-                    AccountInterventionException.class,
-                    () ->
-                            makeRequest(
-                                    Optional.of(TEST_EMAIL_ADDRESS),
-                                    constructHeaders(
-                                            Optional.of(
-                                                    buildSessionCookie(
-                                                            SESSION_ID, CLIENT_SESSION_ID))),
-                                    constructQueryStringParameters()));
-        }
+        assertRedirectToSuspendedPage(response);
+    }
+
+    @Test
+    void
+            shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
+                    throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, true);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertUserInfoStoredAndRedirectedToRp(response);
+    }
+
+    @Test
+    void
+            shouldRedirectToRpWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
+                    throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, true);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertUserInfoStoredAndRedirectedToRp(response);
+    }
+
+    @Test
+    void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        assertDoesNotThrow(
+                () ->
+                        makeRequest(
+                                Optional.of(TEST_EMAIL_ADDRESS),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters()));
+    }
+
+    @Test
+    void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithAbortOnAisErrorResponseFlagOn();
+        accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        assertThrows(
+                AccountInterventionException.class,
+                () ->
+                        makeRequest(
+                                Optional.of(TEST_EMAIL_ADDRESS),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters()));
+    }
+
+    @Test
+    void shouldRedirectToRpWhenFieldsAreMissingInResponse() throws Json.JsonException {
+        accountInterventionSetup();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithoutOptionalFields(
+                SUBJECT_ID.getValue(), false, false, false, false);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertUserInfoStoredAndRedirectedToRp(response);
+    }
+
+    void accountInterventionSetupWithIdentity() throws Json.JsonException {
+        setupSession();
+        setupClientRegWithIdentityVerificationSupported();
+    }
+
+    @Test
+    void shouldRedirectToIpvWhenAccountStatusIsNoIntervention()
+            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+    }
+
+    @Test
+    void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusWithIdentityIsBlocked()
+            throws Json.JsonException {
+        setupTestWithDefaultEnvVars();
+        accountInterventionSetupWithIdentity();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), true, false, false, false);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToBlockedPage(response);
+    }
+
+    @Test
+    void shouldRedirectToIpvpWhenAccountStatusIsSuspendedNoAction()
+            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, false, false, false);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+    }
+
+    @Test
+    void
+            shouldLogoutAndRedirectToSuspendedPageWhenAccountWithIdentityStatusIsSuspendedResetPassword()
+                    throws Json.JsonException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, true);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToSuspendedPage(response);
+    }
+
+    @Test
+    void shouldRedirectToIpvWhenAccountStatusIsSuspendedReproveIdentity()
+            throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, false);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, true);
+    }
+
+    @Test
+    void
+            shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordAndPasswordWasResetAfterInterventionWasApplied()
+                    throws Json.JsonException,
+                            java.text.ParseException,
+                            ParseException,
+                            JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, false, true);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, false);
+    }
+
+    @Test
+    void
+            shouldRedirectToIpvWhenAccountStatusIsSuspendedResetPasswordReproveIdentityAndPasswordWasResetAfterInterventionWasApplied()
+                    throws Json.JsonException,
+                            java.text.ParseException,
+                            ParseException,
+                            JOSEException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithDefaultEnvVars();
+        authExternalApiStub.init(SUBJECT_ID, Long.MAX_VALUE);
+        accountInterventionApiStub.initWithAccountStatus(
+                SUBJECT_ID.getValue(), false, true, true, true);
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        var response =
+                makeRequest(
+                        Optional.of(TEST_EMAIL_ADDRESS),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertRedirectToIpv(response, true);
+    }
+
+    @Test
+    void doesThrowWhenAisReturns500AndAbortFlagIsOnWithIdentity() throws Json.JsonException {
+        accountInterventionSetupWithIdentity();
+        setupTestWithAbortOnAisErrorResponseFlagOn();
+        accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+        var session = redis.getSession(SESSION_ID);
+        assertNotNull(session);
+
+        assertThrows(
+                AccountInterventionException.class,
+                () ->
+                        makeRequest(
+                                Optional.of(TEST_EMAIL_ADDRESS),
+                                constructHeaders(
+                                        Optional.of(
+                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                                constructQueryStringParameters()));
     }
 
     private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
@@ -850,7 +816,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         docAppPrivateKeyJwtSigner,
                         accountInterventionApiStub,
                         abortOnAisErrorResponse);
-        handler = new AuthenticationCallbackHandler(configurationService);
+        handler = new AuthenticationCallbackHandler(configurationService, redisConnectionService);
         authExternalApiStub.init(SUBJECT_ID);
         txmaAuditQueue.clear();
     }

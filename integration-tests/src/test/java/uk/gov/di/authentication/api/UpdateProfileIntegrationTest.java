@@ -36,7 +36,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @BeforeEach
     void setup() {
-        handler = new UpdateProfileHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new UpdateProfileHandler(
+                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

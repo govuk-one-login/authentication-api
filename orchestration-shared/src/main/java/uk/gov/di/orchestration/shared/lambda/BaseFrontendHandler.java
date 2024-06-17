@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
@@ -72,6 +73,18 @@ public abstract class BaseFrontendHandler<T>
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
+        this.authenticationService = new DynamoService(configurationService);
+    }
+
+    protected BaseFrontendHandler(
+            Class<T> clazz,
+            ConfigurationService configurationService,
+            RedisConnectionService redis) {
+        this.clazz = clazz;
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.clientService = new DynamoClientService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
     }

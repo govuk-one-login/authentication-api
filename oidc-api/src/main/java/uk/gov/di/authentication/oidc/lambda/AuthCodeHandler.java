@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
@@ -104,6 +105,22 @@ public class AuthCodeHandler
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
+        auditService = new AuditService(configurationService);
+        cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.configurationService = configurationService;
+        dynamoService = new DynamoService(configurationService);
+        dynamoClientService = new DynamoClientService(configurationService);
+        authCodeResponseService =
+                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+    }
+
+    public AuthCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        sessionService = new SessionService(configurationService, redis);
+        authorisationCodeService = new AuthorisationCodeService(configurationService);
+        orchestrationAuthorizationService =
+                new OrchestrationAuthorizationService(configurationService);
+        clientSessionService = new ClientSessionService(configurationService, redis);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;

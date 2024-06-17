@@ -25,7 +25,9 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @BeforeEach
     void setup() throws Json.JsonException {
         txmaAuditQueue.clear();
-        handler = new SendNotificationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new SendNotificationHandler(
+                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
     }
 

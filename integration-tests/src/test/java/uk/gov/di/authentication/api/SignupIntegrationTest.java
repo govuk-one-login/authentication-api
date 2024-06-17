@@ -45,7 +45,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new SignUpHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new SignUpHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

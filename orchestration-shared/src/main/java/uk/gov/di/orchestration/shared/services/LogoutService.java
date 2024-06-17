@@ -45,6 +45,16 @@ public class LogoutService {
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
     }
 
+    public LogoutService(ConfigurationService configurationService, RedisConnectionService redis) {
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.dynamoClientService = new DynamoClientService(configurationService);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
+    }
+
     public LogoutService(
             ConfigurationService configurationService,
             SessionService sessionService,

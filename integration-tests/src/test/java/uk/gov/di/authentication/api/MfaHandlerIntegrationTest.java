@@ -34,7 +34,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new MfaHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new MfaHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
         String subjectId = "new-subject";
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);

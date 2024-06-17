@@ -41,7 +41,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordHandler(new ResetPasswordTestConfigurationService());
+        handler =
+                new ResetPasswordHandler(
+                        new ResetPasswordTestConfigurationService(), redisConnectionService);
         txmaAuditQueue.clear();
     }
 

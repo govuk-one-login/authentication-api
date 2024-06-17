@@ -127,6 +127,30 @@ public class DocAppCallbackHandler
                 new NoSessionOrchestrationService(configurationService);
     }
 
+    public DocAppCallbackHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.configurationService = configurationService;
+        this.authorisationService =
+                new DocAppAuthorisationService(
+                        configurationService,
+                        redis,
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
+        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService, redis, SerializationService.getInstance());
+        this.cookieHelper = new CookieHelper();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redis);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {

@@ -245,6 +245,9 @@ public class RedisExtension
                 .getRedisPassword()
                 .ifPresent(redisPassword -> builder.withPassword(redisPassword.toCharArray()));
         RedisURI redisURI = builder.build();
+        if (client != null) {
+            client.shutdown();
+        }
         client = RedisClient.create(redisURI);
     }
 

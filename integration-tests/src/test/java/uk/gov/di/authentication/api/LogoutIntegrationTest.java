@@ -55,7 +55,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new LogoutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new LogoutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -94,6 +95,19 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
+    }
+
+    public ResetPasswordRequestHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(ResetPasswordRequest.class, configurationService, redis);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.codeGeneratorService = new CodeGeneratorService();
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
     }
 

@@ -74,7 +74,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub,
                     auditTopic,
@@ -97,7 +97,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @BeforeEach
     void setup() {
         ipvStub.init();
-        handler = new IPVCallbackHandler(configurationService);
+        handler = new IPVCallbackHandler(configurationService, redisConnectionService);
         txmaAuditQueue.clear();
         spotQueue.clear();
     }

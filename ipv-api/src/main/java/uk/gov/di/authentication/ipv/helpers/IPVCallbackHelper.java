@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -75,6 +76,28 @@ public class IPVCallbackHelper {
         this.dynamoService = new DynamoService(configurationService);
         this.objectMapper = SerializationService.getInstance();
         this.sessionService = new SessionService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getSpotQueueURI(),
+                        configurationService.getSqsEndpointURI());
+        this.authCodeResponseService =
+                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+    }
+
+    public IPVCallbackHelper(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService, redis, SerializationService.getInstance());
+        this.configurationService = configurationService;
+        this.dynamoClientService = new DynamoClientService(configurationService);
+        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
+        this.objectMapper = SerializationService.getInstance();
+        this.sessionService = new SessionService(configurationService, redis);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
