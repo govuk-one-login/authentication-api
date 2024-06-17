@@ -68,6 +68,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
@@ -170,10 +171,8 @@ public class MfaHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -207,10 +206,8 @@ public class MfaHandlerTest {
 
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(headers, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -246,11 +243,8 @@ public class MfaHandlerTest {
                         VERIFY_PHONE_NUMBER,
                         CODE,
                         SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(
-                format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true"));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true");
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -290,10 +284,8 @@ public class MfaHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -324,10 +316,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
         APIGatewayProxyResponseEvent result =
@@ -359,10 +349,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", "wrong.email@gov.uk"));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", "wrong.email@gov.uk");
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -388,10 +376,8 @@ public class MfaHandlerTest {
     void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -428,10 +414,8 @@ public class MfaHandlerTest {
         session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
         session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -455,10 +439,8 @@ public class MfaHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
                 .thenReturn(true);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -476,10 +458,8 @@ public class MfaHandlerTest {
         session.incrementCodeRequestCount(MFA_SMS, journeyType);
         session.incrementCodeRequestCount(MFA_SMS, journeyType);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -516,10 +496,8 @@ public class MfaHandlerTest {
                         EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -551,10 +529,9 @@ public class MfaHandlerTest {
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -589,10 +566,8 @@ public class MfaHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -626,10 +601,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -661,10 +634,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(validHeaders);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
