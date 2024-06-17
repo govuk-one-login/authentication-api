@@ -56,6 +56,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -66,7 +67,6 @@ public class AccountInterventionsHandlerTest {
     private static final String TEST_CLIENT_SESSION_ID = "test-client-session-id";
     private static final String TEST_PERSISTENT_SESSION_ID = "test-persistent-session-id";
     private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
-    private static final String TEST_IP_ADDRESS = "123.123.123.123";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
@@ -314,7 +314,7 @@ public class AccountInterventionsHandlerTest {
                         TEST_SESSION_ID,
                         TEST_INTERNAL_SUBJECT_ID,
                         EMAIL,
-                        TEST_IP_ADDRESS,
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         TEST_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -355,7 +355,7 @@ public class AccountInterventionsHandlerTest {
                         TEST_SESSION_ID,
                         TEST_INTERNAL_SUBJECT_ID,
                         EMAIL,
-                        TEST_IP_ADDRESS,
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         TEST_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty);
@@ -391,7 +391,7 @@ public class AccountInterventionsHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", session.getSessionId());
         headers.put("di-persistent-session-id", TEST_PERSISTENT_SESSION_ID);
-        headers.put("X-Forwarded-For", TEST_IP_ADDRESS);
+        headers.put("X-Forwarded-For", IP_ADDRESS);
         return headers;
     }
 

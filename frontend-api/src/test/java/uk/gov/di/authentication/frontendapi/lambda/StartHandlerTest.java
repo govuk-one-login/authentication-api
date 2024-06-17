@@ -63,6 +63,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -158,7 +159,7 @@ class StartHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -181,7 +182,7 @@ class StartHandlerTest {
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -221,7 +222,7 @@ class StartHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -249,7 +250,7 @@ class StartHandlerTest {
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -279,7 +280,7 @@ class StartHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -296,7 +297,7 @@ class StartHandlerTest {
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -324,7 +325,7 @@ class StartHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
 
         var result = handler.handleRequest(event, context);
 
@@ -337,7 +338,7 @@ class StartHandlerTest {
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty,
@@ -367,7 +368,7 @@ class StartHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -432,7 +433,7 @@ class StartHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

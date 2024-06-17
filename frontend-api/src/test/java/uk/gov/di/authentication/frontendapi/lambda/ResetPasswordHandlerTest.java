@@ -64,6 +64,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -171,7 +172,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -200,7 +201,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
@@ -232,7 +233,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -265,7 +266,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -277,7 +278,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -310,7 +311,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -340,7 +341,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -415,7 +416,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -463,7 +464,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -475,7 +476,7 @@ class ResetPasswordHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -490,7 +491,7 @@ class ResetPasswordHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\"}", password));
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
 
         return event;
     }

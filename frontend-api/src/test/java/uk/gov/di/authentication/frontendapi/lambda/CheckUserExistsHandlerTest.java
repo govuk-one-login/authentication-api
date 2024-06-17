@@ -73,6 +73,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -191,7 +192,7 @@ class CheckUserExistsHandlerTest {
                             session.getSessionId(),
                             expectedInternalPairwiseId,
                             EMAIL_ADDRESS,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -228,7 +229,7 @@ class CheckUserExistsHandlerTest {
                             session.getSessionId(),
                             expectedInternalPairwiseId,
                             EMAIL_ADDRESS,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
                             AuditService.RestrictedSection.empty,
@@ -301,7 +302,7 @@ class CheckUserExistsHandlerTest {
                             session.getSessionId(),
                             AuditService.UNKNOWN,
                             EMAIL_ADDRESS,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             AuditService.UNKNOWN,
                             PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -331,7 +332,7 @@ class CheckUserExistsHandlerTest {
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -380,7 +381,7 @@ class CheckUserExistsHandlerTest {
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         "joe.bloggs",
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -452,7 +453,7 @@ class CheckUserExistsHandlerTest {
                                         PERSISTENT_SESSION_ID),
                                 Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)))
                 .withBody(format("{\"email\": \"%s\" }", email))
-                .withRequestContext(contextWithSourceIp("123.123.123.123"));
+                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
     private MFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
