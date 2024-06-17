@@ -710,7 +710,7 @@ Resources:
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          DOC_APP_AUTHORISATION_CLIENT_ID: authOrchestratorDocApp
+          DOC_APP_AUTHORISATION_CLIENT_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppClientId ]
           DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
           DOC_APP_BACKEND_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
           DOC_APP_CRI_DATA_V2_ENDPOINT: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCriDataV2Endpoint ]
@@ -725,7 +725,7 @@ Resources:
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           LOGIN_URI: !Sub
-            - https://signin.${ServiceDomain}/doc-app-callback
+            - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
