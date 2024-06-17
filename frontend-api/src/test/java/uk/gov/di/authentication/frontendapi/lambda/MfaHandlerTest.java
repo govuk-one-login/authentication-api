@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -80,7 +79,6 @@ import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AU
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -297,10 +295,9 @@ public class MfaHandlerTest {
 
     @Test
     void shouldReturn400WhenSessionIdIsInvalid() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
