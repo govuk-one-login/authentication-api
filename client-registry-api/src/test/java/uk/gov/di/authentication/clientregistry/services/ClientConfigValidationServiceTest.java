@@ -323,7 +323,7 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/sector-id",
                                 ClientType.WEB.getValue(),
                                 validIdTokenSigningAlgorithm,
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -352,7 +352,7 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -370,7 +370,7 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -388,7 +388,7 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ES256.getName(),
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -406,7 +406,7 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 ES256.getName(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -424,7 +424,7 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ES256.getName(),
                                 "rubbish-client-type",
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 
@@ -462,7 +462,7 @@ class ClientConfigValidationServiceTest {
                                 null,
                                 ClientType.WEB.getValue(),
                                 invalidIdTokenSigningAlgorithm,
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM)));
     }
 

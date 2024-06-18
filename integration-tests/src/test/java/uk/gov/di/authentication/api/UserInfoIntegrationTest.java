@@ -465,7 +465,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             identityStore.saveIdentityClaims(
                     PUBLIC_SUBJECT.getValue(),
                     additionalClaims,
-                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                    LevelOfConfidence.MEDIUM_LEVEL.toString(),
                     CORE_IDENTITY_CLAIM);
         }
         if (Objects.nonNull(coreIdentityJWT)) {

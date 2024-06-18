@@ -61,7 +61,7 @@ class QueryParamsAuthorizeValidatorTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final List<String> DEFAULT_CLIENT_LOCS =
-            List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue(), LevelOfConfidence.NONE.getValue());
+            List.of(LevelOfConfidence.MEDIUM_LEVEL.toString(), LevelOfConfidence.NONE.toString());
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
@@ -404,22 +404,22 @@ class QueryParamsAuthorizeValidatorTest {
 
     private static Stream<Arguments> requestVtrsNotPermitted() {
         return Stream.of(
-                Arguments.of(List.of(LevelOfConfidence.NONE.getValue()), jsonArrayOf("Cl.P2.Cm")),
+                Arguments.of(List.of(LevelOfConfidence.NONE.toString()), jsonArrayOf("Cl.P2.Cm")),
                 Arguments.of(
                         List.of(
-                                LevelOfConfidence.NONE.getValue(),
-                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                LevelOfConfidence.NONE.toString(),
+                                LevelOfConfidence.MEDIUM_LEVEL.toString()),
                         jsonArrayOf("Cl.PCL250.Cm")),
                 Arguments.of(
                         List.of(
-                                LevelOfConfidence.NONE.getValue(),
-                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                LevelOfConfidence.NONE.toString(),
+                                LevelOfConfidence.MEDIUM_LEVEL.toString()),
                         jsonArrayOf("PCL200.Cl.Cm", "Cl.P2.Cm")),
                 Arguments.of(
                         List.of(
-                                LevelOfConfidence.NONE.getValue(),
-                                LevelOfConfidence.HMRC250.getValue(),
-                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                                LevelOfConfidence.NONE.toString(),
+                                LevelOfConfidence.HMRC250.toString(),
+                                LevelOfConfidence.MEDIUM_LEVEL.toString()),
                         jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
     }
 

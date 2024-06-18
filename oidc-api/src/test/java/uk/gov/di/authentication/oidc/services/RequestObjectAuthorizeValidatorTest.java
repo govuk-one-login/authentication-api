@@ -627,8 +627,8 @@ class RequestObjectAuthorizeValidatorTest {
                 .withSubjectType("pairwise")
                 .withClientLoCs(
                         List.of(
-                                LevelOfConfidence.NONE.getValue(),
-                                LevelOfConfidence.MEDIUM_LEVEL.getValue()))
+                                LevelOfConfidence.NONE.toString(),
+                                LevelOfConfidence.MEDIUM_LEVEL.toString()))
                 .withClientType(clientType);
     }
 

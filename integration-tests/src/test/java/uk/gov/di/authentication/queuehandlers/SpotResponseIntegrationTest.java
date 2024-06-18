@@ -62,7 +62,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
                         ADDRESS_CLAIM,
                         ValidClaims.PASSPORT.getValue(),
                         PASSPORT_CLAIM),
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                LevelOfConfidence.MEDIUM_LEVEL.toString(),
                 CORE_IDENTITY_CLAIM);
         var signedCredential = "some-signed-credential";
         var spotResponse =
@@ -83,7 +83,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
         assertTrue(identityCredentials.isPresent());
         assertThat(
                 identityCredentials.get().getIpvVot(),
-                equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL.toString()));
         assertThat(identityCredentials.get().getAdditionalClaims().size(), equalTo(2));
         assertThat(identityCredentials.get().getIpvCoreIdentity(), equalTo(CORE_IDENTITY_CLAIM));
         assertThat(identityCredentials.get().getCoreIdentityJWT(), equalTo(signedCredential));
@@ -139,7 +139,7 @@ public class SpotResponseIntegrationTest extends IntegrationTest {
         identityStore.saveIdentityClaims(
                 pairwiseIdentifier.getValue(),
                 emptyMap(),
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                LevelOfConfidence.MEDIUM_LEVEL.toString(),
                 CORE_IDENTITY_CLAIM);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 

@@ -353,7 +353,7 @@ public class TokenHandler
         }
 
         VtrList vtr = clientSession.getVtrList();
-        var credentialTrustLevel = vtr.getCredentialTrustLevel();
+        var tokenCode = vtr.getTokenCode();
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(authRequest);
 
         OIDCTokenResponse tokenResponse;
@@ -373,7 +373,7 @@ public class TokenHandler
                                             true,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            credentialTrustLevel));
+                                            tokenCode));
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -403,7 +403,7 @@ public class TokenHandler
                                             false,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            credentialTrustLevel));
+                                            tokenCode));
         }
         return tokenResponse;
     }

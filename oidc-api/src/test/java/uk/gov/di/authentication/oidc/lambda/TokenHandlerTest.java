@@ -234,7 +234,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        vtr.getCredentialTrustLevel()))
+                        vtr.getTokenCode()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -302,7 +302,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.RS256,
                         CLIENT_SESSION_ID,
-                        vtr.getCredentialTrustLevel()))
+                        vtr.getTokenCode()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -599,7 +599,7 @@ public class TokenHandlerTest {
                         true,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        vtr.getCredentialTrustLevel()))
+                        vtr.getTokenCode()))
                 .thenReturn(tokenResponse);
 
         var result =

@@ -110,7 +110,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
             if (!client.getClientLoCs()
                     .containsAll(
                             levelOfConfidenceValues.stream()
-                                    .map(LevelOfConfidence::getValue)
+                                    .map(LevelOfConfidence::toString)
                                     .toList())) {
                 LOG.error(
                         "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",

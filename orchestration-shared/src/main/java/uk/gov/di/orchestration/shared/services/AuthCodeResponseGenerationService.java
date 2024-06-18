@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
@@ -76,7 +77,7 @@ public class AuthCodeResponseGenerationService {
         dimensions.put(
                 "RequestedLevelOfConfidence",
                 vtrList.getLevelsOfConfidence().stream()
-                        .map(loc -> loc.getValue())
+                        .map(LevelOfConfidence::toString)
                         .collect(Collectors.joining(",")));
     }
 

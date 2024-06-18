@@ -17,6 +17,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.CL;
+import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.CL_CM;
 
 class VtrListTest {
 
@@ -145,9 +147,23 @@ class VtrListTest {
     }
 
     @ParameterizedTest
+    @MethodSource("getTokenCodeTestCases")
+    void getTokenCodeReturnsCorrectValue(
+            VtrList vtrList, CredentialTrustLevelCode expectedTokenCode) {
+        assertThat(vtrList.getTokenCode(), is(equalTo(expectedTokenCode)));
+    }
+
+    static Stream<Arguments> getTokenCodeTestCases() {
+        return Stream.of(
+                arguments(VtrList.of(VOT_CL_CM), CL_CM),
+                arguments(VtrList.of(VOT_P0_CL), CL),
+                arguments(VtrList.of(VOT_P0_CL, VOT_CL_CM), CL),
+                arguments(VtrList.of(VOT_CL_CM, VOT_P0_CL), CL));
+    }
+
+    @ParameterizedTest
     @MethodSource("getExpectedVectorOfTrustTestCases")
-    void getEffectiveVectorOfTrustReturnsCorrectValue(
-            VtrList vtrList, VectorOfTrust expectedVectorOfTrust) {
+    void getTokenCodeReturnsCorrectValue(VtrList vtrList, VectorOfTrust expectedVectorOfTrust) {
         assertThat(vtrList.getEffectiveVectorOfTrust(), is(equalTo(expectedVectorOfTrust)));
     }
 
@@ -166,15 +182,21 @@ class VtrListTest {
                 [
                     {
                         "credentialTrustLevel": "MEDIUM_LEVEL",
-                        "levelOfConfidence": "MEDIUM_LEVEL"
+                        "levelOfConfidence": "MEDIUM_LEVEL",
+                        "credentialTrustLevelCode": "Cl.Cm",
+                        "levelOfConfidenceCode": "P2"
                     },
                     {
                         "credentialTrustLevel": "MEDIUM_LEVEL",
-                        "levelOfConfidence": "HMRC250"
+                        "levelOfConfidence": "HMRC250",
+                        "credentialTrustLevelCode": "Cl.Cm",
+                        "levelOfConfidenceCode": "PCL250"
                     },
                     {
                         "credentialTrustLevel": "LOW_LEVEL",
-                        "levelOfConfidence": "NONE"
+                        "levelOfConfidence": "NONE",
+                        "credentialTrustLevelCode": "Cl",
+                        "levelOfConfidenceCode": "P0"
                      }
                  ]
                  """;
@@ -193,21 +215,27 @@ class VtrListTest {
         var actualVtrList =
                 GSON.fromJson(
                         """
-                [
-                    {
-                        "credentialTrustLevel": "MEDIUM_LEVEL",
-                        "levelOfConfidence": "MEDIUM_LEVEL"
-                    },
-                    {
-                        "credentialTrustLevel": "MEDIUM_LEVEL",
-                        "levelOfConfidence": "HMRC250"
-                    },
-                    {
-                        "credentialTrustLevel": "LOW_LEVEL",
-                        "levelOfConfidence": "NONE"
-                     }
-                 ]
-                 """,
+                        [
+                            {
+                                "credentialTrustLevel": "MEDIUM_LEVEL",
+                                "levelOfConfidence": "MEDIUM_LEVEL",
+                                "credentialTrustLevelCode": "Cl.Cm",
+                                "levelOfConfidenceCode": "P2"
+                            },
+                            {
+                                "credentialTrustLevel": "MEDIUM_LEVEL",
+                                "levelOfConfidence": "HMRC250",
+                                "credentialTrustLevelCode": "Cl.Cm",
+                                "levelOfConfidenceCode": "PCL250"
+                            },
+                            {
+                                "credentialTrustLevel": "LOW_LEVEL",
+                                "levelOfConfidence": "NONE",
+                                "credentialTrustLevelCode": "Cl",
+                                "levelOfConfidenceCode": "P0"
+                             }
+                        ]
+                        """,
                         VtrList.class);
 
         assertThat(expectedVtrList.getVtr().size(), is(equalTo(actualVtrList.getVtr().size())));

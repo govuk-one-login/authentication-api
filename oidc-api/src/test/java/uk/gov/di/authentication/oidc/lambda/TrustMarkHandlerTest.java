@@ -6,8 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -42,10 +40,8 @@ class TrustMarkHandlerTest {
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),
                         configurationService.getOidcApiBaseURL().orElseThrow(),
-                        List.of(
-                                CredentialTrustLevel.LOW_LEVEL.getValue(),
-                                CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
-                        LevelOfConfidence.getAllSupportedLevelOfConfidenceValues());
+                        List.of("Cl", "Cl.Cm"),
+                        List.of("P0", "PCL200", "PCL250", "P2"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

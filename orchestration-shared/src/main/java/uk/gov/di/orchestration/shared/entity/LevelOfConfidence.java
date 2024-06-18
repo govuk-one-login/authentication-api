@@ -1,64 +1,63 @@
 package uk.gov.di.orchestration.shared.entity;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.text.MessageFormat.format;
 
 public enum LevelOfConfidence {
-    NONE("P0", true),
-    HMRC200("PCL200", true),
-    HMRC250("PCL250", true),
-    LOW_LEVEL("P1", false),
-    MEDIUM_LEVEL("P2", true),
-    HIGH_LEVEL("P3", false),
-    VERY_HIGH_LEVEL("P4", false);
+    NONE(LevelOfConfidenceCode.P0, LevelOfConfidenceCode.EMPTY),
+    HMRC200(LevelOfConfidenceCode.PCL200),
+    HMRC250(LevelOfConfidenceCode.PCL250),
+    MEDIUM_LEVEL(LevelOfConfidenceCode.P2);
 
-    private String value;
-    private boolean supported;
+    private static final Map<LevelOfConfidenceCode, LevelOfConfidence> valueMap = new HashMap<>();
 
-    LevelOfConfidence(String value, boolean supported) {
-        this.value = value;
-        this.supported = supported;
+    static {
+        for (var loc : values()) {
+            for (var value : loc.allPermittedValues) {
+                valueMap.put(value, loc);
+            }
+        }
     }
 
-    public String getValue() {
-        return value;
+    private final LevelOfConfidenceCode defaultValue;
+    private final Set<LevelOfConfidenceCode> allPermittedValues;
+
+    LevelOfConfidence(LevelOfConfidenceCode defaultValue, LevelOfConfidenceCode... aliasValues) {
+        this.defaultValue = defaultValue;
+        this.allPermittedValues =
+                Stream.concat(Stream.of(defaultValue), Arrays.stream(aliasValues))
+                        .collect(Collectors.toSet());
     }
 
-    public boolean isSupported() {
-        return supported;
-    }
+    public static LevelOfConfidence of(LevelOfConfidenceCode code) {
+        if (valueMap.containsKey(code)) {
+            return valueMap.get(code);
+        }
 
-    public static LevelOfConfidence retrieveLevelOfConfidence(String vtrSet) {
-        return Arrays.stream(values())
-                .filter(LevelOfConfidence::isSupported)
-                .filter(tl -> vtrSet.equals(tl.getValue()))
-                .findFirst()
-                .orElseThrow(
-                        () -> new IllegalArgumentException("Invalid LevelOfConfidence provided"));
-    }
-
-    public static List<String> getAllSupportedLevelOfConfidenceValues() {
-        return Arrays.stream(LevelOfConfidence.values())
-                .filter(LevelOfConfidence::isSupported)
-                .map(LevelOfConfidence::getValue)
-                .toList();
+        throw new IllegalArgumentException(
+                format("Unknown \"Level of Confidence\" \"{0}\".", code));
     }
 
     public static LevelOfConfidence getDefault() {
         return NONE;
     }
 
-    public static List<String> getDefaultLevelOfConfidenceValues() {
-        List<LevelOfConfidence> defaults =
-                List.of(
-                        LevelOfConfidence.NONE,
-                        LevelOfConfidence.LOW_LEVEL,
-                        LevelOfConfidence.MEDIUM_LEVEL,
-                        LevelOfConfidence.HIGH_LEVEL,
-                        LevelOfConfidence.VERY_HIGH_LEVEL);
-        return defaults.stream()
-                .filter(LevelOfConfidence::isSupported)
-                .map(LevelOfConfidence::getValue)
-                .toList();
+    public LevelOfConfidenceCode getDefaultCode() {
+        return defaultValue;
+    }
+
+    public Set<LevelOfConfidenceCode> getAllCodes() {
+        return allPermittedValues;
+    }
+
+    @Override
+    public String toString() {
+        return defaultValue.toString();
     }
 }

@@ -159,7 +159,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         new SPOTRequest(
                                 Map.of(
                                         VOT.getValue(),
-                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                        LevelOfConfidence.MEDIUM_LEVEL.toString(),
                                         VTM.getValue(),
                                         "/trustmark"),
                                 INTERNAL_SUBJECT.getValue(),

@@ -2,29 +2,50 @@ package uk.gov.di.orchestration.shared.entity;
 
 import com.google.gson.annotations.Expose;
 
-import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
+import static java.text.MessageFormat.format;
 
 public class VectorOfTrust {
 
     public static final VectorOfTrust DEFAULT_VECTOR_OF_TRUST =
-            new VectorOfTrust(CredentialTrustLevel.getDefault(), LevelOfConfidence.getDefault());
+            new VectorOfTrust(CredentialTrustLevel.getDefault());
 
-    @Expose private CredentialTrustLevel credentialTrustLevel;
+    @Expose private CredentialTrustLevel credentialTrustLevel = CredentialTrustLevel.getDefault();
 
-    @Expose private LevelOfConfidence levelOfConfidence;
+    @Expose private LevelOfConfidence levelOfConfidence = LevelOfConfidence.getDefault();
+
+    @Expose
+    private CredentialTrustLevelCode credentialTrustLevelCode =
+            credentialTrustLevel.getDefaultCode();
+
+    @Expose
+    private LevelOfConfidenceCode levelOfConfidenceCode = levelOfConfidence.getDefaultCode();
 
     public VectorOfTrust(CredentialTrustLevel credentialTrustLevel) {
-        this(credentialTrustLevel, NONE);
+        this(credentialTrustLevel.getDefaultCode());
     }
 
     public VectorOfTrust(
             CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
-        this.credentialTrustLevel = credentialTrustLevel;
-        this.levelOfConfidence = levelOfConfidence;
+        this(credentialTrustLevel.getDefaultCode(), levelOfConfidence.getDefaultCode());
+    }
+
+    public VectorOfTrust(CredentialTrustLevelCode credentialTrustLevelCode) {
+        this(credentialTrustLevelCode, LevelOfConfidence.getDefault().getDefaultCode());
+    }
+
+    public VectorOfTrust(
+            CredentialTrustLevelCode credentialTrustLevelCode,
+            LevelOfConfidenceCode levelOfConfidenceCode) {
+        this.credentialTrustLevelCode = credentialTrustLevelCode;
+        this.levelOfConfidenceCode = levelOfConfidenceCode;
+        this.credentialTrustLevel = CredentialTrustLevel.of(credentialTrustLevelCode);
+        this.levelOfConfidence = LevelOfConfidence.of(levelOfConfidenceCode);
     }
 
     public CredentialTrustLevel getCredentialTrustLevel() {
@@ -35,59 +56,63 @@ public class VectorOfTrust {
         return levelOfConfidence;
     }
 
+    public CredentialTrustLevelCode getCredentialTrustLevelCode() {
+        return credentialTrustLevelCode;
+    }
+
+    private LevelOfConfidenceCode getLevelOfConfidenceCode() {
+        return levelOfConfidenceCode;
+    }
+
     public static VectorOfTrust parse(String vectorOfTrust) {
-        var splitVtr = vectorOfTrust.split("\\.");
+        EnumSet<CredentialTrustLevelId> ctlComponentIds =
+                EnumSet.noneOf(CredentialTrustLevelId.class);
+        EnumSet<LevelOfConfidenceId> locComponentIds = EnumSet.noneOf(LevelOfConfidenceId.class);
 
-        var levelOfConfidence =
-                Arrays.stream(splitVtr)
-                        .filter(a -> a.startsWith("P"))
-                        .map(LevelOfConfidence::retrieveLevelOfConfidence)
-                        .collect(
-                                Collectors.collectingAndThen(
-                                        Collectors.toList(),
-                                        list -> {
-                                            if (list.size() > 1) {
-                                                throw new IllegalArgumentException(
-                                                        "VTR must contain either 0 or 1 identity proofing components");
-                                            }
-                                            return list;
-                                        }))
-                        .stream()
-                        .findFirst();
+        if (!vectorOfTrust.isEmpty()) {
+            for (var componentId : vectorOfTrust.split("\\.", -1)) {
+                Optional<CredentialTrustLevelId> authId =
+                        CredentialTrustLevelId.tryParse(componentId);
+                Optional<LevelOfConfidenceId> identId = LevelOfConfidenceId.tryParse(componentId);
 
-        var credentialTrustLevel =
-                CredentialTrustLevel.retrieveCredentialTrustLevel(
-                        Arrays.stream(splitVtr)
-                                .filter(a -> a.startsWith("C"))
-                                .sorted()
-                                .collect(Collectors.joining(".")));
+                if (authId.isPresent()) {
+                    ctlComponentIds.add(authId.get());
+                } else if (identId.isPresent()) {
+                    locComponentIds.add(identId.get());
+                } else {
+                    throw new IllegalArgumentException(
+                            format(
+                                    "Unknown ID \"{0}\" in VoT \"{1}\".",
+                                    componentId, vectorOfTrust));
+                }
+            }
+        }
 
-        return levelOfConfidence
-                .map(ofConfidence -> new VectorOfTrust(credentialTrustLevel, ofConfidence))
-                .orElseGet(() -> new VectorOfTrust(credentialTrustLevel));
+        return new VectorOfTrust(
+                new CredentialTrustLevelCode(ctlComponentIds),
+                new LevelOfConfidenceCode(locComponentIds));
     }
 
     @Override
     public String toString() {
-        return "VectorOfTrust{"
-                + "credentialTrustLevel="
-                + credentialTrustLevel
-                + ", levelOfConfidence="
-                + levelOfConfidence
-                + '}';
+        return Stream.concat(
+                        getLevelOfConfidenceCode().stream(), getCredentialTrustLevelCode().stream())
+                .map(Enum::toString)
+                .collect(Collectors.joining("."));
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        VectorOfTrust that = (VectorOfTrust) o;
-        return credentialTrustLevel == that.credentialTrustLevel
-                && levelOfConfidence == that.levelOfConfidence;
+    public boolean equals(Object obj) {
+        if (obj instanceof VectorOfTrust other) {
+            return this.levelOfConfidence.equals(other.levelOfConfidence)
+                    && this.credentialTrustLevel.equals(other.credentialTrustLevel);
+        }
+
+        return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(credentialTrustLevel, levelOfConfidence);
+        return Objects.hash(levelOfConfidence, credentialTrustLevel);
     }
 }

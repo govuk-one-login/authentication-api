@@ -104,7 +104,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         identityStore.saveIdentityClaims(
                 pairwiseIdentifier,
                 emptyMap(),
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                LevelOfConfidence.MEDIUM_LEVEL.toString(),
                 CORE_IDENTITY_CLAIM);
 
         Map<String, String> headers = new HashMap<>();

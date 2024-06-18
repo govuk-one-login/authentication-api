@@ -486,11 +486,11 @@ public class AuthenticationCallbackHandler
         var vtr = clientSession.getVtrList();
         var mfaRequired = vtr.mfaRequired();
 
-        var levelOfConfidence = LevelOfConfidence.NONE.getValue();
+        var levelOfConfidence = LevelOfConfidence.NONE.toString();
         if (vtr.identityRequired()) {
             levelOfConfidence =
                     vtr.getLevelsOfConfidence().stream()
-                            .map(LevelOfConfidence::getValue)
+                            .map(LevelOfConfidence::toString)
                             .collect(Collectors.joining(","));
         }
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");

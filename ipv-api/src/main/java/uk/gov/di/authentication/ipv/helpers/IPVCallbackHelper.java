@@ -141,7 +141,7 @@ public class IPVCallbackHelper {
         LOG.info("Validating userinfo response");
         for (VectorOfTrust vtr : vtrList.getVtr()) {
             if (vtr.getLevelOfConfidence()
-                    .getValue()
+                    .toString()
                     .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
                 var trustmarkURL =
                         buildURI(

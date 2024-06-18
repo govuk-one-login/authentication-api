@@ -607,7 +607,7 @@ public class AuthorisationHandler
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
-                        .claim("confidence", vtrList.getCredentialTrustLevel().getValue())
+                        .claim("confidence", vtrList.getCredentialTrustLevel().toString())
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())

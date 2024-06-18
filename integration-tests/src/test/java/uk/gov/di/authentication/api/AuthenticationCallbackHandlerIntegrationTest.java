@@ -997,14 +997,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setUpClientSession() throws Json.JsonException {
-        String vtrStr1 =
-                LevelOfConfidence.MEDIUM_LEVEL.getValue()
-                        + "."
-                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
-        String vtrStr2 =
-                LevelOfConfidence.HMRC200.getValue()
-                        + "."
-                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+        String vtrStr1 = LevelOfConfidence.MEDIUM_LEVEL + "." + CredentialTrustLevel.MEDIUM_LEVEL;
+        String vtrStr2 = LevelOfConfidence.HMRC200 + "." + CredentialTrustLevel.MEDIUM_LEVEL;
 
         VtrList vtrList =
                 VtrList.parseFromAuthRequestAttribute(

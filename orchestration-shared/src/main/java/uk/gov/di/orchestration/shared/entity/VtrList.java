@@ -27,6 +27,7 @@ public class VtrList {
     private final List<VectorOfTrust> vtr;
     private final CredentialTrustLevel credentialTrustLevel;
     private final List<LevelOfConfidence> levelsOfConfidence;
+    private final CredentialTrustLevelCode tokenCode;
     private final VectorOfTrust effectiveVectorOfTrust;
 
     public VtrList(List<VectorOfTrust> vtr) {
@@ -44,6 +45,15 @@ public class VtrList {
                         .distinct()
                         .sorted(Comparator.naturalOrder())
                         .toList();
+        this.tokenCode =
+                this.vtr.stream()
+                        .filter(
+                                vot ->
+                                        vot.getCredentialTrustLevel()
+                                                .equals(this.credentialTrustLevel))
+                        .map(VectorOfTrust::getCredentialTrustLevelCode)
+                        .findFirst()
+                        .orElseThrow(); // Should never throw.
         this.effectiveVectorOfTrust =
                 this.vtr.stream()
                         .filter(
@@ -108,13 +118,6 @@ public class VtrList {
                             "Unsupported combination of \"Credential Trust Level\": \"{0}\" and \"Level of Confidence\": \"{1}\".",
                             vot.getCredentialTrustLevel(), vot.getLevelOfConfidence()));
         }
-
-        if (!vot.getLevelOfConfidence().isSupported()) {
-            throw new IllegalArgumentException(
-                    format(
-                            "Unsupported \"Level of Confidence\": \"{0}\".",
-                            vot.getLevelOfConfidence()));
-        }
     }
 
     public List<VectorOfTrust> getVtr() {
@@ -127,6 +130,10 @@ public class VtrList {
 
     public List<LevelOfConfidence> getLevelsOfConfidence() {
         return levelsOfConfidence;
+    }
+
+    public CredentialTrustLevelCode getTokenCode() {
+        return tokenCode;
     }
 
     public VectorOfTrust getEffectiveVectorOfTrust() {

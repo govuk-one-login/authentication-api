@@ -639,7 +639,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
+                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.toString()),
                         Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
@@ -947,9 +947,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 clientType,
                 jarValidationRequired,
                 List.of(
-                        LevelOfConfidence.NONE.getValue(),
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue()));
+                        LevelOfConfidence.NONE.toString(),
+                        LevelOfConfidence.MEDIUM_LEVEL.toString(),
+                        LevelOfConfidence.HMRC200.toString()));
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
