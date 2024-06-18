@@ -58,6 +58,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -134,9 +135,8 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn200IfSignUpIsSuccessful() {
-        String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
@@ -182,7 +182,7 @@ class SignUpHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
@@ -199,9 +199,8 @@ class SignUpHandlerTest {
 
     @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
@@ -237,7 +236,7 @@ class SignUpHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));

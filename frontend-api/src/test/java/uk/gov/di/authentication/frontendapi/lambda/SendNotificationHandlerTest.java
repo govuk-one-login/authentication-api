@@ -81,11 +81,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSISTENT_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -245,7 +245,7 @@ class SendNotificationHandlerTest {
                                             EMAIL,
                                             session.getSessionId(),
                                             CLIENT_SESSION_ID,
-                                            PERSISTENT_ID,
+                                            DI_PERSISTENT_SESSION_ID,
                                             IP_ADDRESS,
                                             JourneyType.REGISTRATION,
                                             mockedDate.toInstant().getEpochSecond(),
@@ -277,7 +277,7 @@ class SendNotificationHandlerTest {
                                 EMAIL,
                                 IP_ADDRESS,
                                 AuditService.UNKNOWN,
-                                PERSISTENT_ID,
+                                DI_PERSISTENT_SESSION_ID,
                                 restrictedSection);
             }
         }
@@ -345,7 +345,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -394,7 +394,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -437,7 +437,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -615,7 +615,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         phoneNumber,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -754,7 +754,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -784,7 +784,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty);
     }
 
@@ -828,7 +828,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -869,7 +869,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -903,7 +903,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -939,7 +939,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -976,7 +976,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1009,7 +1009,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1044,7 +1044,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1077,7 +1077,7 @@ class SendNotificationHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1131,7 +1131,7 @@ class SendNotificationHandlerTest {
     private APIGatewayProxyRequestEvent sendRequest(String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);

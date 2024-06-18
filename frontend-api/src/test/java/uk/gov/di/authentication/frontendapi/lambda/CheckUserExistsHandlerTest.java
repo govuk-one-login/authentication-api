@@ -73,6 +73,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -99,7 +100,6 @@ class CheckUserExistsHandlerTest {
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
-    private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
@@ -194,7 +194,7 @@ class CheckUserExistsHandlerTest {
                             EMAIL_ADDRESS,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_SESSION_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
@@ -231,7 +231,7 @@ class CheckUserExistsHandlerTest {
                             EMAIL_ADDRESS,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_SESSION_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             AuditService.RestrictedSection.empty,
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
@@ -304,7 +304,7 @@ class CheckUserExistsHandlerTest {
                             EMAIL_ADDRESS,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_SESSION_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
@@ -334,7 +334,7 @@ class CheckUserExistsHandlerTest {
                         EMAIL_ADDRESS,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
@@ -383,7 +383,7 @@ class CheckUserExistsHandlerTest {
                         "joe.bloggs",
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -450,7 +450,7 @@ class CheckUserExistsHandlerTest {
                                 Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                                 Map.entry(
                                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                        PERSISTENT_SESSION_ID),
+                                        DI_PERSISTENT_SESSION_ID),
                                 Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)))
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));

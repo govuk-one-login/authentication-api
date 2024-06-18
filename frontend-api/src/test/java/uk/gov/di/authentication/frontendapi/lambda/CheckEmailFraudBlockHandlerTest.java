@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -53,7 +54,6 @@ class CheckEmailFraudBlockHandlerTest {
 
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String EMAIL = "joe.bloggs@test.com";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
@@ -127,7 +127,7 @@ class CheckEmailFraudBlockHandlerTest {
 
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
@@ -156,7 +156,7 @@ class CheckEmailFraudBlockHandlerTest {
 
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
@@ -193,7 +193,7 @@ class CheckEmailFraudBlockHandlerTest {
                             EMAIL,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),

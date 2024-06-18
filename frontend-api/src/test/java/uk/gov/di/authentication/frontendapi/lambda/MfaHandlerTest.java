@@ -68,6 +68,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
@@ -114,10 +115,10 @@ class MfaHandlerTest {
             new Session("a-session-id")
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private static final String persistentId = "some-persistent-id-value";
     private final Map<String, String> validHeaders =
             Map.ofEntries(
-                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId),
+                    Map.entry(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
                     Map.entry("Session-Id", session.getSessionId()),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                     Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
@@ -190,7 +191,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -221,7 +222,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -264,7 +265,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -320,7 +321,7 @@ class MfaHandlerTest {
                         "wrong.email@gov.uk",
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -348,7 +349,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
@@ -426,7 +427,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -459,7 +460,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -491,7 +492,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -522,7 +523,7 @@ class MfaHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));

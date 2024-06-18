@@ -77,6 +77,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -95,7 +96,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.c
 class ResetPasswordRequestHandlerTest {
 
     private static final String TEST_SIX_DIGIT_CODE = "123456";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final long LOCKOUT_DURATION = 799;
@@ -276,7 +276,7 @@ class ResetPasswordRequestHandlerTest {
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -306,7 +306,7 @@ class ResetPasswordRequestHandlerTest {
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -360,7 +360,7 @@ class ResetPasswordRequestHandlerTest {
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -395,7 +395,7 @@ class ResetPasswordRequestHandlerTest {
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -563,7 +563,7 @@ class ResetPasswordRequestHandlerTest {
 
     private Map<String, String> validHeaders() {
         return Map.ofEntries(
-                Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
+                Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
                 Map.entry("Session-Id", session.getSessionId()),
                 Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                 Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));

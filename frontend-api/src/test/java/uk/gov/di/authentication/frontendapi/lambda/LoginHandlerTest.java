@@ -77,6 +77,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -104,7 +105,6 @@ class LoginHandlerTest {
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final MFAMethod AUTH_APP_MFA_METHOD =
@@ -119,7 +119,8 @@ class LoginHandlerTest {
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
     private static final Map<String, String> VALID_HEADERS =
             Map.ofEntries(
-                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
+                    Map.entry(
+                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
                     Map.entry("Session-Id", session.getSessionId()),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                     Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
@@ -163,7 +164,7 @@ class LoginHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    PERSISTENT_ID,
+                    DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
 
     private final AuditContext auditContextWithoutUserInfo =
@@ -175,7 +176,7 @@ class LoginHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    PERSISTENT_ID,
+                    DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
 
     @RegisterExtension
@@ -238,7 +239,7 @@ class LoginHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         Optional.of(ENCODED_DEVICE_DETAILS));
 
         // Act

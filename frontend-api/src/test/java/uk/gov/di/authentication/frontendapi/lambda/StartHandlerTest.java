@@ -63,6 +63,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -80,7 +81,6 @@ class StartHandlerTest {
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
     public static final String SESSION_ID = "some-session-id";
     public static final State STATE = new State();
-    public static final String PERSISTENT_ID = "some-persistent-id-value";
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
     private static final Scope DOC_APP_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
@@ -152,7 +152,7 @@ class StartHandlerTest {
         usingValidSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
@@ -184,7 +184,7 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -215,7 +215,7 @@ class StartHandlerTest {
         usingValidSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
@@ -252,7 +252,7 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -272,7 +272,7 @@ class StartHandlerTest {
         usingValidClientSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(REAUTHENTICATE_HEADER, "true");
@@ -299,7 +299,7 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -318,7 +318,7 @@ class StartHandlerTest {
         usingValidClientSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(REAUTHENTICATE_HEADER, "true");
@@ -340,7 +340,7 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -360,7 +360,7 @@ class StartHandlerTest {
         usingValidClientSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(REAUTHENTICATE_HEADER, "false");
@@ -399,7 +399,7 @@ class StartHandlerTest {
         usingInvalidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
@@ -426,7 +426,7 @@ class StartHandlerTest {
         usingValidSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);

@@ -6,4 +6,5 @@ public class CommonTestVariables {
     public static final String PASSWORD = "computer-1";
     public static final String UK_MOBILE_NUMBER = "+447234567890";
     public static final String IP_ADDRESS = "123.123.123.123";
+    public static final String DI_PERSISTENT_SESSION_ID = "some-persistent-id-value";
 }

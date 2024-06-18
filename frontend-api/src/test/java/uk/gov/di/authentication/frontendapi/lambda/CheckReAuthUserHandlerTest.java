@@ -38,6 +38,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -57,7 +58,6 @@ class CheckReAuthUserHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final String CLIENT_ID = "test-client-id";
-    private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
@@ -72,7 +72,7 @@ class CheckReAuthUserHandlerTest {
                     EMAIL_ADDRESS,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
-                    PERSISTENT_SESSION_ID,
+                    DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
 
     private final AuditContext testAuditContextWithAuditEncoded =
@@ -296,7 +296,7 @@ class CheckReAuthUserHandlerTest {
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", session.getSessionId());
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         return headers;
     }
 }
