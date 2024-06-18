@@ -13,4 +13,6 @@ public class CommonTestVariables {
     public static final String SESSION_ID_HEADER = "Session-Id";
     public static final String SESSION_ID = "some-session-id";
     public static final String PERSISTENT_ID = "some-persistent-id-value";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 }

@@ -55,24 +55,23 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AccountInterventionsHandlerTest {
-    private static final String TEST_CLIENT_ID = "test_client_id";
-    private static final String TEST_CLIENT_NAME = "test_client_name";
-    private static final String TEST_SESSION_ID = "test-session-id";
-    private static final String TEST_CLIENT_SESSION_ID = "test-client-session-id";
-    private static final String TEST_PERSISTENT_SESSION_ID = "test-persistent-session-id";
     private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
     private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private static final Instant fixedDate = Instant.now();
 
@@ -100,7 +99,7 @@ public class AccountInterventionsHandlerTest {
     private final Session session =
             new Session(IdGenerator.generate())
                     .setEmailAddress(EMAIL)
-                    .setSessionId(TEST_SESSION_ID)
+                    .setSessionId(SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -121,7 +120,7 @@ public class AccountInterventionsHandlerTest {
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(TEST_CLIENT_ID);
-        when(userContext.getClientSessionId()).thenReturn(TEST_CLIENT_SESSION_ID);
+        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
@@ -310,13 +309,13 @@ public class AccountInterventionsHandlerTest {
                 .submitAuditEvent(
                         expectedEvent,
                         TEST_CLIENT_ID,
-                        TEST_CLIENT_SESSION_ID,
-                        TEST_SESSION_ID,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
                         TEST_INTERNAL_SUBJECT_ID,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        TEST_PERSISTENT_SESSION_ID,
+                        PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -351,13 +350,13 @@ public class AccountInterventionsHandlerTest {
                 .submitAuditEvent(
                         expectedEvent,
                         TEST_CLIENT_ID,
-                        TEST_CLIENT_SESSION_ID,
-                        TEST_SESSION_ID,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
                         TEST_INTERNAL_SUBJECT_ID,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        TEST_PERSISTENT_SESSION_ID,
+                        PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);
     }
 
@@ -390,7 +389,7 @@ public class AccountInterventionsHandlerTest {
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", session.getSessionId());
-        headers.put("di-persistent-session-id", TEST_PERSISTENT_SESSION_ID);
+        headers.put("di-persistent-session-id", PERSISTENT_ID);
         headers.put("X-Forwarded-For", IP_ADDRESS);
         return headers;
     }
