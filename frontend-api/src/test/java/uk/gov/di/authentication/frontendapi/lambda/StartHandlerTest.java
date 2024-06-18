@@ -63,6 +63,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
@@ -79,7 +80,6 @@ class StartHandlerTest {
     public static final String TEST_CLIENT_NAME = "test_client_name";
     public static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
     public static final String SESSION_ID_HEADER = "Session-Id";
-    public static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final String SESSION_ID = "some-session-id";
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");

@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -45,7 +46,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class AccountRecoveryHandlerTest {
 
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private final Context context = mock(Context.class);

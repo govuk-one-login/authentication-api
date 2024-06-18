@@ -42,6 +42,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -55,7 +56,6 @@ class CheckEmailFraudBlockHandlerTest {
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final String CLIENT_ID = "some-client-id";
     private static final String IP_ADDRESS = "123.123.123.123";

@@ -53,6 +53,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
@@ -66,7 +67,6 @@ class UpdateProfileHandlerTest {
 
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
     private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
