@@ -98,7 +98,10 @@ public abstract class BaseFrontendHandler<T>
         this.authenticationService = new DynamoService(configurationService);
     }
 
-    protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService, RedisConnectionService redis) {
+    protected BaseFrontendHandler(
+            Class<T> clazz,
+            ConfigurationService configurationService,
+            RedisConnectionService redis) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
