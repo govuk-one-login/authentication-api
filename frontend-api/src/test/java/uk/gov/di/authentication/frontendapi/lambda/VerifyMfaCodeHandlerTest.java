@@ -69,7 +69,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -81,18 +84,13 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class VerifyMfaCodeHandlerTest {
 
     private static final String CODE = "123456";
-    private static final String CLIENT_ID = "client-id";
-    private static final String CLIENT_NAME = "client-name";
     private static final String TEST_CLIENT_CODE = "654321";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String SUBJECT_ID = "test-subject-id";
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
@@ -130,9 +128,9 @@ class VerifyMfaCodeHandlerTest {
     void setUp() {
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
-        when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
+        when(clientRegistry.getClientName()).thenReturn(TEST_CLIENT_NAME);
 
         when(clientSession.getAuthRequestParams())
                 .thenReturn(withAuthenticationRequest().toParameters());
@@ -164,7 +162,7 @@ class VerifyMfaCodeHandlerTest {
                 not(
                         hasItem(
                                 withMessageContaining(
-                                        CLIENT_ID,
+                                        TEST_CLIENT_ID,
                                         TEST_CLIENT_CODE,
                                         session.getSessionId(),
                                         CLIENT_SESSION_ID))));
@@ -208,7 +206,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.REGISTRATION));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        Session.AccountState.NEW,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -246,7 +249,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -298,7 +301,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.PASSWORD_RESET_MFA));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        Session.AccountState.EXISTING,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -335,7 +343,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.REGISTRATION));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        Session.AccountState.NEW,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -372,7 +385,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        Session.AccountState.EXISTING,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -409,7 +427,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        Session.AccountState.EXISTING,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
@@ -441,7 +464,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("journey-type", journeyType));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        Session.AccountState.EXISTING,
+                        TEST_CLIENT_ID,
+                        TEST_CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -775,7 +803,7 @@ class VerifyMfaCodeHandlerTest {
         return new AuthenticationRequest.Builder(
                         new ResponseType(ResponseType.Value.CODE),
                         new Scope(OIDCScopeValue.OPENID),
-                        new ClientID(CLIENT_ID),
+                        new ClientID(TEST_CLIENT_ID),
                         URI.create("https://redirectUri"))
                 .state(new State())
                 .nonce(new Nonce())
@@ -787,7 +815,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         event,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,

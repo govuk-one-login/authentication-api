@@ -86,6 +86,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -106,8 +107,6 @@ class SendNotificationHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
-    private static final String CLIENT_ID = "client-id";
-    private static final String TEST_CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
@@ -121,7 +120,7 @@ class SendNotificationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientRegistry clientRegistry =
-            new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
+            new ClientRegistry().withTestClient(false).withClientID(TEST_CLIENT_ID);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -163,7 +162,7 @@ class SendNotificationHandlerTest {
                         hasItem(
                                 withMessageContaining(
                                         session.getSessionId(),
-                                        CLIENT_ID,
+                                        TEST_CLIENT_ID,
                                         TEST_CLIENT_ID,
                                         EMAIL,
                                         CommonTestVariables.UK_MOBILE_NUMBER))));
@@ -179,7 +178,7 @@ class SendNotificationHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
@@ -201,7 +200,7 @@ class SendNotificationHandlerTest {
             NotificationType notificationType, JourneyType journeyType, boolean ticfHeaderPresent)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         Date mockedDate = new Date();
         UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
@@ -270,7 +269,7 @@ class SendNotificationHandlerTest {
                                 notificationType.equals(VERIFY_EMAIL)
                                         ? EMAIL_CODE_SENT
                                         : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
-                                CLIENT_ID,
+                                TEST_CLIENT_ID,
                                 CLIENT_SESSION_ID,
                                 session.getSessionId(),
                                 expectedCommonSubject,
@@ -289,7 +288,7 @@ class SendNotificationHandlerTest {
             NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
         when(configurationService.isEmailCheckEnabled()).thenReturn(false);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -310,7 +309,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndGenerateNewOtpCodeIfOneExistsWhenNewCodeRequested(
             NotificationType notificationType) throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -338,7 +337,7 @@ class SendNotificationHandlerTest {
                         notificationType.equals(VERIFY_EMAIL)
                                 ? EMAIL_CODE_SENT
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -353,7 +352,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndUseExistingOtpCodeIfOneExistsForVerifyPhoneRequest()
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
@@ -387,7 +386,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_CODE_SENT,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -478,7 +477,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400WhenPhoneNumberFailsValidation(
             String phoneNumber, String environment, boolean isSmokeTest) {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
         clientRegistry.withSmokeTest(isSmokeTest);
         when(configurationService.getEnvironment()).thenReturn(environment);
 
@@ -499,7 +498,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event = sendRequest("{ }");
 
@@ -519,7 +518,7 @@ class SendNotificationHandlerTest {
     void shouldReturn500IfMessageCannotBeSentToQueue(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
         Mockito.doThrow(SdkClientException.class)
                 .when(emailSqsClient)
                 .send(
@@ -546,7 +545,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400WhenInvalidNotificationType() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -582,7 +581,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204ForValidVerifyPhoneNumberRequest(String phoneNumber)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -608,7 +607,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_CODE_SENT,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -622,7 +621,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400ForVerifyPhoneNumberRequestWhenPhoneNumberIsMissing() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -673,7 +672,7 @@ class SendNotificationHandlerTest {
                     JourneyType journeyTypeTwo) {
         maxOutCodeRequestCount(notificationTypeOne, journeyTypeOne);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -704,7 +703,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(true);
 
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -724,7 +723,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -747,7 +746,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -762,7 +761,7 @@ class SendNotificationHandlerTest {
     void checkEmailInvalidCodeRequestAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -777,7 +776,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -792,7 +791,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -821,7 +820,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -836,7 +835,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         maxOutCodeRequestCount(VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -862,7 +861,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -880,7 +879,7 @@ class SendNotificationHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -896,7 +895,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -914,7 +913,7 @@ class SendNotificationHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -932,7 +931,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -949,7 +948,7 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -969,7 +968,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -983,7 +982,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
@@ -1002,7 +1001,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -1016,7 +1015,7 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringAccountRecoveryEmailOtpCodes() {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
@@ -1037,7 +1036,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -1054,7 +1053,7 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
                 sendRequest(
@@ -1070,7 +1069,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -1088,7 +1087,7 @@ class SendNotificationHandlerTest {
     void shouldReturn204WhenSendingAccountCreationEmail(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
-        usingValidClientSession(CLIENT_ID);
+        usingValidClientSession(TEST_CLIENT_ID);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
