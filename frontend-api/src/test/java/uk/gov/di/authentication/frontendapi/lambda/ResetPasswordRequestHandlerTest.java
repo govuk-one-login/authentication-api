@@ -79,8 +79,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -97,15 +99,12 @@ class ResetPasswordRequestHandlerTest {
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final long CODE_EXPIRY_TIME = 900;
-    private static final String TEST_CLIENT_ID = "test-client-id";
     private static final long LOCKOUT_DURATION = 799;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final AuditService.MetadataPair PASSWORD_RESET_COUNTER =
             pair("passwordResetCounter", 0);
     private static final AuditService.MetadataPair PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD =
             pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -118,8 +117,6 @@ class ResetPasswordRequestHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final Context context = mock(Context.class);
-    private static final String CLIENT_ID = "test-client-id";
-    private static final String CLIENT_NAME = "test-client-name";
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -128,7 +125,7 @@ class ResetPasswordRequestHandlerTest {
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
-                    .withClientID(TEST_CLIENT_ID)
+                    .withClientID(CommonTestVariables.TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(
                             List.of(
                                     "joe.bloggs@digital.cabinet-office.gov.uk",
@@ -167,7 +164,8 @@ class ResetPasswordRequestHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
+        when(clientService.getClient(CommonTestVariables.TEST_CLIENT_ID))
+                .thenReturn(Optional.of(testClientRegistry));
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
@@ -269,7 +267,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                            TEST_CLIENT_ID,
+                            CommonTestVariables.TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedCommonSubject,
@@ -299,7 +297,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                            TEST_CLIENT_ID,
+                            CommonTestVariables.TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedCommonSubject,
@@ -353,7 +351,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                            TEST_CLIENT_ID,
+                            CommonTestVariables.TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedCommonSubject,
@@ -388,7 +386,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                            TEST_CLIENT_ID,
+                            CommonTestVariables.TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedCommonSubject,
@@ -540,7 +538,7 @@ class ResetPasswordRequestHandlerTest {
                 new AuthenticationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
                                 new Scope(OIDCScopeValue.OPENID),
-                                new ClientID(TEST_CLIENT_ID),
+                                new ClientID(CommonTestVariables.TEST_CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .state(new State())
                         .nonce(new Nonce())
@@ -590,11 +588,11 @@ class ResetPasswordRequestHandlerTest {
                 new AuthenticationRequest.Builder(
                                 responseType,
                                 scope,
-                                new ClientID(CLIENT_ID),
+                                new ClientID(CommonTestVariables.TEST_CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
     }
 }
