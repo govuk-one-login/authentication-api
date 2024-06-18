@@ -75,7 +75,12 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -95,16 +100,10 @@ class CheckUserExistsHandlerTest {
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session = new Session(IdGenerator.generate());
-    private static final String CLIENT_ID = "test-client-id";
-    private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
-    private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
-    private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -119,7 +118,7 @@ class CheckUserExistsHandlerTest {
     void setup() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(0);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(0);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
 
         handler =
@@ -148,11 +147,11 @@ class CheckUserExistsHandlerTest {
         void shouldReturn200WithRelevantMfaMethod() throws Json.JsonException {
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
             MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(
                             new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL), context);
             var phoneNumber = CommonTestVariables.UK_MOBILE_NUMBER;
 
             assertThat(result, hasStatus(200));
@@ -165,7 +164,7 @@ class CheckUserExistsHandlerTest {
                     "phoneNumberLastThree":"%s",
                     "lockoutInformation":[]}
                     """,
-                            EMAIL_ADDRESS, phoneNumber.substring(phoneNumber.length() - 3));
+                            EMAIL, phoneNumber.substring(phoneNumber.length() - 3));
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
@@ -173,9 +172,9 @@ class CheckUserExistsHandlerTest {
 
         @Test
         void shouldSubmitTheRelevantAuditEvent() {
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL), context);
 
             assertThat(result, hasStatus(200));
             var expectedRpPairwiseId =
@@ -187,23 +186,23 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                            CLIENT_ID,
+                            TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedInternalPairwiseId,
-                            EMAIL_ADDRESS,
+                            EMAIL,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_SESSION_ID,
+                            PERSISTENT_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
 
         @Test
         void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
-            var req = userExistsRequest(EMAIL_ADDRESS);
+            var req = userExistsRequest(EMAIL);
             var headers =
                     req.getHeaders().entrySet().stream()
                             .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
@@ -224,14 +223,14 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                            CLIENT_ID,
+                            TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             expectedInternalPairwiseId,
-                            EMAIL_ADDRESS,
+                            EMAIL,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_SESSION_ID,
+                            PERSISTENT_ID,
                             AuditService.RestrictedSection.empty,
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
@@ -239,18 +238,17 @@ class CheckUserExistsHandlerTest {
         @Test
         void shouldReturn200WithLockInformationIfUserExistsAndMfaIsAuthApp() {
             when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN))
                     .thenReturn(15L);
             when(codeStorageService.getMfaCodeBlockTimeToLive(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
+                            EMAIL, MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA))
                     .thenReturn(15L);
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                            EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
                     .thenReturn(6);
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
-            var event = userExistsRequest(EMAIL_ADDRESS);
+            var event = userExistsRequest(EMAIL);
 
             var result = handler.handleRequest(event, context);
             assertThat(result, hasStatus(200));
@@ -273,23 +271,23 @@ class CheckUserExistsHandlerTest {
             setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
-            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
 
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL), context);
 
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-            assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
+            assertEquals(EMAIL, checkUserExistsResponse.getEmail());
             assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
         }
 
         @Test
         void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
-            when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
+            when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
 
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL), context);
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
@@ -297,14 +295,14 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             ACCOUNT_TEMPORARILY_LOCKED,
-                            CLIENT_ID,
+                            TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
                             session.getSessionId(),
                             AuditService.UNKNOWN,
-                            EMAIL_ADDRESS,
+                            EMAIL,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_SESSION_ID,
+                            PERSISTENT_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
@@ -317,24 +315,24 @@ class CheckUserExistsHandlerTest {
 
         setupUserProfileAndClient(Optional.empty());
 
-        var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+        var result = handler.handleRequest(userExistsRequest(EMAIL), context);
 
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.getEmail(), equalTo(EMAIL_ADDRESS));
+        assertThat(checkUserExistsResponse.getEmail(), equalTo(EMAIL));
         assertFalse(checkUserExistsResponse.doesUserExist());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
-                        CLIENT_ID,
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
+                        EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
@@ -383,7 +381,7 @@ class CheckUserExistsHandlerTest {
                         "joe.bloggs",
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -394,7 +392,7 @@ class CheckUserExistsHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .withEmail(EMAIL_ADDRESS)
+                .withEmail(EMAIL)
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(SUBJECT.getValue())
@@ -405,8 +403,8 @@ class CheckUserExistsHandlerTest {
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withRedirectUrls(singletonList("http://localhost/oidc/redirect"))
-                .withClientID(CLIENT_ID)
-                .withContacts(singletonList(EMAIL_ADDRESS))
+                .withClientID(TEST_CLIENT_ID)
+                .withContacts(singletonList(EMAIL))
                 .withPublicKey(null)
                 .withSectorIdentifierUri(SECTOR_URI)
                 .withScopes(singletonList("openid"))
@@ -422,12 +420,12 @@ class CheckUserExistsHandlerTest {
                 new AuthenticationRequest.Builder(
                                 responseType,
                                 scope,
-                                new ClientID(CLIENT_ID),
+                                new ClientID(TEST_CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
     }
 
     private void setupUserProfileAndClient(Optional<UserProfile> maybeUserProfile) {
@@ -435,9 +433,9 @@ class CheckUserExistsHandlerTest {
                 profile ->
                         when(authenticationService.getOrGenerateSalt(profile))
                                 .thenReturn(SALT.array()));
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(maybeUserProfile);
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(maybeUserProfile);
+        when(clientService.getClient(TEST_CLIENT_ID))
+                .thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
     }
@@ -450,7 +448,7 @@ class CheckUserExistsHandlerTest {
                                 Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                                 Map.entry(
                                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                        PERSISTENT_SESSION_ID),
+                                        PERSISTENT_ID),
                                 Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)))
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
