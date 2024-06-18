@@ -45,6 +45,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -126,15 +127,11 @@ class CheckEmailFraudBlockHandlerTest {
         when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
 
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(proxyRequestContext);
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
+        var event = new APIGatewayProxyRequestEvent()
+                .withRequestContext(proxyRequestContext)
+                .withHeaders(VALID_HEADERS)
+                .withBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         var expectedResponse = new CheckEmailFraudBlockResponse(EMAIL, status.getValue());
         var result =

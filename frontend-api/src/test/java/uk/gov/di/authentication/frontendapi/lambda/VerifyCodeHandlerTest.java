@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -62,10 +61,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -244,7 +246,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", emailNotificationType.name()),
                         pair(
@@ -271,14 +273,7 @@ class VerifyCodeHandlerTest {
                         CODE, emailNotificationType.toString());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry(
-                                "Session-Id",
-                                Optional.of(session)
-                                        .map(Session::getSessionId)
-                                        .orElse("invalid-session-id")),
-                        Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
+        event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
         event.setBody(body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
@@ -307,7 +302,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty,
                         pair("notification-type", emailNotificationType.name()),
                         pair(
@@ -351,7 +346,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", emailNotificationType.name()),
                         pair(
@@ -395,7 +390,7 @@ class VerifyCodeHandlerTest {
                         email,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
@@ -437,7 +432,7 @@ class VerifyCodeHandlerTest {
                         email,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
@@ -469,7 +464,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
@@ -545,7 +540,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
@@ -582,7 +577,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
@@ -602,7 +597,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
@@ -635,7 +630,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
@@ -668,7 +663,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
@@ -708,7 +703,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
@@ -751,7 +746,7 @@ class VerifyCodeHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
@@ -802,13 +797,7 @@ class VerifyCodeHandlerTest {
             String body, Optional<Session> session, String clientId) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry(
-                                "Session-Id",
-                                session.map(Session::getSessionId).orElse("invalid-session-id")),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
-                        Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
+        event.setHeaders(VALID_HEADERS);
         event.setBody(body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders())).thenReturn(session);
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))

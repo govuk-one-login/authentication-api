@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -39,8 +38,6 @@ import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -63,8 +60,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -134,12 +131,6 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn200IfSignUpIsSuccessful() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
@@ -153,7 +144,7 @@ class SignUpHandlerTest {
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
+        event.setHeaders(VALID_HEADERS);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -198,11 +189,6 @@ class SignUpHandlerTest {
 
     @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
@@ -216,7 +202,7 @@ class SignUpHandlerTest {
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
+        event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -260,7 +246,7 @@ class SignUpHandlerTest {
     void shouldReturn400IfAnyRequestParametersAreMissing() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
+        event.setHeaders(VALID_HEADERS);
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -274,7 +260,7 @@ class SignUpHandlerTest {
     void shouldReturn400IfPasswordInvalid() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", SESSION_ID));
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -292,11 +278,7 @@ class SignUpHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", SESSION_ID),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -316,7 +298,7 @@ class SignUpHandlerTest {
                         "joe.bloggs@test.com",
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -326,10 +308,7 @@ class SignUpHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", SESSION_ID),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
+        event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
         event.setBody(
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -349,7 +328,7 @@ class SignUpHandlerTest {
                         "joe.bloggs@test.com",
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty);
     }
 

@@ -39,7 +39,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -58,7 +57,6 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -81,10 +79,10 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -115,13 +113,6 @@ class LoginHandlerTest {
                     .withEnabled(true);
     private static final Json objectMapper = SerializationService.getInstance();
     private static final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
-    private static final Map<String, String> VALID_HEADERS =
-            Map.ofEntries(
-                    Map.entry(
-                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
-                    Map.entry("Session-Id", SESSION_ID),
-                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -288,15 +279,9 @@ class LoginHandlerTest {
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
-        var headersWithoutTICFHeader =
-                VALID_HEADERS.entrySet().stream()
-                        .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
-                        .collect(
-                                Collectors.toUnmodifiableMap(
-                                        Map.Entry::getKey, Map.Entry::getValue));
-
         var event =
-                eventWithHeadersAndBody(headersWithoutTICFHeader, validBodyWithEmailAndPassword);
+                eventWithHeadersAndBody(
+                        VALID_HEADERS_WITHOUT_AUDIT_ENCODED, validBodyWithEmailAndPassword);
 
         var result = handler.handleRequest(event, context);
 

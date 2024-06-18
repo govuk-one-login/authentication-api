@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -47,7 +46,6 @@ import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,8 +66,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -156,7 +154,7 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -184,8 +182,7 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
-        var event = generateRequest(NEW_PASSWORD);
-        event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
 
         var result = handler.handleRequest(event, context);
 
@@ -213,7 +210,7 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -246,7 +243,7 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(true));
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -290,7 +287,7 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -323,7 +320,7 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateMigratedUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -362,7 +359,7 @@ class ResetPasswordHandlerTest {
 
     @Test
     void shouldReturn400IfPasswordFailsValidation() {
-        var event = generateRequest("password");
+        var event = generateRequest("password", VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -377,7 +374,7 @@ class ResetPasswordHandlerTest {
     void shouldReturn400IfNewPasswordEqualsExistingPassword() {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -396,7 +393,7 @@ class ResetPasswordHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -445,7 +442,7 @@ class ResetPasswordHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
 
-        var event = generateRequest(NEW_PASSWORD);
+        var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -481,12 +478,8 @@ class ResetPasswordHandlerTest {
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
-    private APIGatewayProxyRequestEvent generateRequest(String password) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
+    private APIGatewayProxyRequestEvent generateRequest(
+            String password, Map<String, String> headers) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\"}", password));
         event.setHeaders(headers);

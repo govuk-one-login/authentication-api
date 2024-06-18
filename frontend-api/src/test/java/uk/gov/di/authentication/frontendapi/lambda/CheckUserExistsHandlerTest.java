@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -48,13 +47,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
-import static java.util.Collections.singletonMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -77,8 +73,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -203,13 +199,7 @@ class CheckUserExistsHandlerTest {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
             var req = userExistsRequest(EMAIL_ADDRESS);
-            var headers =
-                    req.getHeaders().entrySet().stream()
-                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
-                            .collect(
-                                    Collectors.toUnmodifiableMap(
-                                            Map.Entry::getKey, Map.Entry::getValue));
-            req.setHeaders(headers);
+            req.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
 
             var result = handler.handleRequest(req, context);
 
@@ -342,10 +332,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
 
-        var event =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(singletonMap("Session-Id", SESSION_ID))
-                        .withBody("{ }");
+        var event = new APIGatewayProxyRequestEvent().withHeaders(VALID_HEADERS).withBody("{ }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -443,14 +430,7 @@ class CheckUserExistsHandlerTest {
 
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {
         return new APIGatewayProxyRequestEvent()
-                .withHeaders(
-                        Map.ofEntries(
-                                Map.entry("Session-Id", SESSION_ID),
-                                Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                                Map.entry(
-                                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                        DI_PERSISTENT_SESSION_ID),
-                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)))
+                .withHeaders(VALID_HEADERS)
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }

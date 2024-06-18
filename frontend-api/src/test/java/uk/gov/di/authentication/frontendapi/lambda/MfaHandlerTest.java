@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -50,7 +49,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -75,7 +73,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -115,13 +113,6 @@ class MfaHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private final Map<String, String> validHeaders =
-            Map.ofEntries(
-                    Map.entry(
-                            PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
-                    Map.entry("Session-Id", SESSION_ID),
-                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -172,7 +163,7 @@ class MfaHandlerTest {
         usingValidSession();
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -201,7 +192,7 @@ class MfaHandlerTest {
         usingValidSession();
 
         var headers = new HashMap<String, String>();
-        headers.putAll(validHeaders);
+        headers.putAll(VALID_HEADERS);
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
@@ -240,7 +231,7 @@ class MfaHandlerTest {
                         CODE,
                         SupportedLanguage.EN);
         var body = format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true");
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -275,7 +266,7 @@ class MfaHandlerTest {
         usingValidSession();
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
         APIGatewayProxyResponseEvent result =
@@ -291,7 +282,7 @@ class MfaHandlerTest {
     void shouldReturn400WhenSessionIdIsInvalid() {
         when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -304,7 +295,7 @@ class MfaHandlerTest {
     void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
         var body = format("{ \"email\": \"%s\"}", "wrong.email@gov.uk");
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -331,7 +322,7 @@ class MfaHandlerTest {
         usingValidSession();
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -365,7 +356,7 @@ class MfaHandlerTest {
         }
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -387,7 +378,7 @@ class MfaHandlerTest {
                 .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -404,7 +395,7 @@ class MfaHandlerTest {
         }
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -442,7 +433,7 @@ class MfaHandlerTest {
                 .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -474,7 +465,7 @@ class MfaHandlerTest {
                 .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -504,7 +495,7 @@ class MfaHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -536,7 +527,7 @@ class MfaHandlerTest {
                 .thenReturn(Optional.of(CODE));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -559,7 +550,7 @@ class MfaHandlerTest {
                 .thenReturn(Optional.empty());
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

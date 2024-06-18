@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -67,8 +66,9 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.C
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -150,14 +150,8 @@ class StartHandlerTest {
         usingValidClientSession();
         usingValidSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
+        event.setHeaders(VALID_HEADERS);
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -213,14 +207,8 @@ class StartHandlerTest {
         usingValidDocAppClientSession();
         usingValidSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
+        event.setHeaders(VALID_HEADERS);
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         var result = handler.handleRequest(event, context);
 
@@ -271,11 +259,8 @@ class StartHandlerTest {
         usingValidClientSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.putAll(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, "true");
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
@@ -317,9 +302,7 @@ class StartHandlerTest {
         usingValidClientSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.putAll(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
         headers.put(REAUTHENTICATE_HEADER, "true");
 
         var event = new APIGatewayProxyRequestEvent();
@@ -359,11 +342,8 @@ class StartHandlerTest {
         usingValidClientSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.putAll(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, "false");
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
@@ -381,7 +361,7 @@ class StartHandlerTest {
     void shouldReturn400WhenClientSessionIsNotFound() throws Json.JsonException {
         usingInvalidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
+        event.setHeaders(VALID_HEADERS);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -397,13 +377,8 @@ class StartHandlerTest {
         usingValidClientSession();
         usingInvalidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        event.setHeaders(headers);
+        event.setHeaders(VALID_HEADERS);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -424,14 +399,8 @@ class StartHandlerTest {
         usingValidClientSession();
         usingValidSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(SESSION_ID_HEADER, SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
+        event.setHeaders(VALID_HEADERS);
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

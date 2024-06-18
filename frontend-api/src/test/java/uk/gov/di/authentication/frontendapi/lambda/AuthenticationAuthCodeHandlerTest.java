@@ -21,9 +21,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -39,6 +37,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -83,7 +82,7 @@ class AuthenticationAuthCodeHandlerTest {
     @Test
     void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\" }",
@@ -97,7 +96,7 @@ class AuthenticationAuthCodeHandlerTest {
     @Test
     void shouldReturn400ErrorWhenStateIsInvalid() throws Json.JsonException {
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\" }",
@@ -111,7 +110,7 @@ class AuthenticationAuthCodeHandlerTest {
     @Test
     void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
@@ -128,7 +127,7 @@ class AuthenticationAuthCodeHandlerTest {
     @Test
     void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\", }",
@@ -189,7 +188,7 @@ class AuthenticationAuthCodeHandlerTest {
     void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough()
             throws URISyntaxException {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"password-reset-time\": \"%d\" }",
@@ -222,7 +221,7 @@ class AuthenticationAuthCodeHandlerTest {
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(VALID_HEADERS);
         event.setBody(
                 format(
                         "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\" }",
@@ -232,12 +231,6 @@ class AuthenticationAuthCodeHandlerTest {
                         TEST_SECTOR_IDENTIFIER,
                         false));
         return event;
-    }
-
-    private Map<String, String> getHeaders() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", SESSION_ID);
-        return headers;
     }
 
     private UserProfile generateUserProfile() {
