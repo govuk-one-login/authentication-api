@@ -163,7 +163,8 @@ class LoginHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    PERSISTENT_ID);
+                    PERSISTENT_ID,
+                    Optional.empty());
 
     private final AuditContext auditContextWithoutUserInfo =
             new AuditContext(
@@ -174,7 +175,8 @@ class LoginHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    PERSISTENT_ID);
+                    PERSISTENT_ID,
+                    Optional.empty());
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -236,10 +238,8 @@ class LoginHandlerTest {
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID);
-
-        var expectedRestrictedSection =
-                new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
+                        PERSISTENT_ID,
+                        Optional.of(ENCODED_DEVICE_DETAILS));
 
         // Act
         var result = handler.handleRequest(event, context);
@@ -260,7 +260,6 @@ class LoginHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         expectedAuditContext,
-                        expectedRestrictedSection,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
@@ -308,7 +307,6 @@ class LoginHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
                         auditContextWithAllUserInfo,
-                        AuditService.RestrictedSection.empty,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
 
@@ -417,8 +415,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         verifyNoInteractions(cloudwatchMetricsService);
@@ -482,8 +480,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -514,8 +512,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        auditContextWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("incorrectPasswordCount", maxRetriesAllowed),
                         pair("attemptNoFailedAt", maxRetriesAllowed));
@@ -523,8 +521,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", maxRetriesAllowed),
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
@@ -554,8 +552,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -608,8 +606,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        auditContextWithAllUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", 6));
@@ -712,8 +710,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        auditContextWithoutUserInfo,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        auditContextWithoutUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

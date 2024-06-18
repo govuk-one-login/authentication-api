@@ -44,7 +44,7 @@ public class AuditService {
     }
 
     private static void addRestrictedSectionToAuditEvent(
-            RestrictedSection restrictedSection,
+            Optional<String> txmaAuditEncoded,
             TxmaAuditEvent txmaAuditEvent,
             MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
@@ -55,21 +55,15 @@ public class AuditService {
                             }
                         });
 
-        restrictedSection
-                .encoded()
-                .ifPresentOrElse(
-                        s -> {
-                            if (!s.isEmpty()) {
-                                txmaAuditEvent.addRestricted(
-                                        "device_information", Map.of("encoded", s));
-                            } else {
-                                LOG.warn(
-                                        "Encoded device information for audit event present but empty.");
-                            }
-                        },
-                        () ->
-                                LOG.warn(
-                                        "Encoded device information for audit event is not present."));
+        txmaAuditEncoded.ifPresentOrElse(
+                s -> {
+                    if (!s.isEmpty()) {
+                        txmaAuditEvent.addRestricted("device_information", Map.of("encoded", s));
+                    } else {
+                        LOG.warn("Encoded device information for audit event present but empty.");
+                    }
+                },
+                () -> LOG.warn("Encoded device information for audit event is not present."));
     }
 
     private static void addExtensionSectionToAuditEvent(
@@ -94,10 +88,7 @@ public class AuditService {
     }
 
     public void submitAuditEvent(
-            AuditableEvent event,
-            AuditContext auditContext,
-            RestrictedSection restrictedSection,
-            MetadataPair... metadataPairs) {
+            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 
         var user =
                 TxmaAuditUser.user()
@@ -115,7 +106,8 @@ public class AuditService {
                         .withComponentId(COMPONENT_ID)
                         .withUser(user);
 
-        addRestrictedSectionToAuditEvent(restrictedSection, txmaAuditEvent, metadataPairs);
+        addRestrictedSectionToAuditEvent(
+                auditContext.txmaAuditEncoded(), txmaAuditEvent, metadataPairs);
         addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
@@ -143,9 +135,10 @@ public class AuditService {
                         email,
                         ipAddress,
                         phoneNumber,
-                        persistentSessionId);
+                        persistentSessionId,
+                        restrictedSection.encoded);
 
-        submitAuditEvent(event, auditContext, restrictedSection, metadataPairs);
+        submitAuditEvent(event, auditContext, metadataPairs);
     }
 
     public static class MetadataPair {

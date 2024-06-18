@@ -109,10 +109,10 @@ class AuditServiceTest {
                         "email",
                         "ip-address",
                         "phone-number",
-                        "persistent-session-id");
+                        "persistent-session-id",
+                        Optional.empty());
 
-        auditService.submitAuditEvent(
-                TEST_EVENT_ONE, myContext, AuditService.RestrictedSection.empty);
+        auditService.submitAuditEvent(TEST_EVENT_ONE, myContext);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
