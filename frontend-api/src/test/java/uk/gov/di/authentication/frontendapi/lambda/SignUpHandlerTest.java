@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -58,9 +57,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -82,11 +86,6 @@ class SignUpHandlerTest {
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
-    private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final ClientID CLIENT_ID = new ClientID();
-    private static final String CLIENT_NAME = "client-name";
-    private static final String EMAIL = CommonTestVariables.EMAIL;
-
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final URI REDIRECT_URI = URI.create("test-uri");
@@ -94,15 +93,16 @@ class SignUpHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private SignUpHandler handler;
 
     private final Session session = new Session(IdGenerator.generate());
     private final ClientSession clientSession =
             new ClientSession(
-                    generateAuthRequest().toParameters(), null, (VectorOfTrust) null, CLIENT_NAME);
+                    generateAuthRequest().toParameters(),
+                    null,
+                    (VectorOfTrust) null,
+                    TEST_CLIENT_NAME);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -142,7 +142,7 @@ class SignUpHandlerTest {
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
+        when(clientService.getClient(TEST_CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
@@ -175,7 +175,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -206,7 +206,7 @@ class SignUpHandlerTest {
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
+        when(clientService.getClient(TEST_CLIENT_ID))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
@@ -230,7 +230,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -368,7 +368,8 @@ class SignUpHandlerTest {
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
-        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+        return new AuthenticationRequest.Builder(
+                        responseType, scope, new ClientID(TEST_CLIENT_ID), REDIRECT_URI)
                 .state(state)
                 .nonce(nonce)
                 .build();
@@ -381,7 +382,7 @@ class SignUpHandlerTest {
 
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
+                .withClientID(TEST_CLIENT_ID)
                 .withClientName("test-client")
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");
