@@ -860,7 +860,7 @@ resource "aws_api_gateway_method" "orch_frontend_proxy_method" {
 
 data "aws_cloudformation_stack" "orch_frontend_stack" {
   count = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
-  name  = "${var.environment}-orch-fe-deploy"
+  name  = var.environment == "sandpit" ? "dev-orch-fe-deploy" : "${var.environment}-orch-fe-deploy"
 }
 
 locals {
