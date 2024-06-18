@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -44,6 +43,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -73,7 +73,7 @@ class CheckEmailFraudBlockHandlerTest {
     private static ClientRegistry clientRegistry;
     private static UserContext userContext;
 
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
     private CheckEmailFraudBlockHandler handler;
 
     @BeforeAll
@@ -128,7 +128,7 @@ class CheckEmailFraudBlockHandlerTest {
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
+        headers.put("Session-Id", SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
         var event = new APIGatewayProxyRequestEvent();

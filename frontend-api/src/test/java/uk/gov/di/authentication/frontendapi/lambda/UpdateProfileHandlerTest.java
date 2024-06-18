@@ -56,7 +56,6 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDA
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -139,7 +138,7 @@ class UpdateProfileHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                         Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(
@@ -169,7 +168,7 @@ class UpdateProfileHandlerTest {
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "",
@@ -191,7 +190,7 @@ class UpdateProfileHandlerTest {
 
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
         event.setBody(
                 format(
@@ -219,7 +218,7 @@ class UpdateProfileHandlerTest {
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         "",
@@ -235,7 +234,7 @@ class UpdateProfileHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                         Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
         event.setBody(
@@ -280,7 +279,7 @@ class UpdateProfileHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
         event.setBody(
                 format(

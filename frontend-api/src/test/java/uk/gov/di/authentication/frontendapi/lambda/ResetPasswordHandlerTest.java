@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -67,6 +66,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -112,7 +112,7 @@ class ResetPasswordHandlerTest {
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
     private ResetPasswordHandler handler;
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -168,7 +168,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -197,7 +197,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -229,7 +229,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -262,7 +262,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -274,7 +274,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -307,7 +307,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -337,7 +337,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -350,7 +350,7 @@ class ResetPasswordHandlerTest {
     void shouldReturn400ForRequestIsMissingPassword() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(Map.of("Session-Id", SESSION_ID));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -412,7 +412,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -425,7 +425,7 @@ class ResetPasswordHandlerTest {
     void shouldReturn400WhenUserHasInvalidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(Map.of("Session-Id", SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -460,7 +460,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -472,7 +472,7 @@ class ResetPasswordHandlerTest {
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -484,7 +484,7 @@ class ResetPasswordHandlerTest {
     private APIGatewayProxyRequestEvent generateRequest(String password) {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
+        headers.put("Session-Id", SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

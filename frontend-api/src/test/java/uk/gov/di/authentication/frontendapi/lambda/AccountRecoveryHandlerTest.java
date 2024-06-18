@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -36,6 +35,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -62,7 +62,7 @@ class AccountRecoveryHandlerTest {
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
 
     @BeforeEach
     void setup() {
@@ -89,7 +89,7 @@ class AccountRecoveryHandlerTest {
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
+        headers.put(SESSION_ID, SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
@@ -108,7 +108,7 @@ class AccountRecoveryHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED,
                         AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         internalCommonSubjectId,
                         EMAIL,
                         IP_ADDRESS,
@@ -124,7 +124,7 @@ class AccountRecoveryHandlerTest {
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
+        headers.put(SESSION_ID, SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
@@ -143,7 +143,7 @@ class AccountRecoveryHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
                         AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         internalCommonSubjectId,
                         EMAIL,
                         IP_ADDRESS,
@@ -159,7 +159,7 @@ class AccountRecoveryHandlerTest {
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
+        headers.put("Session-Id", SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
         var event = new APIGatewayProxyRequestEvent();
@@ -175,7 +175,7 @@ class AccountRecoveryHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
                         AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         internalCommonSubjectId,
                         EMAIL,
                         IP_ADDRESS,

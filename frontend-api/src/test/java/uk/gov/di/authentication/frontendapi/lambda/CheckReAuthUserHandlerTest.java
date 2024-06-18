@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -40,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -60,13 +60,12 @@ class CheckReAuthUserHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private static final String CLIENT_ID = "test-client-id";
 
-    private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL_ADDRESS);
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
-                    session.getSessionId(),
+                    SESSION_ID,
                     AuditService.UNKNOWN,
                     EMAIL_ADDRESS,
                     AuditService.UNKNOWN,
@@ -294,7 +293,7 @@ class CheckReAuthUserHandlerTest {
 
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", session.getSessionId());
+        headers.put("Session-Id", SESSION_ID);
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
         return headers;
     }

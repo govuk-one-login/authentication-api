@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -76,6 +75,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -96,7 +96,7 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session = new Session(IdGenerator.generate());
+    private final Session session = new Session(SESSION_ID);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
@@ -111,7 +111,7 @@ class CheckUserExistsHandlerTest {
 
     @AfterEach
     void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
+        assertThat(logging.events(), not(hasItem(withMessageContaining(SESSION_ID))));
     }
 
     @BeforeEach
@@ -188,7 +188,7 @@ class CheckUserExistsHandlerTest {
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
                             CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedInternalPairwiseId,
                             EMAIL_ADDRESS,
                             IP_ADDRESS,
@@ -225,7 +225,7 @@ class CheckUserExistsHandlerTest {
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
                             CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedInternalPairwiseId,
                             EMAIL_ADDRESS,
                             IP_ADDRESS,
@@ -298,7 +298,7 @@ class CheckUserExistsHandlerTest {
                             ACCOUNT_TEMPORARILY_LOCKED,
                             CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             AuditService.UNKNOWN,
                             EMAIL_ADDRESS,
                             IP_ADDRESS,
@@ -328,7 +328,7 @@ class CheckUserExistsHandlerTest {
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         AuditService.UNKNOWN,
                         EMAIL_ADDRESS,
                         IP_ADDRESS,
@@ -344,7 +344,7 @@ class CheckUserExistsHandlerTest {
 
         var event =
                 new APIGatewayProxyRequestEvent()
-                        .withHeaders(singletonMap("Session-Id", session.getSessionId()))
+                        .withHeaders(singletonMap("Session-Id", SESSION_ID))
                         .withBody("{ }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -377,7 +377,7 @@ class CheckUserExistsHandlerTest {
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
                         AuditService.UNKNOWN,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         AuditService.UNKNOWN,
                         "joe.bloggs",
                         IP_ADDRESS,
@@ -445,7 +445,7 @@ class CheckUserExistsHandlerTest {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(
                         Map.ofEntries(
-                                Map.entry("Session-Id", session.getSessionId()),
+                                Map.entry("Session-Id", SESSION_ID),
                                 Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                                 Map.entry(
                                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,

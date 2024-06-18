@@ -80,7 +80,7 @@ class StartHandlerTest {
     public static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
     public static final String SESSION_ID_HEADER = "Session-Id";
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
-    public static final String SESSION_ID = "some-session-id";
+    private static final String SESSION_ID = "some-session-id";
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
     private static final Scope DOC_APP_SCOPE =

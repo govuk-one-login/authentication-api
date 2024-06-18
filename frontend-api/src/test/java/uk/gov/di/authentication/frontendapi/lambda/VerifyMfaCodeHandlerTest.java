@@ -70,7 +70,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -96,7 +96,7 @@ class VerifyMfaCodeHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
-            new Session("session-id")
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Json objectMapper = SerializationService.getInstance();
@@ -165,7 +165,7 @@ class VerifyMfaCodeHandlerTest {
                                 withMessageContaining(
                                         CLIENT_ID,
                                         TEST_CLIENT_CODE,
-                                        session.getSessionId(),
+                                        SESSION_ID,
                                         CLIENT_SESSION_ID))));
     }
 
@@ -228,7 +228,7 @@ class VerifyMfaCodeHandlerTest {
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
         event.setBody(objectMapper.writeValueAsString(mfaCodeRequest));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
@@ -247,7 +247,7 @@ class VerifyMfaCodeHandlerTest {
                         FrontendAuditableEvent.CODE_VERIFIED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -756,7 +756,7 @@ class VerifyMfaCodeHandlerTest {
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
                         Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
         event.setBody(objectMapper.writeValueAsString(mfaCodeRequest));
@@ -788,7 +788,7 @@ class VerifyMfaCodeHandlerTest {
                         event,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,

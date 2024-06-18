@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -85,6 +84,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -133,7 +133,7 @@ class SendNotificationHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session =
-            new Session(IdGenerator.generate())
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
@@ -161,7 +161,7 @@ class SendNotificationHandlerTest {
                 not(
                         hasItem(
                                 withMessageContaining(
-                                        session.getSessionId(),
+                                        SESSION_ID,
                                         CLIENT_ID,
                                         TEST_CLIENT_ID,
                                         EMAIL,
@@ -242,7 +242,7 @@ class SendNotificationHandlerTest {
                                             AuditService.UNKNOWN,
                                             mockedUUID,
                                             EMAIL,
-                                            session.getSessionId(),
+                                            SESSION_ID,
                                             CLIENT_SESSION_ID,
                                             DI_PERSISTENT_SESSION_ID,
                                             IP_ADDRESS,
@@ -271,7 +271,7 @@ class SendNotificationHandlerTest {
                                         : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
                                 CLIENT_ID,
                                 CLIENT_SESSION_ID,
-                                session.getSessionId(),
+                                SESSION_ID,
                                 expectedCommonSubject,
                                 EMAIL,
                                 IP_ADDRESS,
@@ -339,7 +339,7 @@ class SendNotificationHandlerTest {
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -388,7 +388,7 @@ class SendNotificationHandlerTest {
                         PHONE_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -431,7 +431,7 @@ class SendNotificationHandlerTest {
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -609,7 +609,7 @@ class SendNotificationHandlerTest {
                         PHONE_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -748,7 +748,7 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -778,7 +778,7 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -822,7 +822,7 @@ class SendNotificationHandlerTest {
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -863,7 +863,7 @@ class SendNotificationHandlerTest {
                         PHONE_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -897,7 +897,7 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -933,7 +933,7 @@ class SendNotificationHandlerTest {
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -970,7 +970,7 @@ class SendNotificationHandlerTest {
                         PHONE_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -1003,7 +1003,7 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -1038,7 +1038,7 @@ class SendNotificationHandlerTest {
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -1071,7 +1071,7 @@ class SendNotificationHandlerTest {
                         PHONE_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -1089,7 +1089,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(Map.of("Session-Id", SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
@@ -1131,7 +1131,7 @@ class SendNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
+        headers.put("Session-Id", SESSION_ID);
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         event.setHeaders(headers);

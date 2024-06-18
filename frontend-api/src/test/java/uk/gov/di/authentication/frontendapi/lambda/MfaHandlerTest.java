@@ -72,6 +72,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -111,14 +112,14 @@ class MfaHandlerTest {
     private static final int MAX_CODE_RETRIES = 5;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session =
-            new Session("a-session-id")
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Map<String, String> validHeaders =
             Map.ofEntries(
                     Map.entry(
                             PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
-                    Map.entry("Session-Id", session.getSessionId()),
+                    Map.entry("Session-Id", SESSION_ID),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                     Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private final ClientRegistry testClientRegistry =
@@ -141,8 +142,7 @@ class MfaHandlerTest {
     @AfterEach
     void tearDown() {
         assertThat(
-                logging.events(),
-                not(hasItem(withMessageContaining(session.getSessionId(), TEST_CLIENT_ID))));
+                logging.events(), not(hasItem(withMessageContaining(SESSION_ID, TEST_CLIENT_ID))));
     }
 
     @BeforeEach
@@ -185,7 +185,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -216,7 +216,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -259,7 +259,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -315,7 +315,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         "wrong.email@gov.uk",
                         IP_ADDRESS,
@@ -343,7 +343,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -421,7 +421,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -454,7 +454,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -486,7 +486,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -517,7 +517,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,

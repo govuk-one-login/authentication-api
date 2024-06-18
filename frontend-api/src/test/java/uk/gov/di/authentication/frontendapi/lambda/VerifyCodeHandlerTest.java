@@ -64,6 +64,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -102,7 +103,7 @@ class VerifyCodeHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
-            new Session("session-id")
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Session testSession =
@@ -147,7 +148,7 @@ class VerifyCodeHandlerTest {
                                 withMessageContaining(
                                         CLIENT_ID,
                                         TEST_CLIENT_CODE,
-                                        session.getSessionId(),
+                                        SESSION_ID,
                                         testSession.getSessionId()))));
     }
 
@@ -183,7 +184,7 @@ class VerifyCodeHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
+                        Map.entry("Session-Id", SESSION_ID),
                         Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
 
         event.setBody(format("{ \"code\": \"%s\"}", CODE));
@@ -238,7 +239,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_VERIFIED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -301,7 +302,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_VERIFIED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -345,7 +346,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.INVALID_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -463,7 +464,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -539,7 +540,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -576,7 +577,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_VERIFIED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -596,7 +597,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -629,7 +630,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_VERIFIED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -662,7 +663,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.INVALID_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -702,7 +703,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
@@ -745,7 +746,7 @@ class VerifyCodeHandlerTest {
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,

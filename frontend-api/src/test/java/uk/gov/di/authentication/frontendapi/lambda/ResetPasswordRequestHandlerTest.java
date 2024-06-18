@@ -80,9 +80,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -135,7 +135,7 @@ class ResetPasswordRequestHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(IdGenerator.generate())
+            new Session(SESSION_ID)
                     .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ResetPasswordRequestHandler handler =
@@ -158,10 +158,7 @@ class ResetPasswordRequestHandlerTest {
     public void tearDown() {
         assertThat(
                 logging.events(),
-                not(
-                        hasItem(
-                                withMessageContaining(
-                                        session.getSessionId(), CommonTestVariables.EMAIL))));
+                not(hasItem(withMessageContaining(SESSION_ID, CommonTestVariables.EMAIL))));
     }
 
     @BeforeEach
@@ -270,7 +267,7 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
@@ -300,7 +297,7 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
@@ -354,7 +351,7 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
@@ -389,7 +386,7 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
@@ -563,7 +560,7 @@ class ResetPasswordRequestHandlerTest {
     private Map<String, String> validHeaders() {
         return Map.ofEntries(
                 Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
-                Map.entry("Session-Id", session.getSessionId()),
+                Map.entry("Session-Id", SESSION_ID),
                 Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                 Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     }

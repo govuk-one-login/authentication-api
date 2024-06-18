@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -80,6 +79,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -114,13 +114,12 @@ class LoginHandlerTest {
                     .withMethodVerified(true)
                     .withEnabled(true);
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private static final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
     private static final Map<String, String> VALID_HEADERS =
             Map.ofEntries(
                     Map.entry(
                             PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
-                    Map.entry("Session-Id", session.getSessionId()),
+                    Map.entry("Session-Id", SESSION_ID),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
                     Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private LoginHandler handler;
@@ -158,7 +157,7 @@ class LoginHandlerTest {
             new AuditContext(
                     CLIENT_ID.getValue(),
                     CLIENT_SESSION_ID,
-                    session.getSessionId(),
+                    SESSION_ID,
                     expectedCommonSubject,
                     EMAIL,
                     IP_ADDRESS,
@@ -170,7 +169,7 @@ class LoginHandlerTest {
             new AuditContext(
                     CLIENT_ID.getValue(),
                     CLIENT_SESSION_ID,
-                    session.getSessionId(),
+                    SESSION_ID,
                     AuditService.UNKNOWN,
                     EMAIL,
                     IP_ADDRESS,
@@ -183,7 +182,7 @@ class LoginHandlerTest {
 
     @AfterEach
     void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
+        assertThat(logging.events(), not(hasItem(withMessageContaining(SESSION_ID))));
     }
 
     @BeforeEach
@@ -233,7 +232,7 @@ class LoginHandlerTest {
                 new AuditContext(
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
