@@ -25,6 +25,10 @@ public class ClientSession {
 
     @Expose private VtrList vtrList;
 
+    @Expose private Boolean identityRequired;
+
+    @Expose private Boolean mfaRequired;
+
     @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
@@ -37,6 +41,8 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
+        this.identityRequired = vtrList.identityRequired();
+        this.mfaRequired = vtrList.mfaRequired();
         this.effectiveVectorOfTrust = vtrList.getEffectiveVectorOfTrust();
         this.clientName = clientName;
     }
