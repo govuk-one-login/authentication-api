@@ -16,8 +16,10 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
@@ -98,7 +100,11 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (level != null) {
             builder.customParameter("vtr", jsonArrayOf(level.getValue()));
         }
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
+        redis.createClientSession(
+                CLIENT_SESSION_ID,
+                CLIENT_NAME,
+                builder.build().toParameters(),
+                VectorOfTrust.of(level != null ? level : MEDIUM_LEVEL, LevelOfConfidence.NONE));
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",

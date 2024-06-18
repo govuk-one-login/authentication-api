@@ -5,7 +5,9 @@ import java.util.Optional;
 /** IDs that can be used in an {@link CredentialTrustLevelCode}. */
 public enum CredentialTrustLevelId {
     CL("Cl"),
-    CM("Cm");
+    CM("Cm"),
+    C1("C1"),
+    C2("C2");
 
     private final String value;
 

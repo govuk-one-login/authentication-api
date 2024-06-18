@@ -34,6 +34,9 @@ class VtrListTest {
             new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL);
     private static final VectorOfTrust VOT_PCL250_CL_CM =
             new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HMRC250);
+    private static final VectorOfTrust VOT_PCL200_C2 =
+            new VectorOfTrust(CredentialTrustLevelCode.C2, LevelOfConfidenceCode.PCL200);
+    private static final VectorOfTrust VOT_C1 = new VectorOfTrust(CredentialTrustLevelCode.C1);
 
     @ParameterizedTest
     @MethodSource("parseSuccessTestCases")
@@ -54,7 +57,8 @@ class VtrListTest {
                 arguments(List.of("[\"PCL250.Cl.Cm\"]"), VtrList.of(VOT_PCL250_CL_CM)),
                 arguments(
                         List.of("[\"P2.Cl.Cm\",\"PCL250.Cl.Cm\"]"),
-                        VtrList.of(VOT_P2_CL_CM, VOT_PCL250_CL_CM)));
+                        VtrList.of(VOT_P2_CL_CM, VOT_PCL250_CL_CM)),
+                arguments(List.of("[\"PCL200.C2\",\"C1\"]"), VtrList.of(VOT_PCL200_C2, VOT_C1)));
     }
 
     @ParameterizedTest

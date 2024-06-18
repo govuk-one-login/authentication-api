@@ -10,8 +10,8 @@ import java.util.stream.Stream;
 import static java.text.MessageFormat.format;
 
 public enum CredentialTrustLevel {
-    LOW_LEVEL(CredentialTrustLevelCode.CL),
-    MEDIUM_LEVEL(CredentialTrustLevelCode.CL_CM);
+    LOW_LEVEL(CredentialTrustLevelCode.CL, CredentialTrustLevelCode.C1),
+    MEDIUM_LEVEL(CredentialTrustLevelCode.CL_CM, CredentialTrustLevelCode.C2);
 
     private static final Map<CredentialTrustLevelCode, CredentialTrustLevel> valueMap =
             new HashMap<>();

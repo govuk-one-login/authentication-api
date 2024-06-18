@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.C1;
+import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.C2;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.CL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.CL_CM;
 
@@ -63,6 +65,7 @@ class CredentialTrustLevelTest {
     }
 
     static Stream<Arguments> getAllCodesTestCases() {
-        return Stream.of(arguments(LOW_LEVEL, Set.of(CL)), arguments(MEDIUM_LEVEL, Set.of(CL_CM)));
+        return Stream.of(
+                arguments(LOW_LEVEL, Set.of(CL, C1)), arguments(MEDIUM_LEVEL, Set.of(CL_CM, C2)));
     }
 }

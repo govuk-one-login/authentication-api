@@ -20,8 +20,10 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -145,7 +147,7 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturn200WithRelevantMfaMethod() throws Json.JsonException {
+        void shouldReturn200WithRelevantMfaMethod() {
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
             MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
@@ -427,7 +429,10 @@ class CheckUserExistsHandlerTest {
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+                authRequest.toParameters(),
+                null,
+                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
+                CLIENT_NAME);
     }
 
     private void setupUserProfileAndClient(Optional<UserProfile> maybeUserProfile) {

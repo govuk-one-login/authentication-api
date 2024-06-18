@@ -13,6 +13,10 @@ public class CredentialTrustLevelCode extends VotComponentCode<CredentialTrustLe
             CredentialTrustLevelCode.of(CredentialTrustLevelId.CL);
     public static final CredentialTrustLevelCode CL_CM =
             CredentialTrustLevelCode.of(CredentialTrustLevelId.CL, CredentialTrustLevelId.CM);
+    public static final CredentialTrustLevelCode C1 =
+            CredentialTrustLevelCode.of(CredentialTrustLevelId.C1);
+    public static final CredentialTrustLevelCode C2 =
+            CredentialTrustLevelCode.of(CredentialTrustLevelId.C2);
 
     public CredentialTrustLevelCode(EnumSet<CredentialTrustLevelId> ids) {
         super(ids);

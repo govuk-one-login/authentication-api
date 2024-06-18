@@ -157,7 +157,7 @@ public class StartService {
             var clientRegistry = userContext.getClient().orElseThrow();
             identityRequired =
                     IdentityHelper.identityRequired(
-                            userContext.getClientSession().getAuthRequestParams(),
+                            userContext.getClientSession().getIdentityRequired(),
                             clientRegistry.isIdentityVerificationSupported(),
                             identityEnabled);
         }

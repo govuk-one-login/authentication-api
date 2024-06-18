@@ -25,9 +25,9 @@ public class ClientSession {
 
     @Expose private VtrList vtrList;
 
-    @Expose private Boolean identityRequired;
+    @Expose private boolean identityRequired;
 
-    @Expose private Boolean mfaRequired;
+    @Expose private boolean mfaRequired;
 
     @Expose private Subject docAppSubjectId;
 

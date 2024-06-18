@@ -311,6 +311,23 @@ public class RedisExtension
                 300);
     }
 
+    public void createClientSession(
+            String clientSessionId,
+            String clientName,
+            Map<String, List<String>> authRequest,
+            VectorOfTrust effectiveVectorOfTrust)
+            throws Json.JsonException {
+        redis.saveWithExpiry(
+                CLIENT_SESSION_PREFIX.concat(clientSessionId),
+                objectMapper.writeValueAsString(
+                        new ClientSession(
+                                authRequest,
+                                LocalDateTime.now(),
+                                effectiveVectorOfTrust,
+                                clientName)),
+                300);
+    }
+
     public ClientSession getClientSession(String clientSessionId) {
         try {
             var result = redis.getValue(CLIENT_SESSION_PREFIX.concat(clientSessionId));

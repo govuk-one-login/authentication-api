@@ -40,7 +40,7 @@ class TrustMarkHandlerTest {
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),
                         configurationService.getOidcApiBaseURL().orElseThrow(),
-                        List.of("Cl", "Cl.Cm"),
+                        List.of("Cl", "C1", "Cl.Cm", "C2"),
                         List.of("P0", "PCL200", "PCL250", "P2"));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

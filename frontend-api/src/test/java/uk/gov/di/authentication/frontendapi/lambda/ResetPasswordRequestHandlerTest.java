@@ -24,8 +24,10 @@ import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -595,6 +597,9 @@ class ResetPasswordRequestHandlerTest {
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+                authRequest.toParameters(),
+                null,
+                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
+                CLIENT_NAME);
     }
 }
