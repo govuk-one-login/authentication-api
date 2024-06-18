@@ -64,6 +64,8 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandlerTest.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -82,7 +84,6 @@ class VerifyCodeHandlerTest {
     private static final String INVALID_CODE = "6543221";
     private static final String CLIENT_ID = "client-id";
     private static final String CLIENT_NAME = "client-name";
-    private static final String TEST_CLIENT_ID = "test-client-id";
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
             "testclient.user1@digital.cabinet-office.gov.uk";
@@ -92,8 +93,6 @@ class VerifyCodeHandlerTest {
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);

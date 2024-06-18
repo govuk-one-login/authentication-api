@@ -56,7 +56,10 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDA
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -66,8 +69,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class UpdateProfileHandlerTest {
 
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
-    private static final ClientID CLIENT_ID = new ClientID("client-one");
-    private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -75,9 +76,6 @@ class UpdateProfileHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT, "test.account.gov.uk", SaltHelper.generateNewSalt());
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
-
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -106,10 +104,7 @@ class UpdateProfileHandlerTest {
                 not(
                         hasItem(
                                 withMessageContaining(
-                                        SESSION_ID,
-                                        CLIENT_SESSION_ID,
-                                        CLIENT_ID.toString(),
-                                        EMAIL))));
+                                        SESSION_ID, CLIENT_SESSION_ID, TEST_CLIENT_ID, EMAIL))));
         verifyNoMoreInteractions(auditService);
     }
 
@@ -132,8 +127,8 @@ class UpdateProfileHandlerTest {
         usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(generateUserProfile()));
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
@@ -166,7 +161,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        CLIENT_ID.getValue(),
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -183,8 +178,8 @@ class UpdateProfileHandlerTest {
         usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(generateUserProfile()));
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
 
         var event = new APIGatewayProxyRequestEvent();
 
@@ -216,7 +211,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        CLIENT_ID.getValue(),
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         expectedCommonSubject,
@@ -325,7 +320,7 @@ class UpdateProfileHandlerTest {
                 new AuthenticationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
                                 SCOPES,
-                                CLIENT_ID,
+                                new ClientID(TEST_CLIENT_ID),
                                 REDIRECT_URI)
                         .state(new State())
                         .nonce(new Nonce())
@@ -335,7 +330,7 @@ class UpdateProfileHandlerTest {
                         authRequest.toParameters(),
                         LocalDateTime.now(),
                         mock(VectorOfTrust.class),
-                        CLIENT_NAME);
+                        TEST_CLIENT_NAME);
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
     }
