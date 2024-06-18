@@ -6,4 +6,11 @@ public class CommonTestVariables {
     public static final String PASSWORD = "computer-1";
     public static final String UK_MOBILE_NUMBER = "+447234567890";
     public static final String IP_ADDRESS = "123.123.123.123";
+    public static final String CLIENT_SESSION_ID = "known-client-session-id";
+    public static final String TEST_CLIENT_ID = "test_client_id";
+    public static final String TEST_CLIENT_NAME = "test_client_name";
+    public static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
+    public static final String SESSION_ID_HEADER = "Session-Id";
+    public static final String SESSION_ID = "some-session-id";
+    public static final String PERSISTENT_ID = "some-persistent-id-value";
 }
