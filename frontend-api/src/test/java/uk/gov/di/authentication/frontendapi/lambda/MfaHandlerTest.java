@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -68,7 +67,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -78,7 +79,6 @@ import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AU
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -108,11 +108,19 @@ public class MfaHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
+    private static final int MAX_CODE_RETRIES = 5;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session =
             new Session("a-session-id")
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private static final String persistentId = "some-persistent-id-value";
+    private final Map<String, String> validHeaders =
+            Map.ofEntries(
+                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId),
+                    Map.entry("Session-Id", session.getSessionId()),
+                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
+                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -122,6 +130,10 @@ public class MfaHandlerTest {
                                     "joe.bloggs@digital.cabinet-office.gov.uk",
                                     EMAIL,
                                     "jb2@digital.cabinet-office.gov.uk"));
+
+    private static final NotifyRequest notifyRequest =
+            new NotifyRequest(
+                    CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
@@ -137,7 +149,10 @@ public class MfaHandlerTest {
     void setUp() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_CODE_RETRIES);
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+        when(authenticationService.getPhoneNumber(EMAIL))
+                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         handler =
                 new MfaHandler(
                         configurationService,
@@ -155,23 +170,9 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn204ForSuccessfulMfaRequestWhenNonResendCode() throws Json.JsonException {
         usingValidSession();
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -187,7 +188,7 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         persistentId,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -198,18 +199,13 @@ public class MfaHandlerTest {
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var headers = new HashMap<String, String>();
+        headers.putAll(validHeaders);
+        headers.remove(TXMA_AUDIT_ENCODED_HEADER);
+
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(headers, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -223,7 +219,7 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         UK_MOBILE_NUMBER,
                         persistentId,
                         AuditService.RestrictedSection.empty,
@@ -234,32 +230,21 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn204ForSuccessfulMfaRequestWhenResendingCode() throws Json.JsonException {
         usingValidSession();
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(codeStorageService.getOtpCode(EMAIL, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
-        NotifyRequest notifyRequest =
+        NotifyRequest verifyPhoneNumberNotifyRequest =
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         CODE,
                         SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(
-                format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true"));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true");
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(verifyPhoneNumberNotifyRequest));
         verify(codeGeneratorService, never()).sixDigitCode();
         verify(codeStorageService, never())
                 .saveOtpCode(
@@ -277,50 +262,9 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         persistentId,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
-    }
-
-    @Test
-    void shouldReturn204AndAllowMfaRequestDuringUplift() throws Json.JsonException {
-        usingValidSession();
-
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
-        verify(codeStorageService).saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, MFA_SMS);
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -330,17 +274,8 @@ public class MfaHandlerTest {
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
         usingValidSession();
 
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
         APIGatewayProxyResponseEvent result =
@@ -354,10 +289,9 @@ public class MfaHandlerTest {
 
     @Test
     void shouldReturn400WhenSessionIdIsInvalid() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -369,18 +303,8 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", "wrong.email@gov.uk"));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", "wrong.email@gov.uk");
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -394,10 +318,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         "wrong.email@gov.uk",
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        persistentId,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -406,15 +330,8 @@ public class MfaHandlerTest {
     void shouldReturnErrorResponseWhenUsersPhoneNumberIsNotStored() {
         usingValidSession();
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -429,10 +346,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        persistentId,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
     }
@@ -440,26 +357,15 @@ public class MfaHandlerTest {
     @Test
     void
             shouldReturn204IfUserHasReachedTheOtpRequestLimitsInADifferentLambdaButNotSmsSignInOtpRequestLimit() {
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
-        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        for (int i = 0; i < MAX_CODE_RETRIES; i++) {
+            session.incrementCodeRequestCount(
+                    NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        }
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -468,9 +374,6 @@ public class MfaHandlerTest {
 
     @Test
     void shouldReturn204IfUserIsBlockedForRequestingADifferentOtpTypeThanSmsSignInOtpRequest() {
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-
         usingValidSession();
 
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
@@ -483,15 +386,8 @@ public class MfaHandlerTest {
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
                 .thenReturn(true);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -503,21 +399,12 @@ public class MfaHandlerTest {
     void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(JourneyType journeyType) {
         usingValidSession();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
-        session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        for (int i = 0; i < MAX_CODE_RETRIES; i++) {
+            session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        }
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -537,10 +424,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        persistentId,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
@@ -554,15 +441,8 @@ public class MfaHandlerTest {
                         EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -577,10 +457,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        persistentId,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
@@ -589,20 +469,12 @@ public class MfaHandlerTest {
     @MethodSource("smsJourneyTypes")
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(JourneyType journeyType) {
         usingValidSession();
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -617,10 +489,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        persistentId,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
@@ -631,21 +503,8 @@ public class MfaHandlerTest {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -661,35 +520,25 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty,
+                        persistentId,
+                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
     @Test
     void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
-
         usingValidSession();
 
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(CODE));
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService, never()).sixDigitCode();
         verify(codeStorageService, never())
@@ -698,32 +547,22 @@ public class MfaHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(sqsClient).send(serialisedRequest);
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         assertThat(result, hasStatus(204));
     }
 
     @Test
     void shouldGenerateAndSaveOtpCodeIfExistingOneNotFound() throws Json.JsonException {
-
         usingValidSession();
 
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.empty());
-        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
 
-        when(authenticationService.getPhoneNumber(EMAIL))
-                .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(format("{ \"email\": \"%s\"}", EMAIL));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var body = format("{ \"email\": \"%s\"}", EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService).sixDigitCode();

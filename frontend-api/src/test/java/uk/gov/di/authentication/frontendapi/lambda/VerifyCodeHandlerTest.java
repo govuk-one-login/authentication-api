@@ -62,6 +62,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -241,7 +242,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -269,7 +270,7 @@ class VerifyCodeHandlerTest {
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         CODE, emailNotificationType.toString());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.ofEntries(
                         Map.entry(
@@ -304,7 +305,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty,
@@ -348,7 +349,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -392,7 +393,7 @@ class VerifyCodeHandlerTest {
                         testSession.getSessionId(),
                         expectedCommonSubject,
                         email,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -434,7 +435,7 @@ class VerifyCodeHandlerTest {
                         testSession.getSessionId(),
                         expectedCommonSubject,
                         email,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -466,7 +467,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -542,7 +543,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -579,7 +580,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -599,7 +600,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -632,7 +633,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -665,7 +666,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -705,7 +706,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -748,7 +749,7 @@ class VerifyCodeHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -800,7 +801,7 @@ class VerifyCodeHandlerTest {
     private APIGatewayProxyResponseEvent makeCallWithCode(
             String body, Optional<Session> session, String clientId) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.ofEntries(
                         Map.entry(

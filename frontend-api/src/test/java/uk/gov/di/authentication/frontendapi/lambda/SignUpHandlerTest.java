@@ -58,6 +58,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -152,7 +153,7 @@ class SignUpHandlerTest {
         usingValidSession();
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -179,7 +180,7 @@ class SignUpHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         persistentId,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -216,7 +217,7 @@ class SignUpHandlerTest {
         usingValidSession();
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
@@ -234,7 +235,7 @@ class SignUpHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         persistentId,
                         AuditService.RestrictedSection.empty,
@@ -292,7 +293,7 @@ class SignUpHandlerTest {
 
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.ofEntries(
                         Map.entry("Session-Id", session.getSessionId()),
@@ -315,7 +316,7 @@ class SignUpHandlerTest {
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         "joe.bloggs@test.com",
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -326,7 +327,7 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.ofEntries(
                         Map.entry("Session-Id", session.getSessionId()),
@@ -348,7 +349,7 @@ class SignUpHandlerTest {
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         "joe.bloggs@test.com",
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         AuditService.RestrictedSection.empty);

@@ -77,6 +77,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.SESSION_ID;
@@ -273,7 +274,7 @@ class ResetPasswordRequestHandlerTest {
                             session.getSessionId(),
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -303,7 +304,7 @@ class ResetPasswordRequestHandlerTest {
                             session.getSessionId(),
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             AuditService.RestrictedSection.empty,
@@ -357,7 +358,7 @@ class ResetPasswordRequestHandlerTest {
                             session.getSessionId(),
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
@@ -392,7 +393,7 @@ class ResetPasswordRequestHandlerTest {
                             session.getSessionId(),
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
-                            "123.123.123.123",
+                            IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
                             PERSISTENT_ID,
                             AuditService.RestrictedSection.empty,
@@ -571,7 +572,7 @@ class ResetPasswordRequestHandlerTest {
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
             Map<String, String> headers, String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(body);
         return event;

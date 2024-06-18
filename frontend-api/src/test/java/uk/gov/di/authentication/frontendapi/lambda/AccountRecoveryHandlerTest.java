@@ -33,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -94,7 +95,7 @@ class AccountRecoveryHandlerTest {
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
@@ -111,7 +112,7 @@ class AccountRecoveryHandlerTest {
                         session.getSessionId(),
                         internalCommonSubjectId,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -129,7 +130,7 @@ class AccountRecoveryHandlerTest {
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
@@ -146,7 +147,7 @@ class AccountRecoveryHandlerTest {
                         session.getSessionId(),
                         internalCommonSubjectId,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
@@ -163,7 +164,7 @@ class AccountRecoveryHandlerTest {
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
         var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
@@ -178,7 +179,7 @@ class AccountRecoveryHandlerTest {
                         session.getSessionId(),
                         internalCommonSubjectId,
                         EMAIL,
-                        "123.123.123.123",
+                        IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         AuditService.RestrictedSection.empty);

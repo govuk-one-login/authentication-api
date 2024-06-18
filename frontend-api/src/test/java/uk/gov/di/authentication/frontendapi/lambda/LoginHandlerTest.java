@@ -77,6 +77,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -93,7 +94,6 @@ class LoginHandlerTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    public static final String TEST_IP_ADDRESS = "123.123.123.123";
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
@@ -161,7 +161,7 @@ class LoginHandlerTest {
                     session.getSessionId(),
                     expectedCommonSubject,
                     EMAIL,
-                    TEST_IP_ADDRESS,
+                    IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     PERSISTENT_ID);
 
@@ -172,7 +172,7 @@ class LoginHandlerTest {
                     session.getSessionId(),
                     AuditService.UNKNOWN,
                     EMAIL,
-                    TEST_IP_ADDRESS,
+                    IP_ADDRESS,
                     AuditService.UNKNOWN,
                     PERSISTENT_ID);
 
@@ -234,7 +234,7 @@ class LoginHandlerTest {
                         session.getSessionId(),
                         expectedCommonSubject,
                         EMAIL,
-                        TEST_IP_ADDRESS,
+                        IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PERSISTENT_ID);
 
@@ -828,7 +828,7 @@ class LoginHandlerTest {
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
             Map<String, String> headers, String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(TEST_IP_ADDRESS));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(body);
         return event;
