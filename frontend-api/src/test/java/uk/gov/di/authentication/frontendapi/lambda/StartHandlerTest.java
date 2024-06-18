@@ -65,6 +65,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
@@ -84,11 +85,8 @@ class StartHandlerTest {
     private static final Scope DOC_APP_SCOPE =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Nonce NONCE = new Nonce();
-    private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String AUDIENCE = "https://localhost/authorize";
     private static final Json objectMapper = SerializationService.getInstance();
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private StartHandler handler;
     private final Context context = mock(Context.class);
@@ -493,7 +491,7 @@ class StartHandlerTest {
                             .claim("scope", DOC_APP_SCOPE.toString())
                             .claim("nonce", NONCE)
                             .claim("state", STATE)
-                            .claim("client_id", CLIENT_ID)
+                            .claim("client_id", TEST_CLIENT_ID)
                             .issuer(new ClientID("test-id").getValue())
                             .build();
             var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
@@ -502,7 +500,10 @@ class StartHandlerTest {
             signedJWT.sign(signer);
             var authRequest =
                     new AuthenticationRequest.Builder(
-                                    ResponseType.CODE, DOC_APP_SCOPE, CLIENT_ID, REDIRECT_URL)
+                                    ResponseType.CODE,
+                                    DOC_APP_SCOPE,
+                                    new ClientID(TEST_CLIENT_ID),
+                                    REDIRECT_URL)
                             .state(STATE)
                             .nonce(new Nonce())
                             .requestObject(signedJWT)
