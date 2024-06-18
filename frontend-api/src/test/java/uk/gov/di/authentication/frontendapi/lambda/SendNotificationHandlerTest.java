@@ -34,7 +34,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -51,7 +50,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,16 +80,16 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeaders;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeadersWithoutTxmaAuditEncoded;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -210,7 +208,7 @@ class SendNotificationHandlerTest {
                 mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
 
                 var event =
-                        sendRequest(
+                        eventWithBody(
                                 format(
                                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                         EMAIL, notificationType, journeyType));
@@ -219,7 +217,7 @@ class SendNotificationHandlerTest {
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
 
                 if (!ticfHeaderPresent) {
-                    event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+                    event.setHeaders(validHeadersWithoutTxmaAuditEncoded(session));
                     restrictedSection = AuditService.RestrictedSection.empty;
                 }
 
@@ -291,7 +289,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, notificationType, journeyType));
@@ -312,7 +310,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, notificationType, true, JourneyType.ACCOUNT_RECOVERY));
@@ -357,7 +355,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
@@ -406,7 +404,7 @@ class SendNotificationHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, notificationType, journeyType));
@@ -445,7 +443,7 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfInvalidSessionProvided(
             NotificationType notificationType, JourneyType journeyType) {
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, notificationType, journeyType));
@@ -482,7 +480,7 @@ class SendNotificationHandlerTest {
         when(configurationService.getEnvironment()).thenReturn(environment);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION));
@@ -500,7 +498,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
 
-        var event = sendRequest("{ }");
+        var event = eventWithBody("{ }");
 
         var result = handler.handleRequest(event, context);
 
@@ -530,7 +528,7 @@ class SendNotificationHandlerTest {
                                         SupportedLanguage.EN)));
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, notificationType, JourneyType.REGISTRATION));
@@ -548,7 +546,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                                 EMAIL, "VERIFY_PASSWORD"));
@@ -584,7 +582,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION));
@@ -624,7 +622,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
@@ -675,7 +673,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
@@ -706,7 +704,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
@@ -726,7 +724,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
@@ -764,11 +762,11 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
-        event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+        event.setHeaders(validHeadersWithoutTxmaAuditEncoded(session));
 
         var result = handler.handleRequest(event, context);
 
@@ -794,7 +792,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
@@ -838,7 +836,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
                                 EMAIL,
@@ -882,7 +880,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
@@ -916,7 +914,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
@@ -951,7 +949,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
                                 EMAIL,
@@ -988,7 +986,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(true);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
@@ -1021,7 +1019,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(true);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL,
@@ -1056,7 +1054,7 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
@@ -1115,7 +1113,7 @@ class SendNotificationHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
         var event =
-                sendRequest(
+                eventWithBody(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
                                 EMAIL, notificationType, JourneyType.REGISTRATION));
@@ -1127,14 +1125,9 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    private APIGatewayProxyRequestEvent sendRequest(String body) {
+    private APIGatewayProxyRequestEvent eventWithBody(String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders(session));
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setBody(body);
 

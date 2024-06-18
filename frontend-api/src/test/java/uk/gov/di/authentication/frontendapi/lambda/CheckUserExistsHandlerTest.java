@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -49,9 +48,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -74,14 +71,14 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeaders;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeadersWithoutTxmaAuditEncoded;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -203,13 +200,7 @@ class CheckUserExistsHandlerTest {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
             var req = userExistsRequest(EMAIL);
-            var headers =
-                    req.getHeaders().entrySet().stream()
-                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
-                            .collect(
-                                    Collectors.toUnmodifiableMap(
-                                            Map.Entry::getKey, Map.Entry::getValue));
-            req.setHeaders(headers);
+            req.setHeaders(validHeadersWithoutTxmaAuditEncoded(session));
 
             var result = handler.handleRequest(req, context);
 
@@ -442,14 +433,7 @@ class CheckUserExistsHandlerTest {
 
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {
         return new APIGatewayProxyRequestEvent()
-                .withHeaders(
-                        Map.ofEntries(
-                                Map.entry("Session-Id", session.getSessionId()),
-                                Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                                Map.entry(
-                                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                                        PERSISTENT_ID),
-                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)))
+                .withHeaders(validHeaders(session))
                 .withBody(format("{\"email\": \"%s\" }", email))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }

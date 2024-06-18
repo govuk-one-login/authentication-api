@@ -40,7 +40,6 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -78,12 +77,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeaders;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -116,12 +115,6 @@ class LoginHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
     private static final Session session =
             new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
-    private static final Map<String, String> VALID_HEADERS =
-            Map.ofEntries(
-                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
-                    Map.entry("Session-Id", session.getSessionId()),
-                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -226,7 +219,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
 
         AuditContext expectedAuditContext =
                 new AuditContext(
@@ -289,7 +282,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var headersWithoutTICFHeader =
-                VALID_HEADERS.entrySet().stream()
+                validHeaders(session).entrySet().stream()
                         .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
                         .collect(
                                 Collectors.toUnmodifiableMap(
@@ -320,7 +313,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -343,7 +336,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -378,7 +371,7 @@ class LoginHandlerTest {
 
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -405,7 +398,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
 
@@ -440,7 +433,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -467,7 +460,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -501,7 +494,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithReauthJourney);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -542,7 +535,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -573,7 +566,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
 
         when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
@@ -599,7 +592,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(auditService)
@@ -630,7 +623,7 @@ class LoginHandlerTest {
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, body);
+        var event = eventWithHeadersAndBody(validHeaders(session), body);
         handler.handleRequest(event, context);
 
         if (isReauthJourney) {
@@ -657,7 +650,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(401));
@@ -669,7 +662,7 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
         var bodyWithoutEmail = format("{ \"password\": \"%s\"}", CommonTestVariables.PASSWORD);
-        var event = eventWithHeadersAndBody(VALID_HEADERS, bodyWithoutEmail);
+        var event = eventWithHeadersAndBody(validHeaders(session), bodyWithoutEmail);
 
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -683,7 +676,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.empty());
@@ -703,7 +696,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(auditService)
@@ -730,7 +723,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
 
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        var event = eventWithHeadersAndBody(validHeaders(session), validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));

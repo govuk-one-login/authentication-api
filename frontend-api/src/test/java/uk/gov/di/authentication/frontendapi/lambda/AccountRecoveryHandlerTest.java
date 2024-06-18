@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -21,8 +20,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -33,12 +30,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeaders;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeadersWithoutTxmaAuditEncoded;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -87,15 +84,10 @@ class AccountRecoveryHandlerTest {
         when(dynamoAccountModifiersService.isAccountRecoveryBlockPresent(anyString()))
                 .thenReturn(true);
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
         var expectedResponse = new AccountRecoveryResponse(false);
@@ -122,15 +114,10 @@ class AccountRecoveryHandlerTest {
         when(dynamoAccountModifiersService.isAccountRecoveryBlockPresent(anyString()))
                 .thenReturn(false);
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
         var expectedResponse = new AccountRecoveryResponse(true);
@@ -157,14 +144,10 @@ class AccountRecoveryHandlerTest {
         when(dynamoAccountModifiersService.isAccountRecoveryBlockPresent(anyString()))
                 .thenReturn(false);
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
+        event.setHeaders(validHeadersWithoutTxmaAuditEncoded(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
         var result = handler.handleRequest(event, context);

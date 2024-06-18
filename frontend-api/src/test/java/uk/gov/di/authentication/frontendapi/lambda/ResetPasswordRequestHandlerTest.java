@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -78,11 +77,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_NAME;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeaders;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeadersWithoutTxmaAuditEncoded;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -192,7 +192,7 @@ class ResetPasswordRequestHandlerTest {
 
         @BeforeEach
         void setup() {
-            validEvent = eventWithHeadersAndBody(validHeaders(), validRequestBody);
+            validEvent = eventWithHeadersAndBody(validHeaders(session), validRequestBody);
             Subject subject = new Subject("subject_1");
             when(authenticationService.getSubjectFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(subject);
@@ -283,14 +283,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void checkPasswordResetRequestedAuditEventStillEmittedWhenTICFHeaderNotProvided() {
             usingValidSession();
-            var headers = validEvent.getHeaders();
-            var headersWithoutTICF =
-                    headers.entrySet().stream()
-                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
-                            .collect(
-                                    Collectors.toUnmodifiableMap(
-                                            Map.Entry::getKey, Map.Entry::getValue));
-            validEvent.setHeaders(headersWithoutTICF);
+            validEvent.setHeaders(validHeadersWithoutTxmaAuditEncoded(session));
 
             handler.handleRequest(validEvent, context);
 
@@ -519,7 +512,8 @@ class ResetPasswordRequestHandlerTest {
         public void shouldReturn400IfRequestIsMissingEmail() {
             usingValidSession();
             var body = "{ }";
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
+            APIGatewayProxyRequestEvent event =
+                    eventWithHeadersAndBody(validHeaders(session), body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -557,14 +551,6 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         return session;
-    }
-
-    private Map<String, String> validHeaders() {
-        return Map.ofEntries(
-                Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
-                Map.entry("Session-Id", session.getSessionId()),
-                Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     }
 
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(

@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -25,9 +24,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -43,6 +40,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeaders;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.validHeadersWithoutTxmaAuditEncoded;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {
@@ -116,7 +115,7 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn200ForSuccessfulReAuthRequest() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(configurationService.getEnvironment()).thenReturn("build");
@@ -150,7 +149,7 @@ class CheckReAuthUserHandlerTest {
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(validHeadersWithoutTxmaAuditEncoded(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(configurationService.getEnvironment()).thenReturn("build");
@@ -186,7 +185,7 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn404ForWhenUserNotFound() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
@@ -210,7 +209,7 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
         var userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -238,7 +237,7 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
         var userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -259,7 +258,7 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn404ForWhenUserDoesNotMatch() {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
+        event.setHeaders(validHeaders(session));
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -288,12 +287,5 @@ class CheckReAuthUserHandlerTest {
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(TEST_SUBJECT_ID);
-    }
-
-    private Map<String, String> getHeaders() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        return headers;
     }
 }
