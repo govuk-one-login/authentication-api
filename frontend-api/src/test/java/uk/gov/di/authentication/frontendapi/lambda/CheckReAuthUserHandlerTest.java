@@ -39,11 +39,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {
 
-    private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "http://www.example.com";
     private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
@@ -56,23 +59,18 @@ class CheckReAuthUserHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
-    private static final String CLIENT_ID = "test-client-id";
-    private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
-    private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(EMAIL_ADDRESS);
+    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(
-                    CLIENT_ID,
+                    TEST_CLIENT_ID,
                     CLIENT_SESSION_ID,
                     session.getSessionId(),
                     AuditService.UNKNOWN,
-                    EMAIL_ADDRESS,
+                    EMAIL,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
-                    PERSISTENT_SESSION_ID,
+                    PERSISTENT_ID,
                     Optional.empty());
 
     private final AuditContext testAuditContextWithAuditEncoded =
@@ -90,16 +88,16 @@ class CheckReAuthUserHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
+        when(clientRegistry.getClientID()).thenReturn(TEST_CLIENT_ID);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
-        when(userContext.getClientId()).thenReturn(CLIENT_ID);
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
+        when(userContext.getClientId()).thenReturn(TEST_CLIENT_ID);
+        when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         var userProfile = generateUserProfile();
         userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
         when(configurationService.getMaxPasswordRetries()).thenReturn(6);
@@ -119,7 +117,7 @@ class CheckReAuthUserHandlerTest {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -138,7 +136,7 @@ class CheckReAuthUserHandlerTest {
                 handler.handleRequestWithUserContext(
                         event,
                         context,
-                        new CheckReauthUserRequest(EMAIL_ADDRESS, expectedRpPairwiseSub),
+                        new CheckReauthUserRequest(EMAIL, expectedRpPairwiseSub),
                         userContext);
         assertEquals(200, result.getStatusCode());
 
@@ -153,7 +151,7 @@ class CheckReAuthUserHandlerTest {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -173,7 +171,7 @@ class CheckReAuthUserHandlerTest {
                 handler.handleRequestWithUserContext(
                         event,
                         context,
-                        new CheckReauthUserRequest(EMAIL_ADDRESS, expectedRpPairwiseSub),
+                        new CheckReauthUserRequest(EMAIL, expectedRpPairwiseSub),
                         userContext);
 
         assertEquals(200, result.getStatusCode());
@@ -189,16 +187,15 @@ class CheckReAuthUserHandlerTest {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.empty());
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
 
         var result =
                 handler.handleRequestWithUserContext(
                         event,
                         context,
-                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        new CheckReauthUserRequest(EMAIL, TEST_RP_PAIRWISE_ID),
                         userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
@@ -214,9 +211,9 @@ class CheckReAuthUserHandlerTest {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
         var userProfile = generateUserProfile();
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.getIncorrectEmailCount(any())).thenReturn(5);
 
@@ -224,7 +221,7 @@ class CheckReAuthUserHandlerTest {
                 handler.handleRequestWithUserContext(
                         event,
                         context,
-                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        new CheckReauthUserRequest(EMAIL, TEST_RP_PAIRWISE_ID),
                         userContext);
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
@@ -242,9 +239,9 @@ class CheckReAuthUserHandlerTest {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
         var userProfile = generateUserProfile();
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
 
@@ -252,7 +249,7 @@ class CheckReAuthUserHandlerTest {
                 handler.handleRequestWithUserContext(
                         event,
                         context,
-                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        new CheckReauthUserRequest(EMAIL, TEST_RP_PAIRWISE_ID),
                         userContext);
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
@@ -263,7 +260,7 @@ class CheckReAuthUserHandlerTest {
         var context = mock(Context.class);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn("build");
@@ -273,7 +270,7 @@ class CheckReAuthUserHandlerTest {
                 handler.handleRequestWithUserContext(
                         event,
                         context,
-                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        new CheckReauthUserRequest(EMAIL, TEST_RP_PAIRWISE_ID),
                         userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
@@ -286,7 +283,7 @@ class CheckReAuthUserHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .withEmail(EMAIL_ADDRESS)
+                .withEmail(EMAIL)
                 .withEmailVerified(true)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
@@ -296,7 +293,7 @@ class CheckReAuthUserHandlerTest {
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", session.getSessionId());
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         return headers;
     }
 }
