@@ -32,8 +32,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -41,10 +44,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class CheckEmailFraudBlockHandlerTest {
 
     private static final byte[] SALT = SaltHelper.generateNewSalt();
-    private static final String EMAIL = "joe.bloggs@test.com";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
 
     private static AuditService auditServiceMock;
