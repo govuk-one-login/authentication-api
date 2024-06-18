@@ -66,7 +66,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.T
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class AccountInterventionsHandlerTest {
+class AccountInterventionsHandlerTest {
     private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
