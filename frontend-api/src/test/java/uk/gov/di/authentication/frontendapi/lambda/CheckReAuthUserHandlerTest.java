@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,9 +33,11 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
@@ -67,7 +68,7 @@ class CheckReAuthUserHandlerTest {
                     SESSION_ID,
                     AuditService.UNKNOWN,
                     EMAIL_ADDRESS,
-                    AuditService.UNKNOWN,
+                    IP_ADDRESS,
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
@@ -114,9 +115,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn200ForSuccessfulReAuthRequest() {
         var context = mock(Context.class);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", EMAIL_ADDRESS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -148,9 +148,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         var context = mock(Context.class);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", EMAIL_ADDRESS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -184,9 +183,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn404ForWhenUserNotFound() {
         var context = mock(Context.class);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", EMAIL_ADDRESS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
@@ -209,9 +207,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
         var context = mock(Context.class);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", EMAIL_ADDRESS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -237,9 +234,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
         var context = mock(Context.class);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", EMAIL_ADDRESS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -258,9 +254,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn404ForWhenUserDoesNotMatch() {
         var context = mock(Context.class);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var body = format("{ \"email\": \"%s\" }", EMAIL_ADDRESS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn("build");

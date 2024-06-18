@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -62,6 +61,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -70,7 +70,6 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.V
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -78,8 +77,6 @@ class StartHandlerTest {
 
     public static final String TEST_CLIENT_ID = "test_client_id";
     public static final String TEST_CLIENT_NAME = "test_client_name";
-    public static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
-    public static final String SESSION_ID_HEADER = "Session-Id";
     private static final String SESSION_ID = "some-session-id";
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
@@ -150,9 +147,7 @@ class StartHandlerTest {
         usingValidClientSession();
         usingValidSession();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -207,9 +202,7 @@ class StartHandlerTest {
         usingValidDocAppClientSession();
         usingValidSession();
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -261,10 +254,7 @@ class StartHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.putAll(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, "true");
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -304,10 +294,7 @@ class StartHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.putAll(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
         headers.put(REAUTHENTICATE_HEADER, "true");
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
 
         var result = handler.handleRequest(event, context);
 
@@ -344,10 +331,7 @@ class StartHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.putAll(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, "false");
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -360,8 +344,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn400WhenClientSessionIsNotFound() throws Json.JsonException {
         usingInvalidClientSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -376,9 +359,7 @@ class StartHandlerTest {
     void shouldReturn400WhenSessionIsNotFound() throws Json.JsonException {
         usingValidClientSession();
         usingInvalidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-
-        event.setHeaders(VALID_HEADERS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -399,9 +380,7 @@ class StartHandlerTest {
         usingValidClientSession();
         usingValidSession();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(VALID_HEADERS);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

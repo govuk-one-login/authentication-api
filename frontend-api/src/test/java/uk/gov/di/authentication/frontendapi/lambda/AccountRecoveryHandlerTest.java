@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
@@ -36,7 +36,6 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -85,10 +84,8 @@ class AccountRecoveryHandlerTest {
                 .thenReturn(true);
         usingValidSession();
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var expectedResponse = new AccountRecoveryResponse(false);
         var result = handler.handleRequest(event, context);
@@ -115,10 +112,8 @@ class AccountRecoveryHandlerTest {
                 .thenReturn(false);
         usingValidSession();
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(VALID_HEADERS);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var expectedResponse = new AccountRecoveryResponse(true);
         var result = handler.handleRequest(event, context);
@@ -145,10 +140,8 @@ class AccountRecoveryHandlerTest {
                 .thenReturn(false);
         usingValidSession();
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         var result = handler.handleRequest(event, context);
 

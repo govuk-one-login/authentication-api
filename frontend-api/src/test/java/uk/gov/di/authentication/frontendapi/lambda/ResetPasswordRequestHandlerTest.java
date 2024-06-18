@@ -76,6 +76,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -87,7 +88,6 @@ import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AU
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -189,7 +189,7 @@ class ResetPasswordRequestHandlerTest {
 
         @BeforeEach
         void setup() {
-            validEvent = eventWithHeadersAndBody(VALID_HEADERS, validRequestBody);
+            validEvent = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validRequestBody);
             Subject subject = new Subject("subject_1");
             when(authenticationService.getSubjectFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(subject);
@@ -500,7 +500,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn400IfInvalidSessionProvided() {
             var body = format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL);
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(Map.of(), body);
+            APIGatewayProxyRequestEvent event = apiRequestEventWithHeadersAndBody(Map.of(), body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -516,7 +516,8 @@ class ResetPasswordRequestHandlerTest {
         public void shouldReturn400IfRequestIsMissingEmail() {
             usingValidSession();
             var body = "{ }";
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(VALID_HEADERS, body);
+            APIGatewayProxyRequestEvent event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -554,15 +555,6 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         return session;
-    }
-
-    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
-            Map<String, String> headers, String body) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
-        event.setBody(body);
-        return event;
     }
 
     private UserProfile userProfileWithPhoneNumber(String phoneNumber) {
