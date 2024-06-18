@@ -32,6 +32,7 @@ module "auth-code" {
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     INTERNAl_SECTOR_URI      = var.internal_sector_uri
+    OIDC_API_BASE_URL        = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest"
 

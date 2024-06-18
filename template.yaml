@@ -1821,6 +1821,9 @@ Resources:
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
