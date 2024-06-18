@@ -66,7 +66,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PERSISTENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.TEST_CLIENT_ID;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -91,11 +95,8 @@ class ResetPasswordHandlerTest {
             mock(CommonPasswordsService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final Context context = mock(Context.class);
-    private static final String TEST_CLIENT_ID = "test-client-id";
     private static final String NEW_PASSWORD = CommonTestVariables.PASSWORD;
     private static final String SUBJECT = "some-subject";
-    private static final String EMAIL = CommonTestVariables.EMAIL;
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Json objectMapper = SerializationService.getInstance();
     private static final NotifyRequest EXPECTED_SMS_NOTIFY_REQUEST =
@@ -109,8 +110,6 @@ class ResetPasswordHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
