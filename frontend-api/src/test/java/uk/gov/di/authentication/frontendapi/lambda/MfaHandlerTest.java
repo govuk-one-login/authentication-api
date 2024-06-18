@@ -83,7 +83,7 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class MfaHandlerTest {
+class MfaHandlerTest {
 
     private MfaHandler handler;
     private static final String CODE = "123456";

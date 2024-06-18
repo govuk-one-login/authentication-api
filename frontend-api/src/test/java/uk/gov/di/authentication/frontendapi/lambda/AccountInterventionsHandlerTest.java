@@ -60,7 +60,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class AccountInterventionsHandlerTest {
+class AccountInterventionsHandlerTest {
     private static final String TEST_CLIENT_ID = "test_client_id";
     private static final String TEST_CLIENT_NAME = "test_client_name";
     private static final String TEST_SESSION_ID = "test-session-id";
