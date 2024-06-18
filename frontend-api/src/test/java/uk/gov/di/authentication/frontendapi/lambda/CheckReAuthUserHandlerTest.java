@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.SetEnvironmentVariable;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
@@ -45,6 +46,10 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class CheckReAuthUserHandlerTest {
 
+    static {
+        System.setProperty("TEST", "TRUE");
+    }
+
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "http://www.example.com";
@@ -81,6 +86,8 @@ class CheckReAuthUserHandlerTest {
     private static final byte[] SALT = SaltHelper.generateNewSalt();
 
     private CheckReAuthUserHandler handler;
+
+    // LOCALSTACK_ENDPOINT
 
     @BeforeEach
     public void setUp() {
