@@ -7,6 +7,8 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
@@ -16,11 +18,13 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -31,6 +35,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -96,6 +101,7 @@ class UpdateEmailHandlerTest {
                         auditService,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 
@@ -146,8 +152,7 @@ class UpdateEmailHandlerTest {
     }
 
     @Test
-    void shouldReceiveLogWithPendingStatusWhenEmailCheckResultStoreNotPresent()
-            throws Json.JsonException {
+    void shouldSubmitAuditEventWhenEmailCheckResultRecordDoesNotExist() {
         var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -156,14 +161,37 @@ class UpdateEmailHandlerTest {
         when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
-        handler.handleRequest(event, context);
+        Date mockedDate = new Date();
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+            var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
+            handler.handleRequest(event, context);
 
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                "UpdateEmailHandler: Experian email verification status: PENDING")));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "UpdateEmailHandler: Experian email verification status: PENDING")));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                            CLIENT_ID,
+                            SESSION_ID,
+                            AuditService.UNKNOWN,
+                            INTERNAL_SUBJECT.getValue(),
+                            NEW_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            userProfile.getPhoneNumber(),
+                            PERSISTENT_ID,
+                            new AuditService.RestrictedSection(
+                                    Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                            AuditService.MetadataPair.pair(
+                                    "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                            AuditService.MetadataPair.pair(
+                                    "assessment_checked_at_timestamp", mockedDate),
+                            AuditService.MetadataPair.pair("iss", "AUTH"));
+        }
     }
 
     @Test
@@ -187,7 +215,6 @@ class UpdateEmailHandlerTest {
 
         assertThat(expectedException.getMessage(), equalTo("Invalid Principal in request"));
         verifyNoInteractions(sqsClient);
-        verifyNoInteractions(auditService);
     }
 
     @Test
