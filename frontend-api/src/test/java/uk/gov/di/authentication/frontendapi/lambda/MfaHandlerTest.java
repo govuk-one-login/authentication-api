@@ -466,16 +466,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
-                        new AuditContext(
-                                TEST_CLIENT_ID,
-                                CLIENT_SESSION_ID,
-                                SESSION_ID,
-                                expectedCommonSubject,
-                                EMAIL,
-                                IP_ADDRESS,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                DI_PERSISTENT_SESSION_ID,
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }

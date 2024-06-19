@@ -133,18 +133,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             ? request.getJourneyType()
                             : JourneyType.SIGN_IN;
 
-            if (!CodeRequestType.isValidCodeRequestType(
-                    NotificationType.MFA_SMS.getMfaMethodType(), journeyType)) {
-                LOG.warn(
-                        "Invalid MFA Type '{}' for journey '{}'",
-                        NotificationType.MFA_SMS.getMfaMethodType().getValue(),
-                        journeyType.getValue());
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-            }
-
-            Optional<ErrorResponse> codeRequestValid =
-                    validateCodeRequestAttempts(email, journeyType, userContext);
-
             var auditContext =
                     new AuditContext(
                             userContext.getClientId(),
@@ -156,6 +144,18 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             AuditService.UNKNOWN,
                             persistentSessionId,
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+            if (!CodeRequestType.isValidCodeRequestType(
+                    NotificationType.MFA_SMS.getMfaMethodType(), journeyType)) {
+                LOG.warn(
+                        "Invalid MFA Type '{}' for journey '{}'",
+                        NotificationType.MFA_SMS.getMfaMethodType().getValue(),
+                        journeyType.getValue());
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+            }
+
+            Optional<ErrorResponse> codeRequestValid =
+                    validateCodeRequestAttempts(email, journeyType, userContext);
 
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
