@@ -173,7 +173,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
                         auditContext,
                         pair("journey-type", journeyType),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -184,7 +184,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
                         auditContext,
                         pair("journey-type", journeyType),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             } else {
@@ -232,7 +232,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     auditableEvent,
                     auditContext,
                     pair("journey-type", journeyType),
-                    pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+                    pair("mfa-type", MFAMethodType.SMS.getValue()));
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();

@@ -326,7 +326,7 @@ class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
 
     @Test
