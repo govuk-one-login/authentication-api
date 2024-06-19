@@ -1,14 +1,21 @@
-package uk.gov.di.authentication.ticf.cri.stub.lambda.entity;
+package uk.gov.di.authentication.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
 
 public record TICFCRIRequest(
         @Expose @SerializedName("sub") String internalPairwiseId,
-        @Expose @SerializedName("vtr") List<String> vtr,
-        @Expose @SerializedName("govuk_signin_journey_id") String journeyId,
-        @Expose @SerializedName("authenticated") String authenticated,
-        @Expose @SerializedName("initial_registration") String initialRegistration,
-        @Expose @SerializedName("password_reset") String passwordReset) {}
+        @Expose @Required List<String> vtr,
+        @Expose @Required String govukSigninJourneyId,
+        @Expose @Required String authenticated,
+        @Expose String initialRegistration,
+        @Expose String passwordReset) {
+
+    public static TICFCRIRequest basicTicfCriRequest(
+            String internalPairwiseId, List<String> vtr, String journeyId) {
+        return new TICFCRIRequest(internalPairwiseId, vtr, journeyId, "Y", null, null);
+    }
+}
