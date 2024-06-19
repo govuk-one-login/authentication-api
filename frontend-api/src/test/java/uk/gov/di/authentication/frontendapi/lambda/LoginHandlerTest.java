@@ -38,9 +38,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -59,7 +57,6 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -77,12 +74,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -104,7 +104,6 @@ class LoginHandlerTest {
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final MFAMethod AUTH_APP_MFA_METHOD =
@@ -113,16 +112,7 @@ class LoginHandlerTest {
                     .withMethodVerified(true)
                     .withEnabled(true);
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
-    private static final Map<String, String> VALID_HEADERS =
-            Map.ofEntries(
-                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
-                    Map.entry("Session-Id", session.getSessionId()),
-                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
+    private static final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -158,24 +148,24 @@ class LoginHandlerTest {
             new AuditContext(
                     CLIENT_ID.getValue(),
                     CLIENT_SESSION_ID,
-                    session.getSessionId(),
+                    SESSION_ID,
                     expectedCommonSubject,
                     EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    PERSISTENT_ID,
+                    DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
 
     private final AuditContext auditContextWithoutUserInfo =
             new AuditContext(
                     CLIENT_ID.getValue(),
                     CLIENT_SESSION_ID,
-                    session.getSessionId(),
+                    SESSION_ID,
                     AuditService.UNKNOWN,
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    PERSISTENT_ID,
+                    DI_PERSISTENT_SESSION_ID,
                     Optional.empty());
 
     @RegisterExtension
@@ -183,7 +173,7 @@ class LoginHandlerTest {
 
     @AfterEach
     void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
+        assertThat(logging.events(), not(hasItem(withMessageContaining(SESSION_ID))));
     }
 
     @BeforeEach
@@ -233,12 +223,12 @@ class LoginHandlerTest {
                 new AuditContext(
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         Optional.of(ENCODED_DEVICE_DETAILS));
 
         // Act
@@ -289,15 +279,9 @@ class LoginHandlerTest {
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
-        var headersWithoutTICFHeader =
-                VALID_HEADERS.entrySet().stream()
-                        .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
-                        .collect(
-                                Collectors.toUnmodifiableMap(
-                                        Map.Entry::getKey, Map.Entry::getValue));
-
         var event =
-                eventWithHeadersAndBody(headersWithoutTICFHeader, validBodyWithEmailAndPassword);
+                eventWithHeadersAndBody(
+                        VALID_HEADERS_WITHOUT_AUDIT_ENCODED, validBodyWithEmailAndPassword);
 
         var result = handler.handleRequest(event, context);
 

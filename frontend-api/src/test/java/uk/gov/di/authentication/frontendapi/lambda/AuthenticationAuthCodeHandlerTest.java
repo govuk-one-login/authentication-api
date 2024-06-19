@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -22,9 +21,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -39,6 +36,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -60,7 +60,7 @@ class AuthenticationAuthCodeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(CommonTestVariables.EMAIL);
+            new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
 
     @BeforeEach
     void setUp() throws Json.JsonException {
@@ -82,12 +82,11 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\" }",
-                        CommonTestVariables.EMAIL, ""));
+                        CommonTestVariables.EMAIL, "");
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -96,12 +95,11 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenStateIsInvalid() throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\" }",
-                        CommonTestVariables.EMAIL, TEST_REDIRECT_URI, ""));
+                        CommonTestVariables.EMAIL, TEST_REDIRECT_URI, "");
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -110,15 +108,11 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
-                        CommonTestVariables.EMAIL,
-                        TEST_REDIRECT_URI,
-                        TEST_STATE,
-                        Optional.empty()));
+                        CommonTestVariables.EMAIL, TEST_REDIRECT_URI, TEST_STATE, Optional.empty());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -127,16 +121,15 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\", }",
                         CommonTestVariables.EMAIL,
                         TEST_REDIRECT_URI,
                         TEST_STATE,
                         List.of("email-verified", "email"),
-                        ""));
+                        "");
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -188,9 +181,7 @@ class AuthenticationAuthCodeHandlerTest {
     @Test
     void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough()
             throws URISyntaxException {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(
+        var body =
                 format(
                         "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"password-reset-time\": \"%d\" }",
                         TEST_REDIRECT_URI,
@@ -198,7 +189,8 @@ class AuthenticationAuthCodeHandlerTest {
                         List.of("email-verified", "email"),
                         TEST_SECTOR_IDENTIFIER,
                         false,
-                        PASSWORD_RESET_TIME));
+                        PASSWORD_RESET_TIME);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
         var userProfile = new UserProfile();
@@ -221,23 +213,15 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(
+        var body =
                 format(
                         "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\" }",
                         TEST_REDIRECT_URI,
                         TEST_STATE,
                         List.of("email-verified", "email"),
                         TEST_SECTOR_IDENTIFIER,
-                        false));
-        return event;
-    }
-
-    private Map<String, String> getHeaders() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", session.getSessionId());
-        return headers;
+                        false);
+        return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
     }
 
     private UserProfile generateUserProfile() {

@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -50,7 +49,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -68,11 +66,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -83,15 +84,13 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class MfaHandlerTest {
+class MfaHandlerTest {
 
     private MfaHandler handler;
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
     private static final String TEST_CLIENT_ID = "test-client-id";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -111,16 +110,9 @@ public class MfaHandlerTest {
     private static final int MAX_CODE_RETRIES = 5;
     private static final Json objectMapper = SerializationService.getInstance();
     private final Session session =
-            new Session("a-session-id")
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-    private static final String persistentId = "some-persistent-id-value";
-    private final Map<String, String> validHeaders =
-            Map.ofEntries(
-                    Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId),
-                    Map.entry("Session-Id", session.getSessionId()),
-                    Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                    Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -141,8 +133,7 @@ public class MfaHandlerTest {
     @AfterEach
     void tearDown() {
         assertThat(
-                logging.events(),
-                not(hasItem(withMessageContaining(session.getSessionId(), TEST_CLIENT_ID))));
+                logging.events(), not(hasItem(withMessageContaining(SESSION_ID, TEST_CLIENT_ID))));
     }
 
     @BeforeEach
@@ -172,7 +163,7 @@ public class MfaHandlerTest {
         usingValidSession();
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -185,12 +176,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -201,7 +192,7 @@ public class MfaHandlerTest {
         usingValidSession();
 
         var headers = new HashMap<String, String>();
-        headers.putAll(validHeaders);
+        headers.putAll(VALID_HEADERS);
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
@@ -216,12 +207,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -240,7 +231,7 @@ public class MfaHandlerTest {
                         CODE,
                         SupportedLanguage.EN);
         var body = format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true");
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -259,12 +250,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -275,7 +266,7 @@ public class MfaHandlerTest {
         usingValidSession();
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
         APIGatewayProxyResponseEvent result =
@@ -291,7 +282,7 @@ public class MfaHandlerTest {
     void shouldReturn400WhenSessionIdIsInvalid() {
         when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -304,7 +295,7 @@ public class MfaHandlerTest {
     void shouldReturn400WhenEmailInSessionDoesNotMatchEmailInRequest() {
         usingValidSession();
         var body = format("{ \"email\": \"%s\"}", "wrong.email@gov.uk");
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -315,12 +306,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         "wrong.email@gov.uk",
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -331,7 +322,7 @@ public class MfaHandlerTest {
         usingValidSession();
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.empty());
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -343,12 +334,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
@@ -365,7 +356,7 @@ public class MfaHandlerTest {
         }
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -387,7 +378,7 @@ public class MfaHandlerTest {
                 .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -404,7 +395,7 @@ public class MfaHandlerTest {
         }
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -421,12 +412,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -442,7 +433,7 @@ public class MfaHandlerTest {
                 .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -454,12 +445,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -474,7 +465,7 @@ public class MfaHandlerTest {
                 .thenReturn(true);
 
         var body = format("{ \"email\": \"%s\", \"journeyType\": \"%s\"}", EMAIL, journeyType);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -486,12 +477,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
                         "",
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -504,7 +495,7 @@ public class MfaHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -517,12 +508,12 @@ public class MfaHandlerTest {
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        persistentId,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -536,7 +527,7 @@ public class MfaHandlerTest {
                 .thenReturn(Optional.of(CODE));
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -559,7 +550,7 @@ public class MfaHandlerTest {
                 .thenReturn(Optional.empty());
 
         var body = format("{ \"email\": \"%s\"}", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(validHeaders, body);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 

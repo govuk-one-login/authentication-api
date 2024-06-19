@@ -31,10 +31,8 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -51,7 +49,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,19 +78,21 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSISTENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -127,14 +126,12 @@ class SendNotificationHandlerTest {
                     .withTestClient(true)
                     .withClientID(TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(List.of(EMAIL));
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final Context context = mock(Context.class);
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session =
-            new Session(IdGenerator.generate())
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
@@ -162,7 +159,7 @@ class SendNotificationHandlerTest {
                 not(
                         hasItem(
                                 withMessageContaining(
-                                        session.getSessionId(),
+                                        SESSION_ID,
                                         CLIENT_ID,
                                         TEST_CLIENT_ID,
                                         EMAIL,
@@ -210,17 +207,17 @@ class SendNotificationHandlerTest {
                 mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
                 mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
 
-                var event =
-                        sendRequest(
-                                format(
-                                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                        EMAIL, notificationType, journeyType));
+                var body =
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                EMAIL, notificationType, journeyType);
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
                 var restrictedSection =
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
 
                 if (!ticfHeaderPresent) {
-                    event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+                    event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
                     restrictedSection = AuditService.RestrictedSection.empty;
                 }
 
@@ -243,9 +240,9 @@ class SendNotificationHandlerTest {
                                             AuditService.UNKNOWN,
                                             mockedUUID,
                                             EMAIL,
-                                            session.getSessionId(),
+                                            SESSION_ID,
                                             CLIENT_SESSION_ID,
-                                            PERSISTENT_ID,
+                                            DI_PERSISTENT_SESSION_ID,
                                             IP_ADDRESS,
                                             JourneyType.REGISTRATION,
                                             mockedDate.toInstant().getEpochSecond(),
@@ -272,12 +269,12 @@ class SendNotificationHandlerTest {
                                         : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
                                 CLIENT_ID,
                                 CLIENT_SESSION_ID,
-                                session.getSessionId(),
+                                SESSION_ID,
                                 expectedCommonSubject,
                                 EMAIL,
                                 IP_ADDRESS,
                                 AuditService.UNKNOWN,
-                                PERSISTENT_ID,
+                                DI_PERSISTENT_SESSION_ID,
                                 restrictedSection);
             }
         }
@@ -291,11 +288,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, notificationType, journeyType));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, notificationType, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -312,11 +309,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, notificationType, true, JourneyType.ACCOUNT_RECOVERY));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, notificationType, true, JourneyType.ACCOUNT_RECOVERY);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -340,12 +337,12 @@ class SendNotificationHandlerTest {
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -357,14 +354,14 @@ class SendNotificationHandlerTest {
         when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
                 .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL,
+                        VERIFY_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -389,12 +386,12 @@ class SendNotificationHandlerTest {
                         PHONE_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -406,11 +403,11 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, notificationType, journeyType));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, notificationType, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -432,12 +429,12 @@ class SendNotificationHandlerTest {
                                 : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -445,11 +442,11 @@ class SendNotificationHandlerTest {
     @MethodSource("notificationTypeAndJourneyTypeArgs")
     void shouldReturn400IfInvalidSessionProvided(
             NotificationType notificationType, JourneyType journeyType) {
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, notificationType, journeyType));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, notificationType, journeyType);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -482,11 +479,11 @@ class SendNotificationHandlerTest {
         clientRegistry.withSmokeTest(isSmokeTest);
         when(configurationService.getEnvironment()).thenReturn(environment);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -501,7 +498,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event = sendRequest("{ }");
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{ }");
 
         var result = handler.handleRequest(event, context);
 
@@ -530,11 +527,11 @@ class SendNotificationHandlerTest {
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, notificationType, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, notificationType, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -548,11 +545,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                EMAIL, "VERIFY_PASSWORD"));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        EMAIL, "VERIFY_PASSWORD");
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -584,11 +581,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_PHONE_NUMBER, phoneNumber, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -610,12 +607,12 @@ class SendNotificationHandlerTest {
                         PHONE_CODE_SENT,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         phoneNumber,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -624,11 +621,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -675,14 +672,14 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL,
-                                notificationTypeTwo,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                journeyTypeTwo));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL,
+                        notificationTypeTwo,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        journeyTypeTwo);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -706,14 +703,14 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL,
-                                notificationTypeTwo,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                journeyTypeTwo));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL,
+                        notificationTypeTwo,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        journeyTypeTwo);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -726,11 +723,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -749,12 +746,12 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -764,12 +761,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
-        event.getHeaders().remove(TXMA_AUDIT_ENCODED_HEADER);
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -779,12 +775,12 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty);
     }
 
@@ -794,13 +790,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL,
-                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                                JourneyType.ACCOUNT_RECOVERY));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -823,12 +817,12 @@ class SendNotificationHandlerTest {
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -838,14 +832,14 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
+                        EMAIL,
+                        VERIFY_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -864,12 +858,12 @@ class SendNotificationHandlerTest {
                         PHONE_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -882,11 +876,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -898,12 +892,12 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -916,13 +910,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL,
-                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                                JourneyType.ACCOUNT_RECOVERY));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -934,12 +926,12 @@ class SendNotificationHandlerTest {
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -951,14 +943,14 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
-                                EMAIL,
-                                VERIFY_PHONE_NUMBER,
-                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
+                        EMAIL,
+                        VERIFY_PHONE_NUMBER,
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -971,12 +963,12 @@ class SendNotificationHandlerTest {
                         PHONE_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -988,11 +980,11 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_EMAIL, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -1004,12 +996,12 @@ class SendNotificationHandlerTest {
                         EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1021,13 +1013,11 @@ class SendNotificationHandlerTest {
                         EMAIL, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL,
-                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                                JourneyType.ACCOUNT_RECOVERY));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -1039,12 +1029,12 @@ class SendNotificationHandlerTest {
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1056,11 +1046,11 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
@@ -1072,12 +1062,12 @@ class SendNotificationHandlerTest {
                         PHONE_INVALID_CODE_REQUEST,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -1090,7 +1080,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(Map.of("Session-Id", SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
@@ -1115,31 +1105,17 @@ class SendNotificationHandlerTest {
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
 
-        var event =
-                sendRequest(
-                        format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                EMAIL, notificationType, JourneyType.REGISTRATION));
+        var body =
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        EMAIL, notificationType, JourneyType.REGISTRATION);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
-    }
-
-    private APIGatewayProxyRequestEvent sendRequest(String body) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-        event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setBody(body);
-
-        return event;
     }
 
     private void maxOutCodeRequestCount(

@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -36,7 +35,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -52,7 +50,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -67,13 +64,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -84,20 +85,17 @@ class VerifyMfaCodeHandlerTest {
     private static final String CLIENT_ID = "client-id";
     private static final String CLIENT_NAME = "client-name";
     private static final String TEST_CLIENT_CODE = "654321";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String SUBJECT_ID = "test-subject-id";
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
-            new Session("session-id")
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Json objectMapper = SerializationService.getInstance();
@@ -166,7 +164,7 @@ class VerifyMfaCodeHandlerTest {
                                 withMessageContaining(
                                         CLIENT_ID,
                                         TEST_CLIENT_CODE,
-                                        session.getSessionId(),
+                                        SESSION_ID,
                                         CLIENT_SESSION_ID))));
     }
 
@@ -225,13 +223,8 @@ class VerifyMfaCodeHandlerTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, JourneyType.REGISTRATION, AUTH_APP_SECRET);
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
-        event.setBody(objectMapper.writeValueAsString(mfaCodeRequest));
+        var body = objectMapper.writeValueAsString(mfaCodeRequest);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
@@ -248,12 +241,12 @@ class VerifyMfaCodeHandlerTest {
                         FrontendAuditableEvent.CODE_VERIFIED,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false),
@@ -753,14 +746,8 @@ class VerifyMfaCodeHandlerTest {
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)
             throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
-                        Map.entry("Client-Session-Id", CLIENT_SESSION_ID)));
-        event.setBody(objectMapper.writeValueAsString(mfaCodeRequest));
+        var body = objectMapper.writeValueAsString(mfaCodeRequest);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
@@ -789,12 +776,12 @@ class VerifyMfaCodeHandlerTest {
                         event,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                         pairs);
     }

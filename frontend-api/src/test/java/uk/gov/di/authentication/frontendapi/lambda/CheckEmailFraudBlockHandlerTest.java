@@ -19,9 +19,7 @@ import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -33,8 +31,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -43,8 +39,10 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -53,9 +51,7 @@ class CheckEmailFraudBlockHandlerTest {
 
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String EMAIL = "joe.bloggs@test.com";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final String CLIENT_ID = "some-client-id";
     private static final String IP_ADDRESS = "123.123.123.123";
@@ -73,7 +69,7 @@ class CheckEmailFraudBlockHandlerTest {
     private static ClientRegistry clientRegistry;
     private static UserContext userContext;
 
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
     private CheckEmailFraudBlockHandler handler;
 
     @BeforeAll
@@ -126,15 +122,12 @@ class CheckEmailFraudBlockHandlerTest {
         when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
 
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(proxyRequestContext);
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withRequestContext(proxyRequestContext)
+                        .withHeaders(VALID_HEADERS)
+                        .withBody(format("{ \"email\": \"%s\" }", EMAIL));
 
         var expectedResponse = new CheckEmailFraudBlockResponse(EMAIL, status.getValue());
         var result =
@@ -155,20 +148,16 @@ class CheckEmailFraudBlockHandlerTest {
         when(dbMock.getEmailCheckStore(EMAIL)).thenReturn(Optional.of(resultStore));
 
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         Date mockedDate = new Date();
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
             mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
 
-            var event = new APIGatewayProxyRequestEvent();
-            event.setHeaders(headers);
-            event.setRequestContext(proxyRequestContext);
-            event.setBody(format("{ \"email\": \"%s\" }", EMAIL));
+            var event =
+                    new APIGatewayProxyRequestEvent()
+                            .withHeaders(VALID_HEADERS)
+                            .withRequestContext(proxyRequestContext)
+                            .withBody(format("{ \"email\": \"%s\" }", EMAIL));
 
             var expectedResponse =
                     new CheckEmailFraudBlockResponse(
@@ -193,7 +182,7 @@ class CheckEmailFraudBlockHandlerTest {
                             EMAIL,
                             IP_ADDRESS,
                             AuditService.UNKNOWN,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),

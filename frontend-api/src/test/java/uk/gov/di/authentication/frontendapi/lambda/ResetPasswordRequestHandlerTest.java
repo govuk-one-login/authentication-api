@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -77,16 +76,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -95,7 +96,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.c
 class ResetPasswordRequestHandlerTest {
 
     private static final String TEST_SIX_DIGIT_CODE = "123456";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final long LOCKOUT_DURATION = 799;
@@ -104,8 +104,6 @@ class ResetPasswordRequestHandlerTest {
             pair("passwordResetCounter", 0);
     private static final AuditService.MetadataPair PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD =
             pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -136,7 +134,7 @@ class ResetPasswordRequestHandlerTest {
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(IdGenerator.generate())
+            new Session(SESSION_ID)
                     .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ResetPasswordRequestHandler handler =
@@ -159,10 +157,7 @@ class ResetPasswordRequestHandlerTest {
     public void tearDown() {
         assertThat(
                 logging.events(),
-                not(
-                        hasItem(
-                                withMessageContaining(
-                                        session.getSessionId(), CommonTestVariables.EMAIL))));
+                not(hasItem(withMessageContaining(SESSION_ID, CommonTestVariables.EMAIL))));
     }
 
     @BeforeEach
@@ -194,7 +189,7 @@ class ResetPasswordRequestHandlerTest {
 
         @BeforeEach
         void setup() {
-            validEvent = eventWithHeadersAndBody(validHeaders(), validRequestBody);
+            validEvent = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validRequestBody);
             Subject subject = new Subject("subject_1");
             when(authenticationService.getSubjectFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(subject);
@@ -271,12 +266,12 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -301,12 +296,12 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -355,12 +350,12 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -390,12 +385,12 @@ class ResetPasswordRequestHandlerTest {
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
                             TEST_CLIENT_ID,
                             CLIENT_SESSION_ID,
-                            session.getSessionId(),
+                            SESSION_ID,
                             expectedCommonSubject,
                             CommonTestVariables.EMAIL,
                             IP_ADDRESS,
                             CommonTestVariables.UK_MOBILE_NUMBER,
-                            PERSISTENT_ID,
+                            DI_PERSISTENT_SESSION_ID,
                             AuditService.RestrictedSection.empty,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -505,7 +500,7 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldReturn400IfInvalidSessionProvided() {
             var body = format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL);
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(Map.of(), body);
+            APIGatewayProxyRequestEvent event = apiRequestEventWithHeadersAndBody(Map.of(), body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -521,7 +516,8 @@ class ResetPasswordRequestHandlerTest {
         public void shouldReturn400IfRequestIsMissingEmail() {
             usingValidSession();
             var body = "{ }";
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
+            APIGatewayProxyRequestEvent event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -559,23 +555,6 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         return session;
-    }
-
-    private Map<String, String> validHeaders() {
-        return Map.ofEntries(
-                Map.entry(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID),
-                Map.entry("Session-Id", session.getSessionId()),
-                Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS));
-    }
-
-    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
-            Map<String, String> headers, String body) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
-        event.setHeaders(headers);
-        event.setBody(body);
-        return event;
     }
 
     private UserProfile userProfileWithPhoneNumber(String phoneNumber) {

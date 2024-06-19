@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -35,7 +34,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -53,11 +51,15 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -66,7 +68,6 @@ class UpdateProfileHandlerTest {
 
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
-    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
     private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
@@ -77,8 +78,6 @@ class UpdateProfileHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT, "test.account.gov.uk", SaltHelper.generateNewSalt());
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
@@ -137,16 +136,11 @@ class UpdateProfileHandlerTest {
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE));
+                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
@@ -170,12 +164,12 @@ class UpdateProfileHandlerTest {
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
-                        "",
+                        IP_ADDRESS,
                         CommonTestVariables.UK_MOBILE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
@@ -188,16 +182,11 @@ class UpdateProfileHandlerTest {
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
 
-        var event = new APIGatewayProxyRequestEvent();
-
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE));
+                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
@@ -220,12 +209,12 @@ class UpdateProfileHandlerTest {
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
-                        session.getSessionId(),
+                        SESSION_ID,
                         expectedCommonSubject,
                         EMAIL,
-                        "",
+                        IP_ADDRESS,
                         UK_MOBILE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        DI_PERSISTENT_SESSION_ID,
                         AuditService.RestrictedSection.empty);
     }
 
@@ -233,16 +222,11 @@ class UpdateProfileHandlerTest {
     void shouldReturn400WhenRequestIsMissingParameters() {
         usingValidSession();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)));
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        EMAIL, UPDATE_TERMS_CONDS));
+                        EMAIL, UPDATE_TERMS_CONDS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
@@ -278,15 +262,11 @@ class UpdateProfileHandlerTest {
     @Test
     void checkUpdateProfileRequestErrorAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.ofEntries(
-                        Map.entry("Session-Id", session.getSessionId()),
-                        Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID)));
-        event.setBody(
+        var body =
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        EMAIL, UPDATE_TERMS_CONDS));
+                        EMAIL, UPDATE_TERMS_CONDS);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
