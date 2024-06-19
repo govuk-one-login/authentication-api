@@ -92,6 +92,13 @@ performance_tuning = {
     max_concurrency = 10
     scaling_trigger = 0.5
   }
+
+  reverification-result = {
+    memory          = 1536
+    concurrency     = 1
+    max_concurrency = 10
+    scaling_trigger = 0.6
+  }
 }
 lambda_max_concurrency = 10
 lambda_min_concurrency = 3
