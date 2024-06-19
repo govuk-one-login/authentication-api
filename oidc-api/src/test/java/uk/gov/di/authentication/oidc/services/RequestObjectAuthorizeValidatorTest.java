@@ -19,6 +19,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -618,6 +619,7 @@ class RequestObjectAuthorizeValidatorTest {
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
+                .withPublicKeySource(PublicKeySource.STATIC.getValue())
                 .withPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
                 .withClientName("test-client")

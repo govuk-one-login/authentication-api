@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 
@@ -27,8 +28,10 @@ import static uk.gov.di.authentication.clientregistry.services.ClientConfigValid
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_LOCS;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_TYPE;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_ID_TOKEN_SIGNING_ALGORITHM;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_JWKS_URI;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_POST_LOGOUT_URI;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY_SOURCE;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SUBJECT_TYPE;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
@@ -38,18 +41,40 @@ class ClientConfigValidationServiceTest {
 
     private final ClientConfigValidationService validationService =
             new ClientConfigValidationService();
-    private static final String VALID_PUBLIC_CERT =
+    private static final String VALID_PUBLIC_KEY =
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
 
     private static final boolean IDENTITY_VERIFICATION_SUPPORTED = false;
 
     private static Stream<Arguments> registrationRequestParams() {
         return Stream.of(
-                Arguments.of(emptyList(), null, emptyList(), null, null, null),
-                Arguments.of(null, null, null, null, null, null, null),
+                Arguments.of(
+                        emptyList(),
+                        null,
+                        PublicKeySource.STATIC.getValue(),
+                        VALID_PUBLIC_KEY,
+                        null,
+                        emptyList(),
+                        null,
+                        null,
+                        null),
+                Arguments.of(
+                        null,
+                        null,
+                        PublicKeySource.JWKS.getValue(),
+                        null,
+                        "https://valid.jwks.url.gov.uk",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null),
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
+                        PublicKeySource.STATIC.getValue(),
+                        VALID_PUBLIC_KEY,
+                        null,
                         List.of(ValidClaims.ADDRESS.getValue()),
                         String.valueOf(MANDATORY),
                         ClientType.WEB.getValue(),
@@ -59,6 +84,9 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
+                        PublicKeySource.STATIC.getValue(),
+                        VALID_PUBLIC_KEY,
+                        null,
                         List.of(
                                 ValidClaims.CORE_IDENTITY_JWT.getValue(),
                                 ValidClaims.ADDRESS.getValue(),
@@ -73,6 +101,9 @@ class ClientConfigValidationServiceTest {
     void shouldPassValidationForValidRegistrationRequest(
             List<String> postlogoutUris,
             String backChannelLogoutUri,
+            String publicKeySource,
+            String publicKey,
+            String jwksUrl,
             List<String> claims,
             String serviceType,
             String clientType,
@@ -81,7 +112,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                publicKeySource,
+                                publicKey,
+                                jwksUrl,
                                 singletonList("openid"),
                                 postlogoutUris,
                                 backChannelLogoutUri,
@@ -100,7 +133,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
                                 "http://example.com",
@@ -119,7 +154,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("invalid-redirect-uri"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -133,12 +170,14 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidPublicKeyInRegistrationRequest() {
+    void shouldReturnErrorForInvalidPublicKeySourceInRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                "invalid-public-cert",
+                                "invalid-public-key-source",
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -152,12 +191,56 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorForInvalidPublicKeyInRegistrationRequest() {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(
+                        generateClientRegRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                PublicKeySource.STATIC.getValue(),
+                                "invalid-public-cert",
+                                null,
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public",
+                                emptyList(),
+                                ClientType.WEB.getValue(),
+                                ES256.getName()));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidJwksUrlInRegistrationRequest() {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(
+                        generateClientRegRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                PublicKeySource.JWKS.getValue(),
+                                null,
+                                "invalid-jwks-url",
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                "http://example.com",
+                                String.valueOf(MANDATORY),
+                                "http://test.com",
+                                "public",
+                                emptyList(),
+                                ClientType.WEB.getValue(),
+                                ES256.getName()));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_JWKS_URI)));
+    }
+
+    @Test
     void shouldReturnErrorForInvalidScopesInRegistrationRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -176,7 +259,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 List.of("openid", "am"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -195,7 +280,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -214,7 +301,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -234,7 +323,9 @@ class ClientConfigValidationServiceTest {
                         "",
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
-                        VALID_PUBLIC_CERT,
+                        PublicKeySource.STATIC.getValue(),
+                        VALID_PUBLIC_KEY,
+                        null,
                         singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://example.com",
@@ -261,7 +352,9 @@ class ClientConfigValidationServiceTest {
                         "",
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
-                        VALID_PUBLIC_CERT,
+                        PublicKeySource.STATIC.getValue(),
+                        VALID_PUBLIC_KEY,
+                        null,
                         singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://example.com",
@@ -287,7 +380,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -309,26 +404,39 @@ class ClientConfigValidationServiceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("validAlgorithmSource")
-    void shouldPassValidationForValidUpdateRequest(String validIdTokenSigningAlgorithm) {
+    @MethodSource("validUpdateCaseSource")
+    void shouldPassValidationForValidUpdateRequest(
+            String idTokenSigningAlgorithm,
+            String publicKeySource,
+            String publicKey,
+            String jwksUrl) {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                publicKeySource,
+                                publicKey,
+                                jwksUrl,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
                                 false,
                                 "http://localhost/sector-id",
                                 ClientType.WEB.getValue(),
-                                validIdTokenSigningAlgorithm,
+                                idTokenSigningAlgorithm,
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
-    static Stream<Arguments> validAlgorithmSource() {
-        return Stream.of(Arguments.of(ES256.getName()), Arguments.of(RS256.getName()));
+    static Stream<Arguments> validUpdateCaseSource() {
+        return Stream.of(
+                Arguments.of(
+                        ES256.getName(), PublicKeySource.STATIC.getValue(), VALID_PUBLIC_KEY, null),
+                Arguments.of(
+                        RS256.getName(),
+                        PublicKeySource.JWKS.getValue(),
+                        null,
+                        "https://valid.jwks.url.gov.uk"));
     }
 
     @Test
@@ -344,7 +452,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
                                 String.valueOf(MANDATORY),
@@ -362,7 +472,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("invalid-redirect-uri"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -375,12 +487,34 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorForInvalidPublicKeySourceInUpdateRequest() {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientUpdateConfig(
+                        generateClientUpdateRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                "invalid-public-key-source",
+                                VALID_PUBLIC_KEY,
+                                null,
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                String.valueOf(MANDATORY),
+                                false,
+                                null,
+                                ES256.getName(),
+                                ClientType.WEB.getValue(),
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY_SOURCE)));
+    }
+
+    @Test
     void shouldReturnErrorForInvalidPublicKeyInUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
+                                PublicKeySource.STATIC.getValue(),
                                 "invalid-public-cert",
+                                null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -393,12 +527,34 @@ class ClientConfigValidationServiceTest {
     }
 
     @Test
+    void shouldReturnErrorForInvalidJwksUriInUpdateRequest() {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientUpdateConfig(
+                        generateClientUpdateRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                PublicKeySource.JWKS.getValue(),
+                                null,
+                                "invalid-jwks-url",
+                                singletonList("openid"),
+                                singletonList("http://localhost/post-redirect-logout"),
+                                String.valueOf(MANDATORY),
+                                false,
+                                null,
+                                ES256.getName(),
+                                ClientType.WEB.getValue(),
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_JWKS_URI)));
+    }
+
+    @Test
     void shouldReturnErrorForInvalidScopesInUpdateRequest() {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -416,7 +572,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 List.of("openid", "email"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -434,7 +592,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -454,7 +614,9 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                PublicKeySource.STATIC.getValue(),
+                                VALID_PUBLIC_KEY,
+                                null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -473,7 +635,9 @@ class ClientConfigValidationServiceTest {
 
     private ClientRegistrationRequest generateClientRegRequest(
             List<String> redirectUri,
-            String publicCert,
+            String publicKeySource,
+            String publicKey,
+            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutUris,
             String backChannelLogoutUri,
@@ -487,7 +651,9 @@ class ClientConfigValidationServiceTest {
                 "The test client",
                 redirectUri,
                 singletonList("test-client@test.com"),
-                publicCert,
+                publicKeySource,
+                publicKey,
+                jwksUrl,
                 scopes,
                 postLogoutUris,
                 backChannelLogoutUri,
@@ -502,7 +668,9 @@ class ClientConfigValidationServiceTest {
 
     private UpdateClientConfigRequest generateClientUpdateRequest(
             List<String> redirectUri,
-            String publicCert,
+            String publicKeySource,
+            String publicKey,
+            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutUris,
             String serviceType,
@@ -514,7 +682,9 @@ class ClientConfigValidationServiceTest {
         UpdateClientConfigRequest configRequest = new UpdateClientConfigRequest();
         configRequest.setScopes(scopes);
         configRequest.setRedirectUris(redirectUri);
-        configRequest.setPublicKey(publicCert);
+        configRequest.setPublicKeySource(publicKeySource);
+        configRequest.setPublicKey(publicKey);
+        configRequest.setJwksUrl(jwksUrl);
         configRequest.setPostLogoutRedirectUris(postLogoutUris);
         configRequest.setServiceType(serviceType);
         configRequest.setJarValidationRequired(jarValidationRequired);
