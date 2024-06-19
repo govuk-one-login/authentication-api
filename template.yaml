@@ -39,7 +39,7 @@ Conditions:
   SpotResponseEventMappingDisabled:
     !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
   EnableProvisionedConcurrency:
-    !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build]]
+    !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build], !Equals [!Ref Environment, integration]]
 
 Mappings:
   EnvironmentConfiguration:
