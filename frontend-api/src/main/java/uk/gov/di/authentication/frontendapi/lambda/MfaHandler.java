@@ -168,36 +168,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
 
-            if (!userContext.getSession().validateSession(email)) {
-                LOG.warn("Email does not match Email in Request");
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        email,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        new AuditService.RestrictedSection(
-                                Optional.ofNullable(userContext.getTxmaAuditEncoded())),
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
-
-                return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
-            }
-            String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
-
             var auditContext =
                     new AuditContext(
-                            userContext
-                                    .getClient()
-                                    .map(ClientRegistry::getClientID)
-                                    .orElse(AuditService.UNKNOWN),
+                            userContext.getClientId(),
                             userContext.getClientSessionId(),
                             userContext.getSession().getSessionId(),
                             userContext.getSession().getInternalCommonSubjectIdentifier(),
@@ -206,6 +179,18 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             AuditService.UNKNOWN,
                             persistentSessionId,
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+            if (!userContext.getSession().validateSession(email)) {
+                LOG.warn("Email does not match Email in Request");
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
+                        auditContext,
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
+            }
+            String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
 
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
