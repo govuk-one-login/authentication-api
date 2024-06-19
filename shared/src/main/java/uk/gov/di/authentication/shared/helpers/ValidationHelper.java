@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
 import java.util.Objects;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 public class ValidationHelper {
     private static final Logger LOG = LogManager.getLogger(ValidationHelper.class);
@@ -138,7 +140,7 @@ public class ValidationHelper {
             String input,
             CodeStorageService codeStorageService,
             String emailAddress,
-            int maxRetries) {
+            ConfigurationService configurationService) {
 
         if (code.filter(input::equals).isPresent()) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
@@ -154,9 +156,14 @@ public class ValidationHelper {
             return Optional.of(ErrorResponse.ERROR_1002);
         }
 
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
+        if (configurationService.supportAccountCreationTTL() && notificationType == VERIFY_EMAIL) {
+            codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(emailAddress);
+        } else {
+            codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
+        }
 
-        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries) {
+        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress)
+                > configurationService.getCodeMaxRetries()) {
             switch (notificationType) {
                 case MFA_SMS:
                     return Optional.of(ErrorResponse.ERROR_1027);

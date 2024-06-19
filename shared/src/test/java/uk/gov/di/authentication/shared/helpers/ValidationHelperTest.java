@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -37,6 +39,9 @@ class ValidationHelperTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String PRODUCTION = "production";
     private static final String INTEGRATION = "integration";
+
+    private static final ConfigurationService configurationServiceMock =
+            mock(ConfigurationService.class);
 
     private static Stream<String> invalidPhoneNumbers() {
         return Stream.of(
@@ -417,6 +422,9 @@ class ValidationHelperTest {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS))
                 .thenReturn(previousAttempts);
 
+        when(configurationServiceMock.getCodeMaxRetries()).thenReturn(5);
+        when(configurationServiceMock.supportAccountCreationTTL()).thenReturn(false);
+
         assertEquals(
                 expectedResult,
                 ValidationHelper.validateVerificationCode(
@@ -426,6 +434,39 @@ class ValidationHelperTest {
                         input,
                         codeStorageService,
                         EMAIL_ADDRESS,
-                        5));
+                        configurationServiceMock));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validateCodeTestParameters")
+    void shouldIncreaseRetryCountWithCorrectTTL(
+            NotificationType notificationType,
+            JourneyType journeyType,
+            Optional<ErrorResponse> expectedResult,
+            String input,
+            int previousAttempts,
+            Optional<String> storedCode) {
+
+        var codeStorageService = mock(CodeStorageService.class);
+
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS)).thenReturn(1);
+        when(configurationServiceMock.getCodeMaxRetries()).thenReturn(5);
+        when(configurationServiceMock.supportAccountCreationTTL()).thenReturn(true);
+
+        ValidationHelper.validateVerificationCode(
+                notificationType,
+                journeyType,
+                Optional.empty(),
+                input,
+                codeStorageService,
+                EMAIL_ADDRESS,
+                configurationServiceMock);
+
+        if (notificationType == VERIFY_EMAIL) {
+            verify(codeStorageService)
+                    .increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL_ADDRESS);
+        } else {
+            verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS);
+        }
     }
 }

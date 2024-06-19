@@ -208,6 +208,17 @@ variable "lockout_count_ttl" {
   default = 900
 }
 
+variable "account_creation_lockout_count_ttl" {
+  type    = number
+  default = 3600
+}
+
+variable "support_account_creation_count_ttl" {
+  default     = false
+  type        = bool
+  description = "Feature flag which enables using a designated variable for count TTL in the account creation journey"
+}
+
 variable "incorrect_password_lockout_count_ttl" {
   type    = number
   default = 7200

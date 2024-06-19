@@ -76,6 +76,17 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_COUNT_TTL", "900"));
     }
 
+    public long getAccountCreationLockoutCountTTL() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("ACCOUNT_CREATION_LOCKOUT_COUNT_TTL", "3600"));
+    }
+
+    public boolean supportAccountCreationTTL() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
+                .equals("true");
+    }
+
     public long getLockoutDuration() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
     }
