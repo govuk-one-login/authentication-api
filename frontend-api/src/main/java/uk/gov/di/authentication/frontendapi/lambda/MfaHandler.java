@@ -10,7 +10,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -146,28 +145,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             Optional<ErrorResponse> codeRequestValid =
                     validateCodeRequestAttempts(email, journeyType, userContext);
 
-            if (codeRequestValid.isPresent()) {
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        email,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        new AuditService.RestrictedSection(
-                                Optional.ofNullable(userContext.getTxmaAuditEncoded())),
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
-
-                return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
-            }
-
             var auditContext =
                     new AuditContext(
                             userContext.getClientId(),
@@ -179,6 +156,16 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             AuditService.UNKNOWN,
                             persistentSessionId,
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+            if (codeRequestValid.isPresent()) {
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        auditContext,
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+
+                return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
+            }
 
             if (!userContext.getSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
