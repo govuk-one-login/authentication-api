@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -142,12 +143,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
             }
 
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
             Optional<ErrorResponse> codeRequestValid =
                     validateCodeRequestAttempts(email, journeyType, userContext);
+
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
@@ -162,7 +160,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        restrictedSection,
+                        new AuditService.RestrictedSection(
+                                Optional.ofNullable(userContext.getTxmaAuditEncoded())),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
 
@@ -184,7 +183,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        restrictedSection,
+                        new AuditService.RestrictedSection(
+                                Optional.ofNullable(userContext.getTxmaAuditEncoded())),
                         pair("journey-type", journeyType),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
 
@@ -192,25 +192,31 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
             String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
 
+            var auditContext =
+                    new AuditContext(
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getClientID)
+                                    .orElse(AuditService.UNKNOWN),
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            email,
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            persistentSessionId,
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        email,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        restrictedSection,
+                        auditContext,
                         pair("journey-type", journeyType),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
+            } else {
+                auditContext = auditContext.withPhoneNumber(phoneNumber);
             }
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
@@ -249,20 +255,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT;
             }
+
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    email,
-                    IpAddressHelper.extractIpAddress(input),
-                    phoneNumber,
-                    persistentSessionId,
-                    restrictedSection,
+                    auditContext,
                     pair("journey-type", journeyType),
                     pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
             LOG.info("Successfully processed request");

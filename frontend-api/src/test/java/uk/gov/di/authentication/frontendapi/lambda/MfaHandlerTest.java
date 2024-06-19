@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -72,7 +73,6 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -109,6 +109,19 @@ class MfaHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final int MAX_CODE_RETRIES = 5;
     private static final Json objectMapper = SerializationService.getInstance();
+
+    private final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
@@ -144,6 +157,8 @@ class MfaHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         when(authenticationService.getPhoneNumber(EMAIL))
                 .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
+        usingValidClientSession(TEST_CLIENT_ID);
+
         handler =
                 new MfaHandler(
                         configurationService,
@@ -174,15 +189,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -205,15 +212,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -248,15 +247,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "",
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
@@ -304,7 +295,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        "",
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         expectedCommonSubject,
@@ -332,15 +323,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        "",
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType()));
     }
@@ -410,7 +393,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "",
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         expectedCommonSubject,
@@ -443,7 +426,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "",
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         expectedCommonSubject,
@@ -475,7 +458,7 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "",
+                        TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         expectedCommonSubject,
@@ -506,15 +489,16 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        new AuditContext(
+                                TEST_CLIENT_ID,
+                                CLIENT_SESSION_ID,
+                                SESSION_ID,
+                                expectedCommonSubject,
+                                EMAIL,
+                                IP_ADDRESS,
+                                CommonTestVariables.UK_MOBILE_NUMBER,
+                                DI_PERSISTENT_SESSION_ID,
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
