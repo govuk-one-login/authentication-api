@@ -37,6 +37,9 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Locale;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_MISMATCHED_EMAIL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
@@ -145,6 +148,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             persistentSessionId,
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
+            var metadataPairs =
+                    new AuditService.MetadataPair[] {
+                        pair("journey-type", journeyType),
+                        pair("mfa-type", MFAMethodType.SMS.getValue())
+                    };
+
             if (!CodeRequestType.isValidCodeRequestType(
                     NotificationType.MFA_SMS.getMfaMethodType(), journeyType)) {
                 LOG.warn(
@@ -159,21 +168,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        auditContext,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
 
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
 
             if (!userContext.getSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        auditContext,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                auditService.submitAuditEvent(MFA_MISMATCHED_EMAIL, auditContext, metadataPairs);
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -181,11 +183,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        auditContext,
-                        pair("journey-type", journeyType),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
-
+                        MFA_MISSING_PHONE_NUMBER, auditContext, metadataPairs);
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             } else {
                 auditContext = auditContext.withPhoneNumber(phoneNumber);
@@ -228,11 +226,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT;
             }
 
-            auditService.submitAuditEvent(
-                    auditableEvent,
-                    auditContext,
-                    pair("journey-type", journeyType),
-                    pair("mfa-type", MFAMethodType.SMS.getValue()));
+            auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();
