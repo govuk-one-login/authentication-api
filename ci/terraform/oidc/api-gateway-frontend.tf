@@ -87,6 +87,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.identity_progress.method_trigger_value,
       module.mfa_reset_storage_token_jwk.integration_trigger_value,
       module.mfa_reset_storage_token_jwk.method_trigger_value,
+      module.reverification_result.integration_trigger_value,
+      module.reverification_result.method_trigger_value,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].integration_trigger_value : null,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].method_trigger_value : null,
       local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].integration_trigger_value : null,
@@ -119,6 +121,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.orch_auth_code,
     module.check_reauth_user,
     module.mfa_reset_storage_token_jwk,
+    module.reverification_result,
   ]
 }
 
@@ -220,6 +223,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.check_reauth_user,
     module.check_email_fraud_block,
     module.mfa_reset_storage_token_jwk,
+    module.reverification_result,
     aws_api_gateway_deployment.deployment,
   ]
 }
