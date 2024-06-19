@@ -277,65 +277,6 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
 
-  #region RP Public Key DynamoDB Table
-
-  RpPublicKeyTableEncryptionKey:
-    Type: AWS::KMS::Key
-    Properties:
-      Description: KMS encryption key for RP public key DynamoDB table
-      EnableKeyRotation: true
-      KeyPolicy:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowIamManagement
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
-            Action: kms:*
-            Resource: "*"
-          - Sid: AllowDynamodbAccessToEncryptionKey
-            Effect: Allow
-            Principal:
-              Service: dynamodb.amazonaws.com
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:DescribeKey
-            Resource: "*"
-            Condition:
-              ArnLike:
-                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
-
-  RpPublicKeyCacheTable:
-    Type: AWS::DynamoDB::Table
-    # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
-    Properties:
-      TableName: RpPublicKeyCache
-      AttributeDefinitions:
-        - AttributeName: clientId
-          AttributeType: S
-        - AttributeName: keyId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: clientId
-          KeyType: HASH
-        - AttributeName: keyId
-          KeyType: RANGE
-      BillingMode: PAY_PER_REQUEST
-      SSESpecification:
-        SSEEnabled: true
-        KMSMasterKeyId: !GetAtt RpPublicKeyTableEncryptionKey.Arn
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
-      Tags:
-        - Key: Name
-          Value: RpPublicKeyCache
-
-  #endregion
-
   #region Open ID Configuration Lambda
 
   OpenIdConfigurationFunction:
