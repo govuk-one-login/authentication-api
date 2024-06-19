@@ -50,3 +50,4 @@ spot_request_queue_cross_account_access_enabled = true
 orch_trustmark_enabled            = true
 orch_openid_configuration_enabled = true
 orch_jwks_enabled                 = true
+orch_authorisation_enabled        = true
