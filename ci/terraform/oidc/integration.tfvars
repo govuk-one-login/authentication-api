@@ -51,3 +51,4 @@ orch_trustmark_enabled            = true
 orch_openid_configuration_enabled = true
 orch_jwks_enabled                 = true
 orch_authorisation_enabled        = true
+orch_auth_code_enabled            = true
