@@ -57,19 +57,26 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                     "TicfCriResponseReceived",
                     Map.ofEntries(environmentForMetrics, Map.entry("StatusCode", statusCode)));
         } catch (HttpTimeoutException e) {
-            LOG.warn(
+            var errorDescription =
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
-                            configurationService.getTicfCriServiceCallTimeout()));
-            cloudwatchMetricsService.incrementCounter(
-                    "TicfCriServiceTimeout",
-                    Map.of("Environment", configurationService.getEnvironment()));
-        } catch (InterruptedException | IOException e) {
-            LOG.warn(format("Error occurred in the TICF CRI Handler: %s", e));
-            cloudwatchMetricsService.incrementCounter(
-                    "TicfCriServiceError", Map.ofEntries(environmentForMetrics));
+                            configurationService.getTicfCriServiceCallTimeout());
+            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceTimeout");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
+            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError");
+        } catch (IOException e) {
+            var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
+            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError");
         }
         return null;
+    }
+
+    private void logAndSendMetricsForInterventionsError(String errorDescription, String metric) {
+        LOG.warn(errorDescription);
+        cloudwatchMetricsService.incrementCounter(
+                metric, Map.of("Environment", configurationService.getEnvironment()));
     }
 
     private HttpResponse<String> sendRequest(TICFCRIRequest ticfcriRequest)

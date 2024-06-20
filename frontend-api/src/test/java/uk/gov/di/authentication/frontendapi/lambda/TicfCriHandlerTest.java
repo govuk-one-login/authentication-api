@@ -6,6 +6,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -107,25 +109,26 @@ class TicfCriHandlerTest {
                                 Map.entry("StatusCode", statusCode.toString())));
     }
 
-    @Test
-    void testIncrementsMetricWhenARequestTimesOut() throws Exception {
-        when(httpClient.send(any(), any()))
-                .thenThrow(new HttpTimeoutException("request timed out"));
+    @ParameterizedTest
+    @MethodSource("exceptions")
+    void testIncrementsMetricWhenAnExceptionOccurs(Exception e, String metricName)
+            throws Exception {
+        when(httpClient.send(any(), any())).thenThrow(e);
 
         handler.handleRequest(
                 basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID), context);
 
-        verify(cloudwatchMetricsService).incrementCounter("TicfCriServiceTimeout", METRICS_CONTEXT);
+        verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
     }
 
-    @Test
-    void testIncrementsMetricWhenAnExceptionOccurs() throws Exception {
-        when(httpClient.send(any(), any())).thenThrow(new IOException("an IO Exception"));
-
-        handler.handleRequest(
-                basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID), context);
-
-        verify(cloudwatchMetricsService).incrementCounter("TicfCriServiceError", METRICS_CONTEXT);
+    private static List<Arguments> exceptions() {
+        return List.of(
+                Arguments.of(new IOException("an IO Exception"), "TicfCriServiceError"),
+                Arguments.of(
+                        new InterruptedException("an Interrputed exception"),
+                        "TicfCriServiceError"),
+                Arguments.of(
+                        new HttpTimeoutException("request timed out"), "TicfCriServiceTimeout"));
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {
