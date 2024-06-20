@@ -526,6 +526,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
     }
 
+    public long getTicfCriServiceCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("TICF_CRI_SERVICE_CALL_TIMEOUT", "2000"));
+    }
+
     public String getAccountInterventionsErrorMetricName() {
         return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }

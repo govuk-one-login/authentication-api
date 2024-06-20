@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.io.ByteArrayOutputStream;
@@ -16,13 +17,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.entity.TICFCRIRequest.basicTicfCriRequest;
@@ -31,6 +35,7 @@ class TicfCriHandlerTest {
 
     @Mock private Context context;
     @Mock private ConfigurationService configurationService;
+    @Mock private CloudwatchMetricsService cloudwatchMetricsService;
     @Mock private HttpClient httpClient;
 
     private TicfCriHandler handler;
@@ -45,7 +50,9 @@ class TicfCriHandlerTest {
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
         when(configurationService.getTicfCriServiceURI()).thenReturn(SERVICE_URI);
-        handler = new TicfCriHandler(httpClient, configurationService);
+        when(configurationService.getTicfCriServiceCallTimeout()).thenReturn(1000L);
+        when(configurationService.getEnvironment()).thenReturn("test-environment");
+        handler = new TicfCriHandler(httpClient, configurationService, cloudwatchMetricsService);
     }
 
     @AfterEach
@@ -73,6 +80,20 @@ class TicfCriHandlerTest {
 
         assertEquals(SERVICE_URI, httpRequestCaptor.getValue().uri());
         assertEquals(expectedRequestBody, actualRequestBody);
+    }
+
+    @Test
+    void testIncrementsMetricWhenARequestTimesOut() throws Exception {
+        when(httpClient.send(any(), any()))
+                .thenThrow(new HttpTimeoutException("request timed out"));
+
+        handler.handleRequest(
+                basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID), context);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "TicfCriServiceTimeout",
+                        Map.of("Environment", configurationService.getEnvironment()));
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {
