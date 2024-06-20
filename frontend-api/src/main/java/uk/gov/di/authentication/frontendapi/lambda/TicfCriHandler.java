@@ -59,7 +59,10 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                     "TicfCriServiceTimeout",
                     Map.of("Environment", configurationService.getEnvironment()));
         } catch (InterruptedException | IOException e) {
-            throw new RuntimeException(e);
+            LOG.warn(format("Error occurred in the TICF CRI Handler: %s", e));
+            cloudwatchMetricsService.incrementCounter(
+                    "TicfCriServiceError",
+                    Map.of("Environment", configurationService.getEnvironment()));
         }
         return null;
     }

@@ -96,6 +96,18 @@ class TicfCriHandlerTest {
                         Map.of("Environment", configurationService.getEnvironment()));
     }
 
+    @Test
+    void testIncrementsMetricWhenAnExceptionOccurs() throws Exception {
+        when(httpClient.send(any(), any())).thenThrow(new IOException("an IO Exception"));
+
+        handler.handleRequest(basicTicfCriRequest(COMMON_SUBJECTID, VTRS, JOURNEY_ID), context);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "TicfCriServiceError",
+                        Map.of("Environment", configurationService.getEnvironment()));
+    }
+
     private JsonArray jsonArrayFrom(List<String> elements) {
         var jsonArray = new JsonArray();
         elements.forEach(jsonArray::add);
