@@ -48,8 +48,14 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
     @Override
     public Void handleRequest(TICFCRIRequest input, Context context) {
         LOG.debug("received request to TICF CRI Handler");
+        var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
-            sendRequest(input);
+            var response = sendRequest(input);
+            var statusCode = String.valueOf(response.statusCode());
+            LOG.info(format("Response received from TICF CRI Service with status %s", statusCode));
+            cloudwatchMetricsService.incrementCounter(
+                    "TicfCriResponseReceived",
+                    Map.ofEntries(environmentForMetrics, Map.entry("StatusCode", statusCode)));
         } catch (HttpTimeoutException e) {
             LOG.warn(
                     format(
@@ -61,13 +67,12 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
         } catch (InterruptedException | IOException e) {
             LOG.warn(format("Error occurred in the TICF CRI Handler: %s", e));
             cloudwatchMetricsService.incrementCounter(
-                    "TicfCriServiceError",
-                    Map.of("Environment", configurationService.getEnvironment()));
+                    "TicfCriServiceError", Map.ofEntries(environmentForMetrics));
         }
         return null;
     }
 
-    private void sendRequest(TICFCRIRequest ticfcriRequest)
+    private HttpResponse<String> sendRequest(TICFCRIRequest ticfcriRequest)
             throws IOException, InterruptedException {
         var body = serialisationService.writeValueAsStringNoNulls(ticfcriRequest);
         var timeoutInMilliseconds =
@@ -77,6 +82,6 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .timeout(timeoutInMilliseconds)
                         .build();
-        httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 }

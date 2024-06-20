@@ -5,6 +5,8 @@ import com.google.gson.JsonArray;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -17,6 +19,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -37,6 +40,7 @@ class TicfCriHandlerTest {
     @Mock private ConfigurationService configurationService;
     @Mock private CloudwatchMetricsService cloudwatchMetricsService;
     @Mock private HttpClient httpClient;
+    @Mock private HttpResponse httpResponse;
 
     private TicfCriHandler handler;
 
@@ -45,6 +49,8 @@ class TicfCriHandlerTest {
     private static final String JOURNEY_ID = "journey-id";
     private static final List<String> VECTORS_OF_TRUST = List.of("Cl");
     private AutoCloseable mocks;
+    private static final Map<String, String> METRICS_CONTEXT =
+            Map.of("Environment", "test-environment");
 
     @BeforeEach
     void setUp() {
@@ -63,13 +69,14 @@ class TicfCriHandlerTest {
     @Test
     void shouldMakeTheCorrectCallToTheTicfCri()
             throws IOException, InterruptedException, ExecutionException {
-
         var ticfRequest = basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID);
         var expectedRequestBody =
                 format(
                         "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\"}",
                         COMMON_SUBJECTID, jsonArrayFrom(VECTORS_OF_TRUST), JOURNEY_ID);
 
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
         handler.handleRequest(ticfRequest, context);
 
         var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
@@ -82,6 +89,24 @@ class TicfCriHandlerTest {
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {200, 404, 500})
+    void sendsMetricsBasedOnTheHttpStatusCode(Integer statusCode)
+            throws IOException, InterruptedException {
+        var ticfRequest = basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID);
+        when(httpResponse.statusCode()).thenReturn(statusCode);
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+
+        handler.handleRequest(ticfRequest, context);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "TicfCriResponseReceived",
+                        Map.ofEntries(
+                                Map.entry("Environment", "test-environment"),
+                                Map.entry("StatusCode", statusCode.toString())));
+    }
+
     @Test
     void testIncrementsMetricWhenARequestTimesOut() throws Exception {
         when(httpClient.send(any(), any()))
@@ -90,22 +115,17 @@ class TicfCriHandlerTest {
         handler.handleRequest(
                 basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID), context);
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "TicfCriServiceTimeout",
-                        Map.of("Environment", configurationService.getEnvironment()));
+        verify(cloudwatchMetricsService).incrementCounter("TicfCriServiceTimeout", METRICS_CONTEXT);
     }
 
     @Test
     void testIncrementsMetricWhenAnExceptionOccurs() throws Exception {
         when(httpClient.send(any(), any())).thenThrow(new IOException("an IO Exception"));
 
-        handler.handleRequest(basicTicfCriRequest(COMMON_SUBJECTID, VTRS, JOURNEY_ID), context);
+        handler.handleRequest(
+                basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID), context);
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "TicfCriServiceError",
-                        Map.of("Environment", configurationService.getEnvironment()));
+        verify(cloudwatchMetricsService).incrementCounter("TicfCriServiceError", METRICS_CONTEXT);
     }
 
     private JsonArray jsonArrayFrom(List<String> elements) {
