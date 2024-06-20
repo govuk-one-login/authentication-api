@@ -60,7 +60,7 @@ class TicfCriHandlerTest {
         var ticfRequest = basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID);
         var expectedRequestBody =
                 format(
-                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\",\"initial_registration\":null,\"password_reset\":null}",
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\"}",
                         COMMON_SUBJECTID, jsonArrayFrom(VECTORS_OF_TRUST), JOURNEY_ID);
 
         handler.handleRequest(ticfRequest, context);

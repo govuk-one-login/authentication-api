@@ -27,12 +27,17 @@ public class SerializationService implements Json {
 
     private final Gson gsonWithUnderscores;
     private final Gson gsonWithCamelCase;
+    private final Gson gsonWithUnderscoresNoNulls;
+
+    private static final String SEGMENT_NAME = "SerializationService::GSON::toJson";
     private final RequiredFieldValidator defaultValidator = new RequiredFieldValidator();
 
     public SerializationService() {
         gsonWithUnderscores =
                 createGsonBuilder(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
         gsonWithCamelCase = createGsonBuilder(FieldNamingPolicy.IDENTITY).create();
+        gsonWithUnderscoresNoNulls =
+                createNoNullGsonBuilder(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
     }
 
     @Override
@@ -97,14 +102,16 @@ public class SerializationService implements Json {
 
     @Override
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(
-                "SerializationService::GSON::toJson", () -> gsonWithUnderscores.toJson(object));
+        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithUnderscores.toJson(object));
     }
 
     @Override
     public String writeValueAsStringCamelCase(Object object) {
-        return segmentedFunctionCall(
-                "SerializationService::GSON::toJson", () -> gsonWithCamelCase.toJson(object));
+        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithCamelCase.toJson(object));
+    }
+
+    public String writeValueAsStringNoNulls(Object object) {
+        return segmentedFunctionCall(SEGMENT_NAME, () -> gsonWithUnderscoresNoNulls.toJson(object));
     }
 
     public static SerializationService getInstance() {
@@ -115,9 +122,12 @@ public class SerializationService implements Json {
     }
 
     private GsonBuilder createGsonBuilder(FieldNamingPolicy namingPolicy) {
+        return createNoNullGsonBuilder(namingPolicy).serializeNulls();
+    }
+
+    private GsonBuilder createNoNullGsonBuilder(FieldNamingPolicy namingPolicy) {
         return new GsonBuilder()
                 .setFieldNamingPolicy(namingPolicy)
-                .serializeNulls()
                 .excludeFieldsWithoutExposeAnnotation()
                 .registerTypeAdapter(State.class, new StateAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
