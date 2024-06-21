@@ -23,14 +23,15 @@ module "check_email_fraud_block" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    ENVIRONMENT          = var.environment
-    TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
-    REDIS_KEY            = local.redis_key
-    LOCKOUT_DURATION     = var.lockout_duration
-    LOCKOUT_COUNT_TTL    = var.lockout_count_ttl
+    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT                 = var.environment
+    TXMA_AUDIT_QUEUE_URL        = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI         = var.internal_sector_uri
+    REDIS_KEY                   = local.redis_key
+    LOCKOUT_DURATION            = var.lockout_duration
+    LOCKOUT_COUNT_TTL           = var.lockout_count_ttl
+    SUPPORT_EMAIL_CHECK_ENABLED = var.support_email_check_enabled
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandler::handleRequest"
