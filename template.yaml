@@ -37,7 +37,7 @@ Conditions:
   SendStorageToken:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
   SpotResponseEventMappingDisabled:
-    !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+    !Equals [ production, !Ref Environment ]
   EnableProvisionedConcurrency:
     !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build], !Equals [!Ref Environment, integration], !Equals [!Ref Environment, production]]
 
