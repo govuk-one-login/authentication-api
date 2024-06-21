@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
-import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
@@ -85,12 +84,12 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             LOG.info("Request received to CheckEmailFraudBlockHandler");
             LOG.info("Checking if block is present");
 
+            var status = EmailCheckResultStatus.PENDING;
             var emailCheckResult =
                     dynamoEmailCheckResultService.getEmailCheckStore(request.getEmail());
-            var status =
-                    emailCheckResult
-                            .map(EmailCheckResultStore::getStatus)
-                            .orElse(EmailCheckResultStatus.PENDING);
+            if (emailCheckResult.isPresent()) {
+                status = emailCheckResult.get().getStatus();
+            }
 
             var checkEmailFraudBlockResponse = createResponse(request.getEmail(), status);
 
