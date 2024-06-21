@@ -295,16 +295,9 @@ class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        new AuditContext(
-                                TEST_CLIENT_ID,
-                                CLIENT_SESSION_ID,
-                                SESSION_ID,
-                                expectedCommonSubject,
-                                "wrong.email@gov.uk",
-                                IP_ADDRESS,
-                                AuditService.UNKNOWN,
-                                DI_PERSISTENT_SESSION_ID,
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT
+                                .withEmail("wrong.email@gov.uk")
+                                .withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
     }
