@@ -26,14 +26,13 @@ module "email_check_results_writer_role" {
 
 resource "aws_lambda_function" "email_check_results_writer_lambda" {
   #checkov:skip=CKV_AWS_116:No DLQ is required for this lambda, as it is SQS driven, and the SQS has a DLQ
-  function_name                  = "${var.environment}-email-check-writer"
-  role                           = module.email_check_results_writer_role.arn
-  handler                        = "uk.gov.di.authentication.utils.lambda.EmailCheckResultWriterHandler::handleRequest"
-  timeout                        = 30
-  memory_size                    = 512
-  runtime                        = "java17"
-  publish                        = true
-  reserved_concurrent_executions = 1000
+  function_name = "${var.environment}-email-check-writer"
+  role          = module.email_check_results_writer_role.arn
+  handler       = "uk.gov.di.authentication.utils.lambda.EmailCheckResultWriterHandler::handleRequest"
+  timeout       = 30
+  memory_size   = 512
+  runtime       = "java17"
+  publish       = true
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
