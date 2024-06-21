@@ -61,20 +61,26 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                     format(
                             "Request to TICF CRI timed out with timeout set to %d",
                             configurationService.getTicfCriServiceCallTimeout());
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceTimeout");
+            logAndSendMetricsForInterventionsError(
+                    errorDescription, "TicfCriServiceTimeout", false);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError");
+            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError", true);
         } catch (IOException e) {
             var errorDescription = format("Error occurred in the TICF CRI Handler: %s", e);
-            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError");
+            logAndSendMetricsForInterventionsError(errorDescription, "TicfCriServiceError", true);
         }
         return null;
     }
 
-    private void logAndSendMetricsForInterventionsError(String errorDescription, String metric) {
-        LOG.warn(errorDescription);
+    private void logAndSendMetricsForInterventionsError(
+            String errorDescription, String metric, Boolean raiseErrorLog) {
+        if (Boolean.TRUE.equals(raiseErrorLog)) {
+            LOG.error(errorDescription);
+        } else {
+            LOG.warn(errorDescription);
+        }
         cloudwatchMetricsService.incrementCounter(
                 metric, Map.of("Environment", configurationService.getEnvironment()));
     }
