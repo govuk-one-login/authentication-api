@@ -59,3 +59,5 @@ orch_doc_app_callback_enabled        = true
 orch_authentication_callback_enabled = true
 orch_logout_enabled                  = true
 auth_spot_response_disabled          = true
+orch_register_enabled                = true
+orch_storage_token_jwk_enabled       = true
