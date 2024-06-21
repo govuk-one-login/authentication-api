@@ -1,13 +1,14 @@
 package uk.gov.di.authentication.utils;
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import com.google.gson.Gson;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import software.amazon.awssdk.services.lambda.LambdaClient;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
@@ -45,6 +46,10 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
     private Instant fixedNow = LocalDateTime.of(2023, 6, 1, 11, 59, 59).toInstant(ZoneOffset.UTC);
 
+    public static class ElementWrapper {
+        Map<String, Object> detail;
+    }
+
     @BeforeEach
     void setup() {
         var configuration =
@@ -76,6 +81,11 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                     }
 
                     @Override
+                    public String getBulkEmailLoaderLambdaName() {
+                        return "name";
+                    }
+
+                    @Override
                     public boolean isBulkUserEmailEmailSendingEnabled() {
                         return true;
                     }
@@ -88,9 +98,21 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
         handler = new BulkUserEmailAudienceLoaderScheduledEventHandler(configuration);
         var lambdaInvokerService =
-                new LambdaInvokerService(configuration, null) {
-                    @Override
-                    public void invokeWithPayload(ScheduledEvent scheduledEvent) {
+                new LambdaInvokerService((LambdaClient) null) {
+                    public void invokeAsyncWithPayload(String jsonPayload, String lambdaName) {
+                        ScheduledEvent scheduledEvent = new ScheduledEvent();
+
+                        var gson = new Gson();
+                        ElementWrapper elementWrapper =
+                                gson.fromJson(jsonPayload, ElementWrapper.class);
+                        var details = elementWrapper.detail;
+                        int usersAdded =
+                                (int)
+                                        Double.parseDouble(
+                                                String.valueOf(
+                                                        details.get("globalUsersAddedCount")));
+                        details.replace("globalUsersAddedCount", usersAdded);
+                        scheduledEvent.setDetail(details);
                         handler.handleRequest(scheduledEvent, context);
                     }
                 };
@@ -102,7 +124,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     }
 
     @Test
-    void shouldLoadSingleUserFromUserProfile() throws Json.JsonException {
+    void shouldLoadSingleUserFromUserProfile() {
 
         userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
 

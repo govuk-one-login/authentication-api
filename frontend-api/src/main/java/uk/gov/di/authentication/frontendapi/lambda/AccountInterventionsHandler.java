@@ -3,8 +3,12 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.Gson;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
@@ -25,9 +29,11 @@ import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.lang.String.*;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -39,47 +45,32 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private final AccountInterventionsService accountInterventionsService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Gson gson;
+    private final LambdaInvokerService lambdaInvoker;
 
-    private NowClock clock;
+    private final NowClock clock;
 
     private static final Map<State, FrontendAuditableEvent>
             ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT =
-                    Map.of(
-                            new State(false, false, false, false),
-                            FrontendAuditableEvent.NO_INTERVENTION,
-                            new State(false, true, true, false),
-                            FrontendAuditableEvent.NO_INTERVENTION,
-                            new State(false, true, false, true),
-                            FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION,
-                            new State(false, true, true, true),
-                            FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION,
-                            new State(false, true, false, false),
-                            FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION,
-                            new State(true, false, false, false),
-                            FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION);
-
-    protected AccountInterventionsHandler(
-            ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientSessionService clientSessionService,
-            ClientService clientService,
-            AuthenticationService authenticationService,
-            AccountInterventionsService accountInterventionsService,
-            AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            NowClock clock) {
-        super(
-                AccountInterventionsRequest.class,
-                configurationService,
-                sessionService,
-                clientSessionService,
-                clientService,
-                authenticationService);
-        this.accountInterventionsService = accountInterventionsService;
-        this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.clock = clock;
-    }
+                    Map.ofEntries(
+                            Map.entry(
+                                    new State(false, false, false, false),
+                                    FrontendAuditableEvent.NO_INTERVENTION),
+                            Map.entry(
+                                    new State(false, true, true, false),
+                                    FrontendAuditableEvent.NO_INTERVENTION),
+                            Map.entry(
+                                    new State(false, true, false, true),
+                                    FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION),
+                            Map.entry(
+                                    new State(false, true, true, true),
+                                    FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION),
+                            Map.entry(
+                                    new State(false, true, false, false),
+                                    FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION),
+                            Map.entry(
+                                    new State(true, false, false, false),
+                                    FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION));
 
     public AccountInterventionsHandler() {
         this(ConfigurationService.getInstance());
@@ -91,15 +82,50 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.clock = new NowClock(Clock.systemUTC());
+        this.lambdaInvoker = new LambdaInvokerService(configurationService);
+        gson = new Gson();
+    }
+
+    protected AccountInterventionsHandler(
+            ConfigurationService configurationService,
+            SessionService sessionService,
+            ClientSessionService clientSessionService,
+            ClientService clientService,
+            AuthenticationService authenticationService,
+            AccountInterventionsService accountInterventionsService,
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NowClock clock,
+            LambdaInvokerService lambdaInvoker) {
+        super(
+                AccountInterventionsRequest.class,
+                configurationService,
+                sessionService,
+                clientSessionService,
+                clientService,
+                authenticationService);
+        this.accountInterventionsService = accountInterventionsService;
+        this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.clock = clock;
+        this.lambdaInvoker = lambdaInvoker;
+
+        gson = new Gson();
     }
 
     public AccountInterventionsHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
+            ConfigurationService configurationService,
+            RedisConnectionService redis,
+            LambdaInvokerService lambdaInvokerService) {
         super(AccountInterventionsRequest.class, configurationService, redis);
+
+        this.lambdaInvoker = lambdaInvokerService;
+
         accountInterventionsService = new AccountInterventionsService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.clock = new NowClock(Clock.systemUTC());
+        gson = new Gson();
     }
 
     @Override
@@ -131,24 +157,29 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         }
 
         var userProfile = authenticationService.getUserProfileByEmailMaybe(request.email());
+
         if (userProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
         }
 
+        String internalPairwiseId =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                userProfile.get(),
+                                configurationService.getInternalSectorUri(),
+                                authenticationService)
+                        .getValue();
+
         try {
-            var internalPairwiseId =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                    userProfile.get(),
-                                    configurationService.getInternalSectorUri(),
-                                    authenticationService)
-                            .getValue();
             var accountInterventionsInboundResponse =
                     accountInterventionsService.sendAccountInterventionsOutboundRequest(
                             internalPairwiseId);
 
             logAisResponse(accountInterventionsInboundResponse);
+
             submitAuditEvents(
                     accountInterventionsInboundResponse, input, userContext, persistentSessionID);
+
+            sendTICF(userContext, internalPairwiseId);
 
             LOG.info("Generating Account Interventions outbound response for frontend");
             var accountInterventionsResponse =
@@ -159,6 +190,39 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private void sendTICF(UserContext userContext, String internalPairwiseId) {
+        var vtr = new ArrayList<String>();
+
+        try {
+            vtr.add(
+                    userContext
+                            .getClientSession()
+                            .getEffectiveVectorOfTrust()
+                            .getCredentialTrustLevel()
+                            .getValue());
+        } catch (Exception e) {
+            LOG.warn("Error retrieving effective vector of trust: {}", e.getMessage(), e);
+        }
+
+        String journeyId = userContext.getClientSessionId();
+
+        var ticfRequest = TICFCRIRequest.basicTicfCriRequest(internalPairwiseId, vtr, journeyId);
+
+        String payload;
+
+        try {
+            payload = gson.toJson(ticfRequest);
+        } catch (JsonIOException | JsonSyntaxException | NullPointerException e) {
+            LOG.error("Error serializing ticfCriRequest {}", e.getMessage(), e);
+            return;
+        } catch (Exception e) {
+            LOG.error("Unexpected error serializing ticfCriRequest {}", e.getMessage(), e);
+            return;
+        }
+
+        lambdaInvoker.invokeAsyncWithPayload(payload, configurationService.getTicfCRILambdaName());
     }
 
     private AccountInterventionsResponse getAccountInterventionsResponse(
@@ -173,9 +237,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         incrementResultMetric(responseFromApi);
         if (!configurationService.accountInterventionsServiceActionEnabled()) {
             LOG.info(
-                    String.format(
-                            "Account interventions action disabled, discarding response %s from api and returning no interventions",
-                            responseFromApi));
+                    "Account interventions action disabled, discarding response {} from api and returning no interventions",
+                    responseFromApi);
             return noAccountInterventions();
         } else {
             return responseFromApi;
@@ -189,13 +252,13 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         "Environment",
                         configurationService.getEnvironment(),
                         "blocked",
-                        String.valueOf(response.blocked()),
+                        valueOf(response.blocked()),
                         "suspended",
-                        String.valueOf(response.temporarilySuspended()),
+                        valueOf(response.temporarilySuspended()),
                         "resetPassword",
-                        String.valueOf(response.passwordResetRequired()),
+                        valueOf(response.passwordResetRequired()),
                         "reproveIdentity",
-                        String.valueOf(response.reproveIdentity())));
+                        valueOf(response.reproveIdentity())));
     }
 
     private APIGatewayProxyResponseEvent handleErrorForAIS(
@@ -270,6 +333,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     private AccountInterventionsResponse noAccountInterventions() {
         return new AccountInterventionsResponse(
-                false, false, false, false, String.valueOf(clock.now().toInstant().toEpochMilli()));
+                false, false, false, false, valueOf(clock.now().toInstant().toEpochMilli()));
     }
 }
