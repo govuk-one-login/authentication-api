@@ -6,13 +6,13 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -102,25 +102,23 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     ValidationHelper.validateEmailAddress(emailAddress);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+            var auditContext =
+                    new AuditContext(
+                            userContext.getClientId(),
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            AuditService.UNKNOWN,
+                            emailAddress,
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            persistentSessionId,
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
             if (errorResponse.isPresent()) {
-                var restrictedSection =
-                        new AuditService.RestrictedSection(
-                                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        restrictedSection);
+                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -134,21 +132,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 LOG.info("User account is locked");
                 sessionService.save(userContext.getSession());
 
-                var restrictedSection =
-                        new AuditService.RestrictedSection(
-                                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
-                        restrictedSection,
+                        auditContext,
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
@@ -158,7 +144,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
-            var internalPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
@@ -169,7 +154,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
                                 .getValue();
-                internalPairwiseId =
+                var internalPairwiseId =
                         ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                         userProfile.get(),
                                         configurationService.getInternalSectorUri(),
@@ -188,29 +173,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userCredentials,
                                 userProfile.get().getPhoneNumber(),
                                 isPhoneNumberVerified);
+                auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
             auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    internalPairwiseId,
-                    emailAddress,
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    persistentSessionId,
-                    restrictedSection,
-                    pair("rpPairwiseId", rpPairwiseId));
+                    auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
             var lockoutInformation =
                     Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)

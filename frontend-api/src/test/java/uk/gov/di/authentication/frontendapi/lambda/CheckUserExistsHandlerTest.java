@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -182,15 +183,16 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                            CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            expectedInternalPairwiseId,
-                            EMAIL_ADDRESS,
-                            IP_ADDRESS,
-                            AuditService.UNKNOWN,
-                            DI_PERSISTENT_SESSION_ID,
-                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            new AuditContext(
+                                    CLIENT_ID,
+                                    CLIENT_SESSION_ID,
+                                    SESSION_ID,
+                                    expectedInternalPairwiseId,
+                                    EMAIL_ADDRESS,
+                                    IP_ADDRESS,
+                                    AuditService.UNKNOWN,
+                                    DI_PERSISTENT_SESSION_ID,
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
 
@@ -213,15 +215,16 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                            CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            expectedInternalPairwiseId,
-                            EMAIL_ADDRESS,
-                            IP_ADDRESS,
-                            AuditService.UNKNOWN,
-                            DI_PERSISTENT_SESSION_ID,
-                            AuditService.RestrictedSection.empty,
+                            new AuditContext(
+                                    CLIENT_ID,
+                                    CLIENT_SESSION_ID,
+                                    SESSION_ID,
+                                    expectedInternalPairwiseId,
+                                    EMAIL_ADDRESS,
+                                    IP_ADDRESS,
+                                    AuditService.UNKNOWN,
+                                    DI_PERSISTENT_SESSION_ID,
+                                    Optional.empty()),
                             AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
         }
 
@@ -286,15 +289,16 @@ class CheckUserExistsHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             ACCOUNT_TEMPORARILY_LOCKED,
-                            CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            AuditService.UNKNOWN,
-                            EMAIL_ADDRESS,
-                            IP_ADDRESS,
-                            AuditService.UNKNOWN,
-                            DI_PERSISTENT_SESSION_ID,
-                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            new AuditContext(
+                                    CLIENT_ID,
+                                    CLIENT_SESSION_ID,
+                                    SESSION_ID,
+                                    AuditService.UNKNOWN,
+                                    EMAIL_ADDRESS,
+                                    IP_ADDRESS,
+                                    AuditService.UNKNOWN,
+                                    DI_PERSISTENT_SESSION_ID,
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
         }
@@ -316,15 +320,16 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL_ADDRESS,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        new AuditContext(
+                                CLIENT_ID,
+                                CLIENT_SESSION_ID,
+                                SESSION_ID,
+                                AuditService.UNKNOWN,
+                                EMAIL_ADDRESS,
+                                IP_ADDRESS,
+                                AuditService.UNKNOWN,
+                                DI_PERSISTENT_SESSION_ID,
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
 
@@ -362,15 +367,16 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        "joe.bloggs",
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                SESSION_ID,
+                                AuditService.UNKNOWN,
+                                "joe.bloggs",
+                                IP_ADDRESS,
+                                AuditService.UNKNOWN,
+                                DI_PERSISTENT_SESSION_ID,
+                                Optional.of(ENCODED_DEVICE_DETAILS)));
     }
 
     private void usingValidSession() {
