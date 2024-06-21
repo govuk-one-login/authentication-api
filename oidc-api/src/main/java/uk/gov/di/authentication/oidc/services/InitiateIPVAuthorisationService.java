@@ -147,7 +147,7 @@ public class InitiateIPVAuthorisationService {
             LOG.info("Adding storageAccessToken claim to IPV claims request");
             AccessToken storageToken = tokenService.generateStorageToken(internalPairwiseSubject);
 
-            claimsSetRequest.add(
+            return claimsSetRequest.add(
                     new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
                             .withValues(List.of(storageToken.getValue())));
         }
