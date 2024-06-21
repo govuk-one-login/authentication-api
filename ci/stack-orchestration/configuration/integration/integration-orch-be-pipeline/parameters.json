@@ -1,15 +1,11 @@
 [
   {
     "ParameterKey": "AccessCrossAccountSQS",
-    "ParameterValue": "758531536632"
+    "ParameterValue": "761723964695"
   },
   {
     "ParameterKey": "AccessDynamoDBAccounts",
-    "ParameterValue": "758531536632"
-  },
-  {
-    "ParameterKey": "AllowedAccounts",
-    "ParameterValue": "533266965190,058264132019"
+    "ParameterValue": "761723964695"
   },
   {
     "ParameterKey": "AllowedServiceOne",
@@ -33,11 +29,11 @@
   },
   {
     "ParameterKey": "ArtifactSourceBucketArn",
-    "ParameterValue": "arn:aws:s3:::build-orch-be-pipeline-artifactpromotionbucket-hyjm3nfhx7tg "
+    "ParameterValue": "arn:aws:s3:::staging-orch-be-pipeline-artifactpromotionbucket-nxu71x43fqgd"
   },
   {
     "ParameterKey": "ArtifactSourceBucketEventTriggerRoleArn",
-    "ParameterValue": "arn:aws:iam::767397776536:role/PL-build-orch-be-pipeline-PromoTrigRole-069c01797277"
+    "ParameterValue": "arn:aws:iam::590183975515:role/PL-staging-orch-be-pipeline-PromoTrigRole-02b3dd38ed99"
   },
   {
     "ParameterKey": "CustomKmsKeyArns",
@@ -45,11 +41,11 @@
   },
   {
     "ParameterKey": "Environment",
-    "ParameterValue": "staging"
+    "ParameterValue": "integration"
   },
   {
     "ParameterKey": "IncludePromotion",
-    "ParameterValue": "Yes"
+    "ParameterValue": "No"
   },
   {
     "ParameterKey": "ProgrammaticPermissionsBoundary",
@@ -61,7 +57,7 @@
   },
   {
     "ParameterKey": "SAMStackName",
-    "ParameterValue": "staging-orch-be-deploy"
+    "ParameterValue": "int-orch-be-deploy"
   },
   {
     "ParameterKey": "SigningProfileArn",
