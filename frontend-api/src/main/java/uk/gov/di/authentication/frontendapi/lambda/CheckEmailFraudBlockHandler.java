@@ -90,7 +90,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             var status =
                     emailCheckResult
                             .map(EmailCheckResultStore::getStatus)
-                            .orElse(EmailCheckResultStatus.PENDING);
+                            .orElseGet(() -> EmailCheckResultStatus.PENDING);
 
             var checkEmailFraudBlockResponse = createResponse(request.getEmail(), status);
 
