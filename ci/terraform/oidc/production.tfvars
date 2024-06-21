@@ -56,3 +56,4 @@ orch_userinfo_enabled                = true
 orch_ipv_callback_enabled            = true
 orch_doc_app_callback_enabled        = true
 orch_authentication_callback_enabled = true
+orch_logout_enabled                  = true
