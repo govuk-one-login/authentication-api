@@ -1,6 +1,6 @@
 stub_rp_clients = [
   {
-    client_name           = "relying-party-stub-sandpit"
+    client_name           = "relying-party-stub-dev"
     sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
@@ -21,7 +21,7 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name           = "relying-party-stub-sandpit-app"
+    client_name           = "relying-party-stub-dev-app"
     sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
