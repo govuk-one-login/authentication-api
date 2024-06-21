@@ -36,8 +36,6 @@ Conditions:
     !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
   SendStorageToken:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
-  SpotResponseEventMappingDisabled:
-    !Equals [ production, !Ref Environment ]
   EnableProvisionedConcurrency:
     !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build], !Equals [!Ref Environment, integration], !Equals [!Ref Environment, production]]
 
@@ -2513,7 +2511,7 @@ Resources:
     Type: AWS::Lambda::EventSourceMapping
     Condition: IpvExists
     Properties:
-      Enabled: !If [ SpotResponseEventMappingDisabled, false, true ]
+      Enabled: true
       EventSourceArn: !Sub
         - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
         - SecretArn: !Ref SpotResponseQueueArnSecret
