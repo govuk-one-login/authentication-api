@@ -476,8 +476,4 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
-
-    public boolean isTxmaAuditEncodedEnabled() {
-        return getFlagOrFalse("TXMA_AUDIT_ENCODED_ENABLED");
-    }
 }

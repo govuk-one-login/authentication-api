@@ -43,7 +43,6 @@ module "processing-identity" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
-    TXMA_AUDIT_ENCODED_ENABLED                  = var.txma_audit_encoded_enabled
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 

@@ -54,8 +54,7 @@ authorize_protected_subnet_enabled = true
 
 support_email_check_enabled = true
 
-txma_audit_encoded_enabled = true
-contra_state_bucket        = "digital-identity-dev-tfstate"
+contra_state_bucket = "digital-identity-dev-tfstate"
 
 orch_openid_configuration_enabled    = true
 orch_doc_app_callback_enabled        = true

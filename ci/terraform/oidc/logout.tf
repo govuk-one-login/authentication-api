@@ -40,7 +40,6 @@ module "logout" {
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     OIDC_API_BASE_URL                    = local.api_base_url
     FRONTEND_BASE_URL                    = "https://${local.frontend_fqdn}/"
-    TXMA_AUDIT_ENCODED_ENABLED           = var.txma_audit_encoded_enabled
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"
 
