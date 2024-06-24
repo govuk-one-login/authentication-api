@@ -157,16 +157,9 @@ class LoginHandlerTest {
                     Optional.empty());
 
     private final AuditContext auditContextWithoutUserInfo =
-            new AuditContext(
-                    CLIENT_ID.getValue(),
-                    CLIENT_SESSION_ID,
-                    SESSION_ID,
-                    AuditService.UNKNOWN,
-                    EMAIL,
-                    IP_ADDRESS,
-                    AuditService.UNKNOWN,
-                    DI_PERSISTENT_SESSION_ID,
-                    Optional.empty());
+            auditContextWithAllUserInfo
+                    .withSubjectId(AuditService.UNKNOWN)
+                    .withPhoneNumber(AuditService.UNKNOWN);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -219,18 +212,6 @@ class LoginHandlerTest {
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        AuditContext expectedAuditContext =
-                new AuditContext(
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        Optional.of(ENCODED_DEVICE_DETAILS));
-
         // Act
         var result = handler.handleRequest(event, context);
 
@@ -249,7 +230,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        expectedAuditContext,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verify(cloudwatchMetricsService)
