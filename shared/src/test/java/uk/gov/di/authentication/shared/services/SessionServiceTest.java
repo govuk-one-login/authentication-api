@@ -148,7 +148,7 @@ class SessionServiceTest {
         var session = new Session("session-id").addClientSession("client-session-id");
 
         sessionService.save(session);
-        sessionService.deleteSessionFromRedis(session.getSessionId());
+        sessionService.deleteSession(session.getSessionId());
 
         verify(redis).deleteValue("session-id");
     }

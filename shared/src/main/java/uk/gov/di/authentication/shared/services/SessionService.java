@@ -85,7 +85,7 @@ public class SessionService {
                 .flatMap(
                         id -> {
                             try {
-                                return readSessionFromRedis(id);
+                                return readSession(id);
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
@@ -95,17 +95,17 @@ public class SessionService {
     public Optional<Session> getSessionFromSessionCookie(Map<String, String> headers) {
         try {
             Optional<CookieHelper.SessionCookieIds> ids = cookieHelper.parseSessionCookie(headers);
-            return ids.flatMap(s -> readSessionFromRedis(s.getSessionId()));
+            return ids.flatMap(s -> readSession(s.getSessionId()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void deleteSessionFromRedis(String sessionId) {
+    void deleteSession(String sessionId) {
         redisConnectionService.deleteValue(sessionId);
     }
 
-    public Optional<Session> readSessionFromRedis(String sessionId) {
+    private Optional<Session> readSession(String sessionId) {
         String serializedSession = redisConnectionService.getValue(sessionId);
         return Optional.ofNullable(serializedSession)
                 .map(s -> OBJECT_MAPPER.readValueUnchecked(s, Session.class));
