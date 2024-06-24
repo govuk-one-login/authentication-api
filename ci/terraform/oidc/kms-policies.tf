@@ -255,3 +255,28 @@ resource "aws_iam_policy" "mfa_reset_jar_kms_signing_policy" {
 
   policy = data.aws_iam_policy_document.mfa_reset_jar_signing_policy_document.json
 }
+
+
+### MFA reset JAR signing key access
+
+data "aws_iam_policy_document" "mfa_reset_jar_jwk_document" {
+  statement {
+    sid    = "AllowAccessToJarSigningKmsPublicKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      aws_kms_key.mfa_reset_jar_signing_key_ecc.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "mfa_reset_jar_kms_signing_jwk_policy" {
+  name_prefix = "kms-mfa-reset-jar-signing-jwk-policy"
+  path        = "/${var.environment}/mfa-reset-jar-jwk-policy/"
+  description = "IAM policy for a lambda to publish the JWK for the MFA reset JAR signing key"
+
+  policy = data.aws_iam_policy_document.mfa_reset_jar_jwk_document.json
+}
