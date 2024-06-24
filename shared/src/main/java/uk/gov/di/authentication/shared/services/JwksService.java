@@ -66,6 +66,11 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getMfaResetStorageTokenSigningKeyAlias());
     }
 
+    public JWK getPublicMfaResetJarJwkWithOpaqueId() {
+        LOG.info("Retrieving MFA Reset JAR signing public key");
+        return getPublicJWKWithKeyId(configurationService.getMfaResetJarSigningKeyAlias());
+    }
+
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
         JWKSource<SecurityContext> jwkSource =
