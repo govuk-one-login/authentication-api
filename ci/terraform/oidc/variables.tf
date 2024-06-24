@@ -510,12 +510,6 @@ variable "orch_frontend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "orch_doc_app_callback_enabled" {
-  description = "Flag to enable routing doc app callback traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "auth_spot_response_disabled" {
   description = "Flag to disable routing spot response traffic to the authentication account"
   type        = bool

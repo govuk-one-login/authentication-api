@@ -57,7 +57,6 @@ support_email_check_enabled = true
 txma_audit_encoded_enabled = true
 contra_state_bucket        = "digital-identity-dev-tfstate"
 
-orch_doc_app_callback_enabled        = true
 orch_ipv_callback_enabled            = true
 orch_authentication_callback_enabled = true
 auth_spot_response_disabled          = true

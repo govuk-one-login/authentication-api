@@ -53,6 +53,5 @@ enforce_cloudfront          = true
 txma_audit_encoded_enabled  = true
 
 orch_authentication_callback_enabled = true
-orch_doc_app_callback_enabled        = true
 orch_ipv_callback_enabled            = true
 auth_spot_response_disabled          = true

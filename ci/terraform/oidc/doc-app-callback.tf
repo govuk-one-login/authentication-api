@@ -20,7 +20,7 @@ module "doc_app_callback_role" {
 module "doc-app-callback" {
   source          = "../modules/endpoint-module"
   endpoint_name   = "doc-app-callback"
-  path_part       = var.orch_doc_app_callback_enabled ? "doc-app-callback-auth" : "doc-app-callback"
+  path_part       = "doc-app-callback-auth"
   endpoint_method = ["GET"]
   environment     = var.environment
 
