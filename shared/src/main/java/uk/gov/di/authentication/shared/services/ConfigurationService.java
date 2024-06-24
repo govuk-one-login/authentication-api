@@ -499,6 +499,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv("ACCOUNT_INTERVENTION_SERVICE_URI"));
     }
 
+    public URI getTicfCriServiceURI() {
+        return URI.create(System.getenv("TICF_CRI_SERVICE_URI"));
+    }
+
     public boolean abortOnAccountInterventionsErrorResponse() {
         return System.getenv()
                 .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", "false")
@@ -520,6 +524,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public long getAccountInterventionServiceCallTimeout() {
         return Long.parseLong(
                 System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
+    }
+
+    public long getTicfCriServiceCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("TICF_CRI_SERVICE_CALL_TIMEOUT", "2000"));
     }
 
     public String getAccountInterventionsErrorMetricName() {

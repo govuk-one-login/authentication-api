@@ -4,9 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.ticf.cri.stub.lambda.entity.TICFCRIRequest;
 import uk.gov.di.authentication.ticf.cri.stub.lambda.entity.TICFCRIStubResponse;
 
 import java.util.List;
