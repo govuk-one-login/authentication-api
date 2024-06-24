@@ -203,9 +203,3 @@ variable "identity_credentials_cross_account_access_enabled" {
   type        = bool
   description = "Whether the service should allow cross-account access to the identity credentials table"
 }
-
-variable "user_profile_table_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the user profile table"
-}
