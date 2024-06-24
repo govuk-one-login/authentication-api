@@ -233,7 +233,7 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.doc_app_cross_account_access_enabled ? aws_kms_key.doc_app_credential_table_encryption_key.arn : null
+    kms_key_arn = aws_kms_key.doc_app_credential_table_encryption_key.arn
   }
 
   lifecycle {
@@ -249,7 +249,6 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
 }
 
 resource "aws_dynamodb_resource_policy" "doc_app_credential_table_policy" {
-  count        = var.doc_app_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.doc_app_credential_table.arn
   policy       = data.aws_iam_policy_document.cross_account_doc_app_credential_table_policy.json
 }
