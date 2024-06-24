@@ -588,12 +588,6 @@ variable "orch_userinfo_enabled" {
   default     = false
 }
 
-variable "orch_storage_token_jwk_enabled" {
-  description = "Flag to enable routing storage token jwk traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool
