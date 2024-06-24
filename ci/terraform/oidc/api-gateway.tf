@@ -157,7 +157,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_doc_app_callback_enabled,
       var.orch_token_enabled,
-      var.orch_authorisation_enabled,
       var.orch_logout_enabled,
       var.orch_ipv_callback_enabled,
       var.orch_authentication_callback_enabled,
@@ -1056,7 +1055,6 @@ resource "aws_api_gateway_integration" "orch_jwks_integration" {
 }
 
 resource "aws_api_gateway_resource" "orch_authorisation_resource" {
-  count       = var.orch_authorisation_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "authorize"
@@ -1066,9 +1064,9 @@ resource "aws_api_gateway_resource" "orch_authorisation_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_authorisation_method" {
-  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+  for_each    = toset(["GET", "POST"])
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
+  resource_id = aws_api_gateway_resource.orch_authorisation_resource.id
   http_method = each.key
 
   depends_on = [
@@ -1100,9 +1098,9 @@ resource "aws_api_gateway_method" "orch_auth_code_method" {
 }
 
 resource "aws_api_gateway_integration" "orch_authorisation_integration" {
-  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+  for_each    = toset(["GET", "POST"])
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
+  resource_id = aws_api_gateway_resource.orch_authorisation_resource.id
   http_method = aws_api_gateway_method.orch_authorisation_method[each.key].http_method
   depends_on = [
     aws_api_gateway_resource.orch_authorisation_resource

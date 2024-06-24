@@ -59,7 +59,6 @@ contra_state_bucket        = "digital-identity-dev-tfstate"
 
 orch_doc_app_callback_enabled        = true
 orch_token_enabled                   = true
-orch_authorisation_enabled           = true
 orch_logout_enabled                  = true
 orch_ipv_callback_enabled            = true
 orch_authentication_callback_enabled = true

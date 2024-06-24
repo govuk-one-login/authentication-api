@@ -26,7 +26,7 @@ module "authorize" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "authorize"
-  path_part       = var.orch_authorisation_enabled ? "authorize-auth" : "authorize"
+  path_part       = "authorize-auth"
   endpoint_method = ["GET", "POST"]
   environment     = var.environment
 
