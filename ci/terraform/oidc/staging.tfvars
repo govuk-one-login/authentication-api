@@ -37,4 +37,3 @@ orch_authentication_callback_enabled = true
 auth_spot_response_disabled          = true
 orch_auth_code_enabled               = true
 orch_userinfo_enabled                = true
-orch_trustmark_enabled               = true
