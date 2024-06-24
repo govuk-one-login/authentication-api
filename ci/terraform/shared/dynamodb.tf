@@ -170,7 +170,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.client_registry_table_cross_account_access_enabled ? aws_kms_key.client_registry_table_encryption_key.arn : null
+    kms_key_arn = aws_kms_key.client_registry_table_encryption_key.arn
   }
 
   lifecycle {
@@ -544,7 +544,6 @@ resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_
 }
 
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
-  count        = var.client_registry_table_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.client_registry_table.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
