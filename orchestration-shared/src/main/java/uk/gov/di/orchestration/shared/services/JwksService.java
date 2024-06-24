@@ -66,7 +66,7 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getStorageTokenSigningKeyAlias());
     }
 
-    public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
+    public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) throws KeySourceException {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
         JWKSource<SecurityContext> jwkSource =
                 JWKSourceBuilder.create(url)
@@ -75,15 +75,11 @@ public class JwksService {
                         .cache(false)
                         .rateLimited(false)
                         .build();
-        try {
-            LOG.info("Retrieving JWKSet with URL: {}", url);
-            return jwkSource.get(selector, null).stream()
-                    .findFirst()
-                    .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
-        } catch (KeySourceException e) {
-            LOG.error("Unable to load JWKSet", e);
-            throw new RuntimeException(e);
-        }
+
+        LOG.info("Retrieving JWKSet with URL: {}", url);
+        return jwkSource.get(selector, null).stream()
+                .findFirst()
+                .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {

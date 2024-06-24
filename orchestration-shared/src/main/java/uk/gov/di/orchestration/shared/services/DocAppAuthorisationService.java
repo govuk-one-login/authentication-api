@@ -7,6 +7,7 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
@@ -244,6 +245,9 @@ public class DocAppAuthorisationService {
                             configurationService.getDocAppJwksURI().toURL(),
                             configurationService.getDocAppEncryptionKeyID());
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
+        } catch (KeySourceException e) {
+            LOG.error("Could not find key with provided key ID", e);
+            throw new RuntimeException(e);
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new DocAppAuthorisationServiceException(e);
