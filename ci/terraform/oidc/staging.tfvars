@@ -27,7 +27,6 @@ enforce_cloudfront          = true
 
 orch_doc_app_callback_enabled        = true
 orch_token_enabled                   = true
-orch_jwks_enabled                    = true
 orch_authorisation_enabled           = true
 orch_logout_enabled                  = true
 orch_ipv_callback_enabled            = true
