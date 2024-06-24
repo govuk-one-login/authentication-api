@@ -210,13 +210,6 @@ variable "identity_credentials_cross_account_access_enabled" {
   description = "Whether the service should allow cross-account access to the identity credentials table"
 }
 
-variable "kms_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by the orchestration account to kms"
-}
-
-
 variable "user_profile_table_cross_account_access_enabled" {
   default     = false
   type        = bool

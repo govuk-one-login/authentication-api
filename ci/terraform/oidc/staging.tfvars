@@ -16,7 +16,6 @@ incorrect_password_lockout_count_ttl = 7200
 support_account_creation_count_ttl   = true
 
 orch_account_id                                 = "590183975515"
-kms_cross_account_access_enabled                = true
 cmk_for_back_channel_logout_enabled             = true
 spot_request_queue_cross_account_access_enabled = true
 txma_audit_encoded_enabled                      = true
