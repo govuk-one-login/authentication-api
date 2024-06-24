@@ -516,12 +516,6 @@ variable "orch_doc_app_callback_enabled" {
   default     = false
 }
 
-variable "orch_token_enabled" {
-  description = "Flag to enable routing token traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "auth_spot_response_disabled" {
   description = "Flag to disable routing spot response traffic to the authentication account"
   type        = bool

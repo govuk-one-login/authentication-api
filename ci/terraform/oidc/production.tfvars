@@ -44,7 +44,6 @@ oidc_cloudfront_dns_enabled = true
 txma_audit_encoded_enabled  = true
 
 orch_auth_code_enabled               = true
-orch_token_enabled                   = true
 orch_userinfo_enabled                = true
 orch_ipv_callback_enabled            = true
 orch_doc_app_callback_enabled        = true

@@ -46,7 +46,7 @@ module "token" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "token"
-  path_part       = var.orch_token_enabled ? "token-auth" : "token"
+  path_part       = "token-auth"
   endpoint_method = ["POST"]
   environment     = var.environment
 

@@ -156,7 +156,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       jsonencode(aws_api_gateway_integration.orch_frontend_nlb_integration),
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_doc_app_callback_enabled,
-      var.orch_token_enabled,
       var.orch_ipv_callback_enabled,
       var.orch_authentication_callback_enabled,
       var.orch_auth_code_enabled,
@@ -986,7 +985,6 @@ resource "aws_api_gateway_integration" "orch_doc_app_callback_integration" {
 }
 
 resource "aws_api_gateway_resource" "orch_token_resource" {
-  count       = var.orch_token_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "token"
@@ -996,9 +994,8 @@ resource "aws_api_gateway_resource" "orch_token_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_token_method" {
-  count       = var.orch_token_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_token_resource[0].id
+  resource_id = aws_api_gateway_resource.orch_token_resource.id
   http_method = "POST"
 
   depends_on = [
@@ -1008,10 +1005,9 @@ resource "aws_api_gateway_method" "orch_token_method" {
 }
 
 resource "aws_api_gateway_integration" "orch_token_integration" {
-  count       = var.orch_token_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_token_resource[0].id
-  http_method = aws_api_gateway_method.orch_token_method[0].http_method
+  resource_id = aws_api_gateway_resource.orch_token_resource.id
+  http_method = aws_api_gateway_method.orch_token_method.http_method
   depends_on = [
     aws_api_gateway_resource.orch_token_resource
   ]
