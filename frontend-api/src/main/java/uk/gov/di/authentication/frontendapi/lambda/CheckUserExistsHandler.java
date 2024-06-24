@@ -50,7 +50,27 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
+    private static RedisConnectionService redis;
 
+    static {
+        if (System.getProperty("TEST") == null) {
+            redis = new RedisConnectionService(ConfigurationService.getInstance());
+        }
+    }
+
+    // Function Init
+    public CheckUserExistsHandler() {
+        this(ConfigurationService.getInstance(), redis);
+    }
+
+    public CheckUserExistsHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(CheckUserExistsRequest.class, configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    }
+
+    // Test Only Constructors
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
@@ -68,10 +88,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 authenticationService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
-    }
-
-    public CheckUserExistsHandler() {
-        this(ConfigurationService.getInstance());
     }
 
     public CheckUserExistsHandler(ConfigurationService configurationService) {
