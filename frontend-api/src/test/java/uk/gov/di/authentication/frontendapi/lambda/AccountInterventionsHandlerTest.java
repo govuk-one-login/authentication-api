@@ -291,7 +291,7 @@ class AccountInterventionsHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new AccountInterventionsRequest("test"), userContext);
+                        event, context, new AccountInterventionsRequest("test", null), userContext);
         assertThat(result, hasStatus(200));
 
         assertEquals(
@@ -350,7 +350,7 @@ class AccountInterventionsHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new AccountInterventionsRequest("test"), userContext);
+                        event, context, new AccountInterventionsRequest("test", null), userContext);
 
         assertThat(result, hasStatus(200));
 

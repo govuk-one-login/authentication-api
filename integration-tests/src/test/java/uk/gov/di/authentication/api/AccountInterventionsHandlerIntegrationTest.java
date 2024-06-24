@@ -8,8 +8,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
@@ -83,7 +84,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
             throws Json.JsonException {
         var response =
                 makeRequest(
-                        Optional.of(new AccountInterventionsRequest(emailAddress)),
+                        Optional.of(format("{\"email\":\"%s\"}", emailAddress)),
                         getHeaders(),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -94,11 +95,23 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                 response,
                 hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
-                String.format(
+                format(
                         "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false,\"reproveIdentity\":false,\"appliedAt\":\"%s\"}",
                         isUserBlocked, APPLIED_AT_TIMESTAMP),
                 response.getBody());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(expectedAuditEvent));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldReturnSuccessful200ResponseWhenAuthenticatedFieldIsSent(boolean authenticated)
+            throws Json.JsonException {
+        var body =
+                format(
+                        "{\"email\":\"%s\",\"authenticated\":%b}",
+                        TEST_EMAIL_ADDRESS, authenticated);
+        var response = makeRequest(Optional.of(body), getHeaders(), Map.of());
+        assertThat(response, hasStatus(200));
     }
 
     private Map<String, String> getHeaders() throws Json.JsonException {
