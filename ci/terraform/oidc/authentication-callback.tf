@@ -25,7 +25,7 @@ module "authentication_callback" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "orchestration-redirect"
-  path_part       = var.orch_authentication_callback_enabled ? "orchestration-redirect-auth" : "orchestration-redirect"
+  path_part       = "orchestration-redirect-auth"
   endpoint_method = ["GET"]
   environment     = var.environment
 

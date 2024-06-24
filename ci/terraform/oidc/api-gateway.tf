@@ -155,7 +155,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.use_robots_txt ? aws_api_gateway_integration_response.robots_txt_integration_response[0].response_templates : null,
       jsonencode(aws_api_gateway_integration.orch_frontend_nlb_integration),
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
-      var.orch_authentication_callback_enabled,
     ]))
   }
 
@@ -1229,7 +1228,6 @@ resource "aws_api_gateway_integration" "orch_update_client_integration" {
 }
 
 resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {
-  count       = var.orch_authentication_callback_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "orchestration-redirect"
@@ -1239,9 +1237,8 @@ resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_authentication_callback_method" {
-  count       = var.orch_authentication_callback_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource[0].id
+  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource.id
   http_method = "GET"
 
   depends_on = [
@@ -1251,10 +1248,9 @@ resource "aws_api_gateway_method" "orch_authentication_callback_method" {
 }
 
 resource "aws_api_gateway_integration" "orch_authentication_callback_integration" {
-  count       = var.orch_authentication_callback_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource[0].id
-  http_method = aws_api_gateway_method.orch_authentication_callback_method[0].http_method
+  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource.id
+  http_method = aws_api_gateway_method.orch_authentication_callback_method.http_method
   depends_on = [
     aws_api_gateway_resource.orch_authentication_callback_resource
   ]

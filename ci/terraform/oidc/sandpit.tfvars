@@ -57,8 +57,6 @@ support_email_check_enabled = true
 txma_audit_encoded_enabled = true
 contra_state_bucket        = "digital-identity-dev-tfstate"
 
-orch_authentication_callback_enabled = true
-
 orch_account_id                     = "816047645251"
 cmk_for_back_channel_logout_enabled = true
 

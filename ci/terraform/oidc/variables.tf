@@ -510,12 +510,6 @@ variable "orch_frontend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "orch_authentication_callback_enabled" {
-  description = "Flag to enable routing authentication callback traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool
