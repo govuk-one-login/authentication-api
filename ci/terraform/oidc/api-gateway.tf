@@ -158,7 +158,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_doc_app_callback_enabled,
       var.orch_ipv_callback_enabled,
       var.orch_authentication_callback_enabled,
-      var.orch_auth_code_enabled,
     ]))
   }
 
@@ -1070,7 +1069,6 @@ resource "aws_api_gateway_method" "orch_authorisation_method" {
 }
 
 resource "aws_api_gateway_resource" "orch_auth_code_resource" {
-  count       = var.orch_auth_code_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "auth-code"
@@ -1080,9 +1078,8 @@ resource "aws_api_gateway_resource" "orch_auth_code_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_auth_code_method" {
-  count       = var.orch_auth_code_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_auth_code_resource[0].id
+  resource_id = aws_api_gateway_resource.orch_auth_code_resource.id
   http_method = "GET"
 
   depends_on = [
@@ -1275,10 +1272,9 @@ resource "aws_api_gateway_integration" "orch_authentication_callback_integration
 }
 
 resource "aws_api_gateway_integration" "orch_auth_code_integration" {
-  count       = var.orch_auth_code_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_auth_code_resource[0].id
-  http_method = aws_api_gateway_method.orch_auth_code_method[0].http_method
+  resource_id = aws_api_gateway_resource.orch_auth_code_resource.id
+  http_method = aws_api_gateway_method.orch_auth_code_method.http_method
   depends_on = [
     aws_api_gateway_resource.orch_auth_code_resource
   ]

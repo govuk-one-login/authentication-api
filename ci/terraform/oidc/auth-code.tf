@@ -21,7 +21,7 @@ module "auth-code" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "auth-code"
-  path_part       = var.orch_auth_code_enabled ? "auth-code-auth" : "auth-code"
+  path_part       = "auth-code-auth"
   endpoint_method = ["GET"]
 
   handler_environment_variables = {

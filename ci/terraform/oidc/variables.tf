@@ -534,12 +534,6 @@ variable "orch_authentication_callback_enabled" {
   default     = false
 }
 
-variable "orch_auth_code_enabled" {
-  description = "Flag to enable routing auth code traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool
