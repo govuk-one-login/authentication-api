@@ -26,4 +26,3 @@ oidc_cloudfront_dns_enabled = true
 enforce_cloudfront          = true
 
 orch_authentication_callback_enabled = true
-auth_spot_response_disabled          = true
