@@ -654,12 +654,6 @@ variable "cmk_for_back_channel_logout_enabled" {
   description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
 }
 
-variable "spot_request_queue_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by orchestration to the SPoT request queue"
-}
-
 variable "oidc_origin_domain_enabled" {
   type        = bool
   default     = false

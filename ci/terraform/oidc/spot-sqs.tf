@@ -69,32 +69,9 @@ data "aws_iam_policy_document" "cross_account_spot_request_queue_policy_document
   }
 }
 
-data "aws_iam_policy_document" "spot_request_queue_policy_document" {
-  statement {
-    sid    = "AllowSpotAccountToReceive"
-    effect = "Allow"
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
-    }
-
-    actions = [
-      "sqs:ReceiveMessage",
-      "sqs:ChangeMessageVisibility",
-      "sqs:DeleteMessage",
-      "sqs:GetQueueAttributes",
-    ]
-
-    resources = [
-      aws_sqs_queue.spot_request_queue.arn
-    ]
-  }
-}
-
 resource "aws_sqs_queue_policy" "spot_request_queue_policy" {
   queue_url = aws_sqs_queue.spot_request_queue.id
-  policy    = var.spot_request_queue_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_spot_request_queue_policy_document.json : data.aws_iam_policy_document.spot_request_queue_policy_document.json
+  policy    = data.aws_iam_policy_document.cross_account_spot_request_queue_policy_document.json
 }
 
 data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
@@ -122,39 +99,11 @@ data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
 
 resource "aws_sqs_queue_policy" "spot_request_dlq_queue_policy" {
   depends_on = [
-    data.aws_iam_policy_document.spot_request_queue_policy_document,
+    data.aws_iam_policy_document.cross_account_spot_request_kms_key_policy,
   ]
 
   queue_url = aws_sqs_queue.spot_request_dead_letter_queue.id
   policy    = data.aws_iam_policy_document.spot_request_dlq_queue_policy_document.json
-}
-
-data "aws_iam_policy_document" "spot_request_kms_key_policy" {
-  policy_id = "key-policy-ssm"
-  statement {
-    sid = "Enable IAM User Permissions for root user"
-    actions = [
-      "kms:*",
-    ]
-    effect = "Allow"
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-    resources = ["*"]
-  }
-  statement {
-    sid = "Give SPOT permissions to SQS KMS key"
-    actions = [
-      "kms:Decrypt",
-    ]
-    effect = "Allow"
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
-    }
-    resources = ["*"]
-  }
 }
 
 data "aws_iam_policy_document" "cross_account_spot_request_kms_key_policy" {
@@ -206,7 +155,7 @@ data "aws_iam_policy_document" "cross_account_spot_request_kms_key_policy" {
 resource "aws_kms_key" "spot_request_sqs_key" {
   description             = "KMS key for SPOT request SQS queue encryption"
   deletion_window_in_days = 30
-  policy                  = var.spot_request_queue_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_spot_request_kms_key_policy.json : data.aws_iam_policy_document.spot_request_kms_key_policy.json
+  policy                  = data.aws_iam_policy_document.cross_account_spot_request_kms_key_policy.json
 
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"

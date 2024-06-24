@@ -71,9 +71,8 @@ orch_auth_code_enabled               = true
 orch_userinfo_enabled                = true
 orch_storage_token_jwk_enabled       = true
 
-orch_account_id                                 = "816047645251"
-cmk_for_back_channel_logout_enabled             = true
-spot_request_queue_cross_account_access_enabled = true
+orch_account_id                     = "816047645251"
+cmk_for_back_channel_logout_enabled = true
 
 oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
