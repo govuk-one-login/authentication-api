@@ -11,6 +11,7 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -51,6 +53,7 @@ class PhoneNumberCodeProcessorTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final UserProfile userProfile = mock(UserProfile.class);
+    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -369,6 +372,23 @@ class PhoneNumberCodeProcessorTest {
                         JourneyType.REGISTRATION,
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
+
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+
+        verifyNoInteractions(sqsClient);
+    }
+
+    @ParameterizedTest
+    @EnumSource(names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void shouldNotSendPhoneNumberRequestToSqsClientIfTestClientAndTestUser(
+            JourneyType journeyType) {
+        when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, VALID_CODE, journeyType, UK_NOTIFY_MOBILE_TEST_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
+        when(clientRegistry.isSmokeTest()).thenReturn(true);
+        when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 

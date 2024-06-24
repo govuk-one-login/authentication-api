@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -144,7 +145,13 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             String phoneNumber =
                     PhoneNumberHelper.formatPhoneNumber(codeRequest.getProfileInformation());
 
-            submitRequestToExperianPhoneCheckSQSQueue(journeyType, phoneNumber);
+            if (isValidTestNumberForEnvironment(phoneNumber)) {
+                LOG.info(
+                        "Phone number not submitted for checking as smoke test client and test number");
+            } else {
+                LOG.info("Sending number to phone check sqs queue");
+                submitRequestToExperianPhoneCheckSQSQueue(journeyType, phoneNumber);
+            }
 
             switch (journeyType) {
                 case REGISTRATION -> dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
@@ -190,5 +197,12 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         e.getMessage());
             }
         }
+    }
+
+    private boolean isValidTestNumberForEnvironment(String phoneNumber) {
+        return ValidationHelper.isValidTestNumberForEnvironment(
+                phoneNumber,
+                configurationService.getEnvironment(),
+                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false));
     }
 }

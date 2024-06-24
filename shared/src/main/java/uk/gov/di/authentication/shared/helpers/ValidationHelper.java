@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
+import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 
 public class ValidationHelper {
@@ -53,15 +54,7 @@ public class ValidationHelper {
 
     public static Optional<ErrorResponse> validatePhoneNumber(
             String phoneNumberInput, String environment, boolean isSmokeTest) {
-        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
-                && !Objects.equals(environment, "production")) {
-            LOG.info("Allowed test number: non-prod");
-            return Optional.empty();
-        }
-        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
-                && Objects.equals(environment, "production")
-                && isSmokeTest) {
-            LOG.info("Allowed test number: prod smoke test");
+        if (isValidTestNumberForEnvironment(phoneNumberInput, environment, isSmokeTest)) {
             return Optional.empty();
         }
         if ((phoneNumberInput.length() < 5) || (phoneNumberInput.length() > 25)) {
@@ -190,5 +183,21 @@ public class ValidationHelper {
                 return Optional.of(ErrorResponse.ERROR_1021);
         }
         return Optional.of(ErrorResponse.ERROR_1002);
+    }
+
+    public static boolean isValidTestNumberForEnvironment(
+            String phoneNumberInput, String environment, boolean isSmokeTest) {
+        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
+                && !Objects.equals(environment, PRODUCTION.getValue())) {
+            LOG.info("Allowed test number: non-prod");
+            return true;
+        }
+        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
+                && Objects.equals(environment, PRODUCTION.getValue())
+                && isSmokeTest) {
+            LOG.info("Allowed test number: prod smoke test");
+            return true;
+        }
+        return false;
     }
 }
