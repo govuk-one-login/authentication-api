@@ -540,12 +540,6 @@ variable "orch_auth_code_enabled" {
   default     = false
 }
 
-variable "orch_userinfo_enabled" {
-  description = "Flag to enable routing userinfo traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "account_intervention_service_action_enabled" {
   default = false
   type    = bool

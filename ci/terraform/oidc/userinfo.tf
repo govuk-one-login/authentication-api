@@ -26,7 +26,7 @@ module "userinfo" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "userinfo"
-  path_part       = var.orch_userinfo_enabled ? "userinfo-auth" : "userinfo"
+  path_part       = "userinfo-auth"
   endpoint_method = ["GET"]
   environment     = var.environment
 
