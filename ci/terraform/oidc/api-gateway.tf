@@ -105,7 +105,7 @@ resource "aws_api_gateway_resource" "connect_resource" {
 resource "aws_api_gateway_resource" "register_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.connect_resource.id
-  path_part   = var.orch_register_enabled ? "register-auth" : "register"
+  path_part   = "register-auth"
 }
 
 data "aws_region" "current" {
@@ -160,7 +160,6 @@ resource "aws_api_gateway_deployment" "deployment" {
       var.orch_authorisation_enabled,
       var.orch_logout_enabled,
       var.orch_ipv_callback_enabled,
-      var.orch_register_enabled,
       var.orch_authentication_callback_enabled,
       var.orch_auth_code_enabled,
       var.orch_userinfo_enabled,
@@ -1184,7 +1183,6 @@ resource "aws_api_gateway_integration" "orch_ipv_callback_integration" {
 }
 
 resource "aws_api_gateway_resource" "orch_register_resource" {
-  count       = var.orch_register_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.connect_resource.id
   path_part   = "register"
@@ -1194,9 +1192,8 @@ resource "aws_api_gateway_resource" "orch_register_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_register_method" {
-  count            = var.orch_register_enabled ? 1 : 0
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id      = aws_api_gateway_resource.orch_register_resource[0].id
+  resource_id      = aws_api_gateway_resource.orch_register_resource.id
   http_method      = "POST"
   api_key_required = true
 
@@ -1207,10 +1204,9 @@ resource "aws_api_gateway_method" "orch_register_method" {
 }
 
 resource "aws_api_gateway_integration" "orch_register_integration" {
-  count       = var.orch_register_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_register_resource[0].id
-  http_method = aws_api_gateway_method.orch_register_method[0].http_method
+  resource_id = aws_api_gateway_resource.orch_register_resource.id
+  http_method = aws_api_gateway_method.orch_register_method.http_method
   depends_on = [
     aws_api_gateway_resource.orch_register_resource
   ]
@@ -1220,9 +1216,8 @@ resource "aws_api_gateway_integration" "orch_register_integration" {
 }
 
 resource "aws_api_gateway_resource" "orch_update_client_resource" {
-  count       = var.orch_register_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  parent_id   = aws_api_gateway_resource.orch_register_resource[0].id
+  parent_id   = aws_api_gateway_resource.orch_register_resource.id
   path_part   = "{clientId}"
   depends_on = [
     module.update
@@ -1230,9 +1225,8 @@ resource "aws_api_gateway_resource" "orch_update_client_resource" {
 }
 
 resource "aws_api_gateway_method" "orch_update_client_method" {
-  count              = var.orch_register_enabled ? 1 : 0
   rest_api_id        = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id        = aws_api_gateway_resource.orch_update_client_resource[0].id
+  resource_id        = aws_api_gateway_resource.orch_update_client_resource.id
   http_method        = "PUT"
   api_key_required   = true
   request_parameters = { "method.request.path.clientId" = true }
@@ -1244,10 +1238,9 @@ resource "aws_api_gateway_method" "orch_update_client_method" {
 }
 
 resource "aws_api_gateway_integration" "orch_update_client_integration" {
-  count       = var.orch_register_enabled ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.orch_update_client_resource[0].id
-  http_method = aws_api_gateway_method.orch_update_client_method[0].http_method
+  resource_id = aws_api_gateway_resource.orch_update_client_resource.id
+  http_method = aws_api_gateway_method.orch_update_client_method.http_method
   depends_on = [
     aws_api_gateway_resource.orch_update_client_resource
   ]

@@ -19,7 +19,7 @@ module "register" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "register"
-  path_part       = var.orch_register_enabled ? "register-auth" : "register"
+  path_part       = "register-auth"
   endpoint_method = ["POST"]
 
   handler_environment_variables = {

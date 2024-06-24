@@ -546,12 +546,6 @@ variable "orch_ipv_callback_enabled" {
   default     = false
 }
 
-variable "orch_register_enabled" {
-  description = "Flag to enable routing register traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "orch_authentication_callback_enabled" {
   description = "Flag to enable routing authentication callback traffic to the orchestration account"
   type        = bool
