@@ -186,12 +186,6 @@ variable "orch_protectedsub_cidr_blocks" {
   default     = []
 }
 
-variable "authentication_callback_userinfo_table_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the authentication callback userinfo table"
-}
-
 variable "identity_credentials_cross_account_access_enabled" {
   default     = false
   type        = bool

@@ -568,7 +568,7 @@ resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.authentication_callback_userinfo_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
   tags                     = local.default_tags
 }
 

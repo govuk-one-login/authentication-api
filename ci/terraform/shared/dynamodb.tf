@@ -538,7 +538,6 @@ resource "aws_dynamodb_table" "email-check-result" {
 }
 
 resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_policy" {
-  count        = var.authentication_callback_userinfo_table_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.authentication_callback_userinfo.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
