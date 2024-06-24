@@ -43,6 +43,5 @@ oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
 txma_audit_encoded_enabled  = true
 
-orch_ipv_callback_enabled            = true
 orch_authentication_callback_enabled = true
 auth_spot_response_disabled          = true

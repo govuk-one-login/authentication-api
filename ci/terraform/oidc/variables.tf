@@ -516,12 +516,6 @@ variable "auth_spot_response_disabled" {
   default     = false
 }
 
-variable "orch_ipv_callback_enabled" {
-  description = "Flag to enable routing ipv callback traffic to the orchestration account"
-  type        = bool
-  default     = false
-}
-
 variable "orch_authentication_callback_enabled" {
   description = "Flag to enable routing authentication callback traffic to the orchestration account"
   type        = bool

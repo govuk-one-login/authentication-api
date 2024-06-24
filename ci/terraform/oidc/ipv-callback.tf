@@ -28,7 +28,7 @@ module "ipv-callback" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "ipv-callback"
-  path_part       = var.orch_ipv_callback_enabled ? "ipv-callback-auth" : "ipv-callback"
+  path_part       = "ipv-callback-auth"
   endpoint_method = ["GET"]
   environment     = var.environment
 
