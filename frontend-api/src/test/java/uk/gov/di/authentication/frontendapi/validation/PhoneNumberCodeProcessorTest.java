@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
@@ -314,14 +315,15 @@ class PhoneNumberCodeProcessorTest {
         verifyNoInteractions(auditService);
     }
 
-    @Test
-    void shouldSendPhoneNumberRequestToSqsClientIfFeatureSwitchIsOnDuringRegistration() {
+    @ParameterizedTest
+    @EnumSource(names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void shouldSendPhoneNumberRequestToSqsClientIfFeatureSwitchIsOn(JourneyType journeyType) {
         when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
-                        JourneyType.REGISTRATION,
+                        journeyType,
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
@@ -335,32 +337,7 @@ class PhoneNumberCodeProcessorTest {
                                                 true,
                                                 CommonTestVariables.UK_MOBILE_NUMBER,
                                                 true,
-                                                JourneyType.REGISTRATION,
-                                                INTERNAL_SUB_ID)));
-    }
-
-    @Test
-    void shouldSendPhoneNumberRequestToSqsClientIfFeatureSwitchIsOnDuringAccountRecovery() {
-        when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
-        setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        VALID_CODE,
-                        JourneyType.ACCOUNT_RECOVERY,
-                        CommonTestVariables.UK_MOBILE_NUMBER),
-                CodeRequestType.SMS_ACCOUNT_RECOVERY);
-
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
-
-        verify(sqsClient)
-                .send(
-                        SerializationService.getInstance()
-                                .writeValueAsString(
-                                        new PhoneNumberRequest(
-                                                true,
-                                                CommonTestVariables.UK_MOBILE_NUMBER,
-                                                true,
-                                                JourneyType.ACCOUNT_RECOVERY,
+                                                journeyType,
                                                 INTERNAL_SUB_ID)));
     }
 
