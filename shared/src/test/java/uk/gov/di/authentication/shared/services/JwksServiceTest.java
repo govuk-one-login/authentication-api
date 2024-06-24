@@ -111,4 +111,32 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
+
+    @Test
+    void shouldReturnMfaResetJarSigningKeyAndParseToJwk() {
+
+        String mockKeyId = "123456789";
+        when(configurationService.getMfaResetJarSigningKeyAlias()).thenReturn(mockKeyId);
+
+        byte[] publicKey =
+                Base64.getDecoder()
+                        .decode(
+                                "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9cKBC5iJvCv5TD5E+nqI0yes8bXlpqWza/cgYXX6QfL7xTjkgI7gblEYGctJgGTD8HbvO9pQX8n0H6+ibF4ewg==");
+
+        var result =
+                GetPublicKeyResponse.builder()
+                        .keyUsage(KeyUsageType.SIGN_VERIFY)
+                        .keyId(mockKeyId)
+                        .signingAlgorithms(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .publicKey(SdkBytes.fromByteArray(publicKey))
+                        .build();
+
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
+
+        JWK publicKeyJwk = jwksService.getPublicMfaResetJarJwkWithOpaqueId();
+
+        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(mockKeyId)));
+        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
+    }
 }
