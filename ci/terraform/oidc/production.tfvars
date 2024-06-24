@@ -43,7 +43,6 @@ oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
 txma_audit_encoded_enabled  = true
 
-kms_cross_account_access_enabled                = true
 spot_request_queue_cross_account_access_enabled = true
 
 orch_trustmark_enabled               = true
