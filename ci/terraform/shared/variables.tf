@@ -185,9 +185,3 @@ variable "orch_protectedsub_cidr_blocks" {
   description = "Orchestration protected subnet cidr blocks"
   default     = []
 }
-
-variable "identity_credentials_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the identity credentials table"
-}

@@ -6,5 +6,3 @@ tools_account_id                     = 706615647326
 orchestration_account_id      = "590183975515"
 orch_privatesub_cidr_blocks   = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
 orch_protectedsub_cidr_blocks = ["10.1.4.0/23", "10.1.6.0/23", "10.1.8.0/23"]
-
-identity_credentials_cross_account_access_enabled = true

@@ -716,28 +716,13 @@ resource "aws_kms_key" "identity_credentials_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.identity_credentials_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
   tags                     = local.default_tags
 }
 
 resource "aws_kms_alias" "identity_credentials_table_encryption_key_alias" {
   name          = "alias/${var.environment}-identity-credentials-table-encryption-key"
   target_key_id = aws_kms_key.identity_credentials_table_encryption_key.key_id
-}
-
-data "aws_iam_policy_document" "table_encryption_key_access_policy" {
-  statement {
-    sid    = "key-policy-dynamodb"
-    effect = "Allow"
-    actions = [
-      "kms:*",
-    ]
-    principals {
-      identifiers = [data.aws_caller_identity.current.account_id]
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
 }
 
 data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy" {
