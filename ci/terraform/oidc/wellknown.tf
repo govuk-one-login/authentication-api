@@ -10,7 +10,7 @@ module "openid_configuration_discovery" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "openid-configuration"
-  path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"
+  path_part       = "openid-configuration-auth"
   endpoint_method = ["GET"]
   environment     = var.environment
 

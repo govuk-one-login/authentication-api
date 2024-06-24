@@ -43,7 +43,6 @@ oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
 txma_audit_encoded_enabled  = true
 
-orch_openid_configuration_enabled    = true
 orch_jwks_enabled                    = true
 orch_authorisation_enabled           = true
 orch_auth_code_enabled               = true

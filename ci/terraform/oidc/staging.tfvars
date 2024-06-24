@@ -25,7 +25,6 @@ oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
 enforce_cloudfront          = true
 
-orch_openid_configuration_enabled    = true
 orch_doc_app_callback_enabled        = true
 orch_token_enabled                   = true
 orch_jwks_enabled                    = true
