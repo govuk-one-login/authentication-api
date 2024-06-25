@@ -1,7 +1,5 @@
 package uk.gov.di.orchestration.shared.validation;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -10,35 +8,32 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
-import com.nimbusds.oauth2.sdk.id.Audience;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
 
-    private final ConfigurationService configurationService;
-    private static final String TOKEN_PATH = "token";
+    private final ClientSignatureValidationService clientSignatureValidationService;
     private static final String UNKNOWN_CLIENT_ID = "unknown";
 
     public PrivateKeyJwtClientAuthValidator(
-            DynamoClientService dynamoClientService, ConfigurationService configurationService) {
+            DynamoClientService dynamoClientService,
+            ClientSignatureValidationService clientSignatureValidationService) {
         super(dynamoClientService);
-        this.configurationService = configurationService;
+        this.clientSignatureValidationService = clientSignatureValidationService;
     }
 
     @Override
@@ -55,9 +50,6 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             var clientRegistry = getClientRegistryFromTokenAuth(privateKeyJWT.getClientID());
             attachLogFieldToLogs(CLIENT_ID, clientRegistry.getClientID());
             addAnnotation("client_id", clientRegistry.getClientID());
-            var tokenUrl =
-                    buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), TOKEN_PATH)
-                            .toString();
             if (Objects.nonNull(clientRegistry.getTokenAuthMethod())
                     && !clientRegistry
                             .getTokenAuthMethod()
@@ -78,12 +70,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT,
                         clientRegistry.getClientID());
             }
-            ClientAuthenticationVerifier<?> authenticationVerifier =
-                    new ClientAuthenticationVerifier<>(
-                            new PrivateKeyJwtAuthPublicKeySelector(
-                                    clientRegistry.getPublicKey(), KeyType.RSA),
-                            Collections.singleton(new Audience(tokenUrl)));
-            authenticationVerifier.verify(privateKeyJWT, null, null);
+            clientSignatureValidationService.validate(privateKeyJWT, clientRegistry);
             return clientRegistry;
         } catch (InvalidClientException e) {
             LOG.warn("Invalid client in private_kew_jwt", e);
@@ -91,7 +78,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
                     OAuth2Error.INVALID_CLIENT,
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT,
                     UNKNOWN_CLIENT_ID);
-        } catch (JOSEException e) {
+        } catch (ClientSignatureValidationException e) {
             LOG.warn("Could not verify signature of private_key_jwt", e);
             throw new TokenAuthInvalidException(
                     new ErrorObject(

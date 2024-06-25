@@ -32,6 +32,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -115,7 +116,8 @@ public class TokenHandler
                         new JwksService(configurationService, kms), configurationService);
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
-                        configurationService, new DynamoClientService(configurationService));
+                        new DynamoClientService(configurationService),
+                        new ClientSignatureValidationService(configurationService));
     }
 
     public TokenHandler() {
