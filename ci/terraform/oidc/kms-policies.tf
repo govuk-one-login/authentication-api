@@ -208,3 +208,50 @@ resource "aws_iam_policy" "mfa_reset_storage_token_kms_signing_policy" {
 
   policy = data.aws_iam_policy_document.mfa_reset_storage_token_kms_signing_policy_document.json
 }
+
+# Policy for mfa-reset-authorize lambda to access the key used to sign the storage token claim in the MFA reset JAR
+data "aws_iam_policy_document" "mfa_reset_token_kms_signing_policy_document" {
+  statement {
+    sid    = "AllowAccessToKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+    ]
+    resources = [
+      aws_kms_key.mfa_reset_token_signing_key_ecc.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "mfa_reset_token_kms_signing_policy" {
+  name_prefix = "kms-mfa-reset-token-signing-policy"
+  path        = "/${var.environment}/mfa-reset-storage-token/"
+  description = "IAM policy for manging KMS connection for a lambda which allows signing of the storage token claim sent from Auth to IPV when re-authenticating for MFA reset"
+
+  policy = data.aws_iam_policy_document.mfa_reset_token_kms_signing_policy_document.json
+}
+
+
+# Policy for mfa-reset-authorize lambda to access the key used to sign the MFA reset JAR
+data "aws_iam_policy_document" "mfa_reset_jar_signing_policy_document" {
+  statement {
+    sid    = "AllowAccessToKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+    ]
+    resources = [
+      aws_kms_key.mfa_reset_jar_signing_key_ecc.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "mfa_reset_jar_kms_signing_policy" {
+  name_prefix = "kms-mfa-reset-jar-signing-policy"
+  path        = "/${var.environment}/mfa-reset-jar/"
+  description = "IAM policy for manging KMS connection for a lambda which allows signing of the JARs sent from Auth to IPV when re-authenticating for MFA reset"
+
+  policy = data.aws_iam_policy_document.mfa_reset_jar_signing_policy_document.json
+}
