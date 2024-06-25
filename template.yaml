@@ -335,6 +335,41 @@ Resources:
 
   #endregion
 
+  #region Fetch JWKS Lambda
+
+  FetchJwksFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not required
+    # checkov:skip=CKV_AWS_117: Lambda needs to exist outside our VPC so default AWS Lambda service VPC is OK
+    Properties:
+      FunctionName: !Sub ${Environment}-FetchJwksFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref FetchJwksFunctionLogGroup
+      ProvisionedConcurrencyConfig:
+        !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - FetchJwksFunction
+            - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+        - !Ref AWS::NoValue
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117
+
+  FetchJwksFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-fetch-jwks-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  #endregion
+
   #region Open ID Configuration Lambda
 
   OpenIdConfigurationFunction:
