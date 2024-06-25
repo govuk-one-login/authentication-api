@@ -236,14 +236,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
-        var metadataPairs =
-                metadataPairsForEvent(
-                        auditableEvent,
-                        session,
-                        codeRequest.getMfaMethodType(),
-                        codeRequest.getCode(),
-                        codeRequest.getJourneyType(),
-                        codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
+        var metadataPairs = metadataPairsForEvent(auditableEvent, session, codeRequest);
 
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
@@ -291,23 +284,22 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent,
             Session session,
-            MFAMethodType mfaMethodType,
-            String code,
-            JourneyType journeyType,
-            boolean isAccountRecovery) {
+            VerifyMfaCodeRequest codeRequest) {
         var basicMetadataPairs =
                 List.of(
-                        pair("mfa-type", mfaMethodType.getValue()),
-                        pair("account-recovery", isAccountRecovery),
-                        pair("journey-type", journeyType));
+                        pair("mfa-type", codeRequest.getMfaMethodType().getValue()),
+                        pair(
+                                "account-recovery",
+                                codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY),
+                        pair("journey-type", codeRequest.getJourneyType()));
         var additionalPairs =
                 switch (auditableEvent) {
                     case CODE_MAX_RETRIES_REACHED -> List.of(
                             pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
                     case INVALID_CODE_SENT -> List.of(
                             pair("loginFailureCount", session.getRetryCount()),
-                            pair("MFACodeEntered", code));
-                    case CODE_VERIFIED -> List.of(pair("MFACodeEntered", code));
+                            pair("MFACodeEntered", codeRequest.getCode()));
+                    case CODE_VERIFIED -> List.of(pair("MFACodeEntered", codeRequest.getCode()));
                     default -> List.<AuditService.MetadataPair>of();
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
