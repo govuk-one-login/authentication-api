@@ -87,7 +87,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected static final DocumentAppCredentialStoreExtension credentialExtension =
             new DocumentAppCredentialStoreExtension(180);
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
                     criStub,
                     externalTokenSigner,
@@ -102,7 +102,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setup() throws JOSEException {
-        handler = new DocAppCallbackHandler(configurationService);
+        handler = new DocAppCallbackHandler(configurationService, redisConnectionService);
         docAppSubjectId =
                 new Subject(
                         ClientSubjectHelper.calculatePairwiseIdentifier(

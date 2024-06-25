@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -59,6 +60,14 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
 
     public CheckEmailFraudBlockHandler(ConfigurationService configurationService) {
         super(CheckEmailFraudBlockRequest.class, configurationService);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
+        this.auditService = new AuditService(configurationService);
+    }
+
+    public CheckEmailFraudBlockHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(CheckEmailFraudBlockRequest.class, configurationService, redis);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);

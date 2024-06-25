@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
@@ -72,6 +73,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
     public SignUpHandler(ConfigurationService configurationService) {
         super(SignupRequest.class, configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
+    }
+
+    public SignUpHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        super(SignupRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);

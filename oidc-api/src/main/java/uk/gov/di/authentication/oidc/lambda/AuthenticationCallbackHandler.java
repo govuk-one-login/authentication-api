@@ -56,6 +56,7 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -142,6 +143,48 @@ public class AuthenticationCallbackHandler
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
+    }
+
+    public AuthenticationCallbackHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var redisConnectionService = redis;
+        this.configurationService = configurationService;
+        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.tokenService =
+                new AuthenticationTokenService(configurationService, kmsConnectionService);
+        this.sessionService = new SessionService(configurationService, redisConnectionService);
+        this.clientSessionService =
+                new ClientSessionService(configurationService, redisConnectionService);
+        this.auditService = new AuditService(configurationService);
+        this.userInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
+        this.cookieHelper = new CookieHelper();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService,
+                        redisConnectionService,
+                        SerializationService.getInstance());
+        this.clientService = new DynamoClientService(configurationService);
+        this.initiateIPVAuthorisationService =
+                new InitiateIPVAuthorisationService(
+                        configurationService,
+                        auditService,
+                        new IPVAuthorisationService(
+                                configurationService, redisConnectionService, kmsConnectionService),
+                        cloudwatchMetricsService,
+                        new NoSessionOrchestrationService(
+                                configurationService, redisConnectionService),
+                        new TokenService(
+                                configurationService,
+                                redisConnectionService,
+                                kmsConnectionService));
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService, cloudwatchMetricsService, auditService);
+        this.logoutService = new LogoutService(configurationService, redisConnectionService);
     }
 
     public AuthenticationCallbackHandler(

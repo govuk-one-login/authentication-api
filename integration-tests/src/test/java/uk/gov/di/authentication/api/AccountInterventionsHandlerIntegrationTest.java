@@ -61,7 +61,8 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     void setup() throws JOSEException, Json.JsonException {
         handler =
                 new AccountInterventionsHandler(
-                        ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE);
+                        ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE,
+                        redisConnectionService);
         accountInterventionsStubExtension.initWithBlockedUserId(
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS),
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER));

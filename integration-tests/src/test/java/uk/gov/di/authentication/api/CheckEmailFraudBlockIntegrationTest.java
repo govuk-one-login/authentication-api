@@ -51,7 +51,9 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeEach
     void setup() {
-        handler = new CheckEmailFraudBlockHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new CheckEmailFraudBlockHandler(
+                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

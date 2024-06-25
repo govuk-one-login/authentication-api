@@ -69,7 +69,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new StartHandler(new TestConfigurationService());
+        handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
         txmaAuditQueue.clear();
     }
 

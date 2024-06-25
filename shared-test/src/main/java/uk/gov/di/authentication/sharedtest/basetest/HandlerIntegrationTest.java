@@ -12,11 +12,14 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
@@ -70,6 +73,18 @@ public abstract class HandlerIntegrationTest<Q, S> {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected static RedisConnectionService redisConnectionService;
+
+    @BeforeAll
+    static void beforeAll() {
+        redisConnectionService = new RedisConnectionService(TEST_CONFIGURATION_SERVICE);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        redisConnectionService.close();
     }
 
     @RegisterExtension

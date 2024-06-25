@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
@@ -101,6 +102,23 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.dynamoAccountModifiersService =
+                new DynamoAccountModifiersService(configurationService);
+    }
+
+    public ResetPasswordHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(ResetPasswordCompletionRequest.class, configurationService, redis);
+        this.authenticationService = new DynamoService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);

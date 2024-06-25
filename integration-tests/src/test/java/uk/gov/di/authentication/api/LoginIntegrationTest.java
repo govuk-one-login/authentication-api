@@ -61,7 +61,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new LoginHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new LoginHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

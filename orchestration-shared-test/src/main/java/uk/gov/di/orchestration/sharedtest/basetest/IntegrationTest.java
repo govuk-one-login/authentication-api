@@ -4,10 +4,13 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
 import uk.gov.di.orchestration.sharedtest.extensions.*;
@@ -61,6 +64,18 @@ public class IntegrationTest {
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected static RedisConnectionService redisConnectionService;
+
+    @BeforeAll
+    static void setUp() {
+        redisConnectionService = new RedisConnectionService(TEST_CONFIGURATION_SERVICE);
+    }
+
+    @AfterAll
+    static void tearDown() {
+        redisConnectionService.close();
     }
 
     @RegisterExtension

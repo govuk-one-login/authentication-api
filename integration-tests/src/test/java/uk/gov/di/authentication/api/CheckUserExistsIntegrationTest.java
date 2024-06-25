@@ -47,7 +47,9 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new CheckUserExistsHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new CheckUserExistsHandler(
+                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

@@ -30,6 +30,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -88,6 +89,21 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     public VerifyMfaCodeHandler(ConfigurationService configurationService) {
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.mfaCodeProcessorFactory =
+                new MfaCodeProcessorFactory(
+                        configurationService,
+                        codeStorageService,
+                        new DynamoService(configurationService),
+                        auditService,
+                        new DynamoAccountModifiersService(configurationService));
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+    }
+
+    public VerifyMfaCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(VerifyMfaCodeRequest.class, configurationService, redis);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(

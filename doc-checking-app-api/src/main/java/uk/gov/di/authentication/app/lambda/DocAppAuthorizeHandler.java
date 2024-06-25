@@ -88,6 +88,26 @@ public class DocAppAuthorizeHandler
     }
 
     public DocAppAuthorizeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.authorisationService =
+                new DocAppAuthorisationService(
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
+        this.auditService = new AuditService(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(
+                        redis, clientSessionService, configurationService);
+    }
+
+    public DocAppAuthorizeHandler(
             SessionService sessionService,
             ClientSessionService clientSessionService,
             DocAppAuthorisationService authorisationService,

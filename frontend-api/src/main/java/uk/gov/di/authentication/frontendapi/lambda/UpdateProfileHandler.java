@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -63,6 +64,12 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     public UpdateProfileHandler(ConfigurationService configurationService) {
         super(UpdateProfileRequest.class, configurationService);
+        auditService = new AuditService(configurationService);
+    }
+
+    public UpdateProfileHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(UpdateProfileRequest.class, configurationService, redis);
         auditService = new AuditService(configurationService);
     }
 

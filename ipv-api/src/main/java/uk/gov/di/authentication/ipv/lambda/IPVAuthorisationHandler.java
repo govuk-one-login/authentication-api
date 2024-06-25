@@ -104,6 +104,20 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
+    public IPVAuthorisationHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(IPVAuthorisationRequest.class, configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.authorisationService =
+                new IPVAuthorisationService(
+                        configurationService,
+                        redis,
+                        new KmsConnectionService(configurationService));
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {

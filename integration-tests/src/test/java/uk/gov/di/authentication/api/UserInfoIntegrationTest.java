@@ -111,24 +111,25 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
 
+    private static final IntegrationTestConfigurationService configuration =
+            new IntegrationTestConfigurationService(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
+
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {
-        var configuration =
-                new IntegrationTestConfigurationService(
-                        externalTokenSigner,
-                        storageTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
 
-                    @Override
-                    public String getTxmaAuditQueueUrl() {
-                        return txmaAuditQueue.getQueueUrl();
-                    }
-                };
-
-        handler = new UserInfoHandler(configuration);
+        handler = new UserInfoHandler(configuration, redisConnectionService);
         DOC_APP_CREDENTIAL = generateSignedJWT(new JWTClaimsSet.Builder().build()).serialize();
 
         userInfoStorageExtension.addAuthenticationUserInfoData(

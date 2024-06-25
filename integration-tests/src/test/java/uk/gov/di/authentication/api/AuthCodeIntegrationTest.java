@@ -61,7 +61,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new AuthCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 

@@ -118,6 +118,27 @@ public class TokenHandler
                         configurationService, new DynamoClientService(configurationService));
     }
 
+    public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        var kms = new KmsConnectionService(configurationService);
+
+        this.configurationService = configurationService;
+        this.redisConnectionService = redis;
+        this.tokenService =
+                new TokenService(configurationService, this.redisConnectionService, kms);
+        this.dynamoService = new DynamoService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService, redisConnectionService, objectMapper);
+        this.clientSessionService =
+                new ClientSessionService(configurationService, redisConnectionService);
+        this.tokenValidationService =
+                new TokenValidationService(
+                        new JwksService(configurationService, kms), configurationService);
+        this.tokenClientAuthValidatorFactory =
+                new TokenClientAuthValidatorFactory(
+                        configurationService, new DynamoClientService(configurationService));
+    }
+
     public TokenHandler() {
         this(ConfigurationService.getInstance());
     }

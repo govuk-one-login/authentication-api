@@ -674,7 +674,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
                 ClientType.APP,
                 false);
-        handler = new AuthorisationHandler(configuration);
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
         var signedJWT = createSignedJWT(uiLocales);
         var queryStringParameters =
@@ -888,7 +888,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void setupForAuthJourney() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false);
-        handler = new AuthorisationHandler(configuration);
+        handler = new AuthorisationHandler(configuration, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
