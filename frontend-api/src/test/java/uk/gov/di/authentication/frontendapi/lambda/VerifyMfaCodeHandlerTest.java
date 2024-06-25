@@ -16,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -123,6 +124,18 @@ class VerifyMfaCodeHandlerTest {
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(VerifyCodeHandler.class);
+
+    private final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @BeforeEach
     void setUp() {
@@ -239,15 +252,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false),
                         pair("MFACodeEntered", CODE),
@@ -771,18 +776,6 @@ class VerifyMfaCodeHandlerTest {
 
     private void assertAuditEventSubmittedWithMetadata(
             AuditableEvent event, AuditService.MetadataPair... pairs) {
-        verify(auditService)
-                .submitAuditEvent(
-                        event,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
-                        pairs);
+        verify(auditService).submitAuditEvent(event, AUDIT_CONTEXT, pairs);
     }
 }

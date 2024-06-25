@@ -6,12 +6,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -307,24 +307,21 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             pair("journey-type", journeyType));
                 };
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         auditService.submitAuditEvent(
                 auditableEvent,
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                restrictedSection,
+                auditContext,
                 metadataPairs.toArray(new AuditService.MetadataPair[0]));
     }
 }
