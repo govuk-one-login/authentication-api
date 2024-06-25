@@ -79,7 +79,8 @@ public class JwksService {
         LOG.info("Retrieving JWKSet with URL: {}", url);
         return jwkSource.get(selector, null).stream()
                 .findFirst()
-                .orElseThrow(() -> new KeySourceException("No key found with given keyID"));
+                .orElseThrow(
+                        () -> new KeySourceException("No key found with given keyId: " + keyId));
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {
