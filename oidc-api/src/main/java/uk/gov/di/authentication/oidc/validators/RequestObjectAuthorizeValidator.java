@@ -1,8 +1,5 @@
 package uk.gov.di.authentication.oidc.validators;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.langtag.LangTagException;
@@ -18,22 +15,17 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -45,20 +37,26 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
+
     private static final Json objectMapper = SerializationService.getInstance();
 
+    private final ClientSignatureValidationService clientSignatureValidationService;
+
     public RequestObjectAuthorizeValidator(
-            DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
-            IPVCapacityService ipvCapacityService) {
+            DynamoClientService dynamoClientService,
+            IPVCapacityService ipvCapacityService,
+            ClientSignatureValidationService clientSignatureValidationService) {
         super(configurationService, dynamoClientService, ipvCapacityService);
+        this.clientSignatureValidationService = clientSignatureValidationService;
     }
 
     public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
-        super(
+        this(
                 configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService));
+                new IPVCapacityService(configurationService),
+                new ClientSignatureValidationService(configurationService));
     }
 
     @Override
@@ -69,13 +67,9 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         ClientRegistry client = getClientFromDynamo(clientId);
 
         var signedJWT = (SignedJWT) authRequest.getRequestObject();
-        var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
-        if (!signatureValid) {
-            LOG.error("Invalid Signature on request JWT");
-            throw new RuntimeException();
-        }
 
         try {
+            clientSignatureValidationService.validate(signedJWT, client);
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
 
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
@@ -187,7 +181,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             }
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
-        } catch (ParseException e) {
+        } catch (ParseException | ClientSignatureValidationException e) {
             throw new RuntimeException(e);
         }
     }
@@ -205,20 +199,6 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         }
 
         return false;
-    }
-
-    private static boolean isSignatureValid(SignedJWT signedJWT, String publicKey) {
-        try {
-            byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            PublicKey pubKey = kf.generatePublic(keySpec);
-            JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
-            return signedJWT.verify(verifier);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException | JOSEException e) {
-            LOG.error("Error when validating JWT signature");
-            throw new RuntimeException(e);
-        }
     }
 
     private Optional<ErrorObject> validateVtr(JWTClaimsSet jwtClaimsSet, ClientRegistry client) {
