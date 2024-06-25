@@ -21,8 +21,7 @@ class FetchJwksHandlerTest {
     JwksService jwksService = mock(JwksService.class);
     private final FetchJwksHandler handler = new FetchJwksHandler(jwksService);
     private final String keyId = "some-key-id";
-    private final String url =
-            "https://oidc.test.account.gov.uk/.well-known/storage-token-jwk.json";
+    private final String url = "https://oidc.test.account.gov.uk/.well-known/jwk.json";
 
     @Test
     void returnsErrorWhenServiceThrowsKeySourceException()
