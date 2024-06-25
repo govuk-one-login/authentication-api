@@ -215,8 +215,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", JourneyType.REGISTRATION));
+                pair("journey-type", JourneyType.REGISTRATION),
+                pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -255,8 +255,8 @@ class VerifyMfaCodeHandlerTest {
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false),
-                        pair("MFACodeEntered", CODE),
-                        pair("journey-type", JourneyType.REGISTRATION));
+                        pair("journey-type", JourneyType.REGISTRATION),
+                        pair("MFACodeEntered", CODE));
     }
 
     @ParameterizedTest
@@ -292,8 +292,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", JourneyType.PASSWORD_RESET_MFA));
+                pair("journey-type", JourneyType.PASSWORD_RESET_MFA),
+                pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -329,8 +329,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", false),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", JourneyType.REGISTRATION));
+                pair("journey-type", JourneyType.REGISTRATION),
+                pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -366,8 +366,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", true),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
+                pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
+                pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -403,8 +403,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", true),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", JourneyType.ACCOUNT_RECOVERY));
+                pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
+                pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -435,8 +435,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", journeyType));
+                pair("journey-type", journeyType),
+                pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -530,8 +530,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                pair("journey-type", journeyType));
+                pair("journey-type", journeyType),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -567,8 +567,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                pair("journey-type", journeyType));
+                pair("journey-type", journeyType),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -606,9 +606,9 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.INVALID_CODE_SENT,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("journey-type", journeyType),
                 pair("loginFailureCount", 0),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", journeyType));
+                pair("MFACodeEntered", CODE));
     }
 
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
@@ -648,8 +648,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                pair("journey-type", journeyType));
+                pair("journey-type", journeyType),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -677,8 +677,8 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
-                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                pair("journey-type", journeyType));
+                pair("journey-type", journeyType),
+                pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -712,9 +712,9 @@ class VerifyMfaCodeHandlerTest {
                 FrontendAuditableEvent.INVALID_CODE_SENT,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                pair("journey-type", journeyType),
                 pair("loginFailureCount", 0),
-                pair("MFACodeEntered", CODE),
-                pair("journey-type", journeyType));
+                pair("MFACodeEntered", CODE));
     }
 
     @ParameterizedTest

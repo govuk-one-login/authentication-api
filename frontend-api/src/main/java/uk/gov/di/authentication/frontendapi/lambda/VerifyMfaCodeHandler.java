@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
@@ -294,29 +295,22 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String code,
             JourneyType journeyType,
             boolean isAccountRecovery) {
-        var pairs =
+        var basicMetadataPairs =
+                List.of(
+                        pair("mfa-type", mfaMethodType.getValue()),
+                        pair("account-recovery", isAccountRecovery),
+                        pair("journey-type", journeyType));
+        var additionalPairs =
                 switch (auditableEvent) {
                     case CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                            pair("journey-type", journeyType));
+                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
                     case INVALID_CODE_SENT -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
                             pair("loginFailureCount", session.getRetryCount()),
-                            pair("MFACodeEntered", code),
-                            pair("journey-type", journeyType));
-                    case CODE_VERIFIED -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("MFACodeEntered", code),
-                            pair("journey-type", journeyType));
-                    default -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("journey-type", journeyType));
+                            pair("MFACodeEntered", code));
+                    case CODE_VERIFIED -> List.of(pair("MFACodeEntered", code));
+                    default -> List.<AuditService.MetadataPair>of();
                 };
-        return pairs.toArray(new AuditService.MetadataPair[0]);
+        return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
+                .toArray(AuditService.MetadataPair[]::new);
     }
 }
