@@ -262,19 +262,20 @@ public class InitiateIPVAuthorisationServiceTest {
                         LEVELS_OF_CONFIDENCE);
 
         assertThat(response, hasStatus(302));
-        verify(tokenService).generateStorageToken(any());
+        verify(tokenService).generateStorageToken(any(Subject.class));
         ArgumentCaptor<ClaimsSetRequest> actualClaimsSetRequest =
                 ArgumentCaptor.forClass(ClaimsSetRequest.class);
         verify(authorisationService)
                 .constructRequestJWT(
-                        any(),
-                        any(),
-                        any(),
+                        any(State.class),
+                        eq(authRequestWithStorageClaim.getScope()),
+                        any(Subject.class),
                         actualClaimsSetRequest.capture(),
-                        any(),
-                        any(),
-                        any(),
-                        any());
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL_ADDRESS),
+                        eq(List.of("P0", "P2")),
+                        eq(REPROVE_IDENTITY));
+
         assertEquals(
                 claimsSetRequestWithStorageTokenClaim.toJSONString(),
                 actualClaimsSetRequest.getValue().toJSONString());
