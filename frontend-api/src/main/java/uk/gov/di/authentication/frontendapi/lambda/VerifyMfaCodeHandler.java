@@ -223,15 +223,28 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .map(this::errorResponseAsFrontendAuditableEvent)
                         .orElse(CODE_VERIFIED);
 
-        submitAuditEvent(
-                auditableEvent,
-                session,
-                userContext,
-                input,
-                codeRequest.getMfaMethodType(),
-                codeRequest.getCode(),
-                codeRequest.getJourneyType(),
-                codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+        var metadataPairs =
+                metadataPairsForEvent(
+                        auditableEvent,
+                        session,
+                        codeRequest.getMfaMethodType(),
+                        codeRequest.getCode(),
+                        codeRequest.getJourneyType(),
+                        codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         if (errorResponse.isEmpty()) {
             mfaCodeProcessor.processSuccessfulCodeRequest(
@@ -274,16 +287,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private void submitAuditEvent(
+    private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent,
             Session session,
-            UserContext userContext,
-            APIGatewayProxyRequestEvent input,
             MFAMethodType mfaMethodType,
             String code,
             JourneyType journeyType,
             boolean isAccountRecovery) {
-        var metadataPairs =
+        var pairs =
                 switch (auditableEvent) {
                     case CODE_MAX_RETRIES_REACHED -> List.of(
                             pair("mfa-type", mfaMethodType.getValue()),
@@ -306,22 +317,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             pair("account-recovery", isAccountRecovery),
                             pair("journey-type", journeyType));
                 };
-
-        var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
-        auditService.submitAuditEvent(
-                auditableEvent,
-                auditContext,
-                metadataPairs.toArray(new AuditService.MetadataPair[0]));
+        return pairs.toArray(new AuditService.MetadataPair[0]);
     }
 }
