@@ -620,6 +620,17 @@ variable "account_intervention_service_call_timeout" {
   description = "The HTTP Client connection timeout for requests to Account Intervention Service (in milliseconds)."
 }
 
+variable "ticf_cri_service_uri" {
+  default = "undefined"
+  type    = string
+}
+
+variable "ticf_cri_service_call_timeout" {
+  default     = 2000
+  type        = number
+  description = "The HTTP Client connection timeout for requests to TICF CRI Service (in milliseconds)."
+}
+
 variable "orch_redirect_uri" {
   type        = string
   description = "The redirect URI set by Orchestration in the OAuth2 authorize request to Authentication"
