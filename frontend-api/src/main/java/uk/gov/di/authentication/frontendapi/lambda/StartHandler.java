@@ -89,6 +89,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Start request received");
+        LOG.info("Accidental logging");
         var session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
         if (Objects.isNull(session)) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
