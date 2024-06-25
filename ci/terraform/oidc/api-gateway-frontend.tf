@@ -214,7 +214,6 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.reset_password,
     module.reset-password-request,
     module.processing-identity,
-    module.doc-app-authorize,
     module.orch_auth_code,
     module.check_reauth_user,
     module.check_email_fraud_block,
