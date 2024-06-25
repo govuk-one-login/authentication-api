@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -212,15 +213,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
-        var accountRecoveryJourney =
-                codeRequest.notificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         int loginFailureCount = session.getRetryCount();
-        var metadataPairs =
-                new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name()),
-                    pair("account-recovery", accountRecoveryJourney),
-                    pair("journey-type", String.valueOf(journeyType))
-                };
         var clientSession = userContext.getClientSession();
         var clientId = userContext.getClient().get().getClientID();
         var levelOfConfidence =
@@ -234,15 +227,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     MFAMethodType.SMS.getValue(),
                     false);
             sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", accountRecoveryJourney),
-                        pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.code()),
-                        pair("journey-type", String.valueOf(journeyType))
-                    };
             clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
@@ -254,8 +238,31 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
 
+        var metadataPairArray =
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.CODE_VERIFIED, auditContext, metadataPairs);
+                FrontendAuditableEvent.CODE_VERIFIED, auditContext, metadataPairArray);
+    }
+
+    private AuditService.MetadataPair[] metadataPairs(
+            NotificationType notificationType,
+            JourneyType journeyType,
+            VerifyCodeRequest codeRequest,
+            Integer loginFailureCount,
+            boolean isBlockedRequest) {
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(pair("notification-type", notificationType.name()));
+        metadataPairs.add(pair("account-recovery", journeyType == JourneyType.ACCOUNT_RECOVERY));
+        metadataPairs.add(pair("journey-type", String.valueOf(journeyType)));
+        if (notificationType == MFA_SMS) {
+            metadataPairs.add(pair("mfa-type", MFAMethodType.SMS.getValue()));
+            metadataPairs.add(pair("loginFailureCount", loginFailureCount));
+            metadataPairs.add(pair("MFACodeEntered", codeRequest.code()));
+        }
+        if (notificationType == MFA_SMS && isBlockedRequest) {
+            metadataPairs.add(pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+        }
+        return metadataPairs.toArray(AuditService.MetadataPair[]::new);
     }
 
     private void processBlockedCodeSession(
@@ -265,28 +272,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
-        var accountRecoveryJourney = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        var metadataPairs =
-                new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name()),
-                    pair("account-recovery", accountRecoveryJourney),
-                    pair("journey-type", String.valueOf(journeyType))
-                };
         int loginFailureCount = session.getRetryCount();
-        if (notificationType.equals(MFA_SMS)) {
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", accountRecoveryJourney),
-                        pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.code()),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", String.valueOf(journeyType))
-                    };
-        }
         AuditableEvent auditableEvent;
         switch (errorResponse) {
             case ERROR_1027:
@@ -304,7 +292,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
                 break;
         }
-        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
+        var metadataPairArray =
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
