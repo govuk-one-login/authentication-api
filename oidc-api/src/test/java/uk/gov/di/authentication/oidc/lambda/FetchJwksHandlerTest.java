@@ -3,7 +3,7 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.jose.KeySourceException;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.oidc.entity.FetchJwksResponse;
+import uk.gov.di.authentication.oidc.entity.JwksResponse;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.net.MalformedURLException;
@@ -33,7 +33,7 @@ class FetchJwksHandlerTest {
                 .thenThrow(new KeySourceException());
 
         // when
-        FetchJwksResponse response = handler.handleRequest(event, CONTEXT);
+        JwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
         assertThat(response.error().getCode(), equalTo("server_error"));
@@ -46,7 +46,7 @@ class FetchJwksHandlerTest {
         Map<String, String> event = Map.of("keyId", keyId);
 
         // when
-        FetchJwksResponse response = handler.handleRequest(event, CONTEXT);
+        JwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
         assertThat(response.error().getCode(), equalTo("server_error"));
@@ -59,7 +59,7 @@ class FetchJwksHandlerTest {
         Map<String, String> event = Map.of("url", url);
 
         // when
-        FetchJwksResponse response = handler.handleRequest(event, CONTEXT);
+        JwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
         assertThat(response.error().getCode(), equalTo("server_error"));
