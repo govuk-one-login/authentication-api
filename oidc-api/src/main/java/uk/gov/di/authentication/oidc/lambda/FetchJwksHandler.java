@@ -33,8 +33,6 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Fet
         this(ConfigurationService.getInstance());
     }
 
-    FetchJwksResponse response = new FetchJwksResponse();
-
     private static final Logger LOG = LogManager.getLogger(FetchJwksHandler.class);
 
     @Override
@@ -47,17 +45,16 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Fet
                         "FetchJwksHandler invoked with invalid argument(s)");
             }
             JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId);
-            response.setJwk(jwk);
+            return new FetchJwksResponse(jwk, null);
         } catch (KeySourceException e) {
             LOG.error("Failed to fetch JWKS: could not find key with provided key ID", e);
-            response.setError(OAuth2Error.SERVER_ERROR);
+            return new FetchJwksResponse(null, OAuth2Error.SERVER_ERROR);
         } catch (MalformedURLException e) {
             LOG.error("Failed to fetch JWKS: URL is malformed", e);
-            response.setError(OAuth2Error.SERVER_ERROR);
+            return new FetchJwksResponse(null, OAuth2Error.SERVER_ERROR);
         } catch (IllegalArgumentException e) {
             LOG.error("Failed to fetch JWKS: url and/or keyId parameters not present", e);
-            response.setError(OAuth2Error.SERVER_ERROR);
+            return new FetchJwksResponse(null, OAuth2Error.SERVER_ERROR);
         }
-        return response;
     }
 }

@@ -36,8 +36,8 @@ class FetchJwksHandlerTest {
         FetchJwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.getError().getCode(), equalTo("server_error"));
-        assertThat(response.getJwk(), equalTo(null));
+        assertThat(response.error().getCode(), equalTo("server_error"));
+        assertThat(response.jwk(), equalTo(null));
     }
 
     @Test
@@ -49,8 +49,8 @@ class FetchJwksHandlerTest {
         FetchJwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.getError().getCode(), equalTo("server_error"));
-        assertThat(response.getJwk(), equalTo(null));
+        assertThat(response.error().getCode(), equalTo("server_error"));
+        assertThat(response.jwk(), equalTo(null));
     }
 
     @Test
@@ -62,7 +62,7 @@ class FetchJwksHandlerTest {
         FetchJwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.getError().getCode(), equalTo("server_error"));
-        assertThat(response.getJwk(), equalTo(null));
+        assertThat(response.error().getCode(), equalTo("server_error"));
+        assertThat(response.jwk(), equalTo(null));
     }
 }
