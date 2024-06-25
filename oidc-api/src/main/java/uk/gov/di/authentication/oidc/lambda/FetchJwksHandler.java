@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.JwksResponse;
@@ -47,14 +47,18 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Jwk
             JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId);
             return new JwksResponse(jwk, null);
         } catch (KeySourceException e) {
-            LOG.error("Failed to fetch JWKS: could not find key with provided key ID", e);
-            return new JwksResponse(null, OAuth2Error.SERVER_ERROR);
+            String errorMsg =
+                    "Failed to fetch JWKS: could not find key in JWKS that matches provided keyId";
+            LOG.error(errorMsg, e);
+            return new JwksResponse(null, new ErrorObject(null, errorMsg, 404));
         } catch (MalformedURLException e) {
-            LOG.error("Failed to fetch JWKS: URL is malformed", e);
-            return new JwksResponse(null, OAuth2Error.SERVER_ERROR);
+            String errorMsg = "Failed to fetch JWKS: URL is malformed";
+            LOG.error(errorMsg, e);
+            return new JwksResponse(null, new ErrorObject(null, errorMsg, 400));
         } catch (IllegalArgumentException e) {
-            LOG.error("Failed to fetch JWKS: url and/or keyId parameters not present", e);
-            return new JwksResponse(null, OAuth2Error.SERVER_ERROR);
+            String errorMsg = "Failed to fetch JWKS: url and/or keyId parameter not present";
+            LOG.error(errorMsg, e);
+            return new JwksResponse(null, new ErrorObject(null, errorMsg, 400));
         }
     }
 }

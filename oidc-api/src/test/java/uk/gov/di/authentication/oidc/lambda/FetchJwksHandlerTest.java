@@ -55,7 +55,11 @@ class FetchJwksHandlerTest {
         JwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.error().getCode(), equalTo("server_error"));
+        assertThat(
+                response.error().getDescription(),
+                equalTo(
+                        "Failed to fetch JWKS: could not find key in JWKS that matches provided keyId"));
+        assertThat(response.error().getHTTPStatusCode(), equalTo(404));
         assertThat(response.jwk(), equalTo(null));
     }
 
@@ -68,7 +72,10 @@ class FetchJwksHandlerTest {
         JwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.error().getCode(), equalTo("server_error"));
+        assertThat(
+                response.error().getDescription(),
+                equalTo("Failed to fetch JWKS: url and/or keyId parameter not present"));
+        assertThat(response.error().getHTTPStatusCode(), equalTo(400));
         assertThat(response.jwk(), equalTo(null));
     }
 
@@ -81,7 +88,26 @@ class FetchJwksHandlerTest {
         JwksResponse response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.error().getCode(), equalTo("server_error"));
+        assertThat(
+                response.error().getDescription(),
+                equalTo("Failed to fetch JWKS: url and/or keyId parameter not present"));
+        assertThat(response.error().getHTTPStatusCode(), equalTo(400));
+        assertThat(response.jwk(), equalTo(null));
+    }
+
+    @Test
+    void returnsErrorWhenUrlIsMalformed() {
+        // given
+        Map<String, String> event = Map.of("url", "not-a-valid-url", "keyId", keyId);
+
+        // when
+        JwksResponse response = handler.handleRequest(event, CONTEXT);
+
+        // then
+        assertThat(
+                response.error().getDescription(),
+                equalTo("Failed to fetch JWKS: URL is malformed"));
+        assertThat(response.error().getHTTPStatusCode(), equalTo(400));
         assertThat(response.jwk(), equalTo(null));
     }
 }
