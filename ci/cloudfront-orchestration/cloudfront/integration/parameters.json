@@ -9,7 +9,7 @@
   },
   {
     "ParameterKey": "FraudHeaderEnabled",
-    "ParameterValue": "false"
+    "ParameterValue": "true"
   },
   {
     "ParameterKey": "CloudFrontWafACL",
