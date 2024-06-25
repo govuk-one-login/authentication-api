@@ -16,7 +16,7 @@ stub_rp_clients = [
     logout_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
-    test_client                     = "0"
+    test_client                     = "1"
     client_type                     = "web"
     identity_verification_supported = "0"
     scopes = [
