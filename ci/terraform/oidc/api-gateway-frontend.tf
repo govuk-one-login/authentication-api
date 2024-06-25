@@ -213,7 +213,6 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.verify_mfa_code,
     module.reset_password,
     module.reset-password-request,
-    module.ipv-authorize,
     module.processing-identity,
     module.doc-app-authorize,
     module.orch_auth_code,
