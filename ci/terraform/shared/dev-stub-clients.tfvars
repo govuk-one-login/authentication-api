@@ -4,13 +4,15 @@ stub_rp_clients = [
     sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
     ]
-    test_client                     = "0"
+    test_client                     = "1"
+    identity_verification_supported = "1"
     client_type                     = "web"
-    identity_verification_supported = "0"
     scopes = [
       "openid",
       "email",
@@ -25,13 +27,15 @@ stub_rp_clients = [
     sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
     ]
     test_client                     = "1"
-    client_type                     = "app"
     identity_verification_supported = "1"
+    client_type                     = "app"
     scopes = [
       "openid",
       "email",
