@@ -6,11 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -45,7 +45,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -118,6 +117,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            var auditContext =
+                    new AuditContext(
+                            userContext.getClientId(),
+                            userContext.getClientSessionId(),
+                            session.getSessionId(),
+                            session.getInternalCommonSubjectIdentifier(),
+                            session.getEmailAddress(),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            extractPersistentIdFromHeaders(input.getHeaders()),
+                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
@@ -148,7 +158,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             if (errorResponse.isPresent()) {
                 processBlockedCodeSession(
-                        errorResponse.get(), session, codeRequest, input, userContext, journeyType);
+                        errorResponse.get(), session, codeRequest, journeyType, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
@@ -159,7 +169,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         sessionService,
                         session);
             }
-            processSuccessfulCodeRequest(session, codeRequest, input, userContext, journeyType);
+            processSuccessfulCodeRequest(
+                    session, codeRequest, userContext, journeyType, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -197,9 +208,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private void processSuccessfulCodeRequest(
             Session session,
             VerifyCodeRequest codeRequest,
-            APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
         var accountRecoveryJourney =
                 codeRequest.notificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
@@ -232,7 +243,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("MFACodeEntered", codeRequest.code()),
                         pair("journey-type", String.valueOf(journeyType))
                     };
-            clearAccountRecoveryBlockIfPresent(session, userContext, input);
+            clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,
@@ -242,17 +253,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     true);
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
-        submitAuditEvent(
-                session, input, userContext, FrontendAuditableEvent.CODE_VERIFIED, metadataPairs);
+
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.CODE_VERIFIED, auditContext, metadataPairs);
     }
 
     private void processBlockedCodeSession(
             ErrorResponse errorResponse,
             Session session,
             VerifyCodeRequest codeRequest,
-            APIGatewayProxyRequestEvent input,
-            UserContext userContext,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
         var accountRecoveryJourney = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
@@ -293,36 +304,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
                 break;
         }
-        submitAuditEvent(session, input, userContext, auditableEvent, metadataPairs);
-    }
-
-    private void submitAuditEvent(
-            Session session,
-            APIGatewayProxyRequestEvent input,
-            UserContext userContext,
-            AuditableEvent auditableEvent,
-            AuditService.MetadataPair... metadataPairs) {
-        String txmaAuditEncoded =
-                getHeaderValueOrElse(input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, null);
-
-        var restrictedSection =
-                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
-
-        auditService.submitAuditEvent(
-                auditableEvent,
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                restrictedSection,
-                metadataPairs);
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
     }
 
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
@@ -340,8 +322,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         };
     }
 
-    private void clearAccountRecoveryBlockIfPresent(
-            Session session, UserContext userContext, APIGatewayProxyRequestEvent input) {
+    private void clearAccountRecoveryBlockIfPresent(Session session, AuditContext auditContext) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
                         session.getInternalCommonSubjectIdentifier());
@@ -349,11 +330,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
                     session.getInternalCommonSubjectIdentifier());
-            submitAuditEvent(
-                    session,
-                    input,
-                    userContext,
+            auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                    auditContext,
                     pair("mfa-type", MFAMethodType.SMS.getValue()));
         }
     }
