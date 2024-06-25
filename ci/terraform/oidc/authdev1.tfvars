@@ -47,7 +47,8 @@ otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
 
-orch_client_id = "orchestrationAuth"
+orch_client_id  = "orchestrationAuth"
+orch_account_id = "816047645251"
 
 contra_state_bucket = "di-auth-development-tfstate"
 
