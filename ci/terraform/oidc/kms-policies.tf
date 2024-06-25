@@ -196,7 +196,7 @@ data "aws_iam_policy_document" "mfa_reset_storage_token_kms_signing_policy_docum
       "kms:GetPublicKey",
     ]
     resources = [
-      aws_kms_key.mfa_reset_signing_key_ecc.arn
+      aws_kms_key.mfa_reset_token_signing_key_ecc.arn
     ]
   }
 }
