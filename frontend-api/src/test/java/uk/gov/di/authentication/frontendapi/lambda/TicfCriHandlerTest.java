@@ -87,7 +87,8 @@ class TicfCriHandlerTest {
         var actualRequestBody =
                 bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
 
-        assertEquals(SERVICE_URI, httpRequestCaptor.getValue().uri());
+        var expectedUri = URI.create(SERVICE_URI.toString() + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 

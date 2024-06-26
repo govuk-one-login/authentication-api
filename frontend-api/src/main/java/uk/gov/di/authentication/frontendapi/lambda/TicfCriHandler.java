@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
 
@@ -93,7 +94,10 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
         var timeoutInMilliseconds =
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());
         var request =
-                HttpRequest.newBuilder(configurationService.getTicfCriServiceURI())
+                HttpRequest.newBuilder(
+                                buildURI(
+                                        configurationService.getTicfCriServiceURI().toString(),
+                                        "/auth"))
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .timeout(timeoutInMilliseconds)
                         .build();
