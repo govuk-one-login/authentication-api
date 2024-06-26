@@ -2,13 +2,14 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.services.AccountDeletionService;
+import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
+import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -17,29 +18,28 @@ import static org.mockito.Mockito.when;
 
 class ManuallyDeleteAccountHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final AccountDeletionService accountDeletionService =
-            mock(AccountDeletionService.class);
+    private final ManualAccountDeletionService manualAccountDeletionService =
+            mock(ManualAccountDeletionService.class);
     private static final Context CONTEXT = mock(Context.class);
     private final ManuallyDeleteAccountHandler underTest =
-            new ManuallyDeleteAccountHandler(authenticationService, accountDeletionService);
+            new ManuallyDeleteAccountHandler(authenticationService, manualAccountDeletionService);
 
     @Test
-    void callsRemoveAccountWithTheCorrectParameters() throws Json.JsonException {
+    void callsRemoveAccountWithTheCorrectParameters() {
         // given
         var expectedEmail = "test@example.com";
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
-        when(accountDeletionService.removeAccount(any(), any(), any()))
-                .thenReturn(mock(AccountDeletionService.DeletedAccountIdentifiers.class));
+        when(manualAccountDeletionService.manuallyDeleteAccount(any()))
+                .thenReturn(mock(DeletedAccountIdentifiers.class));
 
         // when
         underTest.handleRequest(expectedEmail, CONTEXT);
 
         // then
         verify(authenticationService).getUserProfileByEmailMaybe(expectedEmail);
-        verify(accountDeletionService)
-                .removeAccount(Optional.empty(), userProfile, Optional.empty());
+        verify(manualAccountDeletionService).manuallyDeleteAccount(userProfile);
     }
 
     @Test
@@ -53,16 +53,22 @@ class ManuallyDeleteAccountHandlerTest {
     }
 
     @Test
-    void throwsAnExceptionWhenUserDeletionFails() throws Json.JsonException {
+    void returnsTheCorrectValue() {
         // given
+        var deletedAccountIdentifiers =
+                new DeletedAccountIdentifiers("publicSubject", "legacySubject", "subject");
+        var expectedReturnValue =
+                "DeletedAccountIdentifiers[publicSubjectId=publicSubject, legacySubjectId=legacySubject, subjectId=subject]";
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
-        when(accountDeletionService.removeAccount(any(), any(), any()))
-                .thenThrow(Json.JsonException.class);
+        when(manualAccountDeletionService.manuallyDeleteAccount(any()))
+                .thenReturn(deletedAccountIdentifiers);
+
+        // when
+        var actualReturnValue = underTest.handleRequest("test@example.com", CONTEXT);
 
         // then
-        assertThrows(
-                RuntimeException.class, () -> underTest.handleRequest("test@example.com", CONTEXT));
+        assertEquals(expectedReturnValue, actualReturnValue);
     }
 }
