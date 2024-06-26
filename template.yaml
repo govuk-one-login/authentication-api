@@ -38,6 +38,10 @@ Conditions:
     !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
   EnableProvisionedConcurrency:
     !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build], !Equals [!Ref Environment, integration], !Equals [!Ref Environment, production]]
+  IsNotProduction:
+    !Not [ !Equals [!Ref Environment, production] ]
+  IsNotDevOrProd:
+    !Not [ !Or [ !Equals [ dev, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2025,6 +2029,7 @@ Resources:
 
   UpdateClientConfigFunction:
     Type: AWS::Serverless::Function
+    Condition: IsNotProduction
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
@@ -2060,6 +2065,7 @@ Resources:
 
   UpdateClientConfigFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
+    Condition: IsNotProduction
     Properties:
       FunctionName: !Ref UpdateClientConfigFunction.Alias
       Action: lambda:InvokeFunction
@@ -2071,13 +2077,14 @@ Resources:
 
   UpdateClientConfigFunctionLogGroup:
     Type: AWS::Logs::LogGroup
+    Condition: IsNotProduction
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-update-client-config-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
   UpdateClientConfigFunctionSubscriptionFilter:
-    Condition: IsNotDevEnvironment
+    Condition: IsNotDevOrProd
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
@@ -2086,6 +2093,7 @@ Resources:
 
   UpdateClientConfigFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
+    Condition: IsNotProduction
     Properties:
       FilterName: !Sub ${Environment}-update-client-config-errors
       FilterPattern: "{($.level = \"ERROR\")}"
@@ -2097,6 +2105,7 @@ Resources:
 
   UpdateClientConfigFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
     Properties:
       ActionsEnabled: true
       AlarmActions:
@@ -2113,6 +2122,7 @@ Resources:
 
   UpdateClientConfigFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
     Properties:
       AlarmName: !Sub ${Environment}-update-client-config-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} update client config lambda.ACCOUNT: di-orchestration-${Environment}"
@@ -2156,6 +2166,7 @@ Resources:
   #region Client Registration Function
   ClientRegistrationFunction:
     Type: AWS::Serverless::Function
+    Condition: IsNotProduction
     # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     Properties:
@@ -2191,6 +2202,7 @@ Resources:
 
   ClientRegistrationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
+    Condition: IsNotProduction
     Properties:
       FunctionName: !Ref ClientRegistrationFunction.Alias
       Action: lambda:InvokeFunction
@@ -2202,13 +2214,14 @@ Resources:
 
   ClientRegistrationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
+    Condition: IsNotProduction
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-register-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
   ClientRegistrationFunctionSubscriptionFilter:
-    Condition: IsNotDevEnvironment
+    Condition: IsNotDevOrProd
     Type: AWS::Logs::SubscriptionFilter
     Properties:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
@@ -2217,6 +2230,7 @@ Resources:
 
   ClientRegistrationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
+    Condition: IsNotProduction
     Properties:
       FilterName: !Sub ${Environment}-register-request-errors
       FilterPattern: "{($.level = \"ERROR\")}"
@@ -2228,6 +2242,7 @@ Resources:
 
   ClientRegistrationFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
     Properties:
       ActionsEnabled: true
       AlarmActions:
@@ -2244,6 +2259,7 @@ Resources:
 
   ClientRegistrationFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
     Properties:
       AlarmName: !Sub ${Environment}-register-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} register lambda.ACCOUNT: di-orchestration-${Environment}"
