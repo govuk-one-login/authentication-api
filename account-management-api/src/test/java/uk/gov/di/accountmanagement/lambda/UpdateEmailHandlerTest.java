@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -161,9 +160,11 @@ class UpdateEmailHandlerTest {
         when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        Date mockedDate = new Date();
+        long mockedTimestamp = 1719376320;
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
-            mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+            mockedNowHelperClass
+                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
+                    .thenReturn(mockedTimestamp);
             var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
             handler.handleRequest(event, context);
 
@@ -189,7 +190,7 @@ class UpdateEmailHandlerTest {
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                             AuditService.MetadataPair.pair(
-                                    "assessment_checked_at_timestamp", mockedDate),
+                                    "assessment_checked_at_timestamp", mockedTimestamp),
                             AuditService.MetadataPair.pair("iss", "AUTH"));
         }
     }

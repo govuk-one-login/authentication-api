@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Date;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -149,9 +148,11 @@ class CheckEmailFraudBlockHandlerTest {
 
         usingValidSession();
 
-        Date mockedDate = new Date();
+        long mockedTimestamp = 1719376320;
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
-            mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+            mockedNowHelperClass
+                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
+                    .thenReturn(mockedTimestamp);
 
             var event =
                     new APIGatewayProxyRequestEvent()
@@ -187,7 +188,7 @@ class CheckEmailFraudBlockHandlerTest {
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),
                             AuditService.MetadataPair.pair(
-                                    "assessment_checked_at_timestamp", mockedDate),
+                                    "assessment_checked_at_timestamp", mockedTimestamp),
                             AuditService.MetadataPair.pair("iss", "AUTH"));
         }
     }

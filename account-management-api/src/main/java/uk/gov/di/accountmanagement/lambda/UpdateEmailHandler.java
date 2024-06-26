@@ -174,7 +174,8 @@ public class UpdateEmailHandler
                         AuditService.MetadataPair.pair(
                                 "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                         AuditService.MetadataPair.pair(
-                                "assessment_checked_at_timestamp", NowHelper.now()),
+                                "assessment_checked_at_timestamp",
+                                NowHelper.toUnixTimestamp(NowHelper.now())),
                         AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
             }
 

@@ -145,7 +145,9 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                 AuditHelper.buildRestrictedSection(input.getHeaders()),
                 AuditService.MetadataPair.pair("journey_type", JourneyType.REGISTRATION.getValue()),
-                AuditService.MetadataPair.pair("assessment_checked_at_timestamp", NowHelper.now()),
+                AuditService.MetadataPair.pair(
+                        "assessment_checked_at_timestamp",
+                        NowHelper.toUnixTimestamp(NowHelper.now())),
                 AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
     }
 }
