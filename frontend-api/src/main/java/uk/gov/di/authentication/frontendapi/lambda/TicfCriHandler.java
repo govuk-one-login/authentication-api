@@ -95,9 +95,7 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
                 Duration.ofMillis(configurationService.getTicfCriServiceCallTimeout());
         var request =
                 HttpRequest.newBuilder(
-                                buildURI(
-                                        configurationService.getTicfCriServiceURI().toString(),
-                                        "/auth"))
+                                buildURI(configurationService.getTicfCriServiceURI(), "/auth"))
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .timeout(timeoutInMilliseconds)
                         .build();
