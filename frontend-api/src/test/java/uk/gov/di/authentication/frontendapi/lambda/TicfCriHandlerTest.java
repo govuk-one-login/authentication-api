@@ -46,7 +46,7 @@ class TicfCriHandlerTest {
 
     private TicfCriHandler handler;
 
-    private static final URI SERVICE_URI = URI.create("http://www.example.com");
+    private static final String SERVICE_URI = "http://www.example.com";
     private static final String COMMON_SUBJECTID = "a-subject-id";
     private static final String JOURNEY_ID = "journey-id";
     private static final List<String> VECTORS_OF_TRUST = List.of("Cl");
@@ -87,7 +87,8 @@ class TicfCriHandlerTest {
         var actualRequestBody =
                 bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
 
-        assertEquals(SERVICE_URI, httpRequestCaptor.getValue().uri());
+        var expectedUri = URI.create(SERVICE_URI + "/auth");
+        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
         assertEquals(expectedRequestBody, actualRequestBody);
     }
 

@@ -499,8 +499,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv("ACCOUNT_INTERVENTION_SERVICE_URI"));
     }
 
-    public URI getTicfCriServiceURI() {
-        return URI.create(System.getenv("TICF_CRI_SERVICE_URI"));
+    public String getTicfCriServiceURI() {
+        return System.getenv("TICF_CRI_SERVICE_URI");
     }
 
     public boolean abortOnAccountInterventionsErrorResponse() {
