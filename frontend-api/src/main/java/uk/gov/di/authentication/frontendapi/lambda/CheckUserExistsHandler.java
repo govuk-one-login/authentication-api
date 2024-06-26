@@ -96,13 +96,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         this.codeStorageService = new CodeStorageService(configurationService);
     }
 
-    public CheckUserExistsHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckUserExistsRequest.class, configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
-    }
-
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {

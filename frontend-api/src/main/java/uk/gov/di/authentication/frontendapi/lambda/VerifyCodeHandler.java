@@ -114,15 +114,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
     }
 
-    public VerifyCodeHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(VerifyCodeRequest.class, configurationService, redis);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
-    }
-
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
