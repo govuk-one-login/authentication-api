@@ -56,7 +56,7 @@ variable "logging_endpoint_arns" {
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 5
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }

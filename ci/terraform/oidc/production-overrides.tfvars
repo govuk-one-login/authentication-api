@@ -24,7 +24,7 @@ doc_app_authorisation_uri          = "https://www.review-b.account.gov.uk/dca/oa
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.account.gov.uk/.well-known/jwks.json"
 doc_app_encryption_key_id          = "7958938d-eea0-4e6d-9ea1-ec0b9d421f77"
 
-cloudwatch_log_retention                    = 5
+cloudwatch_log_retention                    = 30
 client_registry_api_enabled                 = false
 spot_enabled                                = true
 ipv_api_enabled                             = true

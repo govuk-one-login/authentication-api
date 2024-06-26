@@ -1,4 +1,4 @@
-cloudwatch_log_retention = 5
+cloudwatch_log_retention = 30
 lambda_min_concurrency   = 25
 
 notify_template_map = {

@@ -128,6 +128,7 @@ variable "cloudwatch_key_arn" {
 }
 
 variable "cloudwatch_log_retention" {
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }

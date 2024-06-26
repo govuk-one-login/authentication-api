@@ -123,7 +123,7 @@ variable "common_state_bucket" {
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 1
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }

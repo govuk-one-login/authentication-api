@@ -39,7 +39,7 @@ variable "enable_api_gateway_execution_logging" {
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 1
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }

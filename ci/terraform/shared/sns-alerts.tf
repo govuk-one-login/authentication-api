@@ -104,7 +104,7 @@ resource "aws_cloudwatch_log_group" "sns_log_group" {
   name              = "/aws/lambda/${aws_sns_topic.slack_events.name}"
   tags              = local.default_tags
   kms_key_id        = aws_kms_key.cloudwatch_log_encryption.arn
-  retention_in_days = 5
+  retention_in_days = 30
 
   depends_on = [
     aws_sns_topic.slack_events
