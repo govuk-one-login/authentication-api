@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
-import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -151,26 +150,22 @@ public class StartService {
         var uplift = false;
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
-        var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
-        if (Boolean.FALSE.equals(docCheckingAppUser)) {
-            uplift = UpliftHelper.upliftRequired(userContext);
-            var clientRegistry = userContext.getClient().orElseThrow();
-            identityRequired =
-                    IdentityHelper.identityRequired(
-                            userContext.getClientSession().getAuthRequestParams(),
-                            clientRegistry.isIdentityVerificationSupported(),
-                            identityEnabled);
-        }
+
+        uplift = UpliftHelper.upliftRequired(userContext);
+        var clientRegistry = userContext.getClient().orElseThrow();
+        identityRequired =
+                IdentityHelper.identityRequired(
+                        userContext.getClientSession().getAuthRequestParams(),
+                        clientRegistry.isIdentityVerificationSupported(),
+                        identityEnabled);
+
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             mfaMethodType = MFAMethodType.SMS;
         } else if (authApp(userContext)) {
             mfaMethodType = MFAMethodType.AUTH_APP;
         }
 
-        var userIsAuthenticated =
-                !docCheckingAppUser
-                        && userContext.getSession().isAuthenticated()
-                        && !reauthenticate;
+        var userIsAuthenticated = userContext.getSession().isAuthenticated() && !reauthenticate;
 
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
@@ -179,7 +174,7 @@ public class StartService {
                 identityRequired,
                 cookieConsent,
                 gaTrackingId,
-                docCheckingAppUser);
+                false);
 
         return new UserStartInfo(
                 uplift,
@@ -187,7 +182,7 @@ public class StartService {
                 userIsAuthenticated,
                 cookieConsent,
                 gaTrackingId,
-                docCheckingAppUser,
+                false,
                 mfaMethodType);
     }
 

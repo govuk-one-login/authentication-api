@@ -246,13 +246,13 @@ class StartServiceTest {
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
     }
 
-    private static Stream<Boolean> userStartDocAppInfo() {
+    private static Stream<Boolean> userIsAuthenticatedInfo() {
         return Stream.of(true, false);
     }
 
     @ParameterizedTest
-    @MethodSource("userStartDocAppInfo")
-    void shouldCreateUserStartInfoWithCorrectDocCheckingAppUserValue(boolean isAuthenticated)
+    @MethodSource("userIsAuthenticatedInfo")
+    void shouldCreateUserStartInfoDependingForAuthenticationStatus(boolean isAuthenticated)
             throws NoSuchAlgorithmException, JOSEException {
         var clientType = ClientType.APP;
         var userContext =
@@ -272,10 +272,10 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
-        assertThat(userStartInfo.isAuthenticated(), equalTo(false));
+        assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
-        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
+        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
     }
 
     private static Stream<Arguments> userStartUpliftInfo() {

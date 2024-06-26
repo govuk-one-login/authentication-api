@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -161,66 +160,6 @@ class StartHandlerTest {
         assertThat(response.user().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
         assertThat(response.user().cookieConsent(), equalTo(cookieConsentValue));
         assertThat(response.user().gaCrossDomainTrackingId(), equalTo(gaTrackingId));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.START_INFO_FOUND,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
-                        pair("internalSubjectId", AuditService.UNKNOWN));
-    }
-
-    @Test
-    void shouldReturn200WhenDocCheckingAppUserIsPresent()
-            throws ParseException, Json.JsonException {
-        when(userContext.getClientSession()).thenReturn(docAppClientSession);
-        when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null);
-        when(startService.buildUserContext(session, docAppClientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext))
-                .thenReturn(
-                        new ClientStartInfo(
-                                TEST_CLIENT_NAME,
-                                DOC_APP_SCOPE.toStringList(),
-                                "MANDATORY",
-                                false,
-                                REDIRECT_URL,
-                                STATE,
-                                false));
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, false))
-                .thenReturn(userStartInfo);
-        usingValidDocAppClientSession();
-        usingValidSession();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
-
-        assertThat(response.client().clientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(response.client().scopes(), equalTo(DOC_APP_SCOPE.toStringList()));
-        assertThat(response.client().serviceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertThat(response.client().redirectUri(), equalTo(REDIRECT_URL));
-        assertFalse(response.client().cookieConsentShared());
-        assertTrue(response.user().isDocCheckingAppUser());
-        assertFalse(response.user().isIdentityRequired());
-        assertFalse(response.user().isUpliftRequired());
-        assertFalse(response.user().isAuthenticated());
-        assertThat(response.user().cookieConsent(), equalTo(null));
-        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(null));
-        verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
                 .submitAuditEvent(
@@ -394,11 +333,6 @@ class StartHandlerTest {
     private void usingValidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
-    }
-
-    private void usingValidDocAppClientSession() {
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(docAppClientSession));
     }
 
     private void usingInvalidClientSession() {
