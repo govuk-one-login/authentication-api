@@ -33,6 +33,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -58,6 +59,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
@@ -99,13 +101,22 @@ public class InitiateIPVAuthorisationServiceTest {
     private InitiateIPVAuthorisationService initiateAuthorisationService;
     private final TokenService tokenService = mock(TokenService.class);
     private APIGatewayProxyRequestEvent event;
+
+    private final String storageTokenClaimName =
+            "https://vocab.account.gov.uk/v1/storageAccessToken";
+    private final AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
     private final ClaimsSetRequest.Entry nameEntry =
             new ClaimsSetRequest.Entry("name").withClaimRequirement(ClaimRequirement.ESSENTIAL);
     private final ClaimsSetRequest.Entry birthDateEntry =
             new ClaimsSetRequest.Entry("birthdate")
                     .withClaimRequirement(ClaimRequirement.VOLUNTARY);
+    private final ClaimsSetRequest.Entry storageTokenEntry =
+            new ClaimsSetRequest.Entry(storageTokenClaimName)
+                    .withValues(List.of(storageToken.getValue()));
     private final ClaimsSetRequest claimsSetRequest =
             new ClaimsSetRequest().add(nameEntry).add(birthDateEntry);
+    private final ClaimsSetRequest claimsSetRequestWithStorageTokenClaim =
+            claimsSetRequest.add(storageTokenEntry);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT_ID, "test.account.gov.uk", SaltHelper.generateNewSalt());
@@ -138,10 +149,8 @@ public class InitiateIPVAuthorisationServiceTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(configService.sendStorageTokenToIpvEnabled()).thenReturn(true);
-        when(configService.getStorageTokenClaimName())
-                .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
-        AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
+        when(configService.sendStorageTokenToIpvEnabled()).thenReturn(false);
+        when(configService.getStorageTokenClaimName()).thenReturn(storageTokenClaimName);
         when(tokenService.generateStorageToken(any())).thenReturn(storageToken);
     }
 
@@ -173,11 +182,12 @@ public class InitiateIPVAuthorisationServiceTest {
     @Test
     void shouldReturn302AndRedirectURIWithClaims() throws JOSEException, ParseException {
         var encryptedJWT = createEncryptedJWT();
+        var authRequest = createAuthenticationRequest(claimsSetRequest);
         when(authorisationService.constructRequestJWT(
                         any(State.class),
                         any(Scope.class),
                         any(Subject.class),
-                        any(),
+                        eq(claimsSetRequest),
                         eq(CLIENT_SESSION_ID),
                         anyString(),
                         eq(List.of("P0", "P2")),
@@ -187,7 +197,7 @@ public class InitiateIPVAuthorisationServiceTest {
         var response =
                 initiateAuthorisationService.sendRequestToIPV(
                         event,
-                        createAuthenticationRequest(),
+                        authRequest,
                         userInfo,
                         session,
                         client,
@@ -205,13 +215,12 @@ public class InitiateIPVAuthorisationServiceTest {
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
-        verify(tokenService).generateStorageToken(any());
         verify(authorisationService)
                 .constructRequestJWT(
                         any(State.class),
-                        eq(createAuthenticationRequest().getScope()),
+                        eq(authRequest.getScope()),
                         any(Subject.class),
-                        any(),
+                        eq(claimsSetRequest),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
@@ -231,6 +240,45 @@ public class InitiateIPVAuthorisationServiceTest {
                         pair("rpPairwiseId", RP_PAIRWISE_ID));
         verify(cloudwatchMetricsService)
                 .incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
+    }
+
+    @Test
+    void shouldConstructJwtWithStorageTokenClaimWhenSendStorageTokenToIpvEnabledFlagEnabled() {
+        when(configService.sendStorageTokenToIpvEnabled()).thenReturn(true);
+        var authRequestWithStorageClaim =
+                createAuthenticationRequest(claimsSetRequestWithStorageTokenClaim);
+
+        var response =
+                initiateAuthorisationService.sendRequestToIPV(
+                        event,
+                        authRequestWithStorageClaim,
+                        userInfo,
+                        session,
+                        client,
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID,
+                        PERSISTENT_SESSION_ID,
+                        REPROVE_IDENTITY,
+                        LEVELS_OF_CONFIDENCE);
+
+        assertThat(response, hasStatus(302));
+        verify(tokenService).generateStorageToken(any(Subject.class));
+        ArgumentCaptor<ClaimsSetRequest> actualClaimsSetRequest =
+                ArgumentCaptor.forClass(ClaimsSetRequest.class);
+        verify(authorisationService)
+                .constructRequestJWT(
+                        any(State.class),
+                        eq(authRequestWithStorageClaim.getScope()),
+                        any(Subject.class),
+                        actualClaimsSetRequest.capture(),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL_ADDRESS),
+                        eq(List.of("P0", "P2")),
+                        eq(REPROVE_IDENTITY));
+
+        assertEquals(
+                claimsSetRequestWithStorageTokenClaim.toJSONString(),
+                actualClaimsSetRequest.getValue().toJSONString());
     }
 
     private EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
@@ -312,10 +360,12 @@ public class InitiateIPVAuthorisationServiceTest {
         return query_pairs;
     }
 
-    private AuthenticationRequest createAuthenticationRequest() {
+    private AuthenticationRequest createAuthenticationRequest(
+            ClaimsSetRequest authenticationClaimSetRequest) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
-        var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+        var oidcClaimsRequest =
+                new OIDCClaimsRequest().withUserInfoClaimsRequest(authenticationClaimSetRequest);
         return new AuthenticationRequest.Builder(
                         new ResponseType(ResponseType.Value.CODE),
                         scope,
