@@ -6,12 +6,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
@@ -239,15 +240,21 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .map(this::errorResponseAsFrontendAuditableEvent)
                         .orElse(CODE_VERIFIED);
 
-        submitAuditEvent(
-                auditableEvent,
-                session,
-                userContext,
-                input,
-                codeRequest.getMfaMethodType(),
-                codeRequest.getCode(),
-                codeRequest.getJourneyType(),
-                codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+        var metadataPairs = metadataPairsForEvent(auditableEvent, session, codeRequest);
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         if (errorResponse.isEmpty()) {
             mfaCodeProcessor.processSuccessfulCodeRequest(
@@ -290,57 +297,28 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private void submitAuditEvent(
+    private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent,
             Session session,
-            UserContext userContext,
-            APIGatewayProxyRequestEvent input,
-            MFAMethodType mfaMethodType,
-            String code,
-            JourneyType journeyType,
-            boolean isAccountRecovery) {
-        var metadataPairs =
+            VerifyMfaCodeRequest codeRequest) {
+        var basicMetadataPairs =
+                List.of(
+                        pair("mfa-type", codeRequest.getMfaMethodType().getValue()),
+                        pair(
+                                "account-recovery",
+                                codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY),
+                        pair("journey-type", codeRequest.getJourneyType()));
+        var additionalPairs =
                 switch (auditableEvent) {
                     case CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                            pair("journey-type", journeyType));
+                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
                     case INVALID_CODE_SENT -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
                             pair("loginFailureCount", session.getRetryCount()),
-                            pair("MFACodeEntered", code),
-                            pair("journey-type", journeyType));
-                    case CODE_VERIFIED -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("MFACodeEntered", code),
-                            pair("journey-type", journeyType));
-                    default -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("journey-type", journeyType));
+                            pair("MFACodeEntered", codeRequest.getCode()));
+                    case CODE_VERIFIED -> List.of(pair("MFACodeEntered", codeRequest.getCode()));
+                    default -> List.<AuditService.MetadataPair>of();
                 };
-
-        var restrictedSection =
-                new AuditService.RestrictedSection(
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
-        auditService.submitAuditEvent(
-                auditableEvent,
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                restrictedSection,
-                metadataPairs.toArray(new AuditService.MetadataPair[0]));
+        return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
+                .toArray(AuditService.MetadataPair[]::new);
     }
 }

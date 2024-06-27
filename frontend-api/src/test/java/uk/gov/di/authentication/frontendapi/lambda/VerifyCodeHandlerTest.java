@@ -17,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -132,6 +133,30 @@ class VerifyCodeHandlerTest {
                                     "^(.+)@digital.cabinet-office.gov.uk$",
                                     "testclient.user2@internet.com"));
 
+    private final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
+    private final AuditContext AUDIT_CONTEXT_FOR_TEST_CLIENT =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    testSession.getSessionId(),
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     private VerifyCodeHandler handler;
 
     @RegisterExtension
@@ -232,15 +257,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
@@ -285,15 +302,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
@@ -329,15 +338,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
@@ -373,15 +374,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        testSession.getSessionId(),
-                        expectedCommonSubject,
-                        email,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT_FOR_TEST_CLIENT.withEmail(email),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
@@ -415,15 +408,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        testSession.getSessionId(),
-                        expectedCommonSubject,
-                        email,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT_FOR_TEST_CLIENT.withEmail(email),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
@@ -447,15 +432,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
@@ -523,15 +500,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
                         pair("journey-type", "ACCOUNT_RECOVERY"));
@@ -560,35 +529,19 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "123456"),
                         pair(
                                 "journey-type",
-                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
+                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", "123456"));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
@@ -613,21 +566,13 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
+                        pair("journey-type", "SIGN_IN"),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "123456"),
-                        pair("journey-type", "SIGN_IN"));
+                        pair("MFACodeEntered", "123456"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -646,22 +591,14 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
+                        pair("journey-type", "SIGN_IN"),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", 0),
                         pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", "SIGN_IN"));
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -686,24 +623,16 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
                         pair(
                                 "journey-type",
-                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
+                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", "6543221"),
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
 
     @Test
@@ -729,15 +658,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "PASSWORD_RESET"));
