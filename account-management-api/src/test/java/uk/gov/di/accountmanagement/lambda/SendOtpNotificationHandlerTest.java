@@ -158,7 +158,7 @@ class SendOtpNotificationHandlerTest {
                         .send(
                                 format(
                                         "{\"userId\":\"%s\",\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
-                                        AuditService.UNKNOWN,
+                                        expectedCommonSubject,
                                         mockedUUID,
                                         TEST_EMAIL_ADDRESS,
                                         "some-session-id",
