@@ -12,9 +12,7 @@ import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
@@ -51,7 +49,7 @@ public class AuditService {
                 .forEach(
                         pair -> {
                             if (Boolean.TRUE.equals(pair.isRestricted())) {
-                                txmaAuditEvent.addRestricted(pair.getKey(), pair.getValue());
+                                txmaAuditEvent.addRestricted(pair.key(), pair.value());
                             }
                         });
 
@@ -72,7 +70,7 @@ public class AuditService {
                 .forEach(
                         pair -> {
                             if (Boolean.FALSE.equals(pair.isRestricted())) {
-                                txmaAuditEvent.addExtension(pair.getKey(), pair.getValue());
+                                txmaAuditEvent.addExtension(pair.key(), pair.value());
                             }
                         });
         Optional.ofNullable(user.getPhone())
@@ -141,63 +139,13 @@ public class AuditService {
         submitAuditEvent(event, auditContext, metadataPairs);
     }
 
-    public static class MetadataPair {
-        private final String key;
-        private final Object value;
-        private final Boolean restricted;
-
-        private MetadataPair(String key, Object value) {
-            this(key, value, false);
-        }
-
-        private MetadataPair(String key, Object value, Boolean restricted) {
-            this.key = key;
-            this.value = value;
-            this.restricted = restricted;
-        }
-
+    public record MetadataPair(String key, Object value, boolean isRestricted) {
         public static MetadataPair pair(String key, Object value) {
             return new MetadataPair(key, value, false);
         }
 
-        public static MetadataPair pair(String key, Object value, Boolean restricted) {
+        public static MetadataPair pair(String key, Object value, boolean restricted) {
             return new MetadataPair(key, value, restricted);
         }
-
-        public String getKey() {
-            return key;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-
-        public Boolean isRestricted() {
-            return restricted;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("[%s: %s]", key, value);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            MetadataPair that = (MetadataPair) o;
-            return Objects.equals(key, that.key)
-                    && Objects.equals(value, that.value)
-                    && Objects.equals(restricted, that.restricted);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(key, value, restricted);
-        }
-    }
-
-    static void addField(String value, Consumer<String> setter) {
-        Optional.ofNullable(value).ifPresent(setter);
     }
 }
