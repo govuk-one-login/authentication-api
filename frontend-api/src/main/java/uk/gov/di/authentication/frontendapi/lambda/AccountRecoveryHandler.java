@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -103,24 +104,22 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                             ? ACCOUNT_RECOVERY_PERMITTED
                             : ACCOUNT_RECOVERY_NOT_PERMITTED;
 
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
+            var auditContext =
+                    new AuditContext(
+                            userContext.getClientId(),
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            commonSubjectId.getValue(),
+                            userContext
+                                    .getUserProfile()
+                                    .map(UserProfile::getEmail)
+                                    .orElse(AuditService.UNKNOWN),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
-            auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext.getClientId(),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    commonSubjectId.getValue(),
-                    userContext
-                            .getUserProfile()
-                            .map(UserProfile::getEmail)
-                            .orElse(AuditService.UNKNOWN),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    restrictedSection);
+            auditService.submitAuditEvent(auditableEvent, auditContext);
             var accountRecoveryResponse = new AccountRecoveryResponse(accountRecoveryPermitted);
             LOG.info("Returning response back to frontend");
             return generateApiGatewayProxyResponse(200, accountRecoveryResponse);

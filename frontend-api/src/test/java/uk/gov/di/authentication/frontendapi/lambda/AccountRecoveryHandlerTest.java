@@ -4,7 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -27,6 +27,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -60,6 +62,18 @@ class AccountRecoveryHandlerTest {
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
 
+    private final AuditContext auditContext =
+            new AuditContext(
+                    AuditService.UNKNOWN,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    internalCommonSubjectId,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     @BeforeEach
     void setup() {
         var userProfile = generateUserProfile();
@@ -92,18 +106,7 @@ class AccountRecoveryHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasJsonBody(expectedResponse));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        internalCommonSubjectId,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_NOT_PERMITTED, auditContext);
     }
 
     @Test
@@ -120,18 +123,7 @@ class AccountRecoveryHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasJsonBody(expectedResponse));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        internalCommonSubjectId,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_PERMITTED, auditContext);
     }
 
     @Test
@@ -148,16 +140,8 @@ class AccountRecoveryHandlerTest {
         assertThat(result, hasStatus(200));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        internalCommonSubjectId,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        ACCOUNT_RECOVERY_PERMITTED,
+                        auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private void usingValidSession() {
