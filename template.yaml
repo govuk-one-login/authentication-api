@@ -2043,6 +2043,7 @@ Resources:
         - !Ref OrchToAuthSigningKmsAccessPolicy
         - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref IpvCapacityAccessPolicy
+        - !Ref InvokeFetchJwksHandlerPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4374,6 +4375,17 @@ Resources:
           - Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
+
+  InvokeFetchJwksHandlerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction
+
 
   #endregion
 
