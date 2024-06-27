@@ -124,7 +124,7 @@ resource "aws_dynamodb_table" "user_profile_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.user_profile_table_cross_account_access_enabled ? aws_kms_key.user_profile_table_encryption_key.arn : null
+    kms_key_arn = aws_kms_key.user_profile_table_encryption_key.arn
   }
 
   point_in_time_recovery {
@@ -170,7 +170,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.client_registry_table_cross_account_access_enabled ? aws_kms_key.client_registry_table_encryption_key.arn : null
+    kms_key_arn = aws_kms_key.client_registry_table_encryption_key.arn
   }
 
   lifecycle {
@@ -199,7 +199,7 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.identity_credentials_cross_account_access_enabled ? aws_kms_key.identity_credentials_table_encryption_key.arn : null
+    kms_key_arn = aws_kms_key.identity_credentials_table_encryption_key.arn
   }
 
   lifecycle {
@@ -233,7 +233,7 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = var.doc_app_cross_account_access_enabled ? aws_kms_key.doc_app_credential_table_encryption_key.arn : null
+    kms_key_arn = aws_kms_key.doc_app_credential_table_encryption_key.arn
   }
 
   lifecycle {
@@ -249,7 +249,6 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
 }
 
 resource "aws_dynamodb_resource_policy" "doc_app_credential_table_policy" {
-  count        = var.doc_app_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.doc_app_credential_table.arn
   policy       = data.aws_iam_policy_document.cross_account_doc_app_credential_table_policy.json
 }
@@ -539,25 +538,21 @@ resource "aws_dynamodb_table" "email-check-result" {
 }
 
 resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_policy" {
-  count        = var.authentication_callback_userinfo_table_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.authentication_callback_userinfo.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "client_registry_table_policy" {
-  count        = var.client_registry_table_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.client_registry_table.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "identity_credentials_table_policy" {
-  count        = var.identity_credentials_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.identity_credentials_table.arn
   policy       = data.aws_iam_policy_document.cross_account_identity_credentials_table_resource_policy_document.json
 }
 
 resource "aws_dynamodb_resource_policy" "user_profile_table_policy" {
-  count        = var.user_profile_table_cross_account_access_enabled ? 1 : 0
   resource_arn = aws_dynamodb_table.user_profile_table.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
 }
