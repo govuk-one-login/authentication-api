@@ -19,6 +19,7 @@ import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundRe
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.entity.State;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -63,19 +64,13 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.TEST_CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountInterventionsHandlerTest {
-    private static final String TEST_CLIENT_ID = "test_client_id";
-    private static final String TEST_CLIENT_NAME = "test_client_name";
-    private static final String TEST_SESSION_ID = "test-session-id";
-    private static final String TEST_CLIENT_SESSION_ID = "test-client-session-id";
     private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -106,22 +101,22 @@ class AccountInterventionsHandlerTest {
             mock(CloudwatchMetricsService.class);
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
-            new Session(SESSION_ID)
+            new Session(CommonTestVariables.SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setSessionId(TEST_SESSION_ID)
+                    .setSessionId(CommonTestVariables.SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
-                    TEST_CLIENT_ID,
-                    TEST_CLIENT_SESSION_ID,
-                    TEST_SESSION_ID,
+                    CommonTestVariables.CLIENT_ID,
+                    CommonTestVariables.CLIENT_SESSION_ID,
+                    CommonTestVariables.SESSION_ID,
                     TEST_INTERNAL_SUBJECT_ID,
                     EMAIL,
-                    IP_ADDRESS,
+                    CommonTestVariables.IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    DI_PERSISTENT_SESSION_ID,
-                    Optional.of(ENCODED_DEVICE_DETAILS));
+                    CommonTestVariables.DI_PERSISTENT_SESSION_ID,
+                    Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS));
     private static final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
@@ -140,9 +135,10 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSession()).thenReturn(clientSession);
-        when(userContext.getClientId()).thenReturn(TEST_CLIENT_ID);
-        when(userContext.getClientSessionId()).thenReturn(TEST_CLIENT_SESSION_ID);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
+        when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
+        when(userContext.getTxmaAuditEncoded())
+                .thenReturn(CommonTestVariables.ENCODED_DEVICE_DETAILS);
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
@@ -389,9 +385,9 @@ class AccountInterventionsHandlerTest {
 
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", SESSION_ID);
-        headers.put("di-persistent-session-id", DI_PERSISTENT_SESSION_ID);
-        headers.put("X-Forwarded-For", IP_ADDRESS);
+        headers.put("Session-Id", CommonTestVariables.SESSION_ID);
+        headers.put("di-persistent-session-id", CommonTestVariables.DI_PERSISTENT_SESSION_ID);
+        headers.put("X-Forwarded-For", CommonTestVariables.IP_ADDRESS);
         return headers;
     }
 
@@ -407,7 +403,7 @@ class AccountInterventionsHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .build();
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 
     private static Stream<Arguments> httpErrorCodesAndAssociatedResponses() {
