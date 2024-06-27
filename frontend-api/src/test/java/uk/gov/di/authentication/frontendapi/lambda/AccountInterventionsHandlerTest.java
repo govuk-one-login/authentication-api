@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
@@ -109,6 +110,18 @@ class AccountInterventionsHandlerTest {
                     .setEmailAddress(EMAIL)
                     .setSessionId(TEST_SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
+
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    TEST_CLIENT_SESSION_ID,
+                    TEST_SESSION_ID,
+                    TEST_INTERNAL_SUBJECT_ID,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
     private static final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
@@ -313,18 +326,7 @@ class AccountInterventionsHandlerTest {
                         String.valueOf(resetPassword));
         verify(cloudwatchMetricsService)
                 .incrementCounter("AuthAisResult", expectedMetricDimensions);
-        verify(auditService)
-                .submitAuditEvent(
-                        expectedEvent,
-                        TEST_CLIENT_ID,
-                        TEST_CLIENT_SESSION_ID,
-                        TEST_SESSION_ID,
-                        TEST_INTERNAL_SUBJECT_ID,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(expectedEvent, AUDIT_CONTEXT);
     }
 
     @Test
@@ -356,16 +358,7 @@ class AccountInterventionsHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        expectedEvent,
-                        TEST_CLIENT_ID,
-                        TEST_CLIENT_SESSION_ID,
-                        TEST_SESSION_ID,
-                        TEST_INTERNAL_SUBJECT_ID,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        expectedEvent, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private UserProfile generateUserProfile() {
