@@ -4,11 +4,14 @@ module "mfa_reset_authorize_role" {
   role_name   = "mfa-reset-authorize-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  #TODO: enable in ATO-670
   policies_to_attach = [
-    #     aws_iam_policy.mfa_reset_token_kms_signing_policy.arn,
-    #     aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn,
-    #     module.oidc_txma_audit.access_policy_arn,
+    aws_iam_policy.mfa_reset_token_kms_signing_policy.arn,
+    aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn,
+    aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
+    aws_iam_policy.dynamo_user_read_access_policy.arn,
+    aws_iam_policy.redis_parameter_policy.arn,
+    module.oidc_txma_audit.access_policy_arn,
   ]
 }
 
@@ -18,14 +21,20 @@ module "mfa_reset_authorize" {
 
   endpoint_name   = "mfa-reset-authorize"
   path_part       = "mfa-reset-authorize"
-  endpoint_method = ["GET"]
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
-    IPV_AUDIENCE                              = var.ipv_audience
+    AUTH_ISSUER_CLAIM                         = "https://${local.frontend_fqdn}/",
+    ENVIRONMENT                               = var.environment,
+    IPV_AUDIENCE                              = var.ipv_audience,
+    IPV_AUTHORISATION_CLIENT_ID               = var.ipv_authorisation_client_id,
+    IPV_AUTHORIZATION_URI                     = var.ipv_authorisation_callback_uri,
+    MFA_RESET_CALLBACK_URI                    = "${local.frontend_api_base_url}reverification-callback",
+    MFA_RESET_JAR_SIGNING_KEY_ID              = aws_kms_alias.mfa_reset_jar_signing_key_alias.target_key_id,
     MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_token_signing_key_alias.arn,
-    MFA_RESET_JAR_SIGNING_KEY_ALIAS           = aws_kms_alias.mfa_reset_jar_signing_key_alias.arn,
-
+    REDIS_KEY                                 = local.redis_key,
+    TXMA_AUDIT_QUEUE_URL                      = module.oidc_txma_audit.queue_url
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest"
@@ -56,7 +65,7 @@ module "mfa_reset_authorize" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-  api_key_required                       = false
+  api_key_required                       = true
 
   use_localstack = false
 
