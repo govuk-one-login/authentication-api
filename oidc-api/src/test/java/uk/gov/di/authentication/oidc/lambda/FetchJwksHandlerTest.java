@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.JWK;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.oidc.entity.JwksResponse;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.net.MalformedURLException;
@@ -36,11 +35,10 @@ class FetchJwksHandlerTest {
         when(jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId)).thenReturn(jwk);
 
         // when
-        JwksResponse response = handler.handleRequest(event, CONTEXT);
+        String response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(response.jwk().toJSONString(), equalTo(jwkJson));
-        assertThat(response.error(), equalTo(null));
+        assertThat(response, equalTo(jwkJson));
     }
 
     @Test
@@ -52,15 +50,10 @@ class FetchJwksHandlerTest {
                 .thenThrow(new KeySourceException());
 
         // when
-        JwksResponse response = handler.handleRequest(event, CONTEXT);
+        String response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(
-                response.error().getDescription(),
-                equalTo(
-                        "Failed to fetch JWKS: could not find key in JWKS that matches provided keyId"));
-        assertThat(response.error().getHTTPStatusCode(), equalTo(404));
-        assertThat(response.jwk(), equalTo(null));
+        assertThat(response, equalTo("error"));
     }
 
     @Test
@@ -69,14 +62,10 @@ class FetchJwksHandlerTest {
         Map<String, String> event = Map.of("keyId", keyId);
 
         // when
-        JwksResponse response = handler.handleRequest(event, CONTEXT);
+        String response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(
-                response.error().getDescription(),
-                equalTo("Failed to fetch JWKS: url and/or keyId parameter not present"));
-        assertThat(response.error().getHTTPStatusCode(), equalTo(400));
-        assertThat(response.jwk(), equalTo(null));
+        assertThat(response, equalTo("error"));
     }
 
     @Test
@@ -85,14 +74,10 @@ class FetchJwksHandlerTest {
         Map<String, String> event = Map.of("url", url);
 
         // when
-        JwksResponse response = handler.handleRequest(event, CONTEXT);
+        String response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(
-                response.error().getDescription(),
-                equalTo("Failed to fetch JWKS: url and/or keyId parameter not present"));
-        assertThat(response.error().getHTTPStatusCode(), equalTo(400));
-        assertThat(response.jwk(), equalTo(null));
+        assertThat(response, equalTo("error"));
     }
 
     @Test
@@ -101,13 +86,9 @@ class FetchJwksHandlerTest {
         Map<String, String> event = Map.of("url", "not-a-valid-url", "keyId", keyId);
 
         // when
-        JwksResponse response = handler.handleRequest(event, CONTEXT);
+        String response = handler.handleRequest(event, CONTEXT);
 
         // then
-        assertThat(
-                response.error().getDescription(),
-                equalTo("Failed to fetch JWKS: URL is malformed"));
-        assertThat(response.error().getHTTPStatusCode(), equalTo(400));
-        assertThat(response.jwk(), equalTo(null));
+        assertThat(response, equalTo("error"));
     }
 }
