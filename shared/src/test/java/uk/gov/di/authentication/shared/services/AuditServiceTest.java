@@ -34,7 +34,6 @@ class AuditServiceTest {
             Clock.fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
 
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private final ArgumentCaptor<String> txmaMessageCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -50,7 +49,7 @@ class AuditServiceTest {
 
     @BeforeEach
     void beforeEach() {
-        auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+        auditService = new AuditService(FIXED_CLOCK, awsSqsClient);
     }
 
     @Test

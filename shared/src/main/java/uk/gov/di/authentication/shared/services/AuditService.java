@@ -26,8 +26,7 @@ public class AuditService {
     private final Clock clock;
     private final AwsSqsClient txmaQueueClient;
 
-    public AuditService(
-            Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
+    public AuditService(Clock clock, AwsSqsClient txmaQueueClient) {
         this.clock = clock;
         this.txmaQueueClient = txmaQueueClient;
     }
