@@ -71,6 +71,7 @@ if [[ $# == 0 ]] || [[ $* == "-p" ]]; then
     OIDC=1
     INTERVENTIONS=1
     SHARED=1
+    TICF_STUB=1
 fi
 
 while [[ $# -gt 0 ]]; do
