@@ -45,12 +45,8 @@ public class AuditService {
             TxmaAuditEvent txmaAuditEvent,
             MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
-                .forEach(
-                        pair -> {
-                            if (Boolean.TRUE.equals(pair.isRestricted())) {
-                                txmaAuditEvent.addRestricted(pair.key(), pair.value());
-                            }
-                        });
+                .filter(MetadataPair::isRestricted)
+                .forEach(pair -> txmaAuditEvent.addRestricted(pair.key(), pair.value()));
 
         txmaAuditEncoded.ifPresentOrElse(
                 s -> {
@@ -66,12 +62,9 @@ public class AuditService {
     private static void addExtensionSectionToAuditEvent(
             TxmaAuditUser user, TxmaAuditEvent txmaAuditEvent, MetadataPair... metadataPairs) {
         Arrays.stream(metadataPairs)
-                .forEach(
-                        pair -> {
-                            if (Boolean.FALSE.equals(pair.isRestricted())) {
-                                txmaAuditEvent.addExtension(pair.key(), pair.value());
-                            }
-                        });
+                .filter(not(MetadataPair::isRestricted))
+                .forEach(pair -> txmaAuditEvent.addExtension(pair.key(), pair.value()));
+
         Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
                 .flatMap(PhoneNumberHelper::maybeGetCountry)
