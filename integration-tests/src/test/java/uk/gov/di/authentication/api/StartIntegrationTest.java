@@ -1,12 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.google.gson.JsonParser;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -19,13 +13,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -49,8 +41,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
@@ -241,47 +231,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldReturn200WhenUserIsADocCheckingAppUser(boolean isAuthenticated)
-            throws JOSEException, Json.JsonException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        var state = new State();
-        var sessionId = redis.createSession(isAuthenticated);
-        var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP),
-                                new ClientID(CLIENT_ID),
-                                REDIRECT_URI)
-                        .state(new State())
-                        .nonce(new Nonce())
-                        .requestObject(createSignedJWT(keyPair, state))
-                        .build();
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
-
-        registerClient(keyPair, ClientType.APP);
-
-        var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
-        assertThat(response, hasStatus(200));
-
-        var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
-
-        assertTrue(startResponse.user().isDocCheckingAppUser());
-        assertFalse(startResponse.user().isAuthenticated());
-        assertFalse(startResponse.user().isIdentityRequired());
-        verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.user());
-
-        var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
-
-        assertNotNull(clientSession.getDocAppSubjectId());
-
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
-    }
-
     @Test
     void userShouldNotComeBackAsAuthenticatedWhenSessionIsAuthenticatedButNoUserProfileExists()
             throws Json.JsonException {
@@ -329,28 +278,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "public",
                 clientType,
                 true);
-    }
-
-    private SignedJWT createSignedJWT(KeyPair keyPair, State state) throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience("http://localhost")
-                        .claim("redirect_uri", REDIRECT_URI.toString())
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim(
-                                "scope",
-                                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
-                                        .toString())
-                        .claim("client_id", CLIENT_ID)
-                        .claim("state", state.getValue())
-                        .claim("nonce", new Nonce().getValue())
-                        .issuer(CLIENT_ID)
-                        .build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-        var signer = new RSASSASigner(keyPair.getPrivate());
-        signedJWT.sign(signer);
-        return signedJWT;
     }
 
     private void verifyStandardClientInformationSetOnResponse(

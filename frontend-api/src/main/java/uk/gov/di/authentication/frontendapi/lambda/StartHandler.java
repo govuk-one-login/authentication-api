@@ -14,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -163,16 +162,6 @@ public class StartHandler
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
-            if (userStartInfo.isDocCheckingAppUser()) {
-                var docAppSubjectId =
-                        DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                                userContext.getClientSession().getAuthRequestParams(),
-                                configurationService.isCustomDocAppClaimEnabled(),
-                                configurationService.getDocAppDomain());
-                clientSessionService.updateStoredClientSession(
-                        clientSessionId, clientSession.get().setDocAppSubjectId(docAppSubjectId));
-                LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
-            }
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
