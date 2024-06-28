@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -54,6 +55,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -100,6 +102,18 @@ class SignUpHandlerTest {
     private final ClientSession clientSession =
             new ClientSession(
                     generateAuthRequest().toParameters(), null, (VectorOfTrust) null, CLIENT_NAME);
+
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID.getValue(),
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    AuditService.UNKNOWN,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -163,15 +177,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT.withSubjectId(expectedCommonSubject),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
 
@@ -206,15 +212,9 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT
+                                .withSubjectId(expectedCommonSubject)
+                                .withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
     }
@@ -264,7 +264,7 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfUserAlreadyExists() {
-        when(authenticationService.userExists(eq(EMAIL))).thenReturn(true);
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
 
         usingValidSession();
         usingValidClientSession();
@@ -279,23 +279,12 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, AUDIT_CONTEXT);
     }
 
     @Test
     void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        when(authenticationService.userExists(eq(EMAIL))).thenReturn(true);
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
         usingValidSession();
         var body =
                 format(
@@ -309,16 +298,8 @@ class SignUpHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private void usingValidSession() {
