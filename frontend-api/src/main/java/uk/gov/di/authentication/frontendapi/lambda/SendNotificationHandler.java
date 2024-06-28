@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -172,6 +173,17 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        request.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
@@ -197,24 +209,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getNotificationType(),
                             request.getJourneyType());
             if (codeRequestValid.isPresent()) {
-                var restrictedSection =
-                        new AuditService.RestrictedSection(
-                                Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        restrictedSection);
+                        auditContext);
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
             switch (request.getNotificationType()) {
@@ -227,7 +225,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext,
                             request.isRequestNewCode(),
                             request,
-                            input);
+                            input,
+                            auditContext);
                 case VERIFY_PHONE_NUMBER:
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
@@ -250,7 +249,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext,
                             request.isRequestNewCode(),
                             request,
-                            input);
+                            input,
+                            auditContext);
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -270,7 +270,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext,
             Boolean requestNewCode,
             SendNotificationRequest request,
-            APIGatewayProxyRequestEvent input)
+            APIGatewayProxyRequestEvent input,
+            AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
 
         String code =
@@ -335,25 +336,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             LOG.info("Successfully processed request");
         }
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
         auditService.submitAuditEvent(
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
-                userContext.getSession().getInternalCommonSubjectIdentifier(),
-                request.getEmail(),
-                IpAddressHelper.extractIpAddress(input),
-                Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                restrictedSection);
+                auditContext);
         return generateEmptySuccessApiGatewayResponse();
     }
 
