@@ -13,6 +13,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -61,6 +62,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -108,6 +111,18 @@ class ResetPasswordHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
+
+    private final AuditContext auditContext =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
@@ -164,15 +179,7 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        auditContext);
     }
 
     @Test
@@ -192,15 +199,7 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
@@ -221,18 +220,7 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -254,30 +242,8 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -299,18 +265,7 @@ class ResetPasswordHandlerTest {
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -329,18 +284,7 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -404,18 +348,7 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -452,30 +385,8 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     private APIGatewayProxyRequestEvent generateRequest(
