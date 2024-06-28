@@ -268,7 +268,7 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfUserAlreadyExists() {
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
+        when(authenticationService.userExists(eq(EMAIL))).thenReturn(true);
 
         usingValidSession();
         var body =
@@ -288,7 +288,7 @@ class SignUpHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        "joe.bloggs@test.com",
+                        EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         DI_PERSISTENT_SESSION_ID,
@@ -297,7 +297,7 @@ class SignUpHandlerTest {
 
     @Test
     void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
+        when(authenticationService.userExists(eq(EMAIL))).thenReturn(true);
         usingValidSession();
         var body =
                 format(
@@ -316,7 +316,7 @@ class SignUpHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        "joe.bloggs@test.com",
+                        EMAIL,
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         DI_PERSISTENT_SESSION_ID,
