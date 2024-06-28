@@ -221,7 +221,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     return handleNotificationRequest(
                             request.getEmail(),
                             request.getNotificationType(),
-                            userContext.getSession(),
                             userContext,
                             request.isRequestNewCode(),
                             request,
@@ -245,7 +244,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
                                     request.getPhoneNumber()),
                             request.getNotificationType(),
-                            userContext.getSession(),
                             userContext,
                             request.isRequestNewCode(),
                             request,
@@ -266,13 +264,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private APIGatewayProxyResponseEvent handleNotificationRequest(
             String destination,
             NotificationType notificationType,
-            Session session,
             UserContext userContext,
             Boolean requestNewCode,
             SendNotificationRequest request,
             APIGatewayProxyRequestEvent input,
             AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
+        var session = userContext.getSession();
 
         String code =
                 requestNewCode != null && requestNewCode
