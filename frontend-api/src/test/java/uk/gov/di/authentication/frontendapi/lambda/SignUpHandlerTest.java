@@ -115,6 +115,10 @@ class SignUpHandlerTest {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(user.getUserProfile()).thenReturn(userProfile);
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
         handler =
@@ -132,10 +136,6 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn200IfSignUpIsSuccessful() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
@@ -188,10 +188,6 @@ class SignUpHandlerTest {
     @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
@@ -271,6 +267,8 @@ class SignUpHandlerTest {
         when(authenticationService.userExists(eq(EMAIL))).thenReturn(true);
 
         usingValidSession();
+        usingValidClientSession();
+
         var body =
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -284,7 +282,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
@@ -312,7 +310,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
