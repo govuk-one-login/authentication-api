@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
@@ -149,6 +150,18 @@ class ResetPasswordRequestHandlerTest {
                     codeStorageService,
                     auditService);
 
+    private final AuditContext auditContext =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    CommonTestVariables.EMAIL,
+                    IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(ResetPasswordRequestHandler.class);
@@ -258,21 +271,14 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldSubmitCorrectAuditEventForAValidRequest() {
             usingValidSession();
+            usingValidClientSession();
 
             handler.handleRequest(validEvent, context);
 
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                            TEST_CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            expectedCommonSubject,
-                            CommonTestVariables.EMAIL,
-                            IP_ADDRESS,
-                            CommonTestVariables.UK_MOBILE_NUMBER,
-                            DI_PERSISTENT_SESSION_ID,
-                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            auditContext,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
@@ -294,15 +300,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                            TEST_CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            expectedCommonSubject,
-                            CommonTestVariables.EMAIL,
-                            IP_ADDRESS,
-                            CommonTestVariables.UK_MOBILE_NUMBER,
-                            DI_PERSISTENT_SESSION_ID,
-                            AuditService.RestrictedSection.empty,
+                            auditContext.withTxmaAuditEncoded(Optional.empty()),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
@@ -348,15 +346,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                            TEST_CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            expectedCommonSubject,
-                            CommonTestVariables.EMAIL,
-                            IP_ADDRESS,
-                            CommonTestVariables.UK_MOBILE_NUMBER,
-                            DI_PERSISTENT_SESSION_ID,
-                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            auditContext,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
@@ -383,15 +373,7 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                            TEST_CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            expectedCommonSubject,
-                            CommonTestVariables.EMAIL,
-                            IP_ADDRESS,
-                            CommonTestVariables.UK_MOBILE_NUMBER,
-                            DI_PERSISTENT_SESSION_ID,
-                            AuditService.RestrictedSection.empty,
+                            auditContext.withTxmaAuditEncoded(Optional.empty()),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
