@@ -15,6 +15,7 @@ import java.util.Optional;
 
 public class LambdaInvokerService implements LambdaInvoker {
     private static final Logger LOG = LogManager.getLogger(LambdaInvokerService.class);
+    public static final String MISSING = "missing";
     private final LambdaClient lambdaClient;
 
     public LambdaInvokerService(LambdaClient lambdaClient) {
@@ -53,14 +54,14 @@ public class LambdaInvokerService implements LambdaInvoker {
             var errorMessage =
                     Optional.ofNullable(e.awsErrorDetails())
                             .map(AwsErrorDetails::errorMessage)
-                            .orElse("missing");
+                            .orElse(MISSING);
 
             var errorCode =
                     Optional.ofNullable(e.awsErrorDetails())
                             .map(AwsErrorDetails::errorCode)
-                            .orElse("missing");
+                            .orElse(MISSING);
 
-            var requestId = Optional.ofNullable(e.requestId()).orElse("missing");
+            var requestId = Optional.ofNullable(e.requestId()).orElse(MISSING);
 
             LOG.error(
                     "Lambda invocation error: {}\n Error code: {}\n Request ID: {}",

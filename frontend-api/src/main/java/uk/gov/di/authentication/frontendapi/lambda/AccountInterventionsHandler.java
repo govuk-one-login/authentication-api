@@ -179,7 +179,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             submitAuditEvents(
                     accountInterventionsInboundResponse, input, userContext, persistentSessionID);
 
-            sendTICF(userContext, internalPairwiseId);
+            if (configurationService.getInvokeTicfCRILambda()) {
+                sendTICF(userContext, internalPairwiseId);
+            }
 
             LOG.info("Generating Account Interventions outbound response for frontend");
             var accountInterventionsResponse =

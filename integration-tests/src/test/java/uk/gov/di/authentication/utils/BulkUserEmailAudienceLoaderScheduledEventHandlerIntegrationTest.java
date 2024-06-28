@@ -99,6 +99,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         handler = new BulkUserEmailAudienceLoaderScheduledEventHandler(configuration);
         var lambdaInvokerService =
                 new LambdaInvokerService((LambdaClient) null) {
+                    @Override
                     public void invokeAsyncWithPayload(String jsonPayload, String lambdaName) {
                         ScheduledEvent scheduledEvent = new ScheduledEvent();
 

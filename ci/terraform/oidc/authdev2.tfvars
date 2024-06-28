@@ -14,6 +14,7 @@ account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
+call_ticf_cri                               = true
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----

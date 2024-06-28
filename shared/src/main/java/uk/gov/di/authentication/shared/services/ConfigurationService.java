@@ -187,6 +187,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_NAME", "");
     }
 
+    public boolean getInvokeTicfCRILambda() {
+        return System.getenv().getOrDefault("INVOKE_TICF_CRI_LAMBDA", "false").equals("true");
+    }
+
     public URI getAuthenticationAuthCallbackURI() {
         return URI.create(
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));

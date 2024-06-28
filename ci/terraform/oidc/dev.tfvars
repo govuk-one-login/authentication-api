@@ -8,6 +8,7 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "di-auth-development-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.dev.account.gov.uk"
+call_ticf_cri                        = true
 
 # lockout config
 lockout_duration                     = 60

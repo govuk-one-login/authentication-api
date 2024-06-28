@@ -129,15 +129,6 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         assertThat(response, hasStatus(200));
     }
 
-    private Map<String, String> getHeaders() throws Json.JsonException {
-        Map<String, String> headers = new HashMap<>();
-        var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
-        headers.put("Session-Id", sessionId);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
-        return headers;
-    }
-
     private Map<String, String> getHeadersForAuthenticatedSession() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
         var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL_ADDRESS);
