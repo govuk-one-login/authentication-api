@@ -82,6 +82,10 @@ class LambdaInvokerServiceTest {
         assertDoesNotThrow(() -> lambdaInvokerService.invokeAsyncWithPayload(null, functionName));
         assertThat(
                 logging.events(),
-                hasItem(withMessage("Could not convert payload for TICF CRI into SdkBytes: null")));
+                hasItem(
+                        withMessage(
+                                "Could not convert payload for "
+                                        + functionName
+                                        + " into SdkBytes: null")));
     }
 }

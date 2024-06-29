@@ -37,7 +37,8 @@ public class LambdaInvokerService implements LambdaInvoker {
         try {
             payload = SdkBytes.fromUtf8String(jsonPayload);
         } catch (Exception e) {
-            LOG.error("Could not convert payload for TICF CRI into SdkBytes: {}", jsonPayload);
+            LOG.error(
+                    "Could not convert payload for {} into SdkBytes: {}", lambdaName, jsonPayload);
             return;
         }
 
@@ -64,12 +65,13 @@ public class LambdaInvokerService implements LambdaInvoker {
             var requestId = Optional.ofNullable(e.requestId()).orElse(MISSING);
 
             LOG.error(
-                    "Lambda invocation error: {}\n Error code: {}\n Request ID: {}",
+                    "Lambda {} invocation error: {}\n Error code: {}\n Request ID: {}",
+                    lambdaName,
                     errorMessage,
                     errorCode,
                     requestId);
         } catch (Exception e) {
-            LOG.error("Lambda invocation failed in unexpected way: ", e);
+            LOG.error("Lambda {} invocation failed in unexpected way: ", lambdaName, e);
         }
     }
 }

@@ -205,7 +205,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                             .getCredentialTrustLevel()
                             .getValue());
         } catch (Exception e) {
-            LOG.warn("Error retrieving effective vector of trust: {}", e.getMessage(), e);
+            LOG.warn(
+                    "Error retrieving effective vector of trust for TICF CRI Request: {}",
+                    e.getMessage(),
+                    e);
         }
 
         String journeyId = userContext.getClientSessionId();
@@ -217,10 +220,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         try {
             payload = gson.toJson(ticfRequest);
         } catch (JsonIOException | JsonSyntaxException | NullPointerException e) {
-            LOG.error("Error serializing ticfCriRequest {}", e.getMessage(), e);
+            LOG.error("Error serializing TICF CRI Request {}", e.getMessage(), e);
             return;
         } catch (Exception e) {
-            LOG.error("Unexpected error serializing ticfCriRequest {}", e.getMessage(), e);
+            LOG.error("Unexpected error serializing TICF CRI Request {}", e.getMessage(), e);
             return;
         }
 
