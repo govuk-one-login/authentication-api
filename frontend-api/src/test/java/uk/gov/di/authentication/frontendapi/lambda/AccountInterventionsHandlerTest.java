@@ -81,9 +81,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class AccountInterventionsHandlerTest {
     private static final String TEST_CLIENT_ID = "test_client_id";
-    private static final String TEST_CLIENT_NAME = "test_client_name";
-    private static final String TEST_SESSION_ID = "test-session-id";
-    private static final String TEST_CLIENT_SESSION_ID = "test-client-session-id";
     private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -266,8 +263,13 @@ class AccountInterventionsHandlerTest {
         }
     }
 
-    @Test
-    void checkDoesNotInvokesTICFLambdaForUnauthenticatedUsers()
+    private static Stream<Boolean> authenticatedUserSource() {
+        return Stream.of(Boolean.TRUE, Boolean.FALSE, null);
+    }
+
+    @ParameterizedTest
+    @MethodSource("authenticatedUserSource")
+    void checkDoesNotInvokesTICFLambdaForUsersWithUnknownAuthenticationStatus(Boolean authenticated)
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
@@ -283,12 +285,16 @@ class AccountInterventionsHandlerTest {
                 handler.handleRequestWithUserContext(
                         apiRequestEventWithEmail(),
                         context,
-                        new AccountInterventionsRequest("test", false),
+                        new AccountInterventionsRequest("test", authenticated),
                         userContext);
 
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
-        verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
+        if (authenticated != null) {
+            verify(mockLambdaInvokerService, times(1)).invokeAsyncWithPayload(any(), any());
+        } else {
+            verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
+        }
     }
 
     @Test
@@ -466,7 +472,7 @@ class AccountInterventionsHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new AccountInterventionsRequest("test", null), userContext);
+                        event, context, new AccountInterventionsRequest("test", true), userContext);
 
         assertThat(result, hasStatus(200));
 
