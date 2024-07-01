@@ -37,11 +37,11 @@ public class ConstructUriHelper {
     private static URI buildURI(
             String baseUri, Optional<String> path, Optional<Map<String, String>> queryParams) {
         try {
-            var uriBuilder = new URIBuilder(StringUtils.removeEnd(baseUri, "/"));
-            path.ifPresent(
-                    p ->
-                            uriBuilder.appendPath(
-                                    StringUtils.removeEnd(StringUtils.removeStart(p, "/"), "/")));
+            var uriBuilder =
+                    path.isEmpty()
+                            ? new URIBuilder(baseUri)
+                            : new URIBuilder(StringUtils.removeEnd(baseUri, "/"));
+            path.ifPresent(uriBuilder::appendPath);
             queryParams.ifPresent(
                     qp -> {
                         for (var entry : qp.entrySet()) {

@@ -16,6 +16,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -37,12 +38,17 @@ public class WellknownHandler
 
     private final String providerMetadata;
 
-    public WellknownHandler(ConfigurationService configService) {
+    private final AuthFrontend authFrontend;
+
+    public WellknownHandler(AuthFrontend authFrontend, ConfigurationService configService) {
+        this.authFrontend = authFrontend;
         providerMetadata = constructProviderMetadata(configService);
     }
 
     public WellknownHandler() {
-        providerMetadata = constructProviderMetadata(ConfigurationService.getInstance());
+        this(
+                new AuthFrontend(ConfigurationService.getInstance()),
+                ConfigurationService.getInstance());
     }
 
     @Override
@@ -100,9 +106,8 @@ public class WellknownHandler
             oidcMetadata.setCustomParameter(
                     "trustmarks", buildURI(baseUrl, "/trustmark").toString());
 
-            var frontendUrl = configService.getFrontendBaseURL();
-            oidcMetadata.setPolicyURI(buildURI(frontendUrl, "privacy-notice"));
-            oidcMetadata.setTermsOfServiceURI(buildURI(frontendUrl, "terms-and-conditions"));
+            oidcMetadata.setPolicyURI(authFrontend.privacyNoticeURI());
+            oidcMetadata.setTermsOfServiceURI(authFrontend.termsOfServiceURI());
 
             oidcMetadata.setUILocales(parseLangTagList("en", "cy"));
 

@@ -22,6 +22,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
@@ -70,7 +71,8 @@ class AuthenticationCallbackHandlerTest {
     private static final LogoutService logoutService = mock(LogoutService.class);
     private static final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientService clientService = mock(ClientService.class);
-    private static final String TEST_FRONTEND_BASE_URL = "test.orchestration.frontend.url";
+    private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private static final String TEST_FRONTEND_ERROR_URI = "test.orchestration.frontend.url/error";
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID =
@@ -110,7 +112,7 @@ class AuthenticationCallbackHandlerTest {
     @BeforeAll
     static void init() {
         when(configurationService.getEnvironment()).thenReturn("test-env");
-        when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
+        when(authFrontend.errorURI()).thenReturn(URI.create(TEST_FRONTEND_ERROR_URI));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
@@ -152,7 +154,8 @@ class AuthenticationCallbackHandlerTest {
                         clientService,
                         initiateIPVAuthorisationService,
                         accountInterventionService,
-                        logoutService);
+                        logoutService,
+                        authFrontend);
     }
 
     @Test
@@ -242,8 +245,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_BASE_URL + "/error"));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
         verifyNoInteractions(
                 tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
@@ -286,8 +288,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_BASE_URL + "/error"));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
         verifyAuditEvents(
                 List.of(
@@ -313,8 +314,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_BASE_URL + "/error"));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
         verifyAuditEvents(
                 List.of(

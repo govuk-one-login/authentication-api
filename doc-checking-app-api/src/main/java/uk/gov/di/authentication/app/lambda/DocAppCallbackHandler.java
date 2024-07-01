@@ -19,6 +19,7 @@ import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -73,9 +74,8 @@ public class DocAppCallbackHandler
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final CookieHelper cookieHelper;
+    private final AuthFrontend authFrontend;
     protected final Json objectMapper = SerializationService.getInstance();
-
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     public DocAppCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -92,7 +92,8 @@ public class DocAppCallbackHandler
             AuthorisationCodeService authorisationCodeService,
             CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -104,6 +105,7 @@ public class DocAppCallbackHandler
         this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.authFrontend = authFrontend;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
@@ -125,6 +127,7 @@ public class DocAppCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     public DocAppCallbackHandler(
@@ -149,6 +152,7 @@ public class DocAppCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService, redis);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     @Override
@@ -258,8 +262,7 @@ public class DocAppCallbackHandler
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
 
             try {
@@ -340,19 +343,15 @@ public class DocAppCallbackHandler
                             clientId,
                             user);
                     LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
-                    return RedirectService.redirectToFrontendErrorPage(
-                            configurationService.getLoginURI().toString(),
-                            ERROR_PAGE_REDIRECT_PATH);
+                    return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
                 }
             }
         } catch (DocAppCallbackException | NoSessionException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         }
     }
 

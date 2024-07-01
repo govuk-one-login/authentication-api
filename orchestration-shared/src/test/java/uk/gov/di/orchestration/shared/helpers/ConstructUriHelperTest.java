@@ -11,7 +11,11 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParameters;
 
 class ConstructUriHelperTest {
 
@@ -60,16 +64,6 @@ class ConstructUriHelperTest {
     }
 
     @Test
-    void shouldBuildUriWhenOnlyQueryParamAndBaseUrlArePreent() {
-        var baseUrl = "https://GOV.UK/";
-        var queryParams = Map.of("referer", "emailConfirmationEmail");
-
-        var uri = ConstructUriHelper.buildURI(baseUrl, null, queryParams);
-
-        assertThat(uri.toString(), equalTo("https://GOV.UK?referer=emailConfirmationEmail"));
-    }
-
-    @Test
     void shouldBeAbleToChainBuildURI() {
         var baseUrl = URI.create("https://GOV.UK/");
         var path1 = "information";
@@ -85,13 +79,92 @@ class ConstructUriHelperTest {
                 equalTo("https://GOV.UK/information/user?name=smith&dob=2000-01-01"));
     }
 
-    @Test
-    void shouldRemoveRedundantBackSlashes() {
-        var baseUrl = URI.create("https://GOV.UK/");
-        var path = "/information/";
+    @ParameterizedTest
+    @MethodSource("queryParameterOnlyCases")
+    void constructingUriWithQueryParametersShouldReturnCorrectUri(
+            String providedUri, Map<String, String> queryParameters) {
+        var constructedUri = ConstructUriHelper.buildURI(providedUri, queryParameters);
+        assertThat(constructedUri, baseUri(URI.create(providedUri)));
+        assertThat(constructedUri, queryParameters(aMapWithSize(queryParameters.size())));
+        for (var entry : queryParameters.entrySet()) {
+            assertThat(constructedUri, queryParameters(hasEntry(entry.getKey(), entry.getValue())));
+        }
 
-        var uri = ConstructUriHelper.buildURI(baseUrl, path);
+        constructedUri = ConstructUriHelper.buildURI(URI.create(providedUri), queryParameters);
+        assertThat(constructedUri, baseUri(URI.create(providedUri)));
+        assertThat(constructedUri, queryParameters(aMapWithSize(queryParameters.size())));
+        for (var entry : queryParameters.entrySet()) {
+            assertThat(constructedUri, queryParameters(hasEntry(entry.getKey(), entry.getValue())));
+        }
+    }
 
-        assertThat(uri.toString(), equalTo("https://GOV.UK/information"));
+    private static Stream<Arguments> queryParameterOnlyCases() {
+        return Stream.of(
+                Arguments.of("https://GOV.UK", Map.of("param1", "value1", "param2", "value2")),
+                Arguments.of("https://GOV.UK/", Map.of("param1", "value1", "param2", "value2")),
+                Arguments.of("https://GOV.UK/path", Map.of("param1", "value1", "param2", "value2")),
+                Arguments.of(
+                        "https://GOV.UK/path/", Map.of("param1", "value1", "param2", "value2")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("pathOnlyCases")
+    void constructingUriWithPathShouldReturnCorrectUri(
+            String providedUri, String path, String combinedUri) {
+        var constructedUri = ConstructUriHelper.buildURI(providedUri, path);
+        assertThat(constructedUri, equalTo(URI.create(combinedUri)));
+
+        constructedUri = ConstructUriHelper.buildURI(URI.create(providedUri), path);
+        assertThat(constructedUri, equalTo(URI.create(combinedUri)));
+    }
+
+    private static Stream<Arguments> pathOnlyCases() {
+        return Stream.of(
+                Arguments.of("https://GOV.UK", "path", "https://GOV.UK/path"),
+                Arguments.of("https://GOV.UK/", "path", "https://GOV.UK/path"),
+                Arguments.of("https://GOV.UK", "/path", "https://GOV.UK/path"),
+                Arguments.of("https://GOV.UK/", "/path", "https://GOV.UK/path"),
+                Arguments.of("https://GOV.UK", "path/", "https://GOV.UK/path/"),
+                Arguments.of("https://GOV.UK/", "path/", "https://GOV.UK/path/"),
+                Arguments.of("https://GOV.UK", "/path/", "https://GOV.UK/path/"),
+                Arguments.of("https://GOV.UK/", "/path/", "https://GOV.UK/path/"),
+                Arguments.of("https://GOV.UK/path1", "path2", "https://GOV.UK/path1/path2"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("pathAndQueryParameterCases")
+    void constructingUriWithPathAndQueryParametersShouldReturnCorrectUri(
+            String providedUri,
+            String path,
+            Map<String, String> queryParameters,
+            String combinedUri) {
+        var constructedUri = ConstructUriHelper.buildURI(providedUri, path, queryParameters);
+        assertThat(constructedUri, baseUri(URI.create(combinedUri)));
+        assertThat(constructedUri, queryParameters(aMapWithSize(queryParameters.size())));
+        for (var entry : queryParameters.entrySet()) {
+            assertThat(constructedUri, queryParameters(hasEntry(entry.getKey(), entry.getValue())));
+        }
+
+        constructedUri =
+                ConstructUriHelper.buildURI(URI.create(providedUri), path, queryParameters);
+        assertThat(constructedUri, baseUri(URI.create(combinedUri)));
+        assertThat(constructedUri, queryParameters(aMapWithSize(queryParameters.size())));
+        for (var entry : queryParameters.entrySet()) {
+            assertThat(constructedUri, queryParameters(hasEntry(entry.getKey(), entry.getValue())));
+        }
+    }
+
+    private static Stream<Arguments> pathAndQueryParameterCases() {
+        return Stream.of(
+                Arguments.of(
+                        "https://GOV.UK",
+                        "path",
+                        Map.of("param1", "value1", "param2", "value2"),
+                        "https://GOV.UK/path"),
+                Arguments.of(
+                        "https://GOV.UK/",
+                        "path/",
+                        Map.of("param1", "value1", "param2", "value2"),
+                        "https://GOV.UK/path/"));
     }
 }

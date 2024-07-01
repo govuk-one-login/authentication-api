@@ -90,7 +90,6 @@ class LogoutRequestTest {
 
     @BeforeEach
     void setUp() throws JOSEException {
-        when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
 

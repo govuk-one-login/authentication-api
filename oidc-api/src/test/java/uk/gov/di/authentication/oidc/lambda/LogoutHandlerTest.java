@@ -102,8 +102,7 @@ class LogoutHandlerTest {
                         dynamoClientService,
                         tokenValidationService,
                         cloudwatchMetricsService,
-                        logoutService,
-                        configurationService);
+                        logoutService);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
@@ -115,9 +114,8 @@ class LogoutHandlerTest {
                         ecSigningKey);
         idTokenHint = signedIDToken.serialize();
 
-        when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any(), any()))
+        when(logoutService.handleLogout(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(dynamoClientService.getClient("client-id"))
@@ -152,10 +150,10 @@ class LogoutHandlerTest {
         verify(logoutService, times(1)).destroySessions(session);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(logoutService, times(1))
-                .generateLogoutResponse(
-                        URI.create(CLIENT_LOGOUT_URI.toString()),
-                        Optional.of(STATE.toString()),
+                .handleLogout(
                         Optional.empty(),
+                        Optional.of(CLIENT_LOGOUT_URI),
+                        Optional.of(STATE.toString()),
                         auditUser,
                         Optional.of("client-id"),
                         Optional.of(SUBJECT.getValue()));
@@ -183,10 +181,10 @@ class LogoutHandlerTest {
         verify(logoutService, times(0)).destroySessions(any());
         verify(cloudwatchMetricsService, times(0)).incrementLogout(any());
         verify(logoutService, times(1))
-                .generateLogoutResponse(
-                        URI.create(CLIENT_LOGOUT_URI.toString()),
-                        Optional.of(STATE.toString()),
+                .handleLogout(
                         Optional.empty(),
+                        Optional.of(CLIENT_LOGOUT_URI),
+                        Optional.of(STATE.toString()),
                         auditUser,
                         Optional.of("client-id"),
                         Optional.of(SUBJECT.getValue()));
@@ -223,10 +221,10 @@ class LogoutHandlerTest {
         verify(logoutService, times(1)).destroySessions(session);
         verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(logoutService, times(1))
-                .generateLogoutResponse(
-                        URI.create(CLIENT_LOGOUT_URI.toString()),
-                        Optional.of(STATE.toString()),
+                .handleLogout(
                         Optional.empty(),
+                        Optional.of(CLIENT_LOGOUT_URI),
+                        Optional.of(STATE.toString()),
                         auditUser,
                         Optional.of("client-id"),
                         Optional.of(SUBJECT.getValue()));

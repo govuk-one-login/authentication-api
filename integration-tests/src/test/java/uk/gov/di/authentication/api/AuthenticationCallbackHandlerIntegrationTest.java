@@ -78,6 +78,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -89,6 +90,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final State RP_STATE = new State();
     public static final State ORCH_TO_AUTH_STATE = new State();
+    private static final String BLOCKED_ENDPOINT = "unavailable-permanent";
+    private static final String SUSPENDED_ENDPOINT = "unavailable-temporary";
 
     @RegisterExtension
     public static final AuthExternalApiStubExtension authExternalApiStub =
@@ -198,7 +201,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -223,7 +226,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -682,7 +685,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertThat(
                 redirectLocationHeader.toString(),
-                containsString(configurationService.getAccountStatusSuspendedURI().toString()));
+                containsString(
+                        buildURI(configurationService.getFrontendBaseURL(), SUSPENDED_ENDPOINT)
+                                .toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -706,7 +711,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertThat(
                 redirectLocationHeader.toString(),
-                containsString(configurationService.getAccountStatusBlockedURI().toString()));
+                containsString(
+                        buildURI(configurationService.getFrontendBaseURL(), BLOCKED_ENDPOINT)
+                                .toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,

@@ -106,16 +106,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }
 
-    public URI getAccountStatusBlockedURI() {
-        return getURIOrDefault(
-                "ACCOUNT_STATUS_BLOCKED_URI", getFrontendBaseURL() + "unavailable-permanent");
-    }
-
-    public URI getAccountStatusSuspendedURI() {
-        return getURIOrDefault(
-                "ACCOUNT_STATUS_SUSPENDED_URI", getFrontendBaseURL() + "unavailable-temporary");
-    }
-
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
@@ -148,10 +138,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isCustomDocAppClaimEnabled() {
         return getFlagOrFalse("CUSTOM_DOC_APP_CLAIM_ENABLED");
-    }
-
-    public URI getDefaultLogoutURI() {
-        return getURIOrThrow("DEFAULT_LOGOUT_URI");
     }
 
     public URI getDocAppAuthorisationURI() {
@@ -214,8 +200,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("SPOT_QUEUE_URL");
     }
 
-    public String getFrontendBaseURL() {
-        return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
+    public URI getFrontendBaseURL() {
+        return getURIOrThrow("FRONTEND_BASE_URL");
     }
 
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
@@ -297,10 +283,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getInternalSectorURI() {
         return System.getenv("INTERNAl_SECTOR_URI");
-    }
-
-    public URI getLoginURI() {
-        return getURIOrThrow("LOGIN_URI");
     }
 
     public String getNotifyCallbackBearerToken() {
