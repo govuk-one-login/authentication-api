@@ -8,8 +8,8 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
@@ -179,7 +179,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             submitAuditEvents(
                     accountInterventionsInboundResponse, input, userContext, persistentSessionID);
 
-            if (configurationService.getInvokeTicfCRILambda()) {
+            if (configurationService.isInvokeTicfCRILambdaEnabled() && request.authenticated()) {
                 sendTICF(userContext, internalPairwiseId);
             }
 

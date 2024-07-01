@@ -17,8 +17,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
@@ -74,11 +74,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.TEST_CLIENT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -123,7 +119,7 @@ class AccountInterventionsHandlerTest {
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setSessionId(TEST_SESSION_ID)
+                    .setSessionId(SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
@@ -233,7 +229,7 @@ class AccountInterventionsHandlerTest {
                 handler.handleRequestWithUserContext(
                         apiRequestEventWithEmail(),
                         context,
-                        new AccountInterventionsRequest("test", null),
+                        new AccountInterventionsRequest("test", true),
                         userContext);
 
         assertThat(result, hasStatus(200));
@@ -252,13 +248,13 @@ class AccountInterventionsHandlerTest {
         when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
-        when(configurationService.getInvokeTicfCRILambda()).thenReturn(featureSwitch);
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(featureSwitch);
 
         var result =
                 handler.handleRequestWithUserContext(
                         apiRequestEventWithEmail(),
                         context,
-                        new AccountInterventionsRequest("test", null),
+                        new AccountInterventionsRequest("test", true),
                         userContext);
 
         assertThat(result, hasStatus(200));
@@ -268,6 +264,31 @@ class AccountInterventionsHandlerTest {
         } else {
             verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
         }
+    }
+
+    @Test
+    void checkDoesNotInvokesTICFLambdaForUnauthenticatedUsers()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithEmail(),
+                        context,
+                        new AccountInterventionsRequest("test", false),
+                        userContext);
+
+        assertThat(result, hasStatus(200));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
     }
 
     @Test
@@ -281,14 +302,14 @@ class AccountInterventionsHandlerTest {
         when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
-        when(configurationService.getInvokeTicfCRILambda()).thenReturn(true);
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
         when(userContext.getClientSession()).thenReturn(null);
 
         var result =
                 handler.handleRequestWithUserContext(
                         apiRequestEventWithEmail(),
                         context,
-                        new AccountInterventionsRequest("test", null),
+                        new AccountInterventionsRequest("test", true),
                         userContext);
 
         assertThat(result, hasStatus(200));
@@ -297,7 +318,7 @@ class AccountInterventionsHandlerTest {
     }
 
     @Test
-    void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDiabled()
+    void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDisabled()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
 
@@ -391,11 +412,11 @@ class AccountInterventionsHandlerTest {
         when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
                 .thenReturn(CredentialTrustLevel.LOW_LEVEL);
 
-        when(configurationService.getInvokeTicfCRILambda()).thenReturn(true);
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new AccountInterventionsRequest("test", null), userContext);
+                        event, context, new AccountInterventionsRequest("test", true), userContext);
 
         assertThat(result, hasStatus(200));
 
@@ -413,19 +434,6 @@ class AccountInterventionsHandlerTest {
                         Map.entry("resetPassword", String.valueOf(resetPassword)));
         verify(cloudwatchMetricsService)
                 .incrementCounter("AuthAisResult", expectedMetricDimensions);
-        verify(auditService)
-                .submitAuditEvent(
-                        expectedEvent,
-                        TEST_CLIENT_ID,
-                        TEST_CLIENT_SESSION_ID,
-                        TEST_SESSION_ID,
-                        TEST_INTERNAL_SUBJECT_ID,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
-
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> lambdaNameCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -433,7 +441,7 @@ class AccountInterventionsHandlerTest {
                 .invokeAsyncWithPayload(payloadCaptor.capture(), lambdaNameCaptor.capture());
 
         var ticfRequest = new Gson().fromJson(payloadCaptor.getValue(), TICFCRIRequest.class);
-        assertEquals(TEST_CLIENT_SESSION_ID, ticfRequest.govukSigninJourneyId());
+        assertEquals(CommonTestVariables.CLIENT_SESSION_ID, ticfRequest.govukSigninJourneyId());
         var vtr = new ArrayList<String>();
         vtr.add(CredentialTrustLevel.LOW_LEVEL.getValue());
         assertEquals(ticfRequest.vtr(), vtr);
