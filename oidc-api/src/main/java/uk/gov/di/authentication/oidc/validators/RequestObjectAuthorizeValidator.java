@@ -14,6 +14,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
+import uk.gov.di.authentication.oidc.services.RpPublicKeyService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -45,6 +46,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
+
     private static final Json objectMapper = SerializationService.getInstance();
 
     public RequestObjectAuthorizeValidator(
@@ -68,8 +70,21 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         attachLogFieldToLogs(CLIENT_ID, clientId);
         ClientRegistry client = getClientFromDynamo(clientId);
 
+        boolean signatureValid;
         var signedJWT = (SignedJWT) authRequest.getRequestObject();
-        var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
+        if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
+            LOG.info("fetchRpPublicKeyFromJwksEnabled = true");
+            RpPublicKeyService rpPublicKeyService =
+                    new RpPublicKeyService(client, configurationService);
+            PublicKey publicKey = rpPublicKeyService.retrievePublicKey();
+            LOG.info("publicKey: " + publicKey.toString());
+            signatureValid = isSignatureValid(signedJWT, publicKey);
+            LOG.info("signature valid: " + signatureValid);
+        } else {
+            LOG.info("client.getPublicKey()" + client.getPublicKey());
+            signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
+        }
+
         if (!signatureValid) {
             LOG.error("Invalid Signature on request JWT");
             throw new RuntimeException();
@@ -216,6 +231,16 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
             return signedJWT.verify(verifier);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException | JOSEException e) {
+            LOG.error("Error when validating JWT signature");
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static boolean isSignatureValid(SignedJWT signedJWT, PublicKey publicKey) {
+        try {
+            JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
+            return signedJWT.verify(verifier);
+        } catch (JOSEException e) {
             LOG.error("Error when validating JWT signature");
             throw new RuntimeException(e);
         }
