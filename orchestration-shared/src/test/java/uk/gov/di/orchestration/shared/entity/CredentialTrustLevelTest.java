@@ -5,14 +5,20 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.CL;
+import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode.CL_CM;
 
 class CredentialTrustLevelTest {
 
@@ -22,26 +28,41 @@ class CredentialTrustLevelTest {
     }
 
     @ParameterizedTest
-    @MethodSource("validCredentialTrustLevelValues")
-    void valuesShouldBeParsable(String vtrSet, CredentialTrustLevel expectedValue) {
-        assertThat(
-                CredentialTrustLevel.retrieveCredentialTrustLevel(vtrSet), equalTo(expectedValue));
+    @MethodSource("ofSuccessTestCases")
+    void ofShouldReturnCorrectValue(
+            CredentialTrustLevelCode ctlCode, CredentialTrustLevel expectedCtl) {
+        assertThat(CredentialTrustLevel.of(ctlCode), is(equalTo(expectedCtl)));
+    }
+
+    static Stream<Arguments> ofSuccessTestCases() {
+        return Stream.of(arguments(CL, LOW_LEVEL), arguments(CL_CM, MEDIUM_LEVEL));
+    }
+
+    @Test
+    void ofShouldThrowIfInvalidCodeProvided() {
+        var invalidCode = new CredentialTrustLevelCode(EnumSet.of(CredentialTrustLevelId.CM));
+        assertThrows(IllegalArgumentException.class, () -> CredentialTrustLevel.of(invalidCode));
     }
 
     @ParameterizedTest
-    @MethodSource("invalidCredentialTrustLevelValues")
-    void shouldThrowWhenInvalidValueIsPassed(String vtrSet) {
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> CredentialTrustLevel.retrieveCredentialTrustLevel(vtrSet),
-                "Expected to throw exception");
+    @MethodSource("getDefaultCodeTestCases")
+    void getDefaultCodeShouldReturnCorrectValue(
+            CredentialTrustLevel ctl, CredentialTrustLevelCode expectedCtlCode) {
+        assertThat(ctl.getDefaultCode(), is(equalTo(expectedCtlCode)));
     }
 
-    private static Stream<Arguments> validCredentialTrustLevelValues() {
-        return Stream.of(Arguments.of("Cl", LOW_LEVEL), Arguments.of("Cl.Cm", MEDIUM_LEVEL));
+    static Stream<Arguments> getDefaultCodeTestCases() {
+        return Stream.of(arguments(LOW_LEVEL, CL), arguments(MEDIUM_LEVEL, CL_CM));
     }
 
-    private static Stream<String> invalidCredentialTrustLevelValues() {
-        return Stream.of("Cm", "Cm.Cl", "Cl.Cm.Cl.Cm", "P2.Cl.Cm");
+    @ParameterizedTest
+    @MethodSource("getAllCodesTestCases")
+    void getAllCodesShouldReturnCorrectValue(
+            CredentialTrustLevel ctl, Set<CredentialTrustLevelCode> expectedCtlCodes) {
+        assertThat(ctl.getAllCodes(), is(equalTo(expectedCtlCodes)));
+    }
+
+    static Stream<Arguments> getAllCodesTestCases() {
+        return Stream.of(arguments(LOW_LEVEL, Set.of(CL)), arguments(MEDIUM_LEVEL, Set.of(CL_CM)));
     }
 }

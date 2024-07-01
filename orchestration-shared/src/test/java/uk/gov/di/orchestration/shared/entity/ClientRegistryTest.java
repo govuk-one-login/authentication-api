@@ -18,8 +18,8 @@ class ClientRegistryTest {
                 clientRegistry.getClientLoCs(),
                 equalTo(
                         List.of(
-                                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                                LevelOfConfidence.NONE.getValue())));
+                                LevelOfConfidence.MEDIUM_LEVEL.toString(),
+                                LevelOfConfidence.NONE.toString())));
     }
 
     @Test
@@ -28,7 +28,7 @@ class ClientRegistryTest {
         clientRegistry.setIdentityVerificationSupported(false);
         assertThat(
                 clientRegistry.getClientLoCs(),
-                equalTo(List.of(LevelOfConfidence.NONE.getValue())));
+                equalTo(List.of(LevelOfConfidence.NONE.toString())));
     }
 
     @Test

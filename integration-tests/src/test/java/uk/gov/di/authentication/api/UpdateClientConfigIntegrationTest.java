@@ -82,8 +82,8 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         updateRequest.setClientType(expectedClientType);
         var expectedAcceptedLevelsOfConfidence =
                 List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue());
+                        LevelOfConfidence.MEDIUM_LEVEL.toString(),
+                        LevelOfConfidence.HMRC200.toString());
         updateRequest.setClientLoCs(expectedAcceptedLevelsOfConfidence);
         var expectedBackchannelLogoutUri = "https://api.example.com/backchannel/logout";
         updateRequest.setBackChannelLogoutUri(expectedBackchannelLogoutUri);

@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevelCode;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -89,7 +90,7 @@ public class TokenService {
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
-            String vot) {
+            CredentialTrustLevelCode tokenCode) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
@@ -118,7 +119,7 @@ public class TokenService {
                                         rpPairwiseSubject,
                                         additionalTokenClaims,
                                         accessTokenHash,
-                                        vot,
+                                        tokenCode,
                                         isDocAppJourney,
                                         signingAlgorithm,
                                         journeyId));
@@ -219,7 +220,7 @@ public class TokenService {
             Subject subject,
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
-            String vot,
+            CredentialTrustLevelCode tokenCode,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId) {
@@ -240,7 +241,7 @@ public class TokenService {
 
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
-            idTokenClaims.setClaim("vot", vot);
+            idTokenClaims.setClaim("vot", tokenCode.toString());
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 
