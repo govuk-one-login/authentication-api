@@ -91,6 +91,7 @@ class CheckEmailFraudBlockHandlerTest {
         var userProfile = generateUserProfile();
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
+        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);

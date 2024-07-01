@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -126,11 +125,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         .getUserProfile()
                         .map(UserProfile::getPhoneNumber)
                         .orElse(AuditService.UNKNOWN);
-        String auditableClientId =
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN);
+        String auditableClientId = userContext.getClientId();
         var auditContext =
                 new AuditContext(
                         auditableClientId,

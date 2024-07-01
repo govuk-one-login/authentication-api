@@ -9,7 +9,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
@@ -126,18 +125,13 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             UserContext userContext,
             CheckEmailFraudBlockRequest request) {
 
-        var clientId =
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN);
         var sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(
                         input.getHeaders(), SESSION_ID_HEADER, AuditService.UNKNOWN);
 
         var auditContext =
                 new AuditContext(
-                        clientId,
+                        userContext.getClientId(),
                         ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                         sessionId,
                         AuditService.UNKNOWN,
