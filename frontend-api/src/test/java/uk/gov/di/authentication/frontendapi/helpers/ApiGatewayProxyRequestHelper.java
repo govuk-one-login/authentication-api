@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
 import java.util.Map;
 
@@ -14,5 +15,13 @@ public class ApiGatewayProxyRequestHelper {
                 .withHeaders(headers)
                 .withBody(body)
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+    }
+
+    public static APIGatewayProxyResponseEvent apiResponseEvent(
+            int statusCode, String body, Map<String, String> headers) {
+        return new APIGatewayProxyResponseEvent()
+                .withStatusCode(statusCode)
+                .withBody(body)
+                .withHeaders(headers);
     }
 }

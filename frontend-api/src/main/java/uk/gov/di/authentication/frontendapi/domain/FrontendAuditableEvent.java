@@ -50,7 +50,8 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     PASSWORD_RESET_INTERVENTION_COMPLETE,
     REAUTHENTICATION_SUCCESSFUL,
     REAUTHENTICATION_INVALID,
-    EMAIL_FRAUD_CHECK_BYPASSED;
+    EMAIL_FRAUD_CHECK_BYPASSED,
+    REVERIFY_AUTHORISATION_REQUESTED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

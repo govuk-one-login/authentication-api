@@ -4,11 +4,12 @@ module "mfa_reset_authorize_role" {
   role_name   = "mfa-reset-authorize-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  #TODO: enable in ATO-670
   policies_to_attach = [
-    #     aws_iam_policy.mfa_reset_token_kms_signing_policy.arn,
-    #     aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn,
-    #     module.oidc_txma_audit.access_policy_arn,
+    aws_iam_policy.mfa_reset_token_kms_signing_policy.arn,
+    aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn,
+    aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
+    module.oidc_txma_audit.access_policy_arn,
+
   ]
 }
 
@@ -22,10 +23,14 @@ module "mfa_reset_authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    IPV_AUDIENCE                              = var.ipv_audience
-    MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_token_signing_key_alias.arn,
+    AUTH_ISSUER_CLAIM                         = "https://${local.frontend_fqdn}/",
+    ENVIRONMENT                               = var.environment,
+    IPV_AUDIENCE                              = var.ipv_audience,
+    IPV_AUTHORISATION_CLIENT_ID               = var.ipv_authorisation_client_id,
+    IPV_AUTHORIZATION_URI                     = var.ipv_authorisation_callback_uri,
+    MFA_RESET_CALLBACK_URI                    = "https://${local.frontend_api_base_url}/reverification-callback",
     MFA_RESET_JAR_SIGNING_KEY_ALIAS           = aws_kms_alias.mfa_reset_jar_signing_key_alias.arn,
-
+    MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_token_signing_key_alias.arn
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetAuthorizeHandler::handleRequest"
