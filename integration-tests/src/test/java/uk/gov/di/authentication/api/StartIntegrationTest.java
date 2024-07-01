@@ -25,9 +25,12 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -102,7 +105,15 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customAuthParameters.forEach(builder::customParameter);
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(
+                CLIENT_SESSION_ID,
+                TEST_CLIENT_NAME,
+                authRequest.toParameters(),
+                VectorOfTrust.of(
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        identityRequired
+                                ? LevelOfConfidence.MEDIUM_LEVEL
+                                : LevelOfConfidence.NONE));
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 

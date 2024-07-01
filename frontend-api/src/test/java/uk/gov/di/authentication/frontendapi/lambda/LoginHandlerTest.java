@@ -778,6 +778,7 @@ class LoginHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("Cl.Cm")));
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+        when(clientSession.getMfaRequired()).thenReturn(true);
     }
 
     private void setUpSmokeTestClient() {

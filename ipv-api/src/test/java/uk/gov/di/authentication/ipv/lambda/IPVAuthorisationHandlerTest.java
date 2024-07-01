@@ -43,6 +43,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -228,7 +229,7 @@ public class IPVAuthorisationHandlerTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        eq(List.of("P0", "P2")),
+                        eq(List.of(LevelOfConfidence.NONE, LevelOfConfidence.MEDIUM_LEVEL)),
                         any());
 
         var user =
@@ -277,11 +278,11 @@ public class IPVAuthorisationHandlerTest {
                 .thenReturn(withAuthenticationRequest().toParameters());
         when(clientSession.getVtrList())
                 .thenReturn(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.NONE),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
+                        VtrList.of(
+                                new VectorOfTrust(
+                                        CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
+                                new VectorOfTrust(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.MEDIUM_LEVEL)));
     }
 

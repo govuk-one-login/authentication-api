@@ -174,7 +174,7 @@ public class VectorOfTrust {
         return Objects.hash(credentialTrustLevel, levelOfConfidence);
     }
 
-    static VectorOfTrust of(
+    public static VectorOfTrust of(
             CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
         return new VectorOfTrust(credentialTrustLevel, Optional.ofNullable(levelOfConfidence));
     }

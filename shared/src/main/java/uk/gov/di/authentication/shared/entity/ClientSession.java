@@ -12,7 +12,12 @@ public class ClientSession {
     @Expose private Map<String, List<String>> authRequestParams;
 
     @Expose private LocalDateTime creationDate;
+
     @Expose private VectorOfTrust effectiveVectorOfTrust;
+
+    @Expose private boolean identityRequired;
+
+    @Expose private boolean mfaRequired;
 
     @Expose private Subject docAppSubjectId;
 
@@ -26,6 +31,14 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        this.identityRequired =
+                effectiveVectorOfTrust != null
+                        && effectiveVectorOfTrust.getLevelOfConfidence() != null
+                        && effectiveVectorOfTrust.getLevelOfConfidence() != LevelOfConfidence.NONE;
+        this.mfaRequired =
+                effectiveVectorOfTrust != null
+                        && effectiveVectorOfTrust.getCredentialTrustLevel()
+                                == CredentialTrustLevel.MEDIUM_LEVEL;
         this.clientName = clientName;
     }
 
@@ -52,5 +65,13 @@ public class ClientSession {
 
     public String getClientName() {
         return clientName;
+    }
+
+    public boolean getIdentityRequired() {
+        return identityRequired;
+    }
+
+    public boolean getMfaRequired() {
+        return mfaRequired;
     }
 }
