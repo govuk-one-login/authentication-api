@@ -291,31 +291,31 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
 
-        if (request.getJourneyType() == JourneyType.REGISTRATION) {
+        if (configurationService.isEmailCheckEnabled()
+                && notificationType == NotificationType.VERIFY_EMAIL
+                && request.getJourneyType() == JourneyType.REGISTRATION) {
             String sessionId = userContext.getSession().getSessionId();
             String clientSessionId = userContext.getClientSessionId();
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-            if (configurationService.isEmailCheckEnabled()) {
-                pendingEmailCheckSqsClient.send(
-                        objectMapper.writeValueAsString(
-                                new PendingEmailCheckRequest(
-                                        AuditService.UNKNOWN,
-                                        UUID.randomUUID(),
-                                        destination,
-                                        sessionId,
-                                        clientSessionId,
-                                        persistentSessionId,
-                                        IpAddressHelper.extractIpAddress(input),
-                                        JourneyType.REGISTRATION,
-                                        NowHelper.now().toInstant().getEpochSecond(),
-                                        testClientWithAllowedEmail)));
-            }
+            pendingEmailCheckSqsClient.send(
+                    objectMapper.writeValueAsString(
+                            new PendingEmailCheckRequest(
+                                    AuditService.UNKNOWN,
+                                    UUID.randomUUID(),
+                                    destination,
+                                    sessionId,
+                                    clientSessionId,
+                                    persistentSessionId,
+                                    IpAddressHelper.extractIpAddress(input),
+                                    JourneyType.REGISTRATION,
+                                    NowHelper.now().toInstant().getEpochSecond(),
+                                    testClientWithAllowedEmail)));
+            LOG.info("PendingEmailCheckRequest enqueued");
         }
 
         if (!testClientWithAllowedEmail) {
-
             if (notificationType == VERIFY_PHONE_NUMBER) {
                 METRICS.putEmbeddedValue(
                         "SendingSms",

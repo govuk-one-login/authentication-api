@@ -203,6 +203,7 @@ public class SendOtpNotificationHandler
                                                 JourneyType.ACCOUNT_MANAGEMENT,
                                                 NowHelper.now().toInstant().getEpochSecond(),
                                                 isTestUserRequest)));
+                        LOG.info("PendingEmailCheckRequest enqueued");
                     }
 
                     return handleNotificationRequest(
