@@ -213,6 +213,8 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context)
             throws ClientNotFoundException, java.text.ParseException {
+        long authorisationFunctionStartTime = System.currentTimeMillis();
+        LOG.info("authorisationFunctionStartTime = " + authorisationFunctionStartTime);
         ClientRegistry client;
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
@@ -316,6 +318,12 @@ public class AuthorisationHandler
             LOG.info("Validating request object");
             authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
         }
+
+        long authorisationFunctionEndTime = System.currentTimeMillis();
+        LOG.info("authorisationFunctionEndTime = " + authorisationFunctionEndTime);
+        long authorisationFunctionExecutionTime =
+                authorisationFunctionEndTime - authorisationFunctionStartTime;
+        LOG.info("authorisationFunctionExecutionTime = " + authorisationFunctionExecutionTime);
 
         if (authRequestError.isPresent()) {
             return generateErrorResponse(

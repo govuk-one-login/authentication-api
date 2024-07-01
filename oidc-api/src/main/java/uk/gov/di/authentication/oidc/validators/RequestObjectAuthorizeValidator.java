@@ -77,13 +77,14 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             RpPublicKeyService rpPublicKeyService =
                     new RpPublicKeyService(client, configurationService);
             PublicKey publicKey = rpPublicKeyService.retrievePublicKey();
-            LOG.info("publicKey: " + publicKey.toString());
-            signatureValid = isSignatureValid(signedJWT, publicKey);
-            LOG.info("signature valid: " + signatureValid);
-        } else {
-            LOG.info("client.getPublicKey()" + client.getPublicKey());
-            signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
+            if (publicKey != null) {
+                LOG.info("publicKey from fetchJwksFunction: " + publicKey);
+                //                signatureValid = isSignatureValid(signedJWT, publicKey);
+                //                LOG.info("signature valid: " + signatureValid);
+            }
         }
+        LOG.info("client.getPublicKey()" + client.getPublicKey());
+        signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
 
         if (!signatureValid) {
             LOG.error("Invalid Signature on request JWT");

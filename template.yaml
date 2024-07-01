@@ -351,8 +351,11 @@ Resources:
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
+      Timeout: 100
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
+#      SnapStart:
+#        ApplyOn: PublishedVersions
       ProvisionedConcurrencyConfig:
         !If
         - EnableProvisionedConcurrency

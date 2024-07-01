@@ -397,3 +397,10 @@ jacocoTestReport {
     }
     dependsOn "test"
 }
+
+
+application {
+    applicationDefaultJvmArgs = [
+        "-Dcom.nimbusds.jose.jwk.source.RemoteJWKSet.defaultHttpReadTimeout=10000"
+    ]
+}

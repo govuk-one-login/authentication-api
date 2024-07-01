@@ -62,6 +62,11 @@ public class RpPublicKeyService {
                                     configurationService.getEnvironment() + "-FetchJwksFunction");
                     String unescapedPayload =
                             objectMapper.readValue(response.payload().asUtf8String(), String.class);
+                    LOG.info("unescapedPayload = " + unescapedPayload);
+                    if (unescapedPayload.equals("error")) {
+                        LOG.error("returned error from FetchJwksHandler");
+                        return null;
+                    }
                     JWK jwk = JWK.parse(unescapedPayload);
                     return jwk.toECKey().toPublicKey();
                 }
@@ -78,8 +83,8 @@ public class RpPublicKeyService {
     private InvokeResponse invokeFunction(LambdaClient awsLambda, String functionName) {
 
         // TODO using these test values for now
-        var url = "https://oidc.sandpit.account.gov.uk/.well-known/storage-token-jwk.json";
-        var keyId = "f27ff20940cdc6c8b34f97f44c24c8601ded9465c0713dd190ed152272d07ddb";
+        var url = "https://oidc.integration.account.gov.uk/.well-known/storage-token-jwk.json";
+        var keyId = "a11f7564fcf886515a7d30f8e46865f709478ce7761d6c44927e4b0ea6cca2f4";
         try {
             JSONObject jsonObj = new JSONObject();
             jsonObj.put("url", url);

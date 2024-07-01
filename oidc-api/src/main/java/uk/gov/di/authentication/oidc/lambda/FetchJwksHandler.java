@@ -35,6 +35,8 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
 
     @Override
     public String handleRequest(Map<String, String> event, Context context) {
+        long fetchJwksFunctionStartTime = System.currentTimeMillis();
+        LOG.info("fetchJwksFunctionStartTime = " + fetchJwksFunctionStartTime);
         String url = event.get("url");
         String keyId = event.get("keyId");
         try {
@@ -43,19 +45,39 @@ public class FetchJwksHandler implements RequestHandler<Map<String, String>, Str
                         "FetchJwksHandler invoked with invalid argument(s)");
             }
             JWK jwk = jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId);
+            long fetchJwksFunctionEndTime = System.currentTimeMillis();
+            LOG.info("fetchJwksFunctionEndTime = " + fetchJwksFunctionEndTime);
             return jwk.toJSONString();
         } catch (KeySourceException e) {
             String errorMsg =
                     "Failed to fetch JWKS: could not find key in JWKS that matches provided keyId";
             LOG.error(errorMsg, e);
+            long fetchJwksFunctionEndTime = System.currentTimeMillis();
+            long fetchJwksFunctionExecutionTime =
+                    fetchJwksFunctionEndTime - fetchJwksFunctionStartTime;
+            LOG.info("fetchJwksFunctionEndTime (failure) = " + fetchJwksFunctionEndTime);
+            LOG.info(
+                    "fetchJwksFunctionExecutionTime (failure) = " + fetchJwksFunctionExecutionTime);
             return "error";
         } catch (MalformedURLException e) {
             String errorMsg = "Failed to fetch JWKS: URL is malformed";
             LOG.error(errorMsg, e);
+            long fetchJwksFunctionEndTime = System.currentTimeMillis();
+            long fetchJwksFunctionExecutionTime =
+                    fetchJwksFunctionEndTime - fetchJwksFunctionStartTime;
+            LOG.info("fetchJwksFunctionEndTime (failure) = " + fetchJwksFunctionEndTime);
+            LOG.info(
+                    "fetchJwksFunctionExecutionTime (failure) = " + fetchJwksFunctionExecutionTime);
             return "error";
         } catch (IllegalArgumentException e) {
             String errorMsg = "Failed to fetch JWKS: url and/or keyId parameter not present";
             LOG.error(errorMsg, e);
+            long fetchJwksFunctionEndTime = System.currentTimeMillis();
+            long fetchJwksFunctionExecutionTime =
+                    fetchJwksFunctionEndTime - fetchJwksFunctionStartTime;
+            LOG.info("fetchJwksFunctionEndTime (failure) = " + fetchJwksFunctionEndTime);
+            LOG.info(
+                    "fetchJwksFunctionExecutionTime (failure) = " + fetchJwksFunctionExecutionTime);
             return "error";
         }
     }
