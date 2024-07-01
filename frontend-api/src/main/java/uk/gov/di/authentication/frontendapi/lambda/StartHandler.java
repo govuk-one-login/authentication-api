@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.services.StartService;
@@ -194,23 +195,24 @@ public class StartHandler
             var txmaAuditHeader =
                     getOptionalHeaderValueFromHeaders(
                             input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
-
-            var restrictedSection = new AuditService.RestrictedSection(txmaAuditHeader);
+            var auditContext =
+                    new AuditContext(
+                            userContext.getClient().get().getClientID(),
+                            clientSessionId,
+                            session.getSessionId(),
+                            internalCommonSubjectIdentifier,
+                            userContext
+                                    .getUserProfile()
+                                    .map(UserProfile::getEmail)
+                                    .orElse(AuditService.UNKNOWN),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                            txmaAuditHeader);
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.START_INFO_FOUND,
-                    userContext.getClient().get().getClientID(),
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalCommonSubjectIdentifier,
-                    userContext
-                            .getUserProfile()
-                            .map(UserProfile::getEmail)
-                            .orElse(AuditService.UNKNOWN),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    restrictedSection,
+                    auditContext,
                     pair("internalSubjectId", internalSubjectId));
 
             return generateApiGatewayProxyResponse(200, startResponse);

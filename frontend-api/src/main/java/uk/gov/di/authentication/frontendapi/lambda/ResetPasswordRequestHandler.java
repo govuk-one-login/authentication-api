@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
@@ -145,28 +146,27 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             LOG.info("passwordResetType: {}", passwordResetTypePair);
 
-            var restrictedSection =
-                    new AuditService.RestrictedSection(
+            var auditContext =
+                    new AuditContext(
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getClientID)
+                                    .orElse(AuditService.UNKNOWN),
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            request.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
-            auditService.submitAuditEvent(
+            var eventName =
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
-                            : PASSWORD_RESET_REQUESTED,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    request.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    restrictedSection,
-                    passwordResetCounterPair,
-                    passwordResetTypePair);
+                            : PASSWORD_RESET_REQUESTED;
+
+            auditService.submitAuditEvent(
+                    eventName, auditContext, passwordResetCounterPair, passwordResetTypePair);
 
             return validatePasswordResetCount(request.getEmail(), userContext)
                     .map(t -> generateApiGatewayProxyErrorResponse(400, t))

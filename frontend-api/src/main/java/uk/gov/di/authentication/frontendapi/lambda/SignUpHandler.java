@@ -7,9 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -105,20 +106,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.getPassword());
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
-        if (passwordValidationError.isEmpty()) {
-            LOG.info("No password validation errors found");
-            if (authenticationService.userExists(request.getEmail())) {
-
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
                         userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         AuditService.UNKNOWN,
@@ -126,7 +116,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        restrictedSection);
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
+        if (passwordValidationError.isEmpty()) {
+            LOG.info("No password validation errors found");
+            if (authenticationService.userExists(request.getEmail())) {
+
+                auditService.submitAuditEvent(CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
@@ -145,6 +141,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             user.getUserProfile(),
                             configurationService.getInternalSectorUri(),
                             authenticationService);
+            auditContext = auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue());
 
             LOG.info("Calculating RP pairwise identifier");
             var rpPairwiseId =
@@ -163,18 +160,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    internalCommonSubjectIdentifier.getValue(),
-                    request.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    restrictedSection,
+                    auditContext,
                     pair("internalSubjectId", user.getUserProfile().getSubjectID()),
                     pair("rpPairwiseId", rpPairwiseId));
 

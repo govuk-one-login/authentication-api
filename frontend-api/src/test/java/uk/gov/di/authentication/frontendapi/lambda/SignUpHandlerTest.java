@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -54,6 +55,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -101,6 +103,18 @@ class SignUpHandlerTest {
             new ClientSession(
                     generateAuthRequest().toParameters(), null, (VectorOfTrust) null, CLIENT_NAME);
 
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID.getValue(),
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    AuditService.UNKNOWN,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(SignUpHandler.class);
@@ -115,6 +129,10 @@ class SignUpHandlerTest {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(user.getUserProfile()).thenReturn(userProfile);
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
+        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(clientSession));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
         handler =
@@ -132,10 +150,6 @@ class SignUpHandlerTest {
     @Test
     void shouldReturn200IfSignUpIsSuccessful() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
@@ -163,15 +177,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT.withSubjectId(expectedCommonSubject),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
 
@@ -188,10 +194,6 @@ class SignUpHandlerTest {
     @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
-        when(clientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
-        when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(clientSession));
         when(authenticationService.signUp(
                         eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
                 .thenReturn(user);
@@ -210,15 +212,9 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT
+                                .withSubjectId(expectedCommonSubject)
+                                .withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
     }
@@ -268,9 +264,11 @@ class SignUpHandlerTest {
 
     @Test
     void shouldReturn400IfUserAlreadyExists() {
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
 
         usingValidSession();
+        usingValidClientSession();
+
         var body =
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
@@ -281,23 +279,12 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        "joe.bloggs@test.com",
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, AUDIT_CONTEXT);
     }
 
     @Test
     void checkCreateAccountEmailAlreadyExistsAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(true);
+        when(authenticationService.userExists(EMAIL)).thenReturn(true);
         usingValidSession();
         var body =
                 format(
@@ -311,16 +298,8 @@ class SignUpHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        "joe.bloggs@test.com",
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private void usingValidSession() {

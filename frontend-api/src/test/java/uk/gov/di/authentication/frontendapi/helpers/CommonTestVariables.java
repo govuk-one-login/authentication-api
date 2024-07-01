@@ -20,6 +20,8 @@ public class CommonTestVariables {
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
     public static final String SESSION_ID = "session-id";
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
+    public static final String CLIENT_NAME = "client-name";
+    public static final String CLIENT_ID = "client-id";
     public static final Map<String, String> VALID_HEADERS =
             Map.ofEntries(
                     Map.entry(

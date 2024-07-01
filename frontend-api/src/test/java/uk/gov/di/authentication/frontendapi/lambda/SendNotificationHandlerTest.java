@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -85,6 +86,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -134,6 +136,18 @@ class SendNotificationHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+
+    private final AuditContext auditContext =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
@@ -213,12 +227,11 @@ class SendNotificationHandlerTest {
                                 EMAIL, notificationType, journeyType);
                 var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-                var restrictedSection =
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS));
+                var expectedAuditContext = auditContext;
 
                 if (!ticfHeaderPresent) {
                     event.setHeaders(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
-                    restrictedSection = AuditService.RestrictedSection.empty;
+                    expectedAuditContext = auditContext.withTxmaAuditEncoded(Optional.empty());
                 }
 
                 var result = handler.handleRequest(event, context);
@@ -268,15 +281,7 @@ class SendNotificationHandlerTest {
                                 notificationType.equals(VERIFY_EMAIL)
                                         ? EMAIL_CODE_SENT
                                         : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
-                                CLIENT_ID,
-                                CLIENT_SESSION_ID,
-                                SESSION_ID,
-                                expectedCommonSubject,
-                                EMAIL,
-                                IP_ADDRESS,
-                                AuditService.UNKNOWN,
-                                DI_PERSISTENT_SESSION_ID,
-                                restrictedSection);
+                                expectedAuditContext);
             }
         }
     }
@@ -331,20 +336,11 @@ class SendNotificationHandlerTest {
                                         notificationType,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
-        verify(auditService)
-                .submitAuditEvent(
-                        notificationType.equals(VERIFY_EMAIL)
-                                ? EMAIL_CODE_SENT
-                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        var expectedEvent =
+                notificationType.equals(VERIFY_EMAIL)
+                        ? EMAIL_CODE_SENT
+                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+        verify(auditService).submitAuditEvent(expectedEvent, auditContext);
     }
 
     @Test
@@ -383,17 +379,7 @@ class SendNotificationHandlerTest {
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
         verify(auditService)
-                .submitAuditEvent(
-                        PHONE_CODE_SENT,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                .submitAuditEvent(PHONE_CODE_SENT, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
     }
 
     @ParameterizedTest
@@ -423,11 +409,9 @@ class SendNotificationHandlerTest {
                                 session ->
                                         isSessionWithEmailSent(
                                                 session, notificationType, journeyType)));
-        verify(auditService)
-                .submitAuditEvent(
-                        notificationType.equals(VERIFY_EMAIL)
-                                ? EMAIL_CODE_SENT_FOR_TEST_CLIENT
-                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
+
+        var testClientAuditContext =
+                new AuditContext(
                         TEST_CLIENT_ID,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
@@ -436,7 +420,13 @@ class SendNotificationHandlerTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        Optional.of(ENCODED_DEVICE_DETAILS));
+        verify(auditService)
+                .submitAuditEvent(
+                        notificationType.equals(VERIFY_EMAIL)
+                                ? EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
+                        testClientAuditContext);
     }
 
     @ParameterizedTest
@@ -604,17 +594,7 @@ class SendNotificationHandlerTest {
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
         verify(auditService)
-                .submitAuditEvent(
-                        PHONE_CODE_SENT,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        phoneNumber,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                .submitAuditEvent(PHONE_CODE_SENT, auditContext.withPhoneNumber(phoneNumber));
     }
 
     @Test
@@ -742,18 +722,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService, never())
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verifyNoInteractions(emailSqsClient);
-        verify(auditService)
-                .submitAuditEvent(
-                        EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -774,15 +743,7 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
@@ -814,17 +775,7 @@ class SendNotificationHandlerTest {
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
-                .submitAuditEvent(
-                        ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                .submitAuditEvent(ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -856,16 +807,7 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        PHONE_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        PHONE_INVALID_CODE_REQUEST, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
     }
 
     @Test
@@ -888,18 +830,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
         verifyNoInteractions(emailSqsClient);
-        verify(auditService)
-                .submitAuditEvent(
-                        EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -923,17 +854,7 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
-                .submitAuditEvent(
-                        ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                .submitAuditEvent(ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -961,16 +882,7 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        PHONE_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        PHONE_INVALID_CODE_REQUEST, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
     }
 
     @Test
@@ -992,18 +904,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
         verifyNoInteractions(emailSqsClient);
-        verify(auditService)
-                .submitAuditEvent(
-                        EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -1026,17 +927,7 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
-                .submitAuditEvent(
-                        ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                .submitAuditEvent(ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -1058,18 +949,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         verifyNoInteractions(emailSqsClient);
-        verify(auditService)
-                .submitAuditEvent(
-                        PHONE_INVALID_CODE_REQUEST,
-                        CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+        verify(auditService).submitAuditEvent(PHONE_INVALID_CODE_REQUEST, auditContext);
     }
 
     @ParameterizedTest

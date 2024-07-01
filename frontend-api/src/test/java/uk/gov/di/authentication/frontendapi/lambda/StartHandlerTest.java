@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
@@ -99,6 +100,17 @@ class StartHandlerTest {
     private final Session session = new Session(SESSION_ID);
     private final ClientSession clientSession = getClientSession();
     private final ClientSession docAppClientSession = getDocAppClientSession();
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @BeforeEach
     void beforeEach() {
@@ -165,15 +177,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
@@ -225,15 +229,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
@@ -266,15 +262,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                        AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
@@ -302,15 +290,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
 

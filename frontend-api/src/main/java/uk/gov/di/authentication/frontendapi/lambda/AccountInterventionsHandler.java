@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
@@ -238,25 +239,23 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         FrontendAuditableEvent auditEvent =
                 ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT.get(requiredInterventionsState);
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        userContext.getSession().getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        userContext
+                                .getUserProfile()
+                                .map(UserProfile::getPhoneNumber)
+                                .orElse(AuditService.UNKNOWN),
+                        persistentSessionID,
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         if (auditEvent != null) {
-            auditService.submitAuditEvent(
-                    auditEvent,
-                    userContext.getClientId(),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    userContext.getSession().getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    userContext
-                            .getUserProfile()
-                            .map(UserProfile::getPhoneNumber)
-                            .orElse(AuditService.UNKNOWN),
-                    persistentSessionID,
-                    restrictedSection);
+            auditService.submitAuditEvent(auditEvent, auditContext);
         } else {
             LOG.error(
                     "Unhandled account interventions state combination to calculate audit event: {}",
