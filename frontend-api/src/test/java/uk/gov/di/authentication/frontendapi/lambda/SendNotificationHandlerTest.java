@@ -232,7 +232,8 @@ class SendNotificationHandlerTest {
                                                 notificationType,
                                                 TEST_SIX_DIGIT_CODE,
                                                 SupportedLanguage.EN)));
-                if (journeyType == JourneyType.REGISTRATION) {
+                if (notificationType == NotificationType.VERIFY_EMAIL
+                        && journeyType == JourneyType.REGISTRATION) {
                     verify(pendingEmailCheckSqsClient)
                             .send(
                                     format(
