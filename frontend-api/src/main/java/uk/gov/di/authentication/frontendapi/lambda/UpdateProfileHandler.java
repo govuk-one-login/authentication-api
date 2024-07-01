@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -75,38 +76,35 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     @Override
     public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {
-        var restrictedSection =
-                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
+        var auditContext =
+                new AuditContext(
+                        AuditService.UNKNOWN,
+                        clientSessionId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        Optional.ofNullable(txmaAuditEncoded));
 
-        auditService.submitAuditEvent(
-                UPDATE_PROFILE_REQUEST_RECEIVED,
-                AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                restrictedSection);
+        auditService.submitAuditEvent(UPDATE_PROFILE_REQUEST_RECEIVED, auditContext);
     }
 
     @Override
     public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {
-        var restrictedSection =
-                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
-
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
-                AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                restrictedSection);
+                new AuditContext(
+                        AuditService.UNKNOWN,
+                        clientSessionId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        Optional.ofNullable(txmaAuditEncoded)));
     }
 
     @Override
@@ -178,21 +176,20 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     session.getInternalCommonSubjectIdentifier(),
                     AuditService.UNKNOWN);
         }
-        var restrictedSection =
-                new AuditService.RestrictedSection(
+
+        var auditContext =
+                new AuditContext(
+                        auditableClientId,
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        ipAddress,
+                        auditablePhoneNumber,
+                        persistentSessionId,
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
-        auditService.submitAuditEvent(
-                auditableEvent,
-                auditableClientId,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                ipAddress,
-                auditablePhoneNumber,
-                persistentSessionId,
-                restrictedSection);
+        auditService.submitAuditEvent(auditableEvent, auditContext);
         return generateEmptySuccessApiGatewayResponse();
     }
 
@@ -205,20 +202,19 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             String persistentSessionId,
             String subjectId,
             String txmaAuditEncoded) {
-        var restrictedSection =
-                new AuditService.RestrictedSection(Optional.ofNullable(txmaAuditEncoded));
+        var auditContext =
+                new AuditContext(
+                        clientId,
+                        clientSessionId,
+                        sessionId,
+                        subjectId,
+                        email,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        persistentSessionId,
+                        Optional.ofNullable(txmaAuditEncoded));
 
-        auditService.submitAuditEvent(
-                UPDATE_PROFILE_REQUEST_ERROR,
-                clientId,
-                clientSessionId,
-                sessionId,
-                subjectId,
-                email,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                persistentSessionId,
-                restrictedSection);
+        auditService.submitAuditEvent(UPDATE_PROFILE_REQUEST_ERROR, auditContext);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }
