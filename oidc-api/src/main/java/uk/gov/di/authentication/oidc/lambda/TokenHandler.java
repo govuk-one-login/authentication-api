@@ -23,7 +23,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
@@ -354,11 +354,9 @@ public class TokenHandler
         }
     }
 
-    private OIDCClaimsRequest getClaimsRequest(
-            VectorOfTrust vtr, AuthenticationRequest authRequest) {
+    private OIDCClaimsRequest getClaimsRequest(AuthenticationRequest authRequest) {
         OIDCClaimsRequest claimsRequest = null;
-        if (Objects.nonNull(vtr.getLevelOfConfidence())
-                && Objects.nonNull(authRequest.getOIDCClaims())) {
+        if (Objects.nonNull(authRequest.getOIDCClaims())) {
             claimsRequest = authRequest.getOIDCClaims();
         }
         return claimsRequest;
@@ -375,10 +373,9 @@ public class TokenHandler
             additionalTokenClaims.put("nonce", authRequest.getNonce());
         }
 
-        VectorOfTrust vtr = VectorOfTrust.orderVtrList(clientSession.getVtrList()).get(0);
-        String vot = vtr.retrieveVectorOfTrustForToken();
-
-        final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
+        VtrList vtr = clientSession.getVtrList();
+        var tokenCode = vtr.getTokenCode();
+        final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(authRequest);
 
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
@@ -397,7 +394,7 @@ public class TokenHandler
                                             true,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            vot));
+                                            tokenCode));
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -427,7 +424,7 @@ public class TokenHandler
                                             false,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            vot));
+                                            tokenCode));
         }
         return tokenResponse;
     }

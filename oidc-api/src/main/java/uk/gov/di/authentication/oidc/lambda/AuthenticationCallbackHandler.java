@@ -28,7 +28,6 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -37,7 +36,6 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -65,6 +63,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
@@ -328,9 +327,10 @@ public class AuthenticationCallbackHandler
 
                 ClientRegistry client = clientService.getClient(clientId).orElseThrow();
 
+                var vtr = clientSession.getVtrList();
                 boolean identityRequired =
                         identityRequired(
-                                clientSession.getAuthRequestParams(),
+                                vtr,
                                 client.isIdentityVerificationSupported(),
                                 configurationService.isIdentityEnabled());
 
@@ -427,8 +427,7 @@ public class AuthenticationCallbackHandler
                             clientSessionId,
                             persistentSessionId,
                             reproveIdentity,
-                            VectorOfTrust.getRequestedLevelsOfConfidence(
-                                    clientSession.getVtrList()));
+                            vtr.getLevelsOfConfidence());
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
@@ -438,7 +437,7 @@ public class AuthenticationCallbackHandler
                 LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                        vtr.getCredentialTrustLevel();
                 if (isNull(userSession.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         userSession.getCurrentCredentialStrength())
@@ -527,14 +526,15 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
-        var mfaRequired = MfaHelper.mfaRequired(orderedVtrList);
+        var vtr = clientSession.getVtrList();
+        var mfaRequired = vtr.mfaRequired();
 
-        var levelOfConfidence = LevelOfConfidence.NONE.getValue();
-        // Assumption: Requested vectors of trust will either all be for identity or none, and so we
-        // can check just the first
-        if (orderedVtrList.get(0).containsLevelOfConfidence()) {
-            levelOfConfidence = VectorOfTrust.stringifyLevelsOfConfidence(orderedVtrList);
+        var levelOfConfidence = LevelOfConfidence.NONE.toString();
+        if (vtr.identityRequired()) {
+            levelOfConfidence =
+                    vtr.getLevelsOfConfidence().stream()
+                            .map(LevelOfConfidence::toString)
+                            .collect(Collectors.joining(","));
         }
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
         dimensions.put("RequestedLevelOfConfidence", format("%s", levelOfConfidence));

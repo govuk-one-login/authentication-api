@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -51,7 +52,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -100,27 +100,25 @@ class IPVCallbackHelperTest {
     private static final String INTERNAL_PAIRWISE_ID = "internal-pairwise-id";
     private static final String INTERNAL_PAIRWISE_ID_WITH_INTERVENTION =
             "internal-pairwise-id-with-intervention";
-    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
-            List.of(
-                    VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
-                    VectorOfTrust.of(
+    private static final VtrList VTR_LIST_P2_AND_PCL200 =
+            VtrList.of(
+                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
+                    new VectorOfTrust(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
-    private static final List<VectorOfTrust> VTR_LIST_P2_ONLY =
-            List.of(
-                    VectorOfTrust.of(
-                            CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                    VectorOfTrust.of(
+    private static final VtrList VTR_LIST_P2_ONLY =
+            VtrList.of(
+                    new VectorOfTrust(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final UserProfile userProfile = generateUserProfile();
-    private static final UserInfo p0VotUserIdentityUserInfo =
+    private static final UserInfo pcl200VotUserIdentityUserInfo =
             new UserInfo(
                     new JSONObject(
                             Map.of(
                                     "sub", "sub-val",
-                                    "vot", "P0",
+                                    "vot", "PCL200",
                                     "vtm", OIDC_BASE_URL + "/trustmark")));
     private static final UserInfo p2VotUserIdentityUserInfo =
             new UserInfo(
@@ -140,7 +138,7 @@ class IPVCallbackHelperTest {
 
     private static Stream<Arguments> validUserIdentities() {
         return Stream.of(
-                Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2),
+                Arguments.of(pcl200VotUserIdentityUserInfo, VTR_LIST_P2_AND_PCL200),
                 Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY));
     }
 
@@ -207,8 +205,8 @@ class IPVCallbackHelperTest {
 
     @ParameterizedTest
     @MethodSource("validUserIdentities")
-    void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(
-            UserInfo userInfo, List<VectorOfTrust> vtrList) throws IpvCallbackException {
+    void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(UserInfo userInfo, VtrList vtrList)
+            throws IpvCallbackException {
         var response = helper.validateUserIdentityResponse(userInfo, vtrList);
 
         assertEquals(Optional.empty(), response);
@@ -231,7 +229,8 @@ class IPVCallbackHelperTest {
     @Test
     void shouldReturnAccessDeniedIfIpvVotNotInVtrList() throws IpvCallbackException {
         var response =
-                helper.validateUserIdentityResponse(p0VotUserIdentityUserInfo, VTR_LIST_P2_ONLY);
+                helper.validateUserIdentityResponse(
+                        pcl200VotUserIdentityUserInfo, VTR_LIST_P2_ONLY);
 
         assertEquals(Optional.of(OAuth2Error.ACCESS_DENIED), response);
     }

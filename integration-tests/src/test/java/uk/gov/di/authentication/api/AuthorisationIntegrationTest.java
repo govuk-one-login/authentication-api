@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
@@ -638,7 +639,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
+                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.toString()),
                         Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
@@ -724,9 +725,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 clientSession.getVtrList(),
                 equalTo(
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
+                        VtrList.of(
+                                new VectorOfTrust(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                new VectorOfTrust(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
 
         JsonElement actualClaims =
                 JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
@@ -946,8 +947,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 clientType,
                 jarValidationRequired,
                 List.of(
-                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                        LevelOfConfidence.HMRC200.getValue()));
+                        LevelOfConfidence.NONE.toString(),
+                        LevelOfConfidence.MEDIUM_LEVEL.toString(),
+                        LevelOfConfidence.HMRC200.toString()));
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {

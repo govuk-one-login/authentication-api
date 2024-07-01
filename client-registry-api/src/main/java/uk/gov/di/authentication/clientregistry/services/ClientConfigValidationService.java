@@ -6,6 +6,7 @@ import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidenceCode;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -209,8 +210,9 @@ public class ClientConfigValidationService {
 
     private boolean areClientLoCsValid(List<String> clientLoCs) {
         for (String clientLoC : clientLoCs) {
-            if (LevelOfConfidence.getAllSupportedLevelOfConfidenceValues().stream()
-                    .noneMatch(t -> t.equals(clientLoC))) {
+            try {
+                LevelOfConfidence.of(LevelOfConfidenceCode.parse(clientLoC));
+            } catch (Exception ignored) {
                 return false;
             }
         }
