@@ -107,16 +107,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 passwordValidator.validate(request.getPassword());
 
         var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+                AuditContext.auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         if (passwordValidationError.isEmpty()) {
             LOG.info("No password validation errors found");

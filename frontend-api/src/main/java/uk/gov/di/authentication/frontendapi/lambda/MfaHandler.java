@@ -6,7 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -38,6 +37,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Locale;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_MISMATCHED_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER;
@@ -127,9 +127,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             MfaRequest request,
             UserContext userContext) {
         try {
-            String persistentSessionId =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-
             attachSessionIdToLogs(userContext.getSession().getSessionId());
 
             LOG.info("MfaHandler received request");
@@ -141,16 +138,13 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             : JourneyType.SIGN_IN;
 
             var auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    auditContextFromUserContext(
+                            userContext,
                             userContext.getSession().getInternalCommonSubjectIdentifier(),
                             email,
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            persistentSessionId,
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             var metadataPairs =
                     new AuditService.MetadataPair[] {
