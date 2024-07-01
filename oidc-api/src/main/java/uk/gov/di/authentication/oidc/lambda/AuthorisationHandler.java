@@ -40,11 +40,10 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -342,9 +341,10 @@ public class AuthorisationHandler
                         && !authRequest.getCustomParameter("id_token_hint").isEmpty()
                         && authRequest.getPrompt() != null
                         && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
+        var vtrList = getVtrList(reauthRequested, authRequest);
         var identityRequested =
                 identityRequired(
-                        authRequest.toParameters(),
+                        vtrList,
                         client.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
         auditService.submitAuditEvent(
@@ -356,7 +356,6 @@ public class AuthorisationHandler
                 pair("reauthRequested", reauthRequested));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
-        var vtrList = getVtrList(reauthRequested, authRequest);
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
                         authRequest.toParameters(),
@@ -398,25 +397,22 @@ public class AuthorisationHandler
         }
     }
 
-    private List<VectorOfTrust> getVtrList(
-            boolean reauthRequested, AuthenticationRequest authRequest)
+    private VtrList getVtrList(boolean reauthRequested, AuthenticationRequest authRequest)
             throws java.text.ParseException {
         if (reauthRequested && isNull(authRequest.getCustomParameter(VTR_PARAM))) {
             var idTokenHint =
                     SignedJWT.parse(authRequest.getCustomParameter("id_token_hint").get(0));
-            var grantedVectorOfTrust = extractVoTFromIdTokenHint(idTokenHint);
-            return List.of(grantedVectorOfTrust);
+            return extractFromIdTokenHint(idTokenHint);
         }
         return orchestrationAuthorizationService.getVtrList(authRequest);
     }
 
-    private VectorOfTrust extractVoTFromIdTokenHint(SignedJWT idTokenHint)
-            throws java.text.ParseException {
+    private VtrList extractFromIdTokenHint(SignedJWT idTokenHint) throws java.text.ParseException {
         var votClaim = idTokenHint.getJWTClaimsSet().getClaim("vot");
         if (votClaim == null) {
-            return new VectorOfTrust(CredentialTrustLevel.getDefault());
+            return VtrList.DEFAULT_VTR_LIST;
         } else if (votClaim instanceof String vot) {
-            return VectorOfTrust.parseFromAuthRequestAttribute(List.of(vot)).get(0);
+            return VtrList.parseFromAuthRequestAttribute(List.of(vot));
         }
         throw new java.text.ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
@@ -508,7 +504,7 @@ public class AuthorisationHandler
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList,
+            VtrList vtrList,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
@@ -566,7 +562,7 @@ public class AuthorisationHandler
             String persistentSessionId,
             ClientRegistry client,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList,
+            VtrList vtrList,
             TxmaAuditUser user) {
         LOG.info("Redirecting");
         String redirectURI;
@@ -618,7 +614,6 @@ public class AuthorisationHandler
                     user);
         }
 
-        var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
@@ -636,14 +631,14 @@ public class AuthorisationHandler
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
-                        .claim("confidence", confidence)
+                        .claim("confidence", vtrList.getCredentialTrustLevel().getValue())
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthenticateClaim);
 
         var claimsSetRequest =
-                constructAdditionalAuthenticationClaims(client, authenticationRequest);
+                constructAdditionalAuthenticationClaims(client, authenticationRequest, vtrList);
         claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
         var encryptedJWT =
                 orchestrationAuthorizationService.getSignedAndEncryptedJWT(claimsBuilder.build());
@@ -703,11 +698,13 @@ public class AuthorisationHandler
     }
 
     private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
-            ClientRegistry clientRegistry, AuthenticationRequest authenticationRequest) {
+            ClientRegistry clientRegistry,
+            AuthenticationRequest authenticationRequest,
+            VtrList vtrList) {
         LOG.info("Constructing additional authentication claims");
         var identityRequired =
                 identityRequired(
-                        authenticationRequest.toParameters(),
+                        vtrList,
                         clientRegistry.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
 
