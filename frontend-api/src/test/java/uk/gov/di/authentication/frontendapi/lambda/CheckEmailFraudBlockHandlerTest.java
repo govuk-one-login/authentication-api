@@ -10,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
@@ -90,6 +91,7 @@ class CheckEmailFraudBlockHandlerTest {
         var userProfile = generateUserProfile();
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
+        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
@@ -176,15 +178,16 @@ class CheckEmailFraudBlockHandlerTest {
             verify(auditServiceMock)
                     .submitAuditEvent(
                             FrontendAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
-                            CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            AuditService.UNKNOWN,
-                            EMAIL,
-                            IP_ADDRESS,
-                            AuditService.UNKNOWN,
-                            DI_PERSISTENT_SESSION_ID,
-                            new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)),
+                            new AuditContext(
+                                    CLIENT_ID,
+                                    CLIENT_SESSION_ID,
+                                    session.getSessionId(),
+                                    AuditService.UNKNOWN,
+                                    EMAIL,
+                                    IP_ADDRESS,
+                                    AuditService.UNKNOWN,
+                                    DI_PERSISTENT_SESSION_ID,
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),
                             AuditService.MetadataPair.pair(

@@ -5,13 +5,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckEmailFraudBlockResponse;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -28,6 +27,8 @@ import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -124,26 +125,25 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             UserContext userContext,
             CheckEmailFraudBlockRequest request) {
 
-        var clientId =
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN);
         var sessionId =
                 RequestHeaderHelper.getHeaderValueOrElse(
                         input.getHeaders(), SESSION_ID_HEADER, AuditService.UNKNOWN);
 
+        var auditContext =
+                new AuditContext(
+                        userContext.getClientId(),
+                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                        sessionId,
+                        AuditService.UNKNOWN,
+                        request.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
-                clientId,
-                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                sessionId,
-                AuditService.UNKNOWN,
-                request.getEmail(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                AuditHelper.buildRestrictedSection(input.getHeaders()),
+                auditContext,
                 AuditService.MetadataPair.pair("journey_type", JourneyType.REGISTRATION.getValue()),
                 AuditService.MetadataPair.pair(
                         "assessment_checked_at_timestamp",

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -96,6 +97,30 @@ class UpdateProfileHandlerTest {
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
+    private final AuditContext auditContextWithAllUserInfo =
+            new AuditContext(
+                    CLIENT_ID.getValue(),
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
+    private final AuditContext auditContextWithOnlyClientSession =
+            new AuditContext(
+                    "",
+                    CLIENT_SESSION_ID,
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "",
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(UpdateProfileHandler.class);
@@ -149,28 +174,10 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(204));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContextWithAllUserInfo);
     }
 
     @Test
@@ -194,28 +201,12 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_RECEIVED,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        AuditService.RestrictedSection.empty);
+                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
 
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        UK_MOBILE_NUMBER,
-                        DI_PERSISTENT_SESSION_ID,
-                        AuditService.RestrictedSection.empty);
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
@@ -235,28 +226,9 @@ class UpdateProfileHandlerTest {
                 .updatePhoneNumber(eq(EMAIL), eq(CommonTestVariables.UK_MOBILE_NUMBER));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                        UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
         verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        new AuditService.RestrictedSection(Optional.of(ENCODED_DEVICE_DETAILS)));
+                .submitAuditEvent(UPDATE_PROFILE_REQUEST_ERROR, auditContextWithOnlyClientSession);
     }
 
     @Test
@@ -274,27 +246,11 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_RECEIVED,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        AuditService.RestrictedSection.empty);
+                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
-                        "",
-                        CLIENT_SESSION_ID,
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        "",
-                        AuditService.RestrictedSection.empty);
+                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private void usingValidSession() {
