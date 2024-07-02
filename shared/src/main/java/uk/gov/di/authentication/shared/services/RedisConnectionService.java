@@ -14,6 +14,19 @@ import java.util.Optional;
 import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
+// TODO: Exponential backoff, retries, timeouts, reader / writer usage
+// TODO: Set DNS TTL to 0 (networkaddress.cache.ttl, networkaddress.cache.negative.ttl)
+// https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/BestPractices.MinimizeDowntime.html
+// https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html
+// https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/BestPractices.Clients-lettuce-cmd.html
+// https://docs.aws.amazon.com/AmazonElastiCache/latest/red-ug/VersionManagement.html
+
+// ElasiCache test-failover API: https://docs.aws.amazon.com/cli/latest/reference/elasticache/test-failover.html
+
+// TODO: Is our cluster actually up to our standards, ie. do we have correct nodes / shards / replicas? Should we consider cluster mode enabled?
+
+
+
 public class RedisConnectionService implements AutoCloseable {
 
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
