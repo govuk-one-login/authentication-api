@@ -54,7 +54,9 @@ public class TicfCriHandler implements RequestHandler<TICFCRIRequest, Void> {
             var response = sendRequest(input);
             var statusCode = String.valueOf(response.statusCode());
             var logMessage =
-                    format("Response received from TICF CRI Service with status %s", statusCode);
+                    format(
+                            "Response received from TICF CRI Service with status %s and body %s",
+                            statusCode, response.body());
             LOG.info(logMessage);
             cloudwatchMetricsService.incrementCounter(
                     "TicfCriResponseReceived",
