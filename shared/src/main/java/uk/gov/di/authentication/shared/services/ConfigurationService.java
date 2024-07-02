@@ -551,6 +551,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getMfaResetJarSigningKeyAlias() {
+        return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ALIAS");
+    }
+
     public URI getCredentialStoreURI() {
         return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
     }
