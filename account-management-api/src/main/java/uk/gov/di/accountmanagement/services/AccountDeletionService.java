@@ -48,17 +48,11 @@ public class AccountDeletionService {
         this.dynamoDeleteService = dynamoDeleteService;
     }
 
-    public DeletedAccountIdentifiers removeAccount(
+    public void removeAccount(
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
             AuditService.RestrictedSection restrictedSection)
             throws Json.JsonException {
-        var accountIdentifiers =
-                new DeletedAccountIdentifiers(
-                        userProfile.getPublicSubjectID(),
-                        userProfile.getLegacySubjectID(),
-                        userProfile.getSubjectID());
-
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -120,9 +114,5 @@ public class AccountDeletionService {
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }
-        return accountIdentifiers;
     }
-
-    public record DeletedAccountIdentifiers(
-            String publicSubjectId, String legacySubjectId, String subjectId) {}
 }
