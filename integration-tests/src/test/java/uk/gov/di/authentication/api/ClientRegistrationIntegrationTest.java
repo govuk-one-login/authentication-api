@@ -9,6 +9,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -73,7 +74,9 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "The test client",
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
+                        PublicKeySource.STATIC.getValue(),
                         VALID_PUBLIC_CERT,
+                        null,
                         singletonList("openid"),
                         postlogoutUris,
                         backChannelLogoutUri,

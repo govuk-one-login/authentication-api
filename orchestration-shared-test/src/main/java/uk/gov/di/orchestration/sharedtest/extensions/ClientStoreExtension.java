@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
@@ -142,8 +143,10 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientName,
                 redirectUris,
                 contacts,
-                scopes,
+                PublicKeySource.STATIC.getValue(),
                 publicKey,
+                null,
+                scopes,
                 postLogoutRedirectUris,
                 backChannelLogoutUri,
                 serviceType,
@@ -180,8 +183,10 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientName,
                 redirectUris,
                 contacts,
-                scopes,
+                PublicKeySource.STATIC.getValue(),
                 publicKey,
+                null,
+                scopes,
                 postLogoutRedirectUris,
                 backChannelLogoutUri,
                 serviceType,
@@ -219,8 +224,10 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientName,
                 redirectUris,
                 contacts,
-                scopes,
+                PublicKeySource.STATIC.getValue(),
                 publicKey,
+                null,
+                scopes,
                 postLogoutRedirectUris,
                 backChannelLogoutUri,
                 serviceType,
@@ -256,8 +263,10 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientName,
                 redirectUris,
                 contacts,
-                scopes,
+                PublicKeySource.STATIC.getValue(),
                 publicKey,
+                null,
+                scopes,
                 postLogoutRedirectUris,
                 backChannelLogoutUri,
                 serviceType,

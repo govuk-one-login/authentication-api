@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.basetest.PactProviderTest;
@@ -21,6 +22,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final List<String> CONTRACTS =
             List.of("pacttest.account@digital.cabinet-office.gov.uk");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
+    private static final String PUBLIC_KEY_SOURCE = PublicKeySource.STATIC.getValue();
     private static final String PUBLIC_KEY =
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0o0K0A7H58Ngl4FyxTKece+hNhWIbeqm/YO4g7G2Cm8UvNvg4kUDsLVtTKMJNuoEaugkILOm393u4MPy7VT0O0ksL8e3tI6ehtfKiIaCaX/pyFiTimojBJTugwtrraJ3gd6rXm/qzUdBoY+AbYzN5OUkpuJ6/Hfm2w7GrOur5bMgiD8DvqQZA5HOqTswjoPeQK/NW3jaca7gQ9LRKu/QeuYXpQHsALoW2xr+Xpz57NWyutq1Ttt5aWHUQ7EzUBfwBDsBDef8a0cWKMUPcEdUaPD8MLVgbRRGbabkBAEO7sYdMlb3IhYMM9j8N8oct8cPgJtEYEN20TFai5fwQM3dUQIDAQAB";
     private static final List<String> POST_LOGOUT_REDIRECT_URIS = List.of();
@@ -70,8 +72,10 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 CLIENT_NAME,
                 REDIRECT_URIS,
                 CONTRACTS,
-                SCOPES,
+                PUBLIC_KEY_SOURCE,
                 PUBLIC_KEY,
+                null,
+                SCOPES,
                 POST_LOGOUT_REDIRECT_URIS,
                 BACK_CHANNEL_LOGOUT_URI,
                 SERVICE_TYPE,
