@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.frontendapi.helpers;
 
 import uk.gov.di.authentication.entity.UserMfaDetail;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 
 public class FrontendApiPhoneNumberHelper {
     public static final int NUMBER_OF_LAST_DIGITS = 3;
@@ -14,15 +13,17 @@ public class FrontendApiPhoneNumberHelper {
     }
 
     public static String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
-        if (userMfaDetail.getPhoneNumber() != null
-                && !userMfaDetail.getPhoneNumber().isEmpty()
-                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
-                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
-            return userMfaDetail
-                    .getPhoneNumber()
-                    .substring(userMfaDetail.getPhoneNumber().length() - NUMBER_OF_LAST_DIGITS);
-        } else {
-            return null;
-        }
+        return "Uh-oh";
+        //        if (userMfaDetail.getPhoneNumber() != null
+        //                && !userMfaDetail.getPhoneNumber().isEmpty()
+        //                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
+        //                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
+        //            return userMfaDetail
+        //                    .getPhoneNumber()
+        //                    .substring(userMfaDetail.getPhoneNumber().length() -
+        // NUMBER_OF_LAST_DIGITS);
+        //        } else {
+        //            return null;
+        //        }
     }
 }

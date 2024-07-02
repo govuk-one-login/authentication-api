@@ -101,6 +101,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+        LOG.info("ASDF revert me logging");
 
         try {
             LOG.info("Processing request");
@@ -216,7 +217,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             LOG.info("Successfully processed request");
 
-            return generateApiGatewayProxyResponse(200, checkUserExistsResponse);
+            return generateApiGatewayProxyResponse(418, checkUserExistsResponse);
 
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
