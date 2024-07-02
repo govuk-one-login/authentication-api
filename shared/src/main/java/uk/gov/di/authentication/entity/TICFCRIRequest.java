@@ -1,13 +1,12 @@
 package uk.gov.di.authentication.entity;
 
 import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.validation.Required;
 
 import java.util.List;
 
 public record TICFCRIRequest(
-        @Expose @SerializedName("sub") String internalPairwiseId,
+        @Expose String sub,
         @Expose @Required List<String> vtr,
         @Expose @Required String govukSigninJourneyId,
         @Expose @Required String authenticated,
