@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "CodeStorageSNSTopicARN",
+    "ParameterValue": "arn:aws:sns:eu-west-2:816047645251:dev-slack-events"
+  },
+  {
+    "ParameterKey": "CodeStorageThreshold",
+    "ParameterValue": "250"
+  }
+]
