@@ -1,10 +1,13 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-added-large-files
+      - id: mixed-line-ending
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
 
   - repo: https://github.com/awslabs/cfn-python-lint
     rev: v0.86.2
@@ -19,3 +22,59 @@ repos:
       - id: gradle-spotless-apply
       - id: terraform-format
       - id: terraform-validate
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v4.0.0-alpha.8" # Use the sha or tag you want to point at
+    hooks:
+      - id: prettier
+
+  - repo: https://github.com/pylint-dev/pylint
+    rev: "v3.2.2"
+    hooks:
+      - id: pylint
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: "7.0.0"
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - "Flake8-pyproject"
+
+  - repo: https://github.com/psf/black
+    rev: "24.4.2"
+    hooks:
+      - id: black
+
+  - repo: https://github.com/PyCQA/isort
+    rev: "5.13.2"
+    hooks:
+      - id: isort
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff # v0.10.0.1 # pragma: allowlist secret
+    hooks:
+      - id: shellcheck
+        exclude: ./gradlew|./pre-commit.sh
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.0
+    hooks:
+      - id: actionlint
+
+  - repo: local
+    hooks:
+      - id: shfmt
+        name: shfmt (shell scripts)
+        language: golang
+        additional_dependencies:
+          - mvdan.cc/sh/v3/cmd/shfmt@v3.8.0
+        entry: shfmt
+        types:
+          - file
+          - shell
+        exclude_types:
+          - zsh
+        args:
+          - -w # write
+          - -s # simplify
+          - -l # list files that differ
