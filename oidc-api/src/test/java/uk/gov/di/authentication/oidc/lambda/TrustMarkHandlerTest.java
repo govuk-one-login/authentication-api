@@ -6,14 +6,14 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
+import java.net.URI;
 import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,25 +23,24 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 class TrustMarkHandlerTest {
 
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final Context context = mock(Context.class);
-    private static final String BASE_URL = "https://example.com";
+    private static final URI OIDC_BASE_URI = URI.create("https://example.com");
     private TrustMarkHandler handler;
     private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
-        handler = new TrustMarkHandler(configurationService);
-        Optional<String> baseUrl = Optional.of(BASE_URL);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(baseUrl);
+        when(oidcApi.baseURI()).thenReturn(OIDC_BASE_URI);
+        handler = new TrustMarkHandler(oidcApi);
     }
 
     @Test
     void shouldReturn200WhenRequestIsSuccessful() throws Json.JsonException {
-        TrustMarkResponse trustMarkResponse =
+        TrustMarkResponse expectedTrustMarkResponse =
                 new TrustMarkResponse(
-                        configurationService.getOidcApiBaseURL().orElseThrow(),
-                        configurationService.getOidcApiBaseURL().orElseThrow(),
+                        OIDC_BASE_URI.toString(),
+                        OIDC_BASE_URI.toString(),
                         List.of(
                                 CredentialTrustLevel.LOW_LEVEL.getValue(),
                                 CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
@@ -52,12 +51,13 @@ class TrustMarkHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        TrustMarkResponse response =
+        TrustMarkResponse actualTrustMarkResponse =
                 objectMapper.readValue(result.getBody(), TrustMarkResponse.class);
 
-        assertEquals(response.getIdp(), trustMarkResponse.getIdp());
-        assertEquals(response.getTrustMark(), trustMarkResponse.getTrustMark());
-        assertEquals(response.getC(), trustMarkResponse.getC());
-        assertEquals(response.getP(), trustMarkResponse.getP());
+        assertEquals(actualTrustMarkResponse.getIdp(), expectedTrustMarkResponse.getIdp());
+        assertEquals(
+                actualTrustMarkResponse.getTrustMark(), expectedTrustMarkResponse.getTrustMark());
+        assertEquals(actualTrustMarkResponse.getC(), expectedTrustMarkResponse.getC());
+        assertEquals(actualTrustMarkResponse.getP(), expectedTrustMarkResponse.getP());
     }
 }

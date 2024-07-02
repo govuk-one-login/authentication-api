@@ -6,11 +6,12 @@ import com.nimbusds.jwt.SignedJWT;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -40,17 +41,22 @@ import static uk.gov.di.orchestration.sharedtest.exceptions.Unchecked.unchecked;
 
 class BackChannelLogoutRequestHandlerTest {
 
-    private final ConfigurationService configuration = mock(ConfigurationService.class);
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final HttpRequestService request = mock(HttpRequestService.class);
     private final TokenService tokenService = mock(TokenService.class);
     private final Instant fixedDate = Instant.now();
 
     private final BackChannelLogoutRequestHandler handler =
             new BackChannelLogoutRequestHandler(
-                    configuration,
+                    oidcApi,
                     request,
                     tokenService,
                     new NowClock(fixed(fixedDate, systemDefault())));
+
+    @BeforeEach
+    void setup() {
+        when(oidcApi.baseURI()).thenReturn(URI.create("https://base-url.account.gov.uk"));
+    }
 
     @Test
     void shouldDoNothingIfPayloadIsInvalid() {
@@ -71,8 +77,6 @@ class BackChannelLogoutRequestHandlerTest {
 
         when(jwt.serialize()).thenReturn("serialized-payload");
 
-        when(configuration.getOidcApiBaseURL())
-                .thenReturn(Optional.of("https://base-url.account.gov.uk"));
         when(tokenService.generateSignedJwtUsingExternalKey(
                         any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
@@ -85,9 +89,6 @@ class BackChannelLogoutRequestHandlerTest {
 
     @Test
     void shouldCreateClaimsForBackChannelLogoutMessage() throws ParseException {
-        when(configuration.getOidcApiBaseURL())
-                .thenReturn(Optional.of("https://base-url.account.gov.uk"));
-
         var jwt =
                 handler.generateClaims(
                         new BackChannelLogoutMessage(

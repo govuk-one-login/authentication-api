@@ -93,7 +93,7 @@ class DocAppCallbackHandlerTest {
             mock(AuthorisationCodeService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
 
-    private static final String OIDC_BASE_URL = "https://base-url.com";
+    private static final URI OIDC_BASE_URL = URI.create("https://base-url.com");
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
 
     private static final URI EXPECTED_ERROR_REDIRECT_URI = URI.create("https://example.com/error");
@@ -148,7 +148,7 @@ class DocAppCallbackHandlerTest {
                         noSessionOrchestrationService,
                         authFrontend);
         when(authFrontend.errorURI()).thenReturn(EXPECTED_ERROR_REDIRECT_URI);
-        when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+        when(configService.getOidcApiBaseURL()).thenReturn(OIDC_BASE_URL);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();

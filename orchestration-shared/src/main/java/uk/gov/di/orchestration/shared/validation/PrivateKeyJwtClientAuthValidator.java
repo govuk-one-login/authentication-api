@@ -13,10 +13,10 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.Collections;
@@ -24,21 +24,19 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
 
-    private final ConfigurationService configurationService;
-    private static final String TOKEN_PATH = "token";
+    private final OidcAPI oidcApi;
     private static final String UNKNOWN_CLIENT_ID = "unknown";
 
     public PrivateKeyJwtClientAuthValidator(
-            DynamoClientService dynamoClientService, ConfigurationService configurationService) {
+            DynamoClientService dynamoClientService, OidcAPI oidcApi) {
         super(dynamoClientService);
-        this.configurationService = configurationService;
+        this.oidcApi = oidcApi;
     }
 
     @Override
@@ -55,9 +53,7 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             var clientRegistry = getClientRegistryFromTokenAuth(privateKeyJWT.getClientID());
             attachLogFieldToLogs(CLIENT_ID, clientRegistry.getClientID());
             addAnnotation("client_id", clientRegistry.getClientID());
-            var tokenUrl =
-                    buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), TOKEN_PATH)
-                            .toString();
+            var tokenUrl = oidcApi.tokenURI();
             if (Objects.nonNull(clientRegistry.getTokenAuthMethod())
                     && !clientRegistry
                             .getTokenAuthMethod()

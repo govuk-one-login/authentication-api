@@ -29,6 +29,7 @@ import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -112,9 +113,9 @@ public class AuthenticationCallbackHandler
     }
 
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
-
         var kmsConnectionService = new KmsConnectionService(configurationService);
         var redisConnectionService = new RedisConnectionService(configurationService);
+        var oidcApi = new OidcAPI(configurationService);
         this.configurationService = configurationService;
         this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
         this.tokenService =
@@ -128,6 +129,7 @@ public class AuthenticationCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
+
         this.initiateIPVAuthorisationService =
                 new InitiateIPVAuthorisationService(
                         configurationService,
@@ -139,7 +141,8 @@ public class AuthenticationCallbackHandler
                         new TokenService(
                                 configurationService,
                                 redisConnectionService,
-                                kmsConnectionService));
+                                kmsConnectionService,
+                                oidcApi));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
@@ -182,7 +185,8 @@ public class AuthenticationCallbackHandler
                         new TokenService(
                                 configurationService,
                                 redisConnectionService,
-                                kmsConnectionService));
+                                kmsConnectionService,
+                                new OidcAPI(configurationService)));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
