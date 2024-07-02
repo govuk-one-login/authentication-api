@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 [[ "${BASH_SOURCE[0]}" != "${0}" ]] || {
@@ -12,18 +12,37 @@ if [ "$ENVIRONMENT" = "dev" ]; then
   ENVIRONMENT="build"
 fi
 
-secrets="$(
-  aws secretsmanager list-secrets \
-    --filter "Key=\"name\",Values=\"/deploy/${ENVIRONMENT}/\"" --region eu-west-2 |
-    jq -r '.SecretList[]|[.ARN,(.Name|split("/")|last)]|@tsv'
-)"
+function get_page() {
+  local next_token="${1:-}"
 
-if [ -z "${secrets}" ]; then
-  printf '!! ERROR: No secrets found for environment %s. Exiting.\n' "${ENVIRONMENT}" >&2
-  exit 1
-fi
+  if [ -n "${next_token}" ]; then
+    next_token="--next-token=${next_token}"
+  fi
 
-while IFS=$'\t' read -r arn name; do
-  value=$(aws secretsmanager get-secret-value --secret-id "${arn}" | jq -r '.SecretString')
+  aws secretsmanager batch-get-secret-value --filters 'Key=name,Values=/deploy/'"${ENVIRONMENT}"'/' --max-results 20 "${next_token}"
+
+}
+
+function get_page_secrets() {
+  jq -r '[.SecretValues[]|{name: (.Name|split("/")|last), value: .SecretString}]'
+}
+
+function get_next_token() {
+  jq -r '.NextToken // empty'
+}
+
+first_page="$(get_page)"
+
+SECRETS="$(get_page_secrets <<<"${first_page}")"
+
+next_token="$(get_next_token <<<"${first_page}")"
+while [ -n "${next_token}" ]; do
+  page="$(get_page "${next_token}")"
+  page_secrets="$(get_page_secrets <<<"${page}")"
+  SECRETS="$(jq -n --argjson secrets "${SECRETS}" --argjson page_secrets "${page_secrets}" '$secrets + $page_secrets')"
+  next_token="$(get_next_token <<<"${page}")"
+done
+
+while IFS=$'\t' read -r name value; do
   export "TF_VAR_${name}"="${value}"
-done <<<"${secrets}"
+done < <(jq -r '.[]|[.name, .value]|@tsv' <<<"${SECRETS}")
