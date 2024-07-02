@@ -80,6 +80,10 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class VerifyCodeHandlerTest {
 
+    static {
+        System.setProperty("TEST", "TRUE");
+    }
+
     private static final String CODE = "123456";
     private static final String INVALID_CODE = "6543221";
     private static final String CLIENT_ID = "client-id";
