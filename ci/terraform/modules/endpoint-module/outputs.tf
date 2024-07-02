@@ -9,3 +9,19 @@ output "integration_trigger_value" {
 output "method_trigger_value" {
   value = jsonencode(aws_api_gateway_method.endpoint_method)
 }
+
+output "lambda_function_name" {
+  value = aws_lambda_function.endpoint_lambda.function_name
+}
+
+output "lambda_version" {
+  value = aws_lambda_function.endpoint_lambda.version
+}
+
+output "lambda_alias_name" {
+  value = aws_lambda_alias.endpoint_lambda.name
+}
+
+output "lambda_alias_version" {
+  value = aws_lambda_alias.endpoint_lambda.function_version
+}

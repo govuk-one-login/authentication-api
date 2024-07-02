@@ -62,3 +62,13 @@ module "update_password" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
 }
+
+module "codedeploy_update_password" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update_password"
+  environment          = var.environment
+  lambda_function_name = module.update_password.lambda_function_name
+  lambda_version       = module.update_password.lambda_version
+  lambda_alias_name    = module.update_password.lambda_alias_name
+  lambda_alias_version = module.update_password.lambda_alias_version
+}
