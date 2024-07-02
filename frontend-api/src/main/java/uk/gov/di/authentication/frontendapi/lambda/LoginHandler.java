@@ -178,10 +178,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             : codeStorageService.getIncorrectPasswordCount(request.getEmail());
             LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
 
-            String codeBlockedKeyPrefix =
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
-            if (codeStorageService.isBlockedForEmail(
-                    userProfile.getEmail(), codeBlockedKeyPrefix)) {
+            if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has exceeded max password retries");
 
                 auditService.submitAuditEvent(
@@ -196,6 +193,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!credentialsAreValid(request, userProfile)) {
                 LOG.info("credentials are invalid");
+                if (isReauthJourney) {
+                    codeStorageService.increaseIncorrectPasswordCountReauthJourney(
+                            request.getEmail());
+                } else {
+                    codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
+                }
                 var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
@@ -204,20 +207,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
-                if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                    LOG.info("User has now exceeded max password retries, setting block");
-
-                    codeStorageService.saveBlockedForEmail(
-                            request.getEmail(),
-                            codeBlockedKeyPrefix,
-                            configurationService.getLockoutDuration());
-
-                    if (isReauthJourney) {
-                        codeStorageService.deleteIncorrectPasswordCountReauthJourney(
-                                request.getEmail());
-                    } else {
-                        codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
-                    }
+                if (incorrectPasswordCount + 1 >= configurationService.getMaxPasswordRetries()) {
+                    LOG.info("User has now exceeded max password retries");
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -231,14 +222,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
                 }
 
+                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+            }
+
+            if (incorrectPasswordCount != 0) {
+                LOG.info("deleting incorrectPasswordCount");
                 if (isReauthJourney) {
-                    codeStorageService.increaseIncorrectPasswordCountReauthJourney(
+                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
                             request.getEmail());
                 } else {
-                    codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
+                    codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
                 }
-
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
 
             LOG.info("Setting internal common subject identifier in user session");

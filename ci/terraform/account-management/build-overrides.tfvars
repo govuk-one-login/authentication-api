@@ -9,4 +9,8 @@ logging_endpoint_arns = [
   "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
 ]
 
+lockout_duration                          = 30
+otp_code_ttl_duration                     = 120
+email_acct_creation_otp_code_ttl_duration = 60
+
 support_email_check_enabled = true
