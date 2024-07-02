@@ -35,7 +35,7 @@ Conditions:
   IpvExists:
     !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
   SendStorageToken:
-    !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
+    !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ], !Equals [ staging, !Ref Environment] ] ]
   EnableProvisionedConcurrency:
     !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build], !Equals [!Ref Environment, integration], !Equals [!Ref Environment, production]]
   IsNotProduction:
