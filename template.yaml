@@ -410,7 +410,7 @@ Resources:
             - https://oidc.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ENVIRONMENT: !Sub ${Environment}
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
@@ -820,7 +820,7 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           REDIS_KEY: session
@@ -1075,7 +1075,7 @@ Resources:
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           TXMA_AUDIT_ENCODED_ENABLED: true
@@ -1261,7 +1261,7 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
@@ -1575,7 +1575,7 @@ Resources:
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           OIDC_API_BASE_URL: !Sub
@@ -2343,7 +2343,7 @@ Resources:
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
@@ -2528,7 +2528,7 @@ Resources:
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          FRONTEND_BASE_URL: !Sub
+          AUTH_FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
           TXMA_AUDIT_QUEUE_URL:
