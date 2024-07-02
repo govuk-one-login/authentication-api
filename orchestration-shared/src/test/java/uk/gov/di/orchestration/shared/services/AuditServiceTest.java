@@ -150,7 +150,6 @@ class AuditServiceTest {
     @Test
     void TxmaHeaderShouldBeAddedToAuditEvent() throws JOSEException, InvalidEncodingException {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
-        when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
 
         attachAuditField(TXMA_ENCODED_HEADER, TXMA_ENCODED_HEADER_VALUE);
         auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
@@ -173,7 +172,6 @@ class AuditServiceTest {
     @Test
     void TxmaHeaderNotAddedWhenNotSet() {
         var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
-        when(configurationService.isTxmaAuditEncodedEnabled()).thenReturn(true);
 
         auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
         verify(awsSqsClient).send(txmaMessageCaptor.capture());

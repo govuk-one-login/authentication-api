@@ -834,7 +834,6 @@ Resources:
             - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
             - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
               AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref DocAppCredentialTableWriteAccessPolicy
@@ -1078,7 +1077,6 @@ Resources:
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
             - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1267,7 +1265,6 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
           STORAGE_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
           SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [ SendStorageToken, true, false ]
-          TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1589,7 +1586,6 @@ Resources:
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          TXMA_AUDIT_ENCODED_ENABLED: true
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -2390,7 +2386,6 @@ Resources:
               - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
                 AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
             - !Ref AWS::NoValue
-          TXMA_AUDIT_ENCODED_ENABLED: true
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref IdentityCredentialsTableWriteAccessPolicy

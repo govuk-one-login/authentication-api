@@ -17,7 +17,6 @@ support_account_creation_count_ttl   = true
 
 orch_account_id                     = "590183975515"
 cmk_for_back_channel_logout_enabled = true
-txma_audit_encoded_enabled          = true
 
 contra_state_bucket = "di-auth-staging-tfstate"
 

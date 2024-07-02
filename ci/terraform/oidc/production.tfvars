@@ -41,7 +41,6 @@ orch_account_id = "533266965190"
 
 oidc_origin_domain_enabled  = true
 oidc_cloudfront_dns_enabled = true
-txma_audit_encoded_enabled  = true
 enforce_cloudfront          = true
 
 orch_trustmark_enabled               = true

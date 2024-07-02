@@ -43,7 +43,6 @@ module "doc-app-callback" {
     REDIS_KEY                          = local.redis_key
     TXMA_AUDIT_QUEUE_URL               = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                  = local.api_base_url
-    TXMA_AUDIT_ENCODED_ENABLED         = var.txma_audit_encoded_enabled
   }
   handler_function_name = "uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest"
 

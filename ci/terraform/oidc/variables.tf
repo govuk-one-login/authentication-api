@@ -677,12 +677,6 @@ variable "oidc_cloudfront_dns_enabled" {
   description = "Feature flag controlling the DNS cutover between API Gateway and Cloudfront for the OIDC API"
 }
 
-variable "txma_audit_encoded_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should pass cloudfront header to txma"
-}
-
 variable "oidc_origin_cloaking_header" {
   type        = string
   description = "Secret header to prove the origin request comes via cloudfront. Set using secrets manager and the read secrets script."
