@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -61,8 +62,9 @@ class DocAppCriServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
+    private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private final HTTPRequest httpRequest = mock(HTTPRequest.class);
-    private static final URI CRI_URI = URI.create("http://cri/");
+    private static final URI TOKEN_URI = URI.create("http://base-uri/token");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String SIGNING_KID = "14342354354353";
@@ -74,8 +76,8 @@ class DocAppCriServiceTest {
 
     @BeforeEach
     void setUp() {
-        docAppCriService = new DocAppCriService(configService, kmsService);
-        when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
+        docAppCriService = new DocAppCriService(configService, kmsService, docAppCriApi);
+        when(docAppCriApi.tokenURI()).thenReturn(TOKEN_URI);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
@@ -92,7 +94,7 @@ class DocAppCriServiceTest {
                     .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
             TokenRequest tokenRequest =
                     docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
-            assertThat(tokenRequest.getEndpointURI().toString(), equalTo(CRI_URI + "token"));
+            assertThat(tokenRequest.getEndpointURI().toString(), equalTo(TOKEN_URI.toString()));
             assertThat(
                     tokenRequest.getClientAuthentication().getMethod().getValue(),
                     equalTo("private_key_jwt"));
@@ -176,7 +178,7 @@ class DocAppCriServiceTest {
             var claimsSet =
                     new JWTAuthenticationClaimsSet(
                             new ClientID(CLIENT_ID),
-                            singletonList(new Audience(buildURI(CRI_URI.toString(), "token"))),
+                            singletonList(new Audience(buildURI(TOKEN_URI.toString(), "token"))),
                             NowHelper.nowPlus(5, ChronoUnit.MINUTES),
                             null,
                             NowHelper.now(),

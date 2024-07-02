@@ -17,6 +17,7 @@ import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.services.DocAppCriService;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -40,6 +41,7 @@ import static uk.gov.di.orchestration.shared.entity.IdentityClaims.CREDENTIAL_JW
 public class DcmawUserInfoTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
     private DocAppCriService docAppCriService;
     private Tokens tokens;
 
@@ -54,7 +56,7 @@ public class DcmawUserInfoTest {
 
     @BeforeEach
     void setup() {
-        docAppCriService = new DocAppCriService(configService, kmsConnectionService);
+        docAppCriService = new DocAppCriService(configService, kmsConnectionService, docAppCriApi);
         tokens = new Tokens(new BearerAccessToken("accessToken"), null);
         when(configService.getEnvironment()).thenReturn("not_build");
     }

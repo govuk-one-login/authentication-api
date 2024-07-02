@@ -31,6 +31,7 @@ import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -92,12 +93,14 @@ class DocAppCallbackHandlerTest {
     private static final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
+    private final DocAppCriAPI docAppCriApi = mock(DocAppCriAPI.class);
 
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
 
     private static final URI EXPECTED_ERROR_REDIRECT_URI = URI.create("https://example.com/error");
 
+    private static final URI DOC_APP_CRI_V2_URI = URI.create("https://base-url.com/userinfo/v2");
     private static final URI CRI_URI = URI.create("http://cri/");
     private static final String ENVIRONMENT = "test-environment";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -146,9 +149,11 @@ class DocAppCallbackHandlerTest {
                         cookieHelper,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
-                        authFrontend);
+                        authFrontend,
+                        docAppCriApi);
         when(authFrontend.errorURI()).thenReturn(EXPECTED_ERROR_REDIRECT_URI);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+        when(docAppCriApi.criDataURI()).thenReturn(DOC_APP_CRI_V2_URI);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
