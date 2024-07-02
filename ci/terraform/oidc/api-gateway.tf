@@ -323,6 +323,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
   ]
 }
 
+# TODO: Investigate if this can be done better in multi-env aws accounts
 resource "aws_api_gateway_account" "api_gateway_logging_role" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_logging_iam_role.arn
 

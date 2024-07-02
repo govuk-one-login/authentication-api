@@ -15,7 +15,8 @@ public record TICFCRIRequest(
         @Expose String passwordReset) {
 
     public static TICFCRIRequest basicTicfCriRequest(
-            String internalPairwiseId, List<String> vtr, String journeyId) {
-        return new TICFCRIRequest(internalPairwiseId, vtr, journeyId, "Y", null, null);
+            String internalPairwiseId, List<String> vtr, String journeyId, boolean authenticated) {
+        return new TICFCRIRequest(
+                internalPairwiseId, vtr, journeyId, authenticated ? "Y" : "N", null, null);
     }
 }

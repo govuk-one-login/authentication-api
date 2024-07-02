@@ -4,7 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.google.gson.JsonArray;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -38,6 +37,7 @@ import static uk.gov.di.authentication.entity.TICFCRIRequest.basicTicfCriRequest
 
 class TicfCriHandlerTest {
 
+    public static final boolean USER_IS_AUTHENTICATED = true;
     @Mock private Context context;
     @Mock private ConfigurationService configurationService;
     @Mock private CloudwatchMetricsService cloudwatchMetricsService;
@@ -68,14 +68,20 @@ class TicfCriHandlerTest {
         mocks.close();
     }
 
-    @Test
-    void shouldMakeTheCorrectCallToTheTicfCri()
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldMakeTheCorrectCallToTheTicfCri(boolean userIsAuthenticated)
             throws IOException, InterruptedException, ExecutionException {
-        var ticfRequest = basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID);
+        var ticfRequest =
+                basicTicfCriRequest(
+                        COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, userIsAuthenticated);
         var expectedRequestBody =
                 format(
-                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"Y\"}",
-                        COMMON_SUBJECTID, jsonArrayFrom(VECTORS_OF_TRUST), JOURNEY_ID);
+                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
+                        COMMON_SUBJECTID,
+                        jsonArrayFrom(VECTORS_OF_TRUST),
+                        JOURNEY_ID,
+                        userIsAuthenticated ? "Y" : "N");
 
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -96,7 +102,9 @@ class TicfCriHandlerTest {
     @ValueSource(ints = {200, 404, 500})
     void sendsMetricsBasedOnTheHttpStatusCode(Integer statusCode)
             throws IOException, InterruptedException {
-        var ticfRequest = basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID);
+        var ticfRequest =
+                basicTicfCriRequest(
+                        COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, USER_IS_AUTHENTICATED);
         when(httpResponse.statusCode()).thenReturn(statusCode);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
 
@@ -117,7 +125,9 @@ class TicfCriHandlerTest {
         when(httpClient.send(any(), any())).thenThrow(e);
 
         handler.handleRequest(
-                basicTicfCriRequest(COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID), context);
+                basicTicfCriRequest(
+                        COMMON_SUBJECTID, VECTORS_OF_TRUST, JOURNEY_ID, USER_IS_AUTHENTICATED),
+                context);
 
         verify(cloudwatchMetricsService).incrementCounter(metricName, METRICS_CONTEXT);
     }

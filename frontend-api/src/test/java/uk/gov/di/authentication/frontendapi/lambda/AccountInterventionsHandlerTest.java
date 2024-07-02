@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.google.gson.Gson;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -12,8 +13,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
@@ -22,6 +27,7 @@ import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -36,6 +42,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -43,6 +50,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +66,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_INTERVENTION;
@@ -66,11 +75,12 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.TEST_CLIENT_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountInterventionsHandlerTest {
+    private static final String TEST_CLIENT_ID = "test_client_id";
     private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -79,31 +89,34 @@ class AccountInterventionsHandlerTest {
 
     private static final Instant fixedDate = Instant.now();
 
-    private static final String fixedDateUnixTimestampString =
+    private static final String FIXED_DATE_UNIX_TIMESTAMP_STRING =
             String.valueOf(fixedDate.toEpochMilli());
-    private final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
+    private static final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
             String.format(
                     "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"reproveIdentity\":%b,\"appliedAt\":\"%s\"}",
-                    false, false, false, false, fixedDateUnixTimestampString);
+                    false, false, false, false, FIXED_DATE_UNIX_TIMESTAMP_STRING);
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
     private final Context context = mock(Context.class);
+
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final UserContext userContext = mock(UserContext.class);
+    private final UserContext userContext = mock(UserContext.class, Mockito.RETURNS_DEEP_STUBS);
     private final AccountInterventionsService accountInterventionsService =
             mock(AccountInterventionsService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final LambdaInvokerService mockLambdaInvokerService = mock(LambdaInvokerService.class);
+
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
-            new Session(CommonTestVariables.SESSION_ID)
+            new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
-                    .setSessionId(CommonTestVariables.SESSION_ID)
+                    .setSessionId(SESSION_ID)
                     .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
@@ -133,6 +146,7 @@ class AccountInterventionsHandlerTest {
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
+        when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
@@ -142,7 +156,7 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
-        var fixedClock = new NowHelper.NowClock(fixed(fixedDate, systemDefault()));
+
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
@@ -153,52 +167,8 @@ class AccountInterventionsHandlerTest {
                         accountInterventionsService,
                         auditService,
                         cloudwatchMetricsService,
-                        fixedClock);
-    }
-
-    @Test
-    void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoValidSessionId()
-            throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
-    }
-
-    @Test
-    void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoEmail()
-            throws Json.JsonException {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
-    }
-
-    @Test
-    void shouldReturnErrorResponseWhenUserDoesNotExists() throws Json.JsonException {
-        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
-                .thenReturn(Optional.empty());
-        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
-    }
-
-    @ParameterizedTest
-    @MethodSource("httpErrorCodesAndAssociatedResponses")
-    void shouldReturnErrorResponseWithGivenHttpStatusCode(
-            int httpCode, ErrorResponse expectedErrorResponse)
-            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
-        when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
-                .thenReturn(Optional.of(generateUserProfile()));
-        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
-                .thenThrow(
-                        new UnsuccessfulAccountInterventionsResponseException(
-                                "Unspecified Error", httpCode));
-        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
-        assertThat(result, hasStatus(httpCode));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(expectedErrorResponse)));
+                        new NowHelper.NowClock(fixed(fixedDate, systemDefault())),
+                        mockLambdaInvokerService);
     }
 
     @Test
@@ -212,7 +182,9 @@ class AccountInterventionsHandlerTest {
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Any 4xx/5xx error valid here", 404));
-        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
+
+        var result = handler.handleRequest(apiRequestEventWithEmail(), context);
+
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
         verify(cloudwatchMetricsService)
@@ -233,7 +205,7 @@ class AccountInterventionsHandlerTest {
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Any 4xx/5xx error valid here", 404));
-        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(), context);
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
@@ -246,35 +218,184 @@ class AccountInterventionsHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
-                .thenReturn(
-                        generateAccountInterventionResponse(
-                                true, true, true, true, APPLIED_AT_TIMESTAMP));
-        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithEmail(),
+                        context,
+                        new AccountInterventionsRequest("test", true),
+                        userContext);
+
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
 
+    @ParameterizedTest
+    @CsvSource({"true", "false"})
+    void checkInvokesTICFLambdaWhenFeatureSwitchOn(boolean featureSwitch)
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(featureSwitch);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithEmail(),
+                        context,
+                        new AccountInterventionsRequest("test", true),
+                        userContext);
+
+        assertThat(result, hasStatus(200));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        if (featureSwitch) {
+            verify(mockLambdaInvokerService, times(1)).invokeAsyncWithPayload(any(), any());
+        } else {
+            verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
+        }
+    }
+
+    private static Stream<Boolean> authenticatedUserSource() {
+        return Stream.of(Boolean.TRUE, Boolean.FALSE, null);
+    }
+
+    @ParameterizedTest
+    @MethodSource("authenticatedUserSource")
+    void checkDoesNotInvokesTICFLambdaForUsersWithUnknownAuthenticationStatus(Boolean authenticated)
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithEmail(),
+                        context,
+                        new AccountInterventionsRequest("test", authenticated),
+                        userContext);
+
+        assertThat(result, hasStatus(200));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        if (authenticated != null) {
+            verify(mockLambdaInvokerService, times(1)).invokeAsyncWithPayload(any(), any());
+        } else {
+            verify(mockLambdaInvokerService, times(0)).invokeAsyncWithPayload(any(), any());
+        }
+    }
+
     @Test
-    void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDiabled()
+    void checkMissingVTRDoesNotImpactUserJourney()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
+        when(userContext.getClientSession()).thenReturn(null);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        apiRequestEventWithEmail(),
+                        context,
+                        new AccountInterventionsRequest("test", true),
+                        userContext);
+
+        assertThat(result, hasStatus(200));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
+        verify(mockLambdaInvokerService, times(1)).invokeAsyncWithPayload(any(), any());
+    }
+
+    @Test
+    void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDisabled()
             throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
-        var result = handler.handleRequest(apiRequestEventWithEmail(EMAIL), context);
+
+        var result = handler.handleRequest(apiRequestEventWithEmail(), context);
 
         verify(accountInterventionsService, never()).sendAccountInterventionsOutboundRequest(any());
         assertThat(result, hasStatus(200));
         assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
 
+    @Test
+    void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoValidSessionId()
+            throws Json.JsonException {
+        var event = new APIGatewayProxyRequestEvent();
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+    }
+
+    @Test
+    void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoEmail()
+            throws Json.JsonException {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenUserDoesNotExists() throws Json.JsonException {
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.empty());
+
+        var result = handler.handleRequest(apiRequestEventWithEmail(), context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("httpErrorCodesAndAssociatedResponses")
+    void shouldReturnErrorResponseWithGivenHttpStatusCode(
+            int httpCode, ErrorResponse expectedErrorResponse)
+            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Unspecified Error", httpCode));
+
+        var result = handler.handleRequest(apiRequestEventWithEmail(), context);
+
+        assertThat(result, hasStatus(httpCode));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(expectedErrorResponse)));
+    }
+
     static Stream<Arguments> accountInterventionResponseParameters() {
-        Stream<Arguments> argumentsStream =
-                Stream.of(
-                        Arguments.of(false, false, false, false, NO_INTERVENTION),
-                        Arguments.of(false, true, true, false, NO_INTERVENTION),
-                        Arguments.of(true, false, false, false, PERMANENTLY_BLOCKED_INTERVENTION),
-                        Arguments.of(false, true, false, false, TEMP_SUSPENDED_INTERVENTION),
-                        Arguments.of(false, true, false, true, PASSWORD_RESET_INTERVENTION),
-                        Arguments.of(false, true, true, true, PASSWORD_RESET_INTERVENTION));
-        return argumentsStream;
+        return Stream.of(
+                Arguments.of(false, false, false, false, NO_INTERVENTION),
+                Arguments.of(false, true, true, false, NO_INTERVENTION),
+                Arguments.of(true, false, false, false, PERMANENTLY_BLOCKED_INTERVENTION),
+                Arguments.of(false, true, false, false, TEMP_SUSPENDED_INTERVENTION),
+                Arguments.of(false, true, false, true, PASSWORD_RESET_INTERVENTION),
+                Arguments.of(false, true, true, true, PASSWORD_RESET_INTERVENTION));
     }
 
     @ParameterizedTest
@@ -285,22 +406,24 @@ class AccountInterventionsHandlerTest {
             boolean reproveIdentity,
             boolean resetPassword,
             FrontendAuditableEvent expectedEvent)
-            throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
-        var event = apiRequestEventWithEmail(EMAIL);
+            throws UnsuccessfulAccountInterventionsResponseException {
+        var event = apiRequestEventWithEmail();
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(
                         generateAccountInterventionResponse(
-                                blocked,
-                                suspended,
-                                reproveIdentity,
-                                resetPassword,
-                                APPLIED_AT_TIMESTAMP));
+                                blocked, suspended, reproveIdentity, resetPassword));
+
+        when(userContext.getClientSession().getEffectiveVectorOfTrust().getCredentialTrustLevel())
+                .thenReturn(CredentialTrustLevel.LOW_LEVEL);
+
+        when(configurationService.isInvokeTicfCRILambdaEnabled()).thenReturn(true);
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new AccountInterventionsRequest("test", null), userContext);
+                        event, context, new AccountInterventionsRequest("test", true), userContext);
+
         assertThat(result, hasStatus(200));
 
         assertEquals(
@@ -309,52 +432,53 @@ class AccountInterventionsHandlerTest {
                         resetPassword, blocked, suspended, reproveIdentity, APPLIED_AT_TIMESTAMP),
                 result.getBody());
         var expectedMetricDimensions =
-                Map.of(
-                        "Environment",
-                        TEST_ENVIRONMENT,
-                        "blocked",
-                        String.valueOf(blocked),
-                        "suspended",
-                        String.valueOf(suspended),
-                        "reproveIdentity",
-                        String.valueOf(reproveIdentity),
-                        "resetPassword",
-                        String.valueOf(resetPassword));
+                Map.ofEntries(
+                        Map.entry("Environment", TEST_ENVIRONMENT),
+                        Map.entry("blocked", String.valueOf(blocked)),
+                        Map.entry("suspended", String.valueOf(suspended)),
+                        Map.entry("reproveIdentity", String.valueOf(reproveIdentity)),
+                        Map.entry("resetPassword", String.valueOf(resetPassword)));
         verify(cloudwatchMetricsService)
                 .incrementCounter("AuthAisResult", expectedMetricDimensions);
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> lambdaNameCaptor = ArgumentCaptor.forClass(String.class);
+
+        verify(mockLambdaInvokerService)
+                .invokeAsyncWithPayload(payloadCaptor.capture(), lambdaNameCaptor.capture());
+
+        var ticfRequest = new Gson().fromJson(payloadCaptor.getValue(), TICFCRIRequest.class);
+        assertEquals(CommonTestVariables.CLIENT_SESSION_ID, ticfRequest.govukSigninJourneyId());
+        var vtr = new ArrayList<String>();
+        vtr.add(CredentialTrustLevel.LOW_LEVEL.getValue());
+        assertEquals(ticfRequest.vtr(), vtr);
         verify(auditService).submitAuditEvent(expectedEvent, AUDIT_CONTEXT);
     }
 
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided()
-            throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
+            throws UnsuccessfulAccountInterventionsResponseException {
         boolean blocked = false;
         boolean suspended = false;
         boolean reproveIdentity = false;
         boolean resetPassword = false;
-        FrontendAuditableEvent expectedEvent = NO_INTERVENTION;
-        var event = apiRequestEventWithEmail(EMAIL);
+        var event = apiRequestEventWithEmail();
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(
                         generateAccountInterventionResponse(
-                                blocked,
-                                suspended,
-                                reproveIdentity,
-                                resetPassword,
-                                APPLIED_AT_TIMESTAMP));
+                                blocked, suspended, reproveIdentity, resetPassword));
         when(userContext.getTxmaAuditEncoded()).thenReturn(null);
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new AccountInterventionsRequest("test", null), userContext);
+                        event, context, new AccountInterventionsRequest("test", true), userContext);
 
         assertThat(result, hasStatus(200));
 
         verify(auditService)
                 .submitAuditEvent(
-                        expectedEvent, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+                        NO_INTERVENTION, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private UserProfile generateUserProfile() {
@@ -367,15 +491,11 @@ class AccountInterventionsHandlerTest {
     }
 
     private AccountInterventionsInboundResponse generateAccountInterventionResponse(
-            boolean blocked,
-            boolean suspended,
-            boolean reproveIdentity,
-            boolean resetPassword,
-            String appliedAtTimestamp) {
+            boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
         return new AccountInterventionsInboundResponse(
                 new Intervention(
                         "1696969322935",
-                        appliedAtTimestamp,
+                        AccountInterventionsHandlerTest.APPLIED_AT_TIMESTAMP,
                         "1696869003456",
                         "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
                         "1696969322935",
@@ -415,10 +535,13 @@ class AccountInterventionsHandlerTest {
                 Arguments.of(404, ErrorResponse.ERROR_1055));
     }
 
-    private APIGatewayProxyRequestEvent apiRequestEventWithEmail(String email) {
+    private APIGatewayProxyRequestEvent apiRequestEventWithEmail() {
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", email));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\" }",
+                        uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL));
         return event;
     }
 }

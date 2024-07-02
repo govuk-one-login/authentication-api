@@ -1,36 +1,28 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
-import net.minidev.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvocationType;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
-import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
-import uk.gov.di.authentication.shared.serialization.Json;
+import software.amazon.awssdk.services.lambda.model.LambdaException;
+
+import java.util.Optional;
 
 public class LambdaInvokerService implements LambdaInvoker {
-
     private static final Logger LOG = LogManager.getLogger(LambdaInvokerService.class);
-
-    protected final Json objectMapper = SerializationService.getInstance();
-
-    private final ConfigurationService configurationService;
-
+    public static final String MISSING = "missing";
     private final LambdaClient lambdaClient;
 
-    public LambdaInvokerService(
-            ConfigurationService configurationService, LambdaClient lambdaClient) {
-        this.configurationService = configurationService;
+    public LambdaInvokerService(LambdaClient lambdaClient) {
         this.lambdaClient = lambdaClient;
     }
 
     public LambdaInvokerService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.lambdaClient =
                 LambdaClient.builder()
                         .credentialsProvider(DefaultCredentialsProvider.create())
@@ -39,21 +31,16 @@ public class LambdaInvokerService implements LambdaInvoker {
     }
 
     @Override
-    public void invokeWithPayload(ScheduledEvent scheduledEvent) {
-        String lambdaName = configurationService.getBulkEmailLoaderLambdaName();
+    public void invokeAsyncWithPayload(String jsonPayload, String lambdaName) {
+        SdkBytes payload;
 
-        if (lambdaName == null || lambdaName.isEmpty()) {
-            throw new LambdaInvokerServiceException(
-                    "BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME environment variable not set");
+        try {
+            payload = SdkBytes.fromUtf8String(jsonPayload);
+        } catch (Exception e) {
+            LOG.error(
+                    "Could not convert payload for {} into SdkBytes: {}", lambdaName, jsonPayload);
+            return;
         }
-
-        JSONObject detail = new JSONObject();
-        detail.appendField("lastEvaluatedKey", scheduledEvent.getDetail().get("lastEvaluatedKey"));
-        detail.appendField(
-                "globalUsersAddedCount", scheduledEvent.getDetail().get("globalUsersAddedCount"));
-
-        String jsonPayload = new JSONObject().appendField("detail", detail).toJSONString();
-        SdkBytes payload = SdkBytes.fromUtf8String(jsonPayload);
 
         InvokeRequest invokeRequest =
                 InvokeRequest.builder()
@@ -61,6 +48,30 @@ public class LambdaInvokerService implements LambdaInvoker {
                         .invocationType(InvocationType.EVENT)
                         .payload(payload)
                         .build();
-        lambdaClient.invoke(invokeRequest);
+
+        try {
+            lambdaClient.invoke(invokeRequest);
+        } catch (LambdaException e) {
+            var errorMessage =
+                    Optional.ofNullable(e.awsErrorDetails())
+                            .map(AwsErrorDetails::errorMessage)
+                            .orElse(MISSING);
+
+            var errorCode =
+                    Optional.ofNullable(e.awsErrorDetails())
+                            .map(AwsErrorDetails::errorCode)
+                            .orElse(MISSING);
+
+            var requestId = Optional.ofNullable(e.requestId()).orElse(MISSING);
+
+            LOG.error(
+                    "Lambda {} invocation error: {}\n Error code: {}\n Request ID: {}",
+                    lambdaName,
+                    errorMessage,
+                    errorCode,
+                    requestId);
+        } catch (Exception e) {
+            LOG.error("Lambda {} invocation failed in unexpected way: ", lambdaName, e);
+        }
     }
 }

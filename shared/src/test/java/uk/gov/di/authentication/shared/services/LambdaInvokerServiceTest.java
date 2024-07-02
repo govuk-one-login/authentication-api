@@ -1,73 +1,91 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
-import net.minidev.json.JSONObject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvocationType;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
-import uk.gov.di.authentication.shared.serialization.Json;
+import software.amazon.awssdk.services.lambda.model.LambdaException;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessage;
 
 class LambdaInvokerServiceTest {
+    String functionName = "SOME_FUNCTION_NAME";
+    String payloadString = "{\"foo\": \"bar\"}";
+    SdkBytes payload = SdkBytes.fromUtf8String(payloadString);
+    InvokeRequest expectedInvokeRequest =
+            InvokeRequest.builder()
+                    .functionName(functionName)
+                    .invocationType(InvocationType.EVENT)
+                    .payload(payload)
+                    .build();
 
-    ConfigurationService configurationService = mock(ConfigurationService.class);
+    LambdaClient lambdaClient;
+    LambdaInvokerService lambdaInvokerService;
 
-    LambdaClient lambdaClient = mock(LambdaClient.class);
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(LambdaInvokerService.class);
 
-    ScheduledEvent scheduledEvent = mock(ScheduledEvent.class);
-
-    @Test
-    void shouldInvokeTheLambdaWithTheGivenScheduledEvent() {
-        var functionName = "BULK_USER_EMAIL_AUDIENCE_LOADER";
-        when(configurationService.getBulkEmailLoaderLambdaName()).thenReturn(functionName);
-        var lastEvaluatedKey = "email@example.com";
-        var globalUsersAddedCount = "5";
-        Map<String, Object> details =
-                Map.of(
-                        "globalUsersAddedCount",
-                        globalUsersAddedCount,
-                        "lastEvaluatedKey",
-                        lastEvaluatedKey);
-        when(scheduledEvent.getDetail()).thenReturn(details);
-
-        JSONObject detail =
-                new JSONObject()
-                        .appendField("lastEvaluatedKey", lastEvaluatedKey)
-                        .appendField("globalUsersAddedCount", globalUsersAddedCount);
-        String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
-
-        var payload = SdkBytes.fromUtf8String(payloadString);
-        InvokeRequest invokeRequest =
-                InvokeRequest.builder()
-                        .functionName(functionName)
-                        .invocationType(InvocationType.EVENT)
-                        .payload(payload)
-                        .build();
-        LambdaInvokerService lambdaInvokerService =
-                new LambdaInvokerService(configurationService, lambdaClient);
-
-        lambdaInvokerService.invokeWithPayload(scheduledEvent);
-
-        verify(lambdaClient).invoke(invokeRequest);
+    @BeforeEach
+    void beforeEach() {
+        lambdaClient = mock(LambdaClient.class);
+        lambdaInvokerService = new LambdaInvokerService(lambdaClient);
     }
 
     @Test
-    void shouldThrowErrorWhenLambdaNameNotSetInEnvironment() throws Json.JsonException {
-        when(configurationService.getBulkEmailLoaderLambdaName()).thenReturn("");
-        LambdaInvokerService lambdaInvokerService =
-                new LambdaInvokerService(configurationService, lambdaClient);
+    void shouldInvokeTheSpecifiedLambdaWithTheGivenPayload() {
+        assertDoesNotThrow(
+                () -> lambdaInvokerService.invokeAsyncWithPayload(payloadString, functionName));
 
-        assertThrows(
-                RuntimeException.class,
-                () -> lambdaInvokerService.invokeWithPayload(scheduledEvent),
-                "BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME environment variable not set");
+        verify(lambdaClient).invoke(expectedInvokeRequest);
+    }
+
+    @Test
+    void shouldNotAllowExpectedExceptionsToEscape() {
+        when(lambdaClient.invoke((InvokeRequest) any())).thenThrow(mock(LambdaException.class));
+
+        assertDoesNotThrow(
+                () -> lambdaInvokerService.invokeAsyncWithPayload(payloadString, functionName));
+    }
+
+    @Test
+    void shouldNotAllowUnexpectedExceptionsToEscape() {
+        when(lambdaClient.invoke((InvokeRequest) any())).thenThrow(mock(RuntimeException.class));
+
+        assertDoesNotThrow(
+                () -> lambdaInvokerService.invokeAsyncWithPayload(payloadString, functionName));
+    }
+
+    @Test
+    void checkConstructor() {
+        var mockConfigurationService = mock(ConfigurationService.class);
+        when(mockConfigurationService.getAwsRegion()).thenReturn("eu-west-2");
+
+        assertDoesNotThrow(() -> new LambdaInvokerService(mockConfigurationService));
+
+        verify(mockConfigurationService).getAwsRegion();
+    }
+
+    @Test
+    void checkHandlesPayloadsThatDontConvertToSdkBytes() {
+        assertDoesNotThrow(() -> lambdaInvokerService.invokeAsyncWithPayload(null, functionName));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessage(
+                                "Could not convert payload for "
+                                        + functionName
+                                        + " into SdkBytes: null")));
     }
 }

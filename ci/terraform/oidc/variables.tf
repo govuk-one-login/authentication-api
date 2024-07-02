@@ -693,6 +693,12 @@ variable "enforce_cloudfront" {
   description = "Feature flag to switch the WAF on the OIDC API Gateway to the Origin Cloaking WAF to mandate CloudFront"
 }
 
+variable "call_ticf_cri" {
+  type        = bool
+  default     = false
+  description = "Feature flag to switch on invoking TICF CRI lambda."
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
