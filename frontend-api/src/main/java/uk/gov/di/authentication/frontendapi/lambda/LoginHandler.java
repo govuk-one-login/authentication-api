@@ -40,6 +40,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
@@ -128,16 +129,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserContext userContext) {
 
         AuditContext auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+                auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         attachSessionIdToLogs(userContext.getSession().getSessionId());
 

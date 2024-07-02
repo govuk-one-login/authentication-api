@@ -86,16 +86,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         LOG.info("Processing CheckReAuthUser request");
 
         AuditContext auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+                AuditContext.auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.email(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         try {
             return authenticationService

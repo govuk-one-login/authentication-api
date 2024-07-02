@@ -129,17 +129,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             var auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            session.getSessionId(),
+                    AuditContext.auditContextFromUserContext(
+                            userContext,
                             session.getInternalCommonSubjectIdentifier(),
                             session.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
-
+                            extractPersistentIdFromHeaders(input.getHeaders()));
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);

@@ -6,7 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
@@ -35,6 +34,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -112,16 +112,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
             var auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    auditContextFromUserContext(
+                            userContext,
                             AuditService.UNKNOWN,
                             emailAddress,
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            persistentSessionId,
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            persistentSessionId);
 
             if (errorResponse.isPresent()) {
 
