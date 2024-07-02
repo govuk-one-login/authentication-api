@@ -14,15 +14,16 @@ public class FrontendApiPhoneNumberHelper {
     }
 
     public static String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
-        if (userMfaDetail.getPhoneNumber() != null
-                && !userMfaDetail.getPhoneNumber().isEmpty()
-                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
-                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
-            return userMfaDetail
-                    .getPhoneNumber()
-                    .substring(userMfaDetail.getPhoneNumber().length() - NUMBER_OF_LAST_DIGITS);
-        } else {
-            return null;
-        }
+        return "Uh-oh";
+//        if (userMfaDetail.getPhoneNumber() != null
+//                && !userMfaDetail.getPhoneNumber().isEmpty()
+//                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
+//                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
+//            return userMfaDetail
+//                    .getPhoneNumber()
+//                    .substring(userMfaDetail.getPhoneNumber().length() - NUMBER_OF_LAST_DIGITS);
+//        } else {
+//            return null;
+//        }
     }
 }

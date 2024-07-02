@@ -101,6 +101,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+        LOG.info("ASDF revert me logging");
 
         try {
             LOG.info("Processing request");
