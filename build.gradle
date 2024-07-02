@@ -23,7 +23,7 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.26.12",
+        aws_sdk_v2_version: "2.26.13",
         aws_lambda_core_version: "1.2.3",
         aws_lambda_events_version: "3.11.6",
         gson: "2.10.1",
