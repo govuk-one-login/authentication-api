@@ -27,3 +27,4 @@ logs/
 
 # Contract Tests
 pact/
+node_modules

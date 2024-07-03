@@ -1,0 +1,263 @@
+name: "DEV: Build and deploy API modules"
+env:
+  AWS_REGION: eu-west-2
+  DEPLOYER_ROLE: arn:aws:iam::706615647326:role/deployers/dev-github-actions-publish-to-s3-for-code-signing
+  SOURCE_BUCKET: di-auth-lambda-source-20220215165054622300000001
+  SIGNING_PROFILE: di_auth_lambda_signing_20220214175605677200000001
+  DESTINATION_BUCKET: di-auth-lambda-signed-20220215165009815000000001
+  GHA_ROLE: arn:aws:iam::653994557586:role/dev-auth-deploy-pipeline-GitHubActionsRole-QrtGginNnjDD
+  ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-ssdefc91xjh6
+  ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:706615647326:table/di-auth-non-production-artifact-lookup
+
+on: workflow_dispatch
+
+concurrency:
+  group: "build-and-deploy-api-modules-dev"
+  cancel-in-progress: false
+
+jobs:
+  set-up:
+    name: Set up environment
+    runs-on: ubuntu-latest
+    outputs:
+      aws_region: ${{ env.AWS_REGION }}
+      deployer_role: ${{ steps.secrets.outputs.DEPLOYER_ROLE }}
+      promotion_role: ${{ steps.secrets.outputs.PROMOTION_ROLE }}
+      source_bucket: ${{ steps.secrets.outputs.SOURCE_BUCKET }}
+      signing_profile: ${{ steps.secrets.outputs.SIGNING_PROFILE }}
+      destination_bucket: ${{ steps.secrets.outputs.DESTINATION_BUCKET }}
+      artifact_bucket: ${{ steps.secrets.outputs.ARTIFACT_BUCKET }}
+      artifact_lookup_table: ${{ steps.secrets.outputs.ARTIFACT_LOOKUP_TABLE  }}
+    steps:
+      - id: secrets
+        run: |
+          {
+            echo "DEPLOYER_ROLE=${{ env.DEPLOYER_ROLE }}"
+            echo "SOURCE_BUCKET=${{ env.SOURCE_BUCKET }}"
+            echo "SIGNING_PROFILE=${{ env.SIGNING_PROFILE }}"
+            echo "DESTINATION_BUCKET=${{ env.DESTINATION_BUCKET }}"
+            echo "PROMOTION_ROLE=${{ env.GHA_ROLE }}"
+            echo "ARTIFACT_BUCKET=${{ env.ARTIFACT_BUCKET }}"
+            echo "ARTIFACT_LOOKUP_TABLE=${{ env.ARTIFACT_LOOKUP_TABLE }}"
+          } >> "$GITHUB_OUTPUT"
+
+  pr-data:
+    name: Get data for merged PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      data: ${{ steps.get_pr_data.outputs.result }}
+    steps:
+      - name: Get PR data
+        uses: actions/github-script@v7
+        id: get_pr_data
+        with:
+          script: |
+            const query = `query($owner: String!, $name: String!, $oid: GitObjectID!) {
+                repository(owner: $owner, name: $name) {
+                  object(oid: $oid) {
+                    ... on Commit {
+                      oid
+                      message
+                      associatedPullRequests(first: 1) {
+                        nodes {
+                          number
+                          title
+                          merged
+                          mergedAt
+                          mergeCommit {
+                            oid
+                          }
+                        }
+                      }
+                    }
+                  }
+                  owner {
+                    login
+                  }
+                  name
+                  nameWithOwner
+                }
+              }`
+            const variables = {
+                owner: context.repo.owner,
+                name: context.repo.repo,
+                oid: context.sha,
+            }
+
+            const result = await github.graphql(query, variables).then((response) => {
+                const sanitisedCommitMessage = response.repository.object.message.replace(/\n/g, "\\n")
+                const res = {
+                    pr_number: null,
+                    pr_title: null,
+                    pr_merged_at: null,
+                    pr_merge_commit_sha: null,
+
+                    commit_message: sanitisedCommitMessage,
+
+                    repo_full_name: response.repository.nameWithOwner,
+                    repo_owner: response.repository.owner.login,
+                    repo_name: response.repository.name,
+
+                    repository: response.repository.nameWithOwner,
+                    commitsha: context.sha,
+                    commitmessage: sanitisedCommitMessage,
+                }
+
+                if (response.repository.object.associatedPullRequests.nodes.length > 0 && response.repository.object.associatedPullRequests.nodes[0].merged) {
+                    const prData = response.repository.object.associatedPullRequests.nodes[0];
+                    res.pr_number = prData.number.toString();
+                    res.pr_title = prData.title;
+                    res.pr_merged_at = prData.mergedAt;
+                    res.pr_merge_commit_sha = prData.mergeCommit.oid;
+                    res.commitmessage = prData.title;
+                }
+                return res;
+            }).catch((error) => {
+                throw error;
+            });
+
+            for (const key in result) {
+                if (result[key] == null) {
+                    result[key] = "";
+                }
+            }
+
+            console.log(result);
+            return result;
+
+  build:
+    name: Build modules
+    needs: set-up
+    strategy:
+      matrix:
+        module:
+          - account-management-api
+          - auth-external-api
+          - client-registry-api
+          - delivery-receipts-api
+          - doc-checking-app-api
+          - frontend-api
+          - interventions-api-stub
+          - ipv-api
+          - oidc-api
+          - test-services-api
+          - ticf-cri-stub
+          - utils
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/call_build-single-api-module.yml
+    with:
+      module_name: ${{ matrix.module }}
+      aws_region: ${{ needs.set-up.outputs.aws_region }}
+      aws_role: ${{ needs.set-up.outputs.deployer_role }}
+      source_bucket: ${{ needs.set-up.outputs.source_bucket }}
+      destination_bucket: ${{ needs.set-up.outputs.destination_bucket }}
+      signing_profile: ${{ needs.set-up.outputs.signing_profile }}
+      lookup_table: ${{ needs.set-up.outputs.artifact_lookup_table }}
+
+  create-promotion-artifact-shared:
+    name: Create Shared Promotion Artifact
+    needs: set-up
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/call_create-shared-promotion-artifact.yml
+
+  create-promotion-artifacts-simple-modules:
+    name: Create Promotion Artifact
+    needs:
+      - set-up
+      - build
+    strategy:
+      matrix:
+        include:
+          - module_name: account-management-api
+            terraform_directory_name: account-management
+          - module_name: auth-external-api
+            terraform_directory_name: auth-external-api
+          - module_name: delivery-receipts-api
+            terraform_directory_name: delivery-receipts
+          - module_name: interventions-api-stub
+            terraform_directory_name: interventions-api-stub
+          - module_name: test-services-api
+            terraform_directory_name: test-services
+          - module_name: ticf-cri-stub
+            terraform_directory_name: ticf-cri-stub
+          - module_name: utils
+            terraform_directory_name: utils
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/call_create-simple-module-promotion-artifact.yml
+    with:
+      module_name: ${{ matrix.module_name }}
+      terraform_directory_name: ${{ matrix.terraform_directory_name }}
+
+  create-promotion-artifact-oidc:
+    name: Create OIDC Promotion artifact
+    needs:
+      - set-up
+      - build
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/call_create-oidc-promotion-artifact.yml
+    with:
+      oidc_api_module_name: oidc-api
+      client_registry_api_module_name: client-registry-api
+      doc_checking_app_api_module_name: doc-checking-app-api
+      frontend_api_module_name: frontend-api
+      ipv_api_module_name: ipv-api
+
+      terraform_directory_name: oidc
+
+  gather-and-trigger-codepipeline:
+    name: Gather and trigger CodePipeline
+    needs:
+      - pr-data
+      - set-up
+      - create-promotion-artifact-shared
+      - create-promotion-artifacts-simple-modules
+      - create-promotion-artifact-oidc
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: ${{ needs.set-up.outputs.promotion_role }}
+          aws-region: ${{ needs.set-up.outputs.aws_region }}
+
+      - name: Download all promotion artifacts
+        id: download_promotion_artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: promotion-artifacts
+          pattern: promotion_artifact_*
+          merge-multiple: true
+
+      - name: Upload single promotion artifact to S3
+        working-directory: promotion-artifacts
+        run: |
+          echo "::group::Zip all promotion artifacts"
+          zip -r authentication-api.zip .
+          echo "::endgroup::"
+
+          echo "::group::Upload final artifact to S3"
+          OBJECT_VERSION="$(aws s3api put-object \
+            --bucket ${{ needs.set-up.outputs.artifact_bucket }} \
+            --key authentication-api.zip \
+            --body authentication-api.zip \
+            --metadata '${{ toJson(fromJson(needs.pr-data.outputs.data)) }}' \
+            --query VersionId --output text)"
+          echo "::endgroup::"
+          echo "::notice title=Final artifact uploaded to S3::object: authentication-api.zip, version: $OBJECT_VERSION"
