@@ -1,7 +1,8 @@
-package uk.gov.di.authentication.shared.helpers;
+package uk.gov.di.accountmanagement.helpers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 
 import java.util.Map;

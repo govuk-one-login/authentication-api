@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.helpers;
+package uk.gov.di.accountmanagement.helpers;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -10,7 +10,7 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.authentication.shared.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.TXMA_ENCODED_HEADER_NAME;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AuditHelperTest {
