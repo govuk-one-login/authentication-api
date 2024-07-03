@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
@@ -174,16 +175,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
         attachSessionIdToLogs(userContext.getSession());
         var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+                auditContextFromUserContext(
+                        userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {

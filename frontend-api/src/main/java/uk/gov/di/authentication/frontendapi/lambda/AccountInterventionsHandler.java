@@ -8,7 +8,6 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.TICFCRIRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
@@ -25,15 +24,23 @@ import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.*;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Optional;
 
-import static java.lang.String.*;
+import static java.lang.String.valueOf;
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -312,10 +319,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT.get(requiredInterventionsState);
 
         var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+                auditContextFromUserContext(
+                        userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         userContext.getSession().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
@@ -323,8 +328,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                                 .getUserProfile()
                                 .map(UserProfile::getPhoneNumber)
                                 .orElse(AuditService.UNKNOWN),
-                        persistentSessionID,
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        persistentSessionID);
 
         if (auditEvent != null) {
             auditService.submitAuditEvent(auditEvent, auditContext);

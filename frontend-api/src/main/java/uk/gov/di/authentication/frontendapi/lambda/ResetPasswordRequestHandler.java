@@ -7,12 +7,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -38,6 +36,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
@@ -147,19 +146,13 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             LOG.info("passwordResetType: {}", passwordResetTypePair);
 
             var auditContext =
-                    new AuditContext(
-                            userContext
-                                    .getClient()
-                                    .map(ClientRegistry::getClientID)
-                                    .orElse(AuditService.UNKNOWN),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    auditContextFromUserContext(
+                            userContext,
                             userContext.getSession().getInternalCommonSubjectIdentifier(),
                             request.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
                             authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             var eventName =
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT

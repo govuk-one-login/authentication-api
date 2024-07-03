@@ -44,6 +44,7 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -172,10 +173,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                             authenticationService);
 
             var auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    auditContextFromUserContext(
+                            userContext,
                             internalCommonSubjectId.getValue(),
                             userCredentials.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
@@ -183,8 +182,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                                     .getUserProfile()
                                     .map(UserProfile::getPhoneNumber)
                                     .orElse(AuditService.UNKNOWN),
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             updateAccountRecoveryBlockTable(
                     userProfile, userCredentials, internalCommonSubjectId, auditContext);
