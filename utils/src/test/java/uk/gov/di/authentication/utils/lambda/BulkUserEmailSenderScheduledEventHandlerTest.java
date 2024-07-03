@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -73,9 +74,18 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final ByteBuffer SALT_BYTE_BUFFER = ByteBuffer.wrap(SALT);
-    private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT_ID, "test.account.gov.uk", SALT);
+
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    EMAIL,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    Optional.empty());
 
     private final String[] TEST_EMAILS = {
         "user.1@account.gov.uk",
@@ -143,15 +153,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UtilsAuditableEvent.BULK_EMAIL_SENT,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.RestrictedSection.empty,
+                        AUDIT_CONTEXT,
                         pair("internalSubjectId", SUBJECT_ID),
                         pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
     }
@@ -186,18 +188,10 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
         verify(auditService, never())
                 .submitAuditEvent(
-                        UtilsAuditableEvent.BULK_EMAIL_SENT,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        EMAIL,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.RestrictedSection.empty,
-                        pair("internalSubjectId", SUBJECT_ID),
-                        pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
+                        eq(UtilsAuditableEvent.BULK_EMAIL_SENT),
+                        any(),
+                        eq(pair("internalSubjectId", SUBJECT_ID)),
+                        eq(pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL")));
     }
 
     @Test
@@ -235,18 +229,10 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
         verify(auditService, never())
                 .submitAuditEvent(
-                        UtilsAuditableEvent.BULK_EMAIL_SENT,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        EMAIL,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.RestrictedSection.empty,
-                        pair("internalSubjectId", SUBJECT_ID),
-                        pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
+                        eq(UtilsAuditableEvent.BULK_EMAIL_SENT),
+                        any(),
+                        eq(pair("internalSubjectId", SUBJECT_ID)),
+                        eq(pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL")));
     }
 
     @Test
@@ -287,15 +273,9 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             UtilsAuditableEvent.BULK_EMAIL_SENT,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            expectedInternalPairwiseId,
-                            TEST_EMAILS[j],
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.RestrictedSection.empty,
+                            AUDIT_CONTEXT
+                                    .withEmail(TEST_EMAILS[j])
+                                    .withSubjectId(expectedInternalPairwiseId),
                             pair("internalSubjectId", TEST_SUBJECT_IDS[j]),
                             pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
         }

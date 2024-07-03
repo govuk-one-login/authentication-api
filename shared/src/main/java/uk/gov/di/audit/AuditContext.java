@@ -1,5 +1,6 @@
 package uk.gov.di.audit;
 
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -32,6 +33,19 @@ public record AuditContext(
                 phoneNumber,
                 persistentSessionId,
                 Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+    }
+
+    public static AuditContext emptyAuditContext() {
+        return new AuditContext(
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                Optional.empty());
     }
 
     public AuditContext withPhoneNumber(String phoneNumber) {
