@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -48,6 +49,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class UpdateEmailHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -155,28 +157,32 @@ public class UpdateEmailHandler
             LOG.info(
                     "UpdateEmailHandler: Experian email verification status: {}",
                     resultStatus.get());
+
+            var auditContext =
+                    new AuditContext(
+                            input.getRequestContext()
+                                    .getAuthorizer()
+                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                    .toString(),
+                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                            sessionId,
+                            AuditService.UNKNOWN,
+                            updateInfoRequest.getReplacementEmailAddress(),
+                            IpAddressHelper.extractIpAddress(input),
+                            userProfile.getPhoneNumber(),
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+
             if (configurationService.isEmailCheckEnabled()
                     && resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
-                        input.getRequestContext()
-                                .getAuthorizer()
-                                .getOrDefault("clientId", AuditService.UNKNOWN)
-                                .toString(),
-                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                        sessionId,
-                        userProfile.getSubjectID(),
-                        updateInfoRequest.getReplacementEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        userProfile.getPhoneNumber(),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        AuditHelper.buildRestrictedSection(input.getHeaders()),
-                        AuditService.MetadataPair.pair(
-                                "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
-                        AuditService.MetadataPair.pair(
+                        auditContext.withSubjectId(userProfile.getSubjectID()),
+                        pair("journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                        pair(
                                 "assessment_checked_at_timestamp",
                                 NowHelper.toUnixTimestamp(NowHelper.now())),
-                        AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
+                        pair("iss", AuditService.COMPONENT_ID));
             }
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
@@ -213,18 +219,7 @@ public class UpdateEmailHandler
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_EMAIL,
-                    input.getRequestContext()
-                            .getAuthorizer()
-                            .getOrDefault("clientId", AuditService.UNKNOWN)
-                            .toString(),
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
-                    internalCommonSubjectIdentifier.getValue(),
-                    updateInfoRequest.getReplacementEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    userProfile.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditHelper.buildRestrictedSection(input.getHeaders()),
+                    auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue()),
                     AuditService.MetadataPair.pair(
                             "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
 
