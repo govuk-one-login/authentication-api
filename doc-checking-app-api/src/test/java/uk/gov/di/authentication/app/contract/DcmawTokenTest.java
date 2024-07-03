@@ -22,6 +22,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.*;
 import uk.gov.di.authentication.app.services.DocAppCriService;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
@@ -70,7 +71,6 @@ public class DcmawTokenTest {
 
     @BeforeEach
     void setup() {
-        docAppCriService = new DocAppCriService(configService, kmsConnectionService);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getDocAppTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configService.isDocAppNewAudClaimEnabled()).thenReturn(true);
@@ -127,6 +127,9 @@ public class DcmawTokenTest {
             pactVersion = PactSpecVersion.V3)
     void getDocAppTokenSuccessResponse(MockServer mockServer) {
         when(configService.getDocAppBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
+        docAppCriService =
+                new DocAppCriService(
+                        configService, kmsConnectionService, new DocAppCriAPI(configService));
 
         TokenRequest tokenRequest;
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
@@ -190,6 +193,9 @@ public class DcmawTokenTest {
             pactVersion = PactSpecVersion.V3)
     void getDocAppTokenErrorResponse(MockServer mockServer) {
         when(configService.getDocAppBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
+        docAppCriService =
+                new DocAppCriService(
+                        configService, kmsConnectionService, new DocAppCriAPI(configService));
 
         TokenRequest tokenRequest;
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
