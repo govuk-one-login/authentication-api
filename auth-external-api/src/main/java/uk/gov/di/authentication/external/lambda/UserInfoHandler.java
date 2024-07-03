@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.Identifier;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
@@ -11,7 +12,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
@@ -22,9 +23,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -130,23 +131,20 @@ public class UserInfoHandler
         LOG.info(
                 "Successfully processed UserInfo request. Setting token status to used and sending back UserInfo response");
 
-        auditService.submitAuditEvent(
-                AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                Objects.isNull(userInfo.getSubject())
-                        ? AuditService.UNKNOWN
-                        : userInfo.getSubject().getValue(),
-                Objects.isNull(userInfo.getEmailAddress())
-                        ? AuditService.UNKNOWN
-                        : userInfo.getEmailAddress(),
-                AuditService.UNKNOWN,
-                Objects.isNull(userInfo.getPhoneNumber())
-                        ? AuditService.UNKNOWN
-                        : userInfo.getPhoneNumber(),
-                AuditService.UNKNOWN,
-                AuditService.RestrictedSection.empty);
+        var subjectId =
+                Optional.ofNullable(userInfo.getSubject())
+                        .map(Identifier::getValue)
+                        .orElse(AuditService.UNKNOWN);
+        var email = Optional.ofNullable(userInfo.getEmailAddress()).orElse(AuditService.UNKNOWN);
+        var phoneNumber =
+                Optional.ofNullable(userInfo.getPhoneNumber()).orElse(AuditService.UNKNOWN);
+        var auditContext =
+                AuditContext.emptyAuditContext()
+                        .withSubjectId(subjectId)
+                        .withEmail(email)
+                        .withPhoneNumber(phoneNumber);
+
+        auditService.submitAuditEvent(USERINFO_SENT_TO_ORCHESTRATION, auditContext);
 
         Optional<AccessTokenStore> updatedTokenStore =
                 accessTokenService.setAccessTokenStoreUsed(accessToken.getValue(), true);
