@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
@@ -16,6 +15,7 @@ import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -146,20 +147,22 @@ public class UpdatePhoneNumberHandler
                             configurationService.getInternalSectorUri(),
                             dynamoService);
 
-            auditService.submitAuditEvent(
-                    AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                    input.getRequestContext()
-                            .getAuthorizer()
-                            .getOrDefault("clientId", AuditService.UNKNOWN)
-                            .toString(),
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    updatePhoneNumberRequest.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditHelper.buildRestrictedSection(input.getHeaders()));
+            var auditContext =
+                    new AuditContext(
+                            input.getRequestContext()
+                                    .getAuthorizer()
+                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                    .toString(),
+                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                            sessionId,
+                            internalCommonSubjectIdentifier.getValue(),
+                            userProfile.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            updatePhoneNumberRequest.getPhoneNumber(),
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+
+            auditService.submitAuditEvent(UPDATE_PHONE_NUMBER, auditContext);
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();

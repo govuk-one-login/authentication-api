@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
@@ -108,15 +109,16 @@ class UpdatePhoneNumberHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        NEW_PHONE_NUMBER,
-                        PERSISTENT_ID,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+                        new AuditContext(
+                                AuditService.UNKNOWN,
+                                CLIENT_SESSION_ID,
+                                AuditService.UNKNOWN,
+                                expectedCommonSubject,
+                                userProfile.getEmail(),
+                                "123.123.123.123",
+                                NEW_PHONE_NUMBER,
+                                PERSISTENT_ID,
+                                Optional.of(TXMA_ENCODED_HEADER_VALUE)));
     }
 
     @Test
