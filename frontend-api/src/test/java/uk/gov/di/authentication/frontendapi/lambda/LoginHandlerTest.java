@@ -505,7 +505,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
-        when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();

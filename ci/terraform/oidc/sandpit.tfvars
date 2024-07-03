@@ -42,12 +42,8 @@ lambda_min_concurrency = 0
 endpoint_memory_size   = 1536
 
 
-# lockout config
-lockout_duration                          = 60
-reduced_lockout_duration                  = 30
-incorrect_password_lockout_count_ttl      = 60
-lockout_count_ttl                         = 60
-otp_code_ttl_duration                     = 60
+lockout_duration                          = 30
+otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
 orch_client_id = "orchestrationAuth"
