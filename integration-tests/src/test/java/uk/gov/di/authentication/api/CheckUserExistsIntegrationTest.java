@@ -178,7 +178,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
         redis.blockMfaCodesForEmail(
-                emailAddress, CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.SIGN_IN);
+                emailAddress,
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
 
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 
