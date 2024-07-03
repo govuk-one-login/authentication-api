@@ -16,11 +16,19 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
-import uk.gov.di.authentication.shared.services.*;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_INVALID;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
@@ -85,17 +93,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
         LOG.info("Processing CheckReAuthUser request");
 
-        AuditContext auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.email(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         try {
             return authenticationService

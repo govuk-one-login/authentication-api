@@ -6,7 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
@@ -41,6 +40,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Map.entry;
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
@@ -241,16 +241,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .orElse(CODE_VERIFIED);
 
         var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
+                auditContextFromUserContext(
+                        userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        extractPersistentIdFromHeaders(input.getHeaders()));
 
         var metadataPairs = metadataPairsForEvent(auditableEvent, session, codeRequest);
 

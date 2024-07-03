@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Map.entry;
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -129,16 +130,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             var auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            session.getSessionId(),
+                    auditContextFromUserContext(
+                            userContext,
                             session.getInternalCommonSubjectIdentifier(),
                             session.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            extractPersistentIdFromHeaders(input.getHeaders()));
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);

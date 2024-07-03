@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -24,8 +23,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
-
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -105,10 +103,8 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                             : ACCOUNT_RECOVERY_NOT_PERMITTED;
 
             var auditContext =
-                    new AuditContext(
-                            userContext.getClientId(),
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
+                    auditContextFromUserContext(
+                            userContext,
                             commonSubjectId.getValue(),
                             userContext
                                     .getUserProfile()
@@ -116,8 +112,7 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                                     .orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             auditService.submitAuditEvent(auditableEvent, auditContext);
             var accountRecoveryResponse = new AccountRecoveryResponse(accountRecoveryPermitted);

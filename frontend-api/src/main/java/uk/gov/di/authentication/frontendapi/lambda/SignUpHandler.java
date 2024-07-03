@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -31,6 +30,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -107,16 +107,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 passwordValidator.validate(request.getPassword());
 
         var auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+                auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         if (passwordValidationError.isEmpty()) {
             LOG.info("No password validation errors found");

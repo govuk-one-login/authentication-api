@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
@@ -125,18 +126,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         .getUserProfile()
                         .map(UserProfile::getPhoneNumber)
                         .orElse(AuditService.UNKNOWN);
-        String auditableClientId = userContext.getClientId();
         var auditContext =
-                new AuditContext(
-                        auditableClientId,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
+                auditContextFromUserContext(
+                        userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         ipAddress,
                         auditablePhoneNumber,
-                        persistentSessionId,
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        persistentSessionId);
 
         if (request.getUpdateProfileType().equals(UPDATE_TERMS_CONDS)) {
             authenticationService.updateTermsAndConditions(
