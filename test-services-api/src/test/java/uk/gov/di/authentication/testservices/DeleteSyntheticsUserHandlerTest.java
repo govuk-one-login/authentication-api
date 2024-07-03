@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -40,6 +41,18 @@ class DeleteSyntheticsUserHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
 
+    private final AuditContext auditContext =
+            new AuditContext(
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    EMAIL,
+                    "123.123.123.123",
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    Optional.empty());
+
     @BeforeEach
     public void setUp() {
         handler =
@@ -62,17 +75,7 @@ class DeleteSyntheticsUserHandlerTest {
         assertThat(result, hasStatus(204));
         verify(authenticationService).removeAccount(EMAIL);
         verify(auditService)
-                .submitAuditEvent(
-                        TestServicesAuditableEvent.SYNTHETICS_USER_DELETED,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.RestrictedSection.empty);
+                .submitAuditEvent(TestServicesAuditableEvent.SYNTHETICS_USER_DELETED, auditContext);
     }
 
     @Test
@@ -100,15 +103,7 @@ class DeleteSyntheticsUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         TestServicesAuditableEvent.SYNTHETICS_USER_NOT_FOUND_FOR_DELETION,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.RestrictedSection.empty);
+                        auditContext);
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent() {

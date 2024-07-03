@@ -112,4 +112,17 @@ public record AuditContext(
                 persistentSessionId,
                 txmaAuditEncoded);
     }
+
+    public AuditContext withIpAddress(String ipAddress) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
 }
