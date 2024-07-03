@@ -120,7 +120,7 @@ public class RemoveAccountHandler
             accountDeletionService.removeAccount(
                     Optional.of(input),
                     userProfile,
-                    AuditHelper.buildRestrictedSection(input.getHeaders()));
+                    AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {

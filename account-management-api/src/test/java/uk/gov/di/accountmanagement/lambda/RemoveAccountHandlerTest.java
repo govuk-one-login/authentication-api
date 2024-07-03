@@ -89,9 +89,7 @@ class RemoveAccountHandlerTest {
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.of(event),
-                        userProfile,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+                        Optional.of(event), userProfile, Optional.of(TXMA_ENCODED_HEADER_VALUE));
     }
 
     @Test
@@ -109,8 +107,7 @@ class RemoveAccountHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
-                .removeAccount(
-                        Optional.of(event), userProfile, AuditService.RestrictedSection.empty);
+                .removeAccount(Optional.of(event), userProfile, Optional.empty());
     }
 
     @Test
