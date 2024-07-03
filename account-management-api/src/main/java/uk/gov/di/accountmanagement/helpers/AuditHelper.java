@@ -12,6 +12,8 @@ public class AuditHelper {
     private static final Logger LOG = LogManager.getLogger(AuditHelper.class);
     public static final String TXMA_ENCODED_HEADER_NAME = "txma-audit-encoded";
 
+    private AuditHelper() {}
+
     public static Optional<String> getTxmaAuditEncoded(Map<String, String> headers) {
         String txmaEncodedValue =
                 RequestHeaderHelper.getHeaderValueFromHeaders(
