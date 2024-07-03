@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.exceptions.MissingConfigurationParameterExcep
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -281,23 +282,27 @@ public class SendOtpNotificationHandler
             emailSqsClient.send(serialiseRequest(notifyRequest));
         }
 
+        var auditContext =
+                new AuditContext(
+                        input.getRequestContext()
+                                .getAuthorizer()
+                                .getOrDefault("clientId", AuditService.UNKNOWN)
+                                .toString(),
+                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                        AuditService.UNKNOWN,
+                        input.getRequestContext()
+                                .getAuthorizer()
+                                .getOrDefault("principalId", AuditService.UNKNOWN)
+                                .toString(),
+                        sendNotificationRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        sendNotificationRequest.getPhoneNumber(),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.SEND_OTP,
-                input.getRequestContext()
-                        .getAuthorizer()
-                        .getOrDefault("clientId", AuditService.UNKNOWN)
-                        .toString(),
-                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                AuditService.UNKNOWN,
-                input.getRequestContext()
-                        .getAuthorizer()
-                        .getOrDefault("principalId", AuditService.UNKNOWN)
-                        .toString(),
-                sendNotificationRequest.getEmail(),
-                IpAddressHelper.extractIpAddress(input),
-                sendNotificationRequest.getPhoneNumber(),
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                AuditHelper.buildRestrictedSection(input.getHeaders()),
+                auditContext,
                 pair("notification-type", sendNotificationRequest.getNotificationType()),
                 pair("test-user", isTestUserRequest));
 
