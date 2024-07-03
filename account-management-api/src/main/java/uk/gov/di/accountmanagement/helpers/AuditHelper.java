@@ -25,4 +25,16 @@ public class AuditHelper {
             return AuditService.RestrictedSection.empty;
         }
     }
+
+    public static Optional<String> getTxmaAuditEncoded(Map<String, String> headers) {
+        String txmaEncodedValue =
+                RequestHeaderHelper.getHeaderValueFromHeaders(
+                        headers, TXMA_ENCODED_HEADER_NAME, false);
+        if (txmaEncodedValue != null && !txmaEncodedValue.isEmpty()) {
+            return Optional.of(txmaEncodedValue);
+        } else {
+            LOG.warn("Audit header field value cannot be empty");
+            return Optional.empty();
+        }
+    }
 }
