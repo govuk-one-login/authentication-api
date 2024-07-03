@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
@@ -234,14 +235,15 @@ class TokenHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        internalPairwiseId,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.RestrictedSection.empty);
+                        new AuditContext(
+                                CLIENT_ID,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                internalPairwiseId,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                Optional.empty()));
     }
 }
