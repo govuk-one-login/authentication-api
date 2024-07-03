@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -112,15 +113,16 @@ class UpdatePasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                        CLIENT_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+                        new AuditContext(
+                                CLIENT_ID,
+                                SESSION_ID,
+                                AuditService.UNKNOWN,
+                                expectedCommonSubject,
+                                userProfile.getEmail(),
+                                "123.123.123.123",
+                                userProfile.getPhoneNumber(),
+                                PERSISTENT_ID,
+                                Optional.of(TXMA_ENCODED_HEADER_VALUE)));
     }
 
     @Test

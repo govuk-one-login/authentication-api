@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
@@ -15,6 +14,7 @@ import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PASSWORD;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -168,20 +169,22 @@ public class UpdatePasswordHandler
                             configurationService.getInternalSectorUri(),
                             dynamoService);
 
-            auditService.submitAuditEvent(
-                    AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                    input.getRequestContext()
-                            .getAuthorizer()
-                            .getOrDefault("clientId", AuditService.UNKNOWN)
-                            .toString(),
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    userProfile.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditHelper.buildRestrictedSection(input.getHeaders()));
+            var auditContext =
+                    new AuditContext(
+                            input.getRequestContext()
+                                    .getAuthorizer()
+                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                    .toString(),
+                            ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                            sessionId,
+                            internalCommonSubjectIdentifier.getValue(),
+                            userProfile.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            userProfile.getPhoneNumber(),
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                            AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
+
+            auditService.submitAuditEvent(UPDATE_PASSWORD, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
 
