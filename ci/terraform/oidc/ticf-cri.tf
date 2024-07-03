@@ -13,6 +13,7 @@ resource "aws_lambda_function" "ticf_cri_lambda" {
   handler       = "uk.gov.di.authentication.frontendapi.lambda.TicfCriHandler::handleRequest"
   runtime       = "java17"
   publish       = true
+  timeout       = 60
 
   memory_size                    = lookup(var.performance_tuning, "ticf-cri", local.default_performance_parameters).memory
   reserved_concurrent_executions = 1
