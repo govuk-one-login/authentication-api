@@ -100,17 +100,17 @@ public class AccountDeletionService {
                                                     .getAuthorizer()
                                                     .getOrDefault("clientId", AuditService.UNKNOWN)
                                                     .toString())
-                            .orElse(null),
+                            .orElse(AuditService.UNKNOWN),
                     input.map(
                                     n ->
                                             ClientSessionIdHelper.extractSessionIdFromHeaders(
                                                     n.getHeaders()))
-                            .orElse(null),
+                            .orElse(AuditService.UNKNOWN),
                     input.map(
                                     n ->
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
-                            .orElse(null),
+                            .orElse(AuditService.UNKNOWN),
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     ipAddress,
