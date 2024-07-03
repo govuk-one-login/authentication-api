@@ -183,6 +183,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 isPhoneNumberVerified);
                 auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
+                userContext.getSession().setInternalCommonSubjectIdentifier(null);
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
