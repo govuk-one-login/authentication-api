@@ -5,8 +5,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -20,6 +20,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -38,13 +40,22 @@ class AuthenticateHandlerTest {
                     persistentIdValue,
                     AuditHelper.TXMA_ENCODED_HEADER_NAME,
                     TXMA_ENCODED_HEADER_VALUE);
-    private static final AuditService.RestrictedSection restrictedSection =
-            new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE));
     private APIGatewayProxyRequestEvent event;
     private AuthenticateHandler handler;
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final AuditContext auditContext =
+            new AuditContext(
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    persistentIdValue,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     public void setUp() {
@@ -64,18 +75,7 @@ class AuthenticateHandlerTest {
 
         assertThat(result, hasStatus(204));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        persistentIdValue,
-                        restrictedSection);
+        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
     }
 
     @Test
@@ -90,16 +90,8 @@ class AuthenticateHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        persistentIdValue,
-                        AuditService.RestrictedSection.empty);
+                        ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
@@ -113,17 +105,7 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
 
         verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        persistentIdValue,
-                        restrictedSection);
+                .submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
     }
 
     @Test
@@ -137,16 +119,8 @@ class AuthenticateHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        persistentIdValue,
-                        restrictedSection);
+                        ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext.withEmail(AuditService.UNKNOWN));
     }
 
     @Test
@@ -160,16 +134,6 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
 
         verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        persistentIdValue,
-                        restrictedSection);
+                .submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
     }
 }
