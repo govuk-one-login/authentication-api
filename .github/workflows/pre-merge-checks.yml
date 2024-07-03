@@ -17,9 +17,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
       - name: Run Spotless
         run: ./gradlew --no-daemon spotlessCheck
 
@@ -31,9 +31,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
       - name: Build Cache
         uses: actions/cache@v4
         with:
@@ -42,7 +42,9 @@ jobs:
             */build/
             !*/build/reports
             !*/build/jacoco
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-
       - name: Run Build
         run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
 
@@ -56,9 +58,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
       - name: Build Cache
         uses: actions/cache@v4
         with:
@@ -67,7 +69,7 @@ jobs:
             */build/
             !*/build/reports
             !*/build/jacoco
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
       - name: Run Unit Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -139,9 +141,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
       - name: Build Cache
         uses: actions/cache@v4
         with:
@@ -150,7 +152,7 @@ jobs:
             */build/
             !*/build/reports
             !*/build/jacoco
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
       - name: Run Integration Tests
         run: |
           ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
@@ -212,9 +214,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
       - name: Build Cache
         uses: actions/cache@v4
         with:
@@ -223,7 +225,7 @@ jobs:
             */build/
             !*/build/reports
             !*/build/jacoco
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
       - name: Run Account Management Integration Tests
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
@@ -270,9 +272,9 @@ jobs:
         if: github.event_name != 'merge_group'
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
       - name: Build Cache
         if: github.event_name != 'merge_group'
         uses: actions/cache@v4
@@ -282,7 +284,7 @@ jobs:
             */build/
             !*/build/reports
             !*/build/jacoco
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-${{ github.sha }}
       - name: Cache Unit Test Reports
         if: github.event_name != 'merge_group'
         uses: actions/cache@v4
