@@ -71,21 +71,12 @@ jobs:
           java-version: ${{ inputs.java_version }}
           distribution: ${{ inputs.java_distribution }}
 
-      - name: Set up Gradle cache for ${{ inputs.module_name }}
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ inputs.module_name }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-${{ inputs.module_name }}
-            ${{ runner.os }}-gradle-
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@dbbdc275be76ac10734476cc723d82dfe7ec6eda # v3.4.2
         with:
-          cache-disabled: true
+          gradle-version: wrapper
+          cache-read-only: true
+          add-job-summary: "on-failure"
 
       - name: Build ${{ inputs.module_name }}
         id: build

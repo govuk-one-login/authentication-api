@@ -9,6 +9,9 @@ env:
   ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
   ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:114407264696:table/di-auth-production-artifact-lookup
 
+  JAVA_VERSION: 17
+  JAVA_DISTRIBUTION: temurin
+
 on:
   push:
     branches:
@@ -88,7 +91,6 @@ jobs:
                 owner: context.repo.owner,
                 name: context.repo.repo,
                 oid: context.sha,
-                shortSha: context.sha.slice(0, 7),
             }
 
             const result = await github.graphql(query, variables).then((response) => {
@@ -142,9 +144,33 @@ jobs:
             console.log(result);
             return result;
 
+  build-cache:
+    name: Set up build cache
+    runs-on: ubuntu-latest
+    outputs:
+      java_version: ${{ env.JAVA_VERSION }}
+      java_distribution: ${{ env.JAVA_DISTRIBUTION }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Set up JDK 17
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 #v4.2.1
+        with:
+          java-version: ${{ env.JAVA_VERSION}}
+          distribution: ${{ env.JAVA_DISTRIBUTION}}
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+      - name: Download dependencies for caching
+        run: ./gradlew --no-daemon --console=plain assemble
+
   build:
     name: Build modules
-    needs: set-up
+    needs:
+      - set-up
+      - build-cache
     strategy:
       matrix:
         module:
@@ -172,6 +198,8 @@ jobs:
       destination_bucket: ${{ needs.set-up.outputs.destination_bucket }}
       signing_profile: ${{ needs.set-up.outputs.signing_profile }}
       lookup_table: ${{ needs.set-up.outputs.artifact_lookup_table }}
+      java_version: ${{ needs.build-cache.outputs.java_version }}
+      java_distribution: ${{ needs.build-cache.outputs.java_distribution }}
 
   create-promotion-artifact-shared:
     name: Create Shared Promotion Artifact
@@ -273,7 +301,5 @@ jobs:
             --body authentication-api.zip \
             --metadata '${{ toJson(fromJson(needs.pr-data.outputs.data)) }}' \
             --query VersionId --output text)"
-
-          echo "Uploaded object version: $OBJECT_VERSION"
           echo "::endgroup::"
           echo "::notice title=Final artifact uploaded to S3::object: authentication-api.zip, version: $OBJECT_VERSION"
