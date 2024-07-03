@@ -26,7 +26,7 @@ dependencies {
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
-            "org.apache.httpcomponents.core5:httpcore5:5.2.4"
+            "org.apache.httpcomponents.core5:httpcore5:5.2.5"
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
