@@ -71,7 +71,7 @@ resource "aws_lambda_alias" "authorizer_alias" {
   lifecycle {
     ignore_changes = [function_version, routing_config]
   }
-  
+
 }
 
 
