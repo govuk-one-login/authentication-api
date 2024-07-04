@@ -50,10 +50,10 @@ Conditions:
     ]
   EnableProvisionedConcurrency:
     !Or [
-      !Equals [!Ref Environment, staging],
-      !Equals [!Ref Environment, build],
-      !Equals [!Ref Environment, integration],
-      !Equals [!Ref Environment, production],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
     ]
   IsNotProduction: !Not [!Equals [!Ref Environment, production]]
   IsNotDevOrProd:
