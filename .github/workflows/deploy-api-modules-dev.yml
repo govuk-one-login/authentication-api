@@ -88,14 +88,14 @@ jobs:
             }
 
             const result = await github.graphql(query, variables).then((response) => {
-                const sanitisedCommitMessage = response.repository.object.message.replace(/\n/g, "\\n")
+                const firstLineOfCommitMessage = response.repository.object.message.slice(0, response.repository.object.message.indexOf("\n"));
                 const res = {
                     pr_number: null,
                     pr_title: null,
                     pr_merged_at: null,
                     pr_merge_commit_sha: null,
 
-                    commit_message: sanitisedCommitMessage,
+                    commit_message: firstLineOfCommitMessage,
 
                     repo_full_name: response.repository.nameWithOwner,
                     repo_owner: response.repository.owner.login,
@@ -103,8 +103,9 @@ jobs:
 
                     repository: response.repository.nameWithOwner,
                     commitsha: context.sha,
-                    commitmessage: sanitisedCommitMessage,
+                    commitmessage: firstLineOfCommitMessage,
                 }
+                res["codepipeline-artifact-revision-summary"] = `${context.sha}: ${firstLineOfCommitMessage}`;
 
                 if (response.repository.object.associatedPullRequests.nodes.length > 0 && response.repository.object.associatedPullRequests.nodes[0].merged) {
                     const prData = response.repository.object.associatedPullRequests.nodes[0];
@@ -113,7 +114,14 @@ jobs:
                     res.pr_merged_at = prData.mergedAt;
                     res.pr_merge_commit_sha = prData.mergeCommit.oid;
                     res.commitmessage = prData.title;
+
+                    res["codepipeline-artifact-revision-summary"] = `${prData.mergeCommit.oid}: ${response.repository.nameWithOwner}#${prData.number} ${prData.title}`;
                 }
+
+                if (res["codepipeline-artifact-revision-summary"].length > 2048) {
+                    res["codepipeline-artifact-revision-summary"] = res["codepipeline-artifact-revision-summary"].slice(0, 2048);
+                }
+
                 return res;
             }).catch((error) => {
                 throw error;
