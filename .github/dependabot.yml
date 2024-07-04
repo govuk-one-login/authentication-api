@@ -7,6 +7,8 @@ updates:
       time: "03:00"
     open-pull-requests-limit: 100
     target-branch: main
+    commit-message: 
+      prefix: BAU
     labels:
       - dependabot
   - package-ecosystem: docker
@@ -16,6 +18,8 @@ updates:
       time: "03:00"
     open-pull-requests-limit: 100
     target-branch: main
+    commit-message:
+      prefix: BAU
     labels:
       - dependabot
     ignore:
@@ -26,6 +30,8 @@ updates:
     directory: /
     open-pull-requests-limit: 100
     target-branch: main
+    commit-message:
+      prefix: BAU
     labels:
       - dependabot
     schedule:
@@ -35,6 +41,8 @@ updates:
     directory: /
     open-pull-requests-limit: 5
     target-branch: main
+    commit-message:
+      prefix: BAU
     labels:
       - dependabot
     schedule:

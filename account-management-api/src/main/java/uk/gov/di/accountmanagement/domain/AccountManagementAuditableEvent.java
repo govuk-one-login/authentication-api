@@ -9,7 +9,8 @@ public enum AccountManagementAuditableEvent implements AuditableEvent {
     ACCOUNT_MANAGEMENT_AUTHENTICATE,
     ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
     DELETE_ACCOUNT,
-    SEND_OTP;
+    SEND_OTP,
+    EMAIL_FRAUD_CHECK_BYPASSED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

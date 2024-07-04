@@ -12,9 +12,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressResponse;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
-import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
-import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseOrchestrationFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -28,9 +27,12 @@ import uk.gov.di.orchestration.shared.state.OrchestrationUserSession;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
+import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 
 public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHandler {
     private final DynamoIdentityService dynamoIdentityService;
@@ -145,18 +147,20 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                             "Status",
                             processingStatus.toString()));
 
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(userSession.getClientSessionId())
+                            .withSessionId(userSession.getSession().getSessionId())
+                            .withIpAddress(extractIpAddress(input))
+                            .withPersistentSessionId(
+                                    extractPersistentIdFromHeaders(input.getHeaders()));
+
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST,
-                    userSession.getClientId() != null
-                            ? userSession.getClientId()
-                            : AuditService.UNKNOWN,
-                    userSession.getClientSessionId(),
-                    userSession.getSession().getSessionId(),
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    Optional.of(userSession)
+                            .map(OrchestrationUserSession::getClientId)
+                            .orElse(AuditService.UNKNOWN),
+                    user);
 
             sessionService.save(userSession.getSession());
 

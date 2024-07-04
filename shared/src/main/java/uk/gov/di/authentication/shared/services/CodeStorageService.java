@@ -16,6 +16,7 @@ public class CodeStorageService {
 
     public static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
     public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
+    public static final String PASSWORD_BLOCKED_KEY_PREFIX = "password-blocked:";
 
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
 
@@ -65,6 +66,13 @@ public class CodeStorageService {
                 email,
                 MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX,
                 configurationService.getLockoutCountTTL());
+    }
+
+    public void increaseIncorrectMfaCodeAttemptsCountAccountCreation(String email) {
+        increaseCount(
+                email,
+                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX,
+                configurationService.getAccountCreationLockoutCountTTL());
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
@@ -179,9 +187,21 @@ public class CodeStorageService {
         }
     }
 
+    public void deleteBlockForEmail(String email, String prefix) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String keys = prefix + encodedHash;
+        try {
+            redisConnectionService.deleteValue(keys);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to remove the block for this value");
+        }
+    }
+
     public boolean isBlockedForEmail(String emailAddress, String prefix) {
-        return redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress))
-                != null;
+        String value =
+                redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress));
+        LOG.info("block value: {}", value);
+        return value != null;
     }
 
     public void saveOtpCode(

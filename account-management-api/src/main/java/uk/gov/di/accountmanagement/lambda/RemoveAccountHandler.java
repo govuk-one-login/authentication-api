@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -116,7 +117,10 @@ public class RemoveAccountHandler
 
             authoriseRequest(input, userProfile);
 
-            accountDeletionService.removeAccount(Optional.of(input), userProfile);
+            accountDeletionService.removeAccount(
+                    Optional.of(input),
+                    userProfile,
+                    AuditHelper.buildRestrictedSection(input.getHeaders()));
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {

@@ -14,6 +14,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
+import com.nimbusds.openid.connect.sdk.claims.PersonClaims;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,6 +28,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -55,6 +57,7 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
@@ -62,6 +65,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
@@ -81,6 +85,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.services.AuditService.UNKNOWN;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -100,7 +105,7 @@ public class AuthenticationCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final CookieHelper cookieHelper;
     private final LogoutService logoutService;
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
+    private final AuthFrontend authFrontend;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -139,6 +144,50 @@ public class AuthenticationCallbackHandler
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
+    }
+
+    public AuthenticationCallbackHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var redisConnectionService = redis;
+        this.configurationService = configurationService;
+        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
+        this.tokenService =
+                new AuthenticationTokenService(configurationService, kmsConnectionService);
+        this.sessionService = new SessionService(configurationService, redisConnectionService);
+        this.clientSessionService =
+                new ClientSessionService(configurationService, redisConnectionService);
+        this.auditService = new AuditService(configurationService);
+        this.userInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
+        this.cookieHelper = new CookieHelper();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService,
+                        redisConnectionService,
+                        SerializationService.getInstance());
+        this.clientService = new DynamoClientService(configurationService);
+        this.initiateIPVAuthorisationService =
+                new InitiateIPVAuthorisationService(
+                        configurationService,
+                        auditService,
+                        new IPVAuthorisationService(
+                                configurationService, redisConnectionService, kmsConnectionService),
+                        cloudwatchMetricsService,
+                        new NoSessionOrchestrationService(
+                                configurationService, redisConnectionService),
+                        new TokenService(
+                                configurationService,
+                                redisConnectionService,
+                                kmsConnectionService));
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService, cloudwatchMetricsService, auditService);
+        this.logoutService = new LogoutService(configurationService, redisConnectionService);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     public AuthenticationCallbackHandler(
@@ -155,7 +204,8 @@ public class AuthenticationCallbackHandler
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
             AccountInterventionService accountInterventionService,
-            LogoutService logoutService) {
+            LogoutService logoutService,
+            AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -170,6 +220,7 @@ public class AuthenticationCallbackHandler
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
         this.accountInterventionService = accountInterventionService;
         this.logoutService = logoutService;
+        this.authFrontend = authFrontend;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -252,8 +303,7 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
 
             try {
@@ -306,20 +356,22 @@ public class AuthenticationCallbackHandler
                                 clientSession,
                                 userSession);
 
+                user =
+                        user.withUserId(userInfo.getSubject().getValue())
+                                .withEmail(
+                                        Optional.of(userSession)
+                                                .map(Session::getEmailAddress)
+                                                .orElse(UNKNOWN))
+                                .withPhone(
+                                        Optional.of(userInfo)
+                                                .map(PersonClaims::getPhoneNumber)
+                                                .orElse(UNKNOWN))
+                                .withIpAddress(IpAddressHelper.extractIpAddress(input));
+
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        userInfo.getSubject().getValue(),
-                        Objects.isNull(userSession.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : userSession.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Objects.isNull(userInfo.getPhoneNumber())
-                                ? AuditService.UNKNOWN
-                                : userInfo.getPhoneNumber(),
-                        persistentSessionId,
+                        user,
                         pair("new_account", newAccount),
                         pair("test_user", isTestJourney));
 
@@ -332,11 +384,11 @@ public class AuthenticationCallbackHandler
                                 clientId,
                                 userInfo.getSubject().getValue(),
                                 Objects.isNull(userSession.getEmailAddress())
-                                        ? AuditService.UNKNOWN
+                                        ? UNKNOWN
                                         : userSession.getEmailAddress(),
                                 IpAddressHelper.extractIpAddress(input),
                                 Objects.isNull(userInfo.getPhoneNumber())
-                                        ? AuditService.UNKNOWN
+                                        ? UNKNOWN
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
@@ -417,18 +469,8 @@ public class AuthenticationCallbackHandler
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         clientId,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        userInfo.getSubject().getValue(),
-                        Objects.isNull(userSession.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : userSession.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Objects.isNull(userInfo.getPhoneNumber())
-                                ? AuditService.UNKNOWN
-                                : userInfo.getPhoneNumber(),
-                        persistentSessionId,
-                        pair("internalSubjectId", AuditService.UNKNOWN),
+                        user,
+                        pair("internalSubjectId", UNKNOWN),
                         pair("isNewAccount", newAccount),
                         pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
                         pair("nonce", authenticationRequest.getNonce()),
@@ -446,17 +488,14 @@ public class AuthenticationCallbackHandler
                 LOG.error(
                         "Orchestration to Authentication userinfo request was not successful: {}",
                         e.getMessage());
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
         } catch (AuthenticationCallbackException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         }
     }
 
@@ -529,7 +568,7 @@ public class AuthenticationCallbackHandler
         Object passwordResetTimeClaim = userInfo.getClaim("password_reset_time");
         if (passwordResetTimeClaim == null) {
             LOG.info("password_reset_time claim not found");
-            return Long.MIN_VALUE;
+            return 0L;
         }
         LOG.info("password_reset_time claim found");
         Long passwordResetTimeLong;
@@ -537,7 +576,7 @@ public class AuthenticationCallbackHandler
             passwordResetTimeLong = (Long) passwordResetTimeClaim;
         } catch (ClassCastException e) {
             LOG.error("Failed to cast password_reset_time claim to Long", e);
-            passwordResetTimeLong = Long.MIN_VALUE;
+            passwordResetTimeLong = 0L;
         }
         return passwordResetTimeLong;
     }

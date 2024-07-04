@@ -18,7 +18,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -36,7 +39,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -56,6 +58,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -63,14 +66,29 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -78,16 +96,15 @@ import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.c
 
 class ResetPasswordRequestHandlerTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final long LOCKOUT_DURATION = 799;
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final String PHONE_NUMBER = "01234567890";
     private static final AuditService.MetadataPair PASSWORD_RESET_COUNTER =
             pair("passwordResetCounter", 0);
+    private static final AuditService.MetadataPair PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD =
+            pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -114,12 +131,12 @@ class ResetPasswordRequestHandlerTest {
                     .withTestClientEmailAllowlist(
                             List.of(
                                     "joe.bloggs@digital.cabinet-office.gov.uk",
-                                    TEST_EMAIL_ADDRESS,
+                                    CommonTestVariables.EMAIL,
                                     "jb2@digital.cabinet-office.gov.uk"));
 
     private final Session session =
-            new Session(IdGenerator.generate())
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+            new Session(SESSION_ID)
+                    .setEmailAddress(CommonTestVariables.EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ResetPasswordRequestHandler handler =
             new ResetPasswordRequestHandler(
@@ -133,6 +150,18 @@ class ResetPasswordRequestHandlerTest {
                     codeStorageService,
                     auditService);
 
+    private final AuditContext auditContext =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    CommonTestVariables.EMAIL,
+                    IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(ResetPasswordRequestHandler.class);
@@ -141,7 +170,7 @@ class ResetPasswordRequestHandlerTest {
     public void tearDown() {
         assertThat(
                 logging.events(),
-                not(hasItem(withMessageContaining(session.getSessionId(), TEST_EMAIL_ADDRESS))));
+                not(hasItem(withMessageContaining(SESSION_ID, CommonTestVariables.EMAIL))));
     }
 
     @BeforeEach
@@ -156,10 +185,11 @@ class ResetPasswordRequestHandlerTest {
     @Nested
     class WhenTheRequestIsValid {
 
-        static final String validRequestBody = format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS);
+        static final String validRequestBody =
+                format("{ \"email\": \"%s\"}", CommonTestVariables.EMAIL);
         static NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
+                        CommonTestVariables.EMAIL,
                         RESET_PASSWORD_WITH_CODE,
                         TEST_SIX_DIGIT_CODE,
                         SupportedLanguage.EN);
@@ -167,20 +197,24 @@ class ResetPasswordRequestHandlerTest {
         public static APIGatewayProxyRequestEvent validEvent;
 
         private boolean isSessionWithEmailSent(Session session) {
-            return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS);
+            return session.getEmailAddress().equals(CommonTestVariables.EMAIL);
         }
 
         @BeforeEach
         void setup() {
-            validEvent = eventWithHeadersAndBody(validHeaders(), validRequestBody);
+            validEvent = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validRequestBody);
             Subject subject = new Subject("subject_1");
-            when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(PHONE_NUMBER));
-            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(PHONE_NUMBER));
-            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(userProfileWithPhoneNumber(PHONE_NUMBER)));
+            when(authenticationService.getSubjectFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(subject);
+            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
+            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(
+                            Optional.of(
+                                    userProfileWithPhoneNumber(
+                                            CommonTestVariables.UK_MOBILE_NUMBER)));
             when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                     .thenReturn(Optional.of(getClientSession()));
             var disabledMfaMethod =
@@ -197,7 +231,7 @@ class ResetPasswordRequestHandlerTest {
                             true,
                             true,
                             NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
-            when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getUserCredentialsFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(
                             new UserCredentials()
                                     .withMfaMethods(List.of(disabledMfaMethod, enabledMfaMethod)));
@@ -213,7 +247,7 @@ class ResetPasswordRequestHandlerTest {
             assertEquals(expectedBody, result.getBody());
             verify(codeStorageService)
                     .saveOtpCode(
-                            TEST_EMAIL_ADDRESS,
+                            CommonTestVariables.EMAIL,
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
@@ -237,21 +271,38 @@ class ResetPasswordRequestHandlerTest {
         @Test
         void shouldSubmitCorrectAuditEventForAValidRequest() {
             usingValidSession();
+            usingValidClientSession();
 
             handler.handleRequest(validEvent, context);
 
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            TEST_CLIENT_ID,
-                            expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
-                            "123.123.123.123",
-                            PHONE_NUMBER,
-                            PERSISTENT_ID,
-                            PASSWORD_RESET_COUNTER);
+                            auditContext,
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
+        void checkPasswordResetRequestedAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            usingValidSession();
+            var headers = validEvent.getHeaders();
+            var headersWithoutTICF =
+                    headers.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            validEvent.setHeaders(headersWithoutTICF);
+
+            handler.handleRequest(validEvent, context);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                            auditContext.withTxmaAuditEncoded(Optional.empty()),
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
 
         @Test
@@ -286,7 +337,7 @@ class ResetPasswordRequestHandlerTest {
             verifyNoInteractions(awsSqsClient);
             verify(codeStorageService)
                     .saveOtpCode(
-                            TEST_EMAIL_ADDRESS,
+                            CommonTestVariables.EMAIL,
                             TEST_SIX_DIGIT_CODE,
                             CODE_EXPIRY_TIME,
                             RESET_PASSWORD_WITH_CODE);
@@ -295,20 +346,41 @@ class ResetPasswordRequestHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            TEST_CLIENT_ID,
-                            expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
-                            "123.123.123.123",
-                            PHONE_NUMBER,
-                            PERSISTENT_ID,
-                            PASSWORD_RESET_COUNTER);
+                            auditContext,
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
+        }
+
+        @Test
+        void
+                checkPasswordResetRequestedForTestClientAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+            when(configurationService.isTestClientsEnabled()).thenReturn(true);
+            usingValidSession();
+            usingValidClientSession();
+            var headers = validEvent.getHeaders();
+            var headersWithoutTICF =
+                    headers.entrySet().stream()
+                            .filter(entry -> !entry.getKey().equals(TXMA_AUDIT_ENCODED_HEADER))
+                            .collect(
+                                    Collectors.toUnmodifiableMap(
+                                            Map.Entry::getKey, Map.Entry::getValue));
+            validEvent.setHeaders(headersWithoutTICF);
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(200, result.getStatusCode());
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
+                            auditContext.withTxmaAuditEncoded(Optional.empty()),
+                            PASSWORD_RESET_COUNTER,
+                            PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
         }
 
         @Test
         void shouldReturn404IfUserProfileIsNotFound() {
-            when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.empty());
 
             usingValidSession();
@@ -326,7 +398,7 @@ class ResetPasswordRequestHandlerTest {
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
             var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(
-                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
                     .thenReturn(true);
 
             var result = handler.handleRequest(validEvent, context);
@@ -344,7 +416,7 @@ class ResetPasswordRequestHandlerTest {
                             RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
             var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
             when(codeStorageService.isBlockedForEmail(
-                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
                     .thenReturn(true);
 
             var result = handler.handleRequest(validEvent, context);
@@ -382,15 +454,17 @@ class ResetPasswordRequestHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
             verify(codeStorageService)
                     .saveBlockedForEmail(
-                            TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, LOCKOUT_DURATION);
+                            CommonTestVariables.EMAIL,
+                            codeRequestBlockedKeyPrefix,
+                            LOCKOUT_DURATION);
             verify(session).resetPasswordResetCount();
             verifyNoInteractions(awsSqsClient);
         }
 
         @Test
         void shouldReturn400WhenNoEmailIsPresentInSession() {
-            when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
-                    .thenReturn(Optional.of(PHONE_NUMBER));
+            when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(sessionService.getSessionFromRequestHeaders(anyMap()))
                     .thenReturn(Optional.of(new Session(IdGenerator.generate())));
 
@@ -407,8 +481,8 @@ class ResetPasswordRequestHandlerTest {
     class WhenRequestIsInvalid {
         @Test
         void shouldReturn400IfInvalidSessionProvided() {
-            var body = format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS);
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(Map.of(), body);
+            var body = format("{ \"email\": \"%s\" }", CommonTestVariables.EMAIL);
+            APIGatewayProxyRequestEvent event = apiRequestEventWithHeadersAndBody(Map.of(), body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -424,7 +498,8 @@ class ResetPasswordRequestHandlerTest {
         public void shouldReturn400IfRequestIsMissingEmail() {
             usingValidSession();
             var body = "{ }";
-            APIGatewayProxyRequestEvent event = eventWithHeadersAndBody(validHeaders(), body);
+            APIGatewayProxyRequestEvent event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
             APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
             assertEquals(400, result.getStatusCode());
@@ -455,36 +530,17 @@ class ResetPasswordRequestHandlerTest {
 
     private Session usingSessionWithPasswordResetCount(int passwordResetCount) {
         Session session = mock(Session.class);
-        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
         when(session.getSessionId()).thenReturn(SESSION_ID);
-        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.validateSession(CommonTestVariables.EMAIL)).thenReturn(true);
         when(session.getPasswordResetCount()).thenReturn(passwordResetCount);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         return session;
     }
 
-    private Map<String, String> validHeaders() {
-        return Map.of(
-                PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                PERSISTENT_ID,
-                "Session-Id",
-                session.getSessionId(),
-                CLIENT_SESSION_ID_HEADER,
-                CLIENT_SESSION_ID);
-    }
-
-    private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
-            Map<String, String> headers, String body) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(body);
-        return event;
-    }
-
     private UserProfile userProfileWithPhoneNumber(String phoneNumber) {
-        return new UserProfile().withEmail(TEST_EMAIL_ADDRESS).withPhoneNumber(phoneNumber);
+        return new UserProfile().withEmail(CommonTestVariables.EMAIL).withPhoneNumber(phoneNumber);
     }
 
     private ClientSession getClientSession() {

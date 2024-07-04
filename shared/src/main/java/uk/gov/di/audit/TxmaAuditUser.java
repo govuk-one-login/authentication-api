@@ -2,6 +2,8 @@ package uk.gov.di.audit;
 
 import com.google.gson.annotations.Expose;
 
+import java.util.Objects;
+
 public class TxmaAuditUser {
 
     @Expose private String userId;
@@ -55,5 +57,37 @@ public class TxmaAuditUser {
     public TxmaAuditUser withGovukSigninJourneyId(String govukSigninJourneyId) {
         this.govukSigninJourneyId = govukSigninJourneyId;
         return this;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TxmaAuditUser that = (TxmaAuditUser) o;
+        return Objects.equals(userId, that.userId)
+                && Objects.equals(transactionId, that.transactionId)
+                && Objects.equals(email, that.email)
+                && Objects.equals(phone, that.phone)
+                && Objects.equals(ipAddress, that.ipAddress)
+                && Objects.equals(sessionId, that.sessionId)
+                && Objects.equals(persistentSessionId, that.persistentSessionId)
+                && Objects.equals(govukSigninJourneyId, that.govukSigninJourneyId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                userId,
+                transactionId,
+                email,
+                phone,
+                ipAddress,
+                sessionId,
+                persistentSessionId,
+                govukSigninJourneyId);
     }
 }

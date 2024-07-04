@@ -1,17 +1,14 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -21,8 +18,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -32,17 +27,23 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountRecoveryHandlerTest {
 
-    private static final String EMAIL = "joe.bloggs@test.com";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private final Context context = mock(Context.class);
@@ -59,7 +60,19 @@ class AccountRecoveryHandlerTest {
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
-    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
+
+    private final AuditContext auditContext =
+            new AuditContext(
+                    AuditService.UNKNOWN,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    internalCommonSubjectId,
+                    EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
 
     @BeforeEach
     void setup() {
@@ -84,32 +97,16 @@ class AccountRecoveryHandlerTest {
         when(dynamoAccountModifiersService.isAccountRecoveryBlockPresent(anyString()))
                 .thenReturn(true);
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var expectedResponse = new AccountRecoveryResponse(false);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasJsonBody(expectedResponse));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        internalCommonSubjectId,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_NOT_PERMITTED, auditContext);
     }
 
     @Test
@@ -117,32 +114,34 @@ class AccountRecoveryHandlerTest {
         when(dynamoAccountModifiersService.isAccountRecoveryBlockPresent(anyString()))
                 .thenReturn(false);
         usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
 
-        var event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+        var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         var expectedResponse = new AccountRecoveryResponse(true);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasJsonBody(expectedResponse));
+        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_PERMITTED, auditContext);
+    }
+
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+        when(dynamoAccountModifiersService.isAccountRecoveryBlockPresent(anyString()))
+                .thenReturn(false);
+        usingValidSession();
+
+        var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        AuditService.UNKNOWN,
-                        internalCommonSubjectId,
-                        EMAIL,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        ACCOUNT_RECOVERY_PERMITTED,
+                        auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private void usingValidSession() {

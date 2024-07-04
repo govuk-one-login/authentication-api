@@ -1,11 +1,19 @@
 [
   {
+    "ParameterKey": "AllowedDomains",
+    "ParameterValue": "*.account.gov.uk"
+  },
+  {
     "ParameterKey": "DynatraceApiEnabled",
     "ParameterValue": "Yes"
   },
   {
     "ParameterKey": "CidrBlock",
     "ParameterValue": "10.1.0.0/16"
+  },
+  {
+    "ParameterKey": "ExecuteApiGatewayEnabled",
+    "ParameterValue": "Yes"
   },
   {
     "ParameterKey": "SSMApiEnabled",
@@ -21,6 +29,10 @@
   },
   {
     "ParameterKey": "DynamoDBApiEnabled",
+    "ParameterValue": "Yes"
+  },
+  {
+    "ParameterKey": "LambdaApiEnabled",
     "ParameterValue": "Yes"
   }
 ]

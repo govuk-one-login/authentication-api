@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -42,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
@@ -122,6 +125,24 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.auditService = new AuditService(configurationService);
     }
 
+    public SendNotificationHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(SendNotificationRequest.class, configurationService, redis);
+        this.emailSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.codeGeneratorService = new CodeGeneratorService();
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+    }
+
     public SendNotificationHandler() {
         super(SendNotificationRequest.class, ConfigurationService.getInstance());
         this.emailSqsClient =
@@ -153,6 +174,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        request.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
@@ -178,19 +207,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getNotificationType(),
                             request.getJourneyType());
             if (codeRequestValid.isPresent()) {
+
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        auditContext);
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
             switch (request.getNotificationType()) {
@@ -199,11 +219,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     return handleNotificationRequest(
                             request.getEmail(),
                             request.getNotificationType(),
-                            userContext.getSession(),
                             userContext,
                             request.isRequestNewCode(),
                             request,
-                            input);
+                            input,
+                            auditContext);
                 case VERIFY_PHONE_NUMBER:
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
@@ -222,11 +242,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
                                     request.getPhoneNumber()),
                             request.getNotificationType(),
-                            userContext.getSession(),
                             userContext,
                             request.isRequestNewCode(),
                             request,
-                            input);
+                            input,
+                            auditContext);
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -242,12 +262,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private APIGatewayProxyResponseEvent handleNotificationRequest(
             String destination,
             NotificationType notificationType,
-            Session session,
             UserContext userContext,
             Boolean requestNewCode,
             SendNotificationRequest request,
-            APIGatewayProxyRequestEvent input)
+            APIGatewayProxyRequestEvent input,
+            AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
+        var session = userContext.getSession();
 
         String code =
                 requestNewCode != null && requestNewCode
@@ -266,8 +287,32 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         request.getNotificationType(), request.getJourneyType()));
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
-        if (!testClientWithAllowedEmail) {
 
+        if (configurationService.isEmailCheckEnabled()
+                && notificationType == NotificationType.VERIFY_EMAIL
+                && request.getJourneyType() == JourneyType.REGISTRATION) {
+            String sessionId = userContext.getSession().getSessionId();
+            String clientSessionId = userContext.getClientSessionId();
+            String persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+            pendingEmailCheckSqsClient.send(
+                    objectMapper.writeValueAsString(
+                            new PendingEmailCheckRequest(
+                                    AuditService.UNKNOWN,
+                                    UUID.randomUUID(),
+                                    destination,
+                                    sessionId,
+                                    clientSessionId,
+                                    persistentSessionId,
+                                    IpAddressHelper.extractIpAddress(input),
+                                    JourneyType.REGISTRATION,
+                                    NowHelper.now().toInstant().getEpochSecond(),
+                                    testClientWithAllowedEmail)));
+            LOG.info("PendingEmailCheckRequest enqueued");
+        }
+
+        if (!testClientWithAllowedEmail) {
             if (notificationType == VERIFY_PHONE_NUMBER) {
                 METRICS.putEmbeddedValue(
                         "SendingSms",
@@ -279,29 +324,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 PhoneNumberHelper.getCountry(destination)));
             }
 
-            if (request.getJourneyType() == JourneyType.REGISTRATION) {
-                String sessionId = userContext.getSession().getSessionId();
-                String clientSessionId = userContext.getClientSessionId();
-                String persistentSessionId =
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-
-                if (configurationService.isEmailCheckEnabled()) {
-                    pendingEmailCheckSqsClient.send(
-                            objectMapper.writeValueAsString(
-                                    new PendingEmailCheckRequest(
-                                            UUID.randomUUID(),
-                                            destination,
-                                            sessionId,
-                                            clientSessionId,
-                                            persistentSessionId,
-                                            IpAddressHelper.extractIpAddress(input),
-                                            JourneyType.REGISTRATION,
-                                            String.valueOf(
-                                                    NowHelper.now()
-                                                            .toInstant()
-                                                            .getEpochSecond()))));
-                }
-            }
             var notifyRequest =
                     new NotifyRequest(
                             destination, notificationType, code, userContext.getUserLanguage());
@@ -309,20 +331,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             LOG.info("{} placed on queue", request.getNotificationType());
             LOG.info("Successfully processed request");
         }
+
         auditService.submitAuditEvent(
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getSession().getInternalCommonSubjectIdentifier(),
-                request.getEmail(),
-                IpAddressHelper.extractIpAddress(input),
-                Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                auditContext);
         return generateEmptySuccessApiGatewayResponse();
     }
 

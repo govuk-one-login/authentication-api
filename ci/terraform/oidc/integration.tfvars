@@ -28,8 +28,32 @@ AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
 -----END PUBLIC KEY-----
 EOT
 
+lockout_duration                     = 7200
+incorrect_password_lockout_count_ttl = 7200
+
 orch_client_id                     = "orchestrationAuth"
 orch_redirect_uri                  = "https://oidc.integration.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
+contra_state_bucket = "digital-identity-dev-tfstate"
+
 orch_account_id = "058264132019"
+
+oidc_origin_domain_enabled  = true
+oidc_cloudfront_dns_enabled = true
+enforce_cloudfront          = true
+
+orch_trustmark_enabled               = true
+orch_openid_configuration_enabled    = true
+orch_jwks_enabled                    = true
+orch_authorisation_enabled           = true
+orch_auth_code_enabled               = true
+orch_token_enabled                   = true
+orch_userinfo_enabled                = true
+orch_ipv_callback_enabled            = true
+orch_doc_app_callback_enabled        = true
+orch_authentication_callback_enabled = true
+orch_logout_enabled                  = true
+auth_spot_response_disabled          = true
+orch_register_enabled                = true
+orch_storage_token_jwk_enabled       = true

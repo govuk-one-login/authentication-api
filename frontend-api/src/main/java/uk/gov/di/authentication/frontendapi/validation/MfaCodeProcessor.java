@@ -68,19 +68,25 @@ public abstract class MfaCodeProcessor {
             String ipAddress,
             String persistentSessionId,
             boolean accountRecovery) {
+
+        var restrictedSection =
+                new AuditService.RestrictedSection(
+                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+
         auditService.submitAuditEvent(
                 auditableEvent,
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
                 userContext
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
+                userContext.getClientSessionId(),
+                userContext.getSession().getSessionId(),
                 userContext.getSession().getInternalCommonSubjectIdentifier(),
                 emailAddress,
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
+                restrictedSection,
                 pair("mfa-type", mfaMethodType.getValue()),
                 pair("account-recovery", accountRecovery));
     }
@@ -96,17 +102,18 @@ public abstract class MfaCodeProcessor {
                     userContext.getSession().getInternalCommonSubjectIdentifier());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     emailAddress,
                     ipAddress,
                     AuditService.UNKNOWN,
                     persistentSessionId,
+                    AuditService.RestrictedSection.empty,
                     pair("mfa-type", mfaMethodType.getValue()));
         }
     }

@@ -1,1 +1,2 @@
+enable=require-variable-braces
 external-sources=true

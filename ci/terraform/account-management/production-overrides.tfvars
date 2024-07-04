@@ -9,7 +9,7 @@ notify_template_map = {
   PASSWORD_UPDATED_TEMPLATE_ID       = "ebf3730c-0769-462b-ab39-7d9a7439bac1"
 }
 
-cloudwatch_log_retention = 5
+cloudwatch_log_retention = 30
 
 performance_tuning = {
   authorizer = {

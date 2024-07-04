@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
 class RequestHeaderHelperTest {
 
@@ -65,17 +64,6 @@ class RequestHeaderHelperTest {
                         true,
                         true,
                         "client-session-id-123"));
-    }
-
-    @ParameterizedTest
-    @MethodSource("headersTestParameters")
-    void testHeadersContainValidHeader(
-            Map<String, String> headers,
-            String headerName,
-            boolean matchLowerCase,
-            boolean expectedValidity) {
-        assertEquals(
-                expectedValidity, headersContainValidHeader(headers, headerName, matchLowerCase));
     }
 
     @ParameterizedTest

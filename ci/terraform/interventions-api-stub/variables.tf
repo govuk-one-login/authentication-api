@@ -23,7 +23,7 @@ variable "aws_region" {
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 1
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
@@ -57,6 +57,12 @@ variable "interventions_api_stub_release_zip_file" {
   default     = "../../../interventions-api-stub/build/distributions/interventions-api-stub.zip"
   description = "Location of the Lambda ZIP file - defaults to build output folder when built locally"
   type        = string
+}
+
+variable "orchestration_vpc_endpoint_id" {
+  description = "ID of the VPC endpoint in the orchestration VPC to permit access"
+  type        = string
+  default     = ""
 }
 
 locals {

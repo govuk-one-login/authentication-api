@@ -35,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -165,7 +166,7 @@ public class IPVAuthorisationHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
-        when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
     }
@@ -229,17 +230,21 @@ public class IPVAuthorisationHandlerTest {
                         eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
                         any());
+
+        var user =
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                        .withSessionId(SESSION_ID)
+                        .withUserId(expectedCommonSubject)
+                        .withEmail(EMAIL_ADDRESS)
+                        .withIpAddress("123.123.123.123")
+                        .withPersistentSessionId(PERSISTENT_SESSION_ID);
+
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                         CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID,
+                        user,
                         pair("clientLandingPageUrl", LANDING_PAGE_URL),
                         pair("rpPairwiseId", expectedRpPairwiseId));
         verify(cloudwatchMetricsService)

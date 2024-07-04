@@ -18,8 +18,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -35,9 +38,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -73,8 +74,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -86,21 +92,18 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class LoginHandlerTest {
 
-    private static final String EMAIL = "joe.bloggs@test.com";
-    private static final String PASSWORD = "computer-1";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private final UserCredentials userCredentials =
-            new UserCredentials().withEmail(EMAIL).withPassword(PASSWORD);
+            new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
     private final UserCredentials userCredentialsAuthApp =
             new UserCredentials()
                     .withEmail(EMAIL)
-                    .withPassword(PASSWORD)
+                    .withPassword(CommonTestVariables.PASSWORD)
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
-    private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final MFAMethod AUTH_APP_MFA_METHOD =
@@ -108,19 +111,8 @@ class LoginHandlerTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
-    private static final AuditService.MetadataPair incorrectPasswordCountPair =
-            pair("incorrectPasswordCount", 0);
     private static final Json objectMapper = SerializationService.getInstance();
-    private static final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
-    private static final Map<String, String> VALID_HEADERS =
-            Map.of(
-                    PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                    PERSISTENT_ID,
-                    "Session-Id",
-                    session.getSessionId(),
-                    CLIENT_SESSION_ID_HEADER,
-                    CLIENT_SESSION_ID);
+    private static final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -141,19 +133,40 @@ class LoginHandlerTest {
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
     private final String validBodyWithEmailAndPassword =
-            format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL.toUpperCase());
+            format(
+                    "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                    CommonTestVariables.PASSWORD, EMAIL.toUpperCase());
 
     private final String validBodyWithReauthJourney =
             format(
                     "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                    PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION);
+                    CommonTestVariables.PASSWORD,
+                    EMAIL.toUpperCase(),
+                    JourneyType.REAUTHENTICATION);
+
+    private final AuditContext auditContextWithAllUserInfo =
+            new AuditContext(
+                    CLIENT_ID.getValue(),
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    expectedCommonSubject,
+                    EMAIL,
+                    IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.empty());
+
+    private final AuditContext auditContextWithoutUserInfo =
+            auditContextWithAllUserInfo
+                    .withSubjectId(AuditService.UNKNOWN)
+                    .withPhoneNumber(AuditService.UNKNOWN);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
 
     @AfterEach
     void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(session.getSessionId()))));
+        assertThat(logging.events(), not(hasItem(withMessageContaining(SESSION_ID))));
     }
 
     @BeforeEach
@@ -183,6 +196,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
+        // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -197,19 +211,29 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
         var result = handler.handleRequest(event, context);
 
+        // Assert
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
         assertThat(
                 response.getRedactedPhoneNumber(),
-                equalTo(FrontendApiPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+                equalTo(
+                        FrontendApiPhoneNumberHelper.redactPhoneNumber(
+                                CommonTestVariables.UK_MOBILE_NUMBER)));
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -220,6 +244,36 @@ class LoginHandlerTest {
                         false);
 
         verifySessionIsSaved();
+    }
+
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        var event =
+                eventWithHeadersAndBody(
+                        VALID_HEADERS_WITHOUT_AUDIT_ENCODED, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
 
     @ParameterizedTest
@@ -238,9 +292,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verifySessionIsSaved();
@@ -268,10 +319,6 @@ class LoginHandlerTest {
 
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
     }
@@ -282,13 +329,14 @@ class LoginHandlerTest {
         var userCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
-                        .withPassword(PASSWORD)
+                        .withPassword(CommonTestVariables.PASSWORD)
                         .setMfaMethod(
                                 new MFAMethod()
                                         .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                                         .withMethodVerified(false)
                                         .withEnabled(true));
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
@@ -306,9 +354,6 @@ class LoginHandlerTest {
         assertThat(response.getMfaMethodType(), equalTo(SMS));
         assertThat(response.isMfaMethodVerified(), equalTo(true));
 
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verifySessionIsSaved();
@@ -333,6 +378,13 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.isPasswordChangeRequired(), equalTo(true));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                        pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
     }
@@ -348,7 +400,8 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials =
                 usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         applicableUserCredentials.withPassword(null);
-        when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
+        when(userMigrationService.processMigratedUser(
+                        applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
@@ -368,12 +421,15 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts(
+    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries(
             MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+
+        var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
@@ -386,16 +442,28 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("attemptNoFailedAt", maxRetriesAllowed),
+                        pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
     }
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttemptsForReauthJourney(
+    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetriesForReauthJourney(
             MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(5);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
+                .thenReturn(maxRetriesAllowed - 1);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
@@ -406,6 +474,24 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("incorrectPasswordCount", maxRetriesAllowed),
+                        pair("attemptNoFailedAt", maxRetriesAllowed));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("attemptNoFailedAt", maxRetriesAllowed),
+                        pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
     }
@@ -417,7 +503,9 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
+        when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -431,14 +519,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair(
@@ -462,7 +544,8 @@ class LoginHandlerTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         handler.handleRequest(event, context);
 
-        when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -478,6 +561,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
         usingValidSession();
@@ -489,16 +573,10 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_ID,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        incorrectPasswordCountPair,
+                        pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", 6));
 
         assertThat(result, hasStatus(401));
@@ -541,7 +619,8 @@ class LoginHandlerTest {
 
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
 
-        when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
+        when(userMigrationService.processMigratedUser(
+                        applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -557,7 +636,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
-        var bodyWithoutEmail = format("{ \"password\": \"%s\"}", PASSWORD);
+        var bodyWithoutEmail = format("{ \"password\": \"%s\"}", CommonTestVariables.PASSWORD);
         var event = eventWithHeadersAndBody(VALID_HEADERS, bodyWithoutEmail);
 
         usingValidSession();
@@ -588,6 +667,7 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingDefaultVectorOfTrust();
 
@@ -597,14 +677,8 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        "",
-                        EMAIL,
-                        "123.123.123.123",
-                        "",
-                        PERSISTENT_ID);
+                        auditContextWithoutUserInfo.withTxmaAuditEncoded(
+                                Optional.of(ENCODED_DEVICE_DETAILS)));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
@@ -632,10 +706,6 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
-
-        assertAuditServiceCalledWith(
-                FrontendAuditableEvent.LOG_IN_SUCCESS,
-                pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
@@ -678,7 +748,7 @@ class LoginHandlerTest {
     private UserCredentials usingApplicableUserCredentialsWithLogin(
             MFAMethodType mfaMethodType, boolean loginSuccessful) {
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
-        when(authenticationService.login(applicableUserCredentials, PASSWORD))
+        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(loginSuccessful);
         return applicableUserCredentials;
     }
@@ -687,7 +757,7 @@ class LoginHandlerTest {
         return new UserProfile()
                 .withEmail(EMAIL)
                 .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
@@ -699,7 +769,6 @@ class LoginHandlerTest {
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
@@ -724,26 +793,10 @@ class LoginHandlerTest {
     private APIGatewayProxyRequestEvent eventWithHeadersAndBody(
             Map<String, String> headers, String body) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(headers);
         event.setBody(body);
         return event;
-    }
-
-    private void assertAuditServiceCalledWith(
-            FrontendAuditableEvent auditableEvent, AuditService.MetadataPair... metadataPairs) {
-        verify(auditService)
-                .submitAuditEvent(
-                        auditableEvent,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        EMAIL,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
-                        PERSISTENT_ID,
-                        metadataPairs);
     }
 
     private void verifySessionIsSaved() {

@@ -22,6 +22,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.eq;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticationCallbackHandlerTest {
@@ -69,15 +71,17 @@ class AuthenticationCallbackHandlerTest {
     private static final LogoutService logoutService = mock(LogoutService.class);
     private static final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientService clientService = mock(ClientService.class);
-    private static final String TEST_FRONTEND_BASE_URL = "test.orchestration.frontend.url";
+    private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private static final String TEST_FRONTEND_ERROR_URI = "test.orchestration.frontend.url/error";
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
-    private static final String TEST_AUTH_USERINFO_PATH = "/test-userinfo";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID =
             "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
     private static final String SESSION_ID = "a-session-id";
     private static final Session session =
-            new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session(SESSION_ID)
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setVerifiedMfaMethodType(MFAMethodType.EMAIL);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
@@ -108,7 +112,7 @@ class AuthenticationCallbackHandlerTest {
     @BeforeAll
     static void init() {
         when(configurationService.getEnvironment()).thenReturn("test-env");
-        when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
+        when(authFrontend.errorURI()).thenReturn(URI.create(TEST_FRONTEND_ERROR_URI));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
@@ -128,6 +132,7 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getSubject()).thenReturn(PAIRWISE_SUBJECT_ID);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
+        when(USER_INFO.getPhoneNumber()).thenReturn("1234");
     }
 
     @BeforeEach
@@ -149,7 +154,8 @@ class AuthenticationCallbackHandlerTest {
                         clientService,
                         initiateIPVAuthorisationService,
                         accountInterventionService,
-                        logoutService);
+                        logoutService,
+                        authFrontend);
     }
 
     @Test
@@ -199,26 +205,30 @@ class AuthenticationCallbackHandlerTest {
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTHENTICATION_COMPLETE),
                         eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        eq(
+                                TxmaAuditUser.user()
+                                        .withSessionId(SESSION_ID)
+                                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                        .withIpAddress("123.123.123.123")
+                                        .withUserId(PAIRWISE_SUBJECT_ID.getValue())
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhone("1234")),
                         eq(pair("new_account", true)),
                         eq(pair("test_user", false)));
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
                         eq(CLIENT_ID.getValue()),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
+                        eq(
+                                TxmaAuditUser.user()
+                                        .withSessionId(SESSION_ID)
+                                        .withPersistentSessionId(PERSISTENT_SESSION_ID)
+                                        .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                        .withIpAddress("123.123.123.123")
+                                        .withUserId(PAIRWISE_SUBJECT_ID.getValue())
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhone("1234")),
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
                         eq(pair("isNewAccount", true)),
                         eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
@@ -235,8 +245,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_BASE_URL + "/error"));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
         verifyNoInteractions(
                 tokenService, auditService, userInfoStorageService, cloudwatchMetricsService);
@@ -279,8 +288,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_BASE_URL + "/error"));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
         verifyAuditEvents(
                 List.of(
@@ -306,8 +314,7 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_BASE_URL + "/error"));
+        assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
 
         verifyAuditEvents(
                 List.of(
@@ -599,6 +606,7 @@ class AuthenticationCallbackHandlerTest {
 
     private static void setValidHeadersAndQueryParameters(APIGatewayProxyRequestEvent event) {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE_ORCH_TO_AUTH.getValue());
         responseHeaders.put("state", STATE.getValue());

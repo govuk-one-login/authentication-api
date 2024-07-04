@@ -7,7 +7,8 @@ public enum CloudwatchMetrics {
             "AuthenticationSuccessExistingAccountByClient"),
     SIGN_IN_NEW_ACCOUNT_BY_CLIENT("SignInNewAccountByClient"),
     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT("SignInExistingAccountByClient"),
-    LOGOUT_SUCCESS("LogoutSuccess");
+    LOGOUT_SUCCESS("LogoutSuccess"),
+    EMAIL_CHECK_DURATION("EmailCheckDuration");
     private String value;
 
     CloudwatchMetrics(String value) {

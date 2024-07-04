@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.entity;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
@@ -7,13 +8,17 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @DynamoDbBean
 public class ClientRegistry {
 
     private String clientID;
     private String clientName;
+    private String publicKeySource;
     private String publicKey;
+    private String jwksUrl;
     private List<String> postLogoutRedirectUrls = new ArrayList<>();
     public String backChannelLogoutUri;
     private List<String> scopes = new ArrayList<>();
@@ -23,7 +28,6 @@ public class ClientRegistry {
     private String sectorIdentifierUri;
     private String subjectType;
     private boolean cookieConsentShared = false;
-    private boolean consentRequired = false;
     private boolean jarValidationRequired = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
@@ -38,6 +42,9 @@ public class ClientRegistry {
     private String idTokenSigningAlgorithm = "ES256";
     private boolean smokeTest = false;
     private List<String> clientLoCs = new ArrayList<>();
+
+    private static final Set<String> RS256_MAPPINGS =
+            Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
 
     public ClientRegistry() {}
 
@@ -71,9 +78,23 @@ public class ClientRegistry {
         return this;
     }
 
+    @DynamoDbAttribute("PublicKeySource")
+    public String getPublicKeySource() {
+        return Optional.ofNullable(publicKeySource).orElseGet(PublicKeySource.STATIC::getValue);
+    }
+
+    public void setPublicKeySource(String publicKeySource) {
+        this.publicKeySource = publicKeySource;
+    }
+
+    public ClientRegistry withPublicKeySource(String publicKeySource) {
+        this.publicKeySource = publicKeySource;
+        return this;
+    }
+
     @DynamoDbAttribute("PublicKey")
     public String getPublicKey() {
-        return publicKey;
+        return PublicKeySource.STATIC.getValue().equals(publicKeySource) ? publicKey : null;
     }
 
     public void setPublicKey(String publicKey) {
@@ -82,6 +103,20 @@ public class ClientRegistry {
 
     public ClientRegistry withPublicKey(String publicKey) {
         this.publicKey = publicKey;
+        return this;
+    }
+
+    @DynamoDbAttribute("JwksUrl")
+    public String getJwksUrl() {
+        return PublicKeySource.JWKS.getValue().equals(publicKeySource) ? jwksUrl : null;
+    }
+
+    public void setJwksUrl(String jwksUrl) {
+        this.jwksUrl = jwksUrl;
+    }
+
+    public ClientRegistry withJwksUrl(String jwksUrl) {
+        this.jwksUrl = jwksUrl;
         return this;
     }
 
@@ -239,20 +274,6 @@ public class ClientRegistry {
         return this;
     }
 
-    @DynamoDbAttribute("ConsentRequired")
-    public boolean isConsentRequired() {
-        return false;
-    }
-
-    public void setConsentRequired(boolean consentRequired) {
-        this.consentRequired = consentRequired;
-    }
-
-    public ClientRegistry withConsentRequired(boolean consentRequired) {
-        this.consentRequired = consentRequired;
-        return this;
-    }
-
     @DynamoDbAttribute("JarValidationRequired")
     public boolean isJarValidationRequired() {
         return jarValidationRequired;
@@ -325,7 +346,9 @@ public class ClientRegistry {
 
     @DynamoDbAttribute("IdTokenSigningAlgorithm")
     public String getIdTokenSigningAlgorithm() {
-        return idTokenSigningAlgorithm;
+        return idTokenSigningAlgorithm != null && RS256_MAPPINGS.contains(idTokenSigningAlgorithm)
+                ? JWSAlgorithm.RS256.getName()
+                : idTokenSigningAlgorithm;
     }
 
     public void setIdTokenSigningAlgorithm(String algorithm) {
@@ -397,7 +420,9 @@ public class ClientRegistry {
     public List<String> getClientLoCs() {
         if (clientLoCs.isEmpty()) {
             return identityVerificationSupported
-                    ? List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())
+                    ? List.of(
+                            LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                            LevelOfConfidence.NONE.getValue())
                     : List.of(LevelOfConfidence.NONE.getValue());
         }
         return clientLoCs;

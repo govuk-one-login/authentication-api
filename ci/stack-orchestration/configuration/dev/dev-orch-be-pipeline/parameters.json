@@ -1,5 +1,33 @@
 [
   {
+    "ParameterKey": "AccessCrossAccountSQS",
+    "ParameterValue": "761723964695"
+  },
+  {
+    "ParameterKey": "AccessDynamoDBAccounts",
+    "ParameterValue": "761723964695"
+  },
+  {
+    "ParameterKey": "AllowedServiceOne",
+    "ParameterValue": "DynamoDB"
+  },
+  {
+    "ParameterKey": "AllowedServiceTwo",
+    "ParameterValue": "SSM"
+  },
+  {
+    "ParameterKey": "AllowedServiceThree",
+    "ParameterValue": "SQS"
+  },
+  {
+    "ParameterKey": "AllowedServiceFour",
+    "ParameterValue": "EC2"
+  },
+  {
+    "ParameterKey": "AllowedServiceFive",
+    "ParameterValue": "Lambda"
+  },
+  {
     "ParameterKey": "AdditionalCodeSigningVersionArns",
     "ParameterValue": "arn:aws:signer:eu-west-2:216552277552:/signing-profiles/DynatraceSigner/5uwzCCGTPq"
   },
@@ -18,6 +46,10 @@
   {
     "ParameterKey": "OneLoginRepositoryName",
     "ParameterValue": "authentication-api"
+  },
+  {
+    "ParameterKey": "ProgrammaticPermissionsBoundary",
+    "ParameterValue": "True"
   },
   {
     "ParameterKey": "RequireManualApproval",

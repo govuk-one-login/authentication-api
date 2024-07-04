@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.services.StartService;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.NoSuchElementException;
@@ -39,6 +41,8 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class StartHandler
@@ -69,6 +73,18 @@ public class StartHandler
     public StartHandler(ConfigurationService configurationService) {
         this.clientSessionService = new ClientSessionService(configurationService);
         this.sessionService = new SessionService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.startService =
+                new StartService(
+                        new DynamoClientService(configurationService),
+                        new DynamoService(configurationService),
+                        sessionService);
+        this.configurationService = configurationService;
+    }
+
+    public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.startService =
                 new StartService(
@@ -175,19 +191,28 @@ public class StartHandler
                                 .map(UserProfile::getSubjectID)
                                 .orElse(AuditService.UNKNOWN);
             }
+
+            var txmaAuditHeader =
+                    getOptionalHeaderValueFromHeaders(
+                            input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
+            var auditContext =
+                    new AuditContext(
+                            userContext.getClient().get().getClientID(),
+                            clientSessionId,
+                            session.getSessionId(),
+                            internalCommonSubjectIdentifier,
+                            userContext
+                                    .getUserProfile()
+                                    .map(UserProfile::getEmail)
+                                    .orElse(AuditService.UNKNOWN),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                            txmaAuditHeader);
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.START_INFO_FOUND,
-                    clientSessionId,
-                    session.getSessionId(),
-                    userContext.getClient().get().getClientID(),
-                    internalCommonSubjectIdentifier,
-                    userContext
-                            .getUserProfile()
-                            .map(UserProfile::getEmail)
-                            .orElse(AuditService.UNKNOWN),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    auditContext,
                     pair("internalSubjectId", internalSubjectId));
 
             return generateApiGatewayProxyResponse(200, startResponse);

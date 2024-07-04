@@ -18,6 +18,9 @@ import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
+import uk.gov.di.orchestration.shared.api.DocAppCriAPI;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -46,7 +49,7 @@ import java.util.Objects;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -71,9 +74,9 @@ public class DocAppCallbackHandler
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final AuthorisationCodeService authorisationCodeService;
     private final CookieHelper cookieHelper;
+    private final AuthFrontend authFrontend;
+    private final DocAppCriAPI docAppCriApi;
     protected final Json objectMapper = SerializationService.getInstance();
-
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     public DocAppCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -90,7 +93,9 @@ public class DocAppCallbackHandler
             AuthorisationCodeService authorisationCodeService,
             CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            AuthFrontend authFrontend,
+            DocAppCriAPI docAppCriApi) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -102,10 +107,13 @@ public class DocAppCallbackHandler
         this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.authFrontend = authFrontend;
+        this.docAppCriApi = docAppCriApi;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.docAppCriApi = new DocAppCriAPI(configurationService);
         this.configurationService = configurationService;
         this.authorisationService =
                 new DocAppAuthorisationService(
@@ -113,7 +121,8 @@ public class DocAppCallbackHandler
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
-        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
+        this.tokenService =
+                new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -123,6 +132,34 @@ public class DocAppCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
+    }
+
+    public DocAppCallbackHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.docAppCriApi = new DocAppCriAPI(configurationService);
+        this.configurationService = configurationService;
+        this.authorisationService =
+                new DocAppAuthorisationService(
+                        configurationService,
+                        redis,
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
+        this.tokenService =
+                new DocAppCriService(configurationService, kmsConnectionService, this.docAppCriApi);
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService, redis, SerializationService.getInstance());
+        this.cookieHelper = new CookieHelper();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redis);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     @Override
@@ -137,9 +174,11 @@ public class DocAppCallbackHandler
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Request received to DocAppCallbackHandler");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             var sessionCookiesIds =
                     cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+
             if (Objects.isNull(sessionCookiesIds)) {
                 LOG.warn("No session cookie present. Attempt to find session using state");
                 var noSessionEntity =
@@ -153,9 +192,13 @@ public class DocAppCallbackHandler
                         authRequest,
                         noSessionEntity.getErrorObject(),
                         true,
-                        noSessionEntity.getClientSessionId(),
-                        AuditService.UNKNOWN,
-                        noSessionEntity.getClientSession().getDocAppSubjectId().getValue());
+                        TxmaAuditUser.user()
+                                .withGovukSigninJourneyId(noSessionEntity.getClientSessionId())
+                                .withUserId(
+                                        noSessionEntity
+                                                .getClientSession()
+                                                .getDocAppSubjectId()
+                                                .getValue()));
             }
             var session =
                     sessionService
@@ -193,26 +236,19 @@ public class DocAppCallbackHandler
                     authorisationService.validateResponse(
                             input.getQueryStringParameters(), session.getSessionId());
 
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(clientSession.getDocAppSubjectId().getValue());
+
             if (errorObject.isPresent()) {
                 return generateAuthenticationErrorResponse(
-                        authenticationRequest,
-                        errorObject.get(),
-                        false,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue());
+                        authenticationRequest, errorObject.get(), false, user);
             }
 
             auditService.submitAuditEvent(
-                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    clientSession.getDocAppSubjectId().getValue(),
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN);
+                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             var tokenRequest =
                     tokenService.constructTokenRequest(
@@ -223,13 +259,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        user);
             } else {
                 LOG.error(
                         "Doc App TokenResponse was not successful: {}",
@@ -238,24 +268,12 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                        user);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
 
             try {
-                var criDataEndpoint = configurationService.getDocAppCriV2DataEndpoint();
-
-                var criDataURI =
-                        buildURI(
-                                configurationService.getDocAppBackendURI().toString(),
-                                criDataEndpoint);
+                var criDataURI = docAppCriApi.criDataURI();
 
                 var request = new HTTPRequest(POST, criDataURI);
                 request.setAuthorization(
@@ -270,13 +288,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        user);
                 LOG.info("Adding DocAppCredential to dynamo");
                 dynamoDocAppService.addDocAppCredential(
                         clientSession.getDocAppSubjectId().getValue(), credential);
@@ -306,13 +318,7 @@ public class DocAppCallbackHandler
                 auditService.submitAuditEvent(
                         AUTH_CODE_ISSUED,
                         clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
+                        user.withIpAddress(IpAddressHelper.extractIpAddress(input)),
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", session.isNewAccount()),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
@@ -331,35 +337,23 @@ public class DocAppCallbackHandler
                             authenticationRequest,
                             new ErrorObject(OAuth2Error.ACCESS_DENIED_CODE, "Not found"),
                             false,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientSession.getDocAppSubjectId().getValue());
+                            user);
                 } else {
                     incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
                     auditService.submitAuditEvent(
                             DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                             clientId,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientSession.getDocAppSubjectId().getValue(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN);
+                            user);
                     LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
-                    return RedirectService.redirectToFrontendErrorPage(
-                            configurationService.getLoginURI().toString(),
-                            ERROR_PAGE_REDIRECT_PATH);
+                    return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
                 }
             }
         } catch (DocAppCallbackException | NoSessionException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         }
     }
 
@@ -367,9 +361,7 @@ public class DocAppCallbackHandler
             AuthenticationRequest authenticationRequest,
             ErrorObject errorObject,
             boolean noSessionErrorResponse,
-            String clientSessionId,
-            String sessionId,
-            String docAppSubjectId) {
+            TxmaAuditUser user) {
         LOG.warn(
                 "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}. No Session Error: {}",
                 errorObject.getCode(),
@@ -379,13 +371,7 @@ public class DocAppCallbackHandler
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                sessionId,
-                docAppSubjectId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                user);
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),

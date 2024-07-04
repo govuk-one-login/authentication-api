@@ -19,6 +19,7 @@ import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -183,11 +184,16 @@ public class SendOtpNotificationHandler
                     if (dynamoService.userExists(email)) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
-
                     if (configurationService.isEmailCheckEnabled()) {
+                        var userId =
+                                input.getRequestContext()
+                                        .getAuthorizer()
+                                        .getOrDefault("principalId", AuditService.UNKNOWN)
+                                        .toString();
                         pendingEmailCheckSqsClient.send(
                                 objectMapper.writeValueAsString(
                                         new PendingEmailCheckRequest(
+                                                userId,
                                                 UUID.randomUUID(),
                                                 email,
                                                 sessionId,
@@ -195,10 +201,9 @@ public class SendOtpNotificationHandler
                                                 persistentSessionId,
                                                 IpAddressHelper.extractIpAddress(input),
                                                 JourneyType.ACCOUNT_MANAGEMENT,
-                                                String.valueOf(
-                                                        NowHelper.now()
-                                                                .toInstant()
-                                                                .getEpochSecond()))));
+                                                NowHelper.now().toInstant().getEpochSecond(),
+                                                isTestUserRequest)));
+                        LOG.info("PendingEmailCheckRequest enqueued");
                     }
 
                     return handleNotificationRequest(
@@ -278,12 +283,12 @@ public class SendOtpNotificationHandler
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.SEND_OTP,
-                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                AuditService.UNKNOWN,
                 input.getRequestContext()
                         .getAuthorizer()
                         .getOrDefault("clientId", AuditService.UNKNOWN)
                         .toString(),
+                ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                AuditService.UNKNOWN,
                 input.getRequestContext()
                         .getAuthorizer()
                         .getOrDefault("principalId", AuditService.UNKNOWN)
@@ -292,6 +297,7 @@ public class SendOtpNotificationHandler
                 IpAddressHelper.extractIpAddress(input),
                 sendNotificationRequest.getPhoneNumber(),
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                AuditHelper.buildRestrictedSection(input.getHeaders()),
                 pair("notification-type", sendNotificationRequest.getNotificationType()),
                 pair("test-user", isTestUserRequest));
 

@@ -4,7 +4,7 @@ resource "aws_kms_key" "id_token_signing_key_rsa" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "RSA_4096"
 
-  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.id_token_signing_key_rsa_access_policy_with_orch_access.json : data.aws_iam_policy_document.id_token_signing_key_rsa_access_policy.json
+  policy = data.aws_iam_policy_document.id_token_signing_key_rsa_access_policy.json
 
   tags = local.default_tags
 }
@@ -14,7 +14,7 @@ resource "aws_kms_alias" "id_token_signing_key_alias" {
   target_key_id = aws_kms_key.id_token_signing_key_rsa.key_id
 }
 
-data "aws_iam_policy_document" "id_token_signing_key_rsa_access_policy_with_orch_access" {
+data "aws_iam_policy_document" "id_token_signing_key_rsa_access_policy" {
   statement {
     sid    = "DefaultAccessPolicy"
     effect = "Allow"
@@ -43,23 +43,6 @@ data "aws_iam_policy_document" "id_token_signing_key_rsa_access_policy_with_orch
     principals {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${var.orch_account_id}:root"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "id_token_signing_key_rsa_access_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
     }
   }
 }

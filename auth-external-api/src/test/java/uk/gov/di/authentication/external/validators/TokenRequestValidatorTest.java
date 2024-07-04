@@ -11,6 +11,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -20,12 +21,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.sharedtest.helper.JwtHelper;
 
-import java.net.URI;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -165,7 +166,9 @@ class TokenRequestValidatorTest {
 
     @Nested
     class ValidatePrivateKeyJwtAuthTests {
-        private static final URI EXPECTED_AUDIENCE = URI.create("https://example.com/resource");
+        private static final Audience AUDIENCE = new Audience("https://example.com/resource");
+        private static final Set<Audience> EXPECTED_AUDIENCE =
+                Set.of(AUDIENCE, new Audience("https://test.com/resource"));
         private static ECKey VALID_KEY_PAIR;
         private static String VALID_PUBLIC_KEY_AS_X509_STRING;
         private static ECKey ALTERNATE_EC_KEY_PAIR;
@@ -180,7 +183,7 @@ class TokenRequestValidatorTest {
         static void init() throws JOSEException, ParseException {
             String validClientAssertionPayload =
                     getClientAssertionPayload(
-                            EXPECTED_AUDIENCE.toString(),
+                            AUDIENCE.getValue(),
                             "matching-random",
                             "matching-random",
                             9999999999L,

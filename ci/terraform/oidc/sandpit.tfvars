@@ -14,6 +14,7 @@ account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
+call_ticf_cri                               = true
 auth_frontend_public_encryption_key         = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
@@ -41,8 +42,12 @@ lambda_min_concurrency = 0
 endpoint_memory_size   = 1536
 
 
-lockout_duration                          = 30
-otp_code_ttl_duration                     = 120
+# lockout config
+lockout_duration                          = 60
+reduced_lockout_duration                  = 30
+incorrect_password_lockout_count_ttl      = 60
+lockout_count_ttl                         = 60
+otp_code_ttl_duration                     = 60
 email_acct_creation_otp_code_ttl_duration = 60
 
 orch_client_id = "orchestrationAuth"
@@ -54,16 +59,25 @@ authorize_protected_subnet_enabled = true
 
 support_email_check_enabled = true
 
+contra_state_bucket = "digital-identity-dev-tfstate"
 
-orch_openid_configuration_enabled = false
-orch_openid_configuration_name    = "dev-orch-be-deploy-OpenIdConfigurationFunction-6Abl5SEjt8kV"
-orch_doc_app_callback_enabled     = true
-orch_doc_app_callback_name        = "dev-orch-be-deploy-DocAppCallbackFunction-RVJSUW5JaiRv"
+orch_openid_configuration_enabled    = true
+orch_doc_app_callback_enabled        = true
+orch_token_enabled                   = true
+orch_jwks_enabled                    = true
+orch_authorisation_enabled           = true
+orch_logout_enabled                  = true
+orch_ipv_callback_enabled            = true
+orch_register_enabled                = true
+orch_authentication_callback_enabled = true
+auth_spot_response_disabled          = true
+orch_auth_code_enabled               = true
+orch_userinfo_enabled                = true
+orch_storage_token_jwk_enabled       = true
 
+orch_account_id                     = "816047645251"
+cmk_for_back_channel_logout_enabled = true
 
-orch_account_id                                  = "816047645251"
-back_channel_logout_cross_account_access_enabled = true
-kms_cross_account_access_enabled                 = true
-cmk_for_back_channel_logout_enabled              = true
-
-oidc_origin_domain_enabled = true
+oidc_origin_domain_enabled  = true
+oidc_cloudfront_dns_enabled = true
+enforce_cloudfront          = true

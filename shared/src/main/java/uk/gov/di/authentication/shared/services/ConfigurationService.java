@@ -10,12 +10,9 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParametersRequest;
 import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
-import uk.gov.di.authentication.entity.Environment;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
-import uk.gov.di.authentication.shared.exceptions.SSMParameterNotFoundException;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
 import java.time.Clock;
@@ -66,10 +63,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
-    public Long getAccountRecoveryBlockTTL() {
-        return Long.parseLong(System.getenv().getOrDefault("ACCOUNT_RECOVERY_BLOCK_TTL", "172800"));
-    }
-
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
@@ -81,6 +74,17 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getLockoutCountTTL() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_COUNT_TTL", "900"));
+    }
+
+    public long getAccountCreationLockoutCountTTL() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("ACCOUNT_CREATION_LOCKOUT_COUNT_TTL", "3600"));
+    }
+
+    public boolean supportAccountCreationTTL() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
+                .equals("true");
     }
 
     public long getLockoutDuration() {
@@ -165,10 +169,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
-    public boolean isAisDetailedLoggingEnabled() {
-        return !List.of(Environment.PRODUCTION, Environment.INTEGRATION).contains(getEnvironment());
-    }
-
     public boolean isEmailCheckEnabled() {
         return System.getenv().getOrDefault("SUPPORT_EMAIL_CHECK_ENABLED", "false").equals("true");
     }
@@ -183,6 +183,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
     }
 
+    public String getTicfCRILambdaName() {
+        return System.getenv().getOrDefault("TICF_CRI_LAMBDA_NAME", "");
+    }
+
+    public boolean isInvokeTicfCRILambdaEnabled() {
+        return System.getenv().getOrDefault("INVOKE_TICF_CRI_LAMBDA", "false").equals("true");
+    }
+
     public URI getAuthenticationAuthCallbackURI() {
         return URI.create(
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
@@ -190,6 +198,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getAuthenticationBackendURI() {
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+    }
+
+    public URI getOrchestrationBackendURI() {
+        return URI.create(System.getenv().getOrDefault("ORCHESTRATION_BACKEND_URI", ""));
     }
 
     public String getContactUsLinkRoute() {
@@ -208,16 +220,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
     }
 
-    public URI getDefaultLogoutURI() {
-        return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
-    }
-
     public URI getDocAppAuthorisationURI() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
-    }
-
-    public URI getDocAppBackendURI() {
-        return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
     }
 
     public URI getDocAppAuthorisationCallbackURI() {
@@ -240,20 +244,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("DOC_APP_TOKEN_SIGNING_KEY_ALIAS");
     }
 
-    public String getDocAppCriDataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_ENDPOINT");
-    }
-
-    public String getDocAppCriV2DataEndpoint() {
-        return System.getenv("DOC_APP_CRI_DATA_V2_ENDPOINT");
-    }
-
     public URI getDocAppDomain() {
         return URI.create(System.getenv("DOC_APP_DOMAIN"));
-    }
-
-    public String getDomainName() {
-        return System.getenv("DOMAIN_NAME");
     }
 
     public Optional<String> getDynamoEndpointUri() {
@@ -268,37 +260,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("PENDING_EMAIL_CHECK_QUEUE_URL");
     }
 
-    public String getSpotQueueUri() {
-        return System.getenv("SPOT_QUEUE_URL");
+    public String getExperianPhoneCheckerQueueUri() {
+        return System.getenv("EXPERIAN_PHONE_CHECKER_QUEUE_URL");
     }
 
     public String getFrontendBaseUrl() {
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
-    public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
-        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
     public String getOrchestrationToAuthenticationSigningPublicKey() {
         return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
-    }
-
-    public String getOrchestrationToAuthenticationEncryptionPublicKey() {
-        var paramName = format("{0}-auth-public-encryption-key", getEnvironment());
-        try {
-            var request =
-                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
-        } catch (ParameterNotFoundException e) {
-            String message = String.format("No parameter exists with name: %s", paramName);
-            LOG.error(message);
-            throw new SSMParameterNotFoundException(message, e);
-        }
-    }
-
-    public String getOrchestrationRedirectUri() {
-        return System.getenv().getOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
     public String getOrchestrationClientId() {
@@ -317,63 +288,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }
 
-    public boolean isIPVNoSessionResponseEnabled() {
-        return System.getenv()
-                .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
-                .equals("true");
-    }
-
-    public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
-        return supportedLanguage.equals(SupportedLanguage.EN)
-                || supportedLanguage.equals(SupportedLanguage.CY);
-    }
-
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
 
-    public URI getIPVAuthorisationURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_URI", ""));
-    }
-
-    public URI getIPVBackendURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_BACKEND_URI", ""));
-    }
-
-    public String getIPVAudience() {
-        return System.getenv().getOrDefault("IPV_AUDIENCE", "");
-    }
-
-    public URI getIPVAuthorisationCallbackURI() {
-        return URI.create(System.getenv().getOrDefault("IPV_AUTHORISATION_CALLBACK_URI", ""));
-    }
-
-    public String getIPVAuthorisationClientId() {
-        return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
-    }
-
-    public String getIPVTokenSigningKeyAlias() {
-        return System.getenv("IPV_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getIPVAuthEncryptionPublicKey() {
-        var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
-        try {
-            var request =
-                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
-            return getSsmClient().getParameter(request).parameter().value();
-        } catch (ParameterNotFoundException e) {
-            LOG.error("No parameter exists with name: {}", paramName);
-            throw new RuntimeException(e);
-        }
-    }
-
     public String getInternalSectorUri() {
         return System.getenv("INTERNAl_SECTOR_URI");
-    }
-
-    public URI getLoginURI() {
-        return URI.create(System.getenv("LOGIN_URI"));
     }
 
     public String getNotifyApiKey() {
@@ -469,10 +389,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                         .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
     }
 
-    public String getResetPasswordRoute() {
-        return System.getenv().getOrDefault("RESET_PASSWORD_ROUTE", "");
-    }
-
     public String getSessionCookieAttributes() {
         return Optional.ofNullable(System.getenv("SESSION_COOKIE_ATTRIBUTES"))
                 .orElse("Secure; HttpOnly;");
@@ -482,26 +398,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "3600"));
     }
 
-    public int getPersistentCookieMaxAge() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("PERSISTENT_COOKIE_MAX_AGE", "47340000"));
-    }
-
-    public int getLanguageCookieMaxAge() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("LANGUAGE_COOKIE_MAX_AGE", "31536000"));
-    }
-
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
     public String getSmoketestBucketName() {
         return System.getenv("SMOKETEST_SMS_BUCKET_NAME");
-    }
-
-    public URI getSkipLoginURI() {
-        return URI.create(System.getenv().getOrDefault("SKIP_LOGIN_URI", "http://skip-login"));
     }
 
     public Optional<String> getSqsEndpointUri() {
@@ -524,6 +426,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
     }
 
+    public boolean isPhoneCheckerWithReplyEnabled() {
+        return System.getenv().getOrDefault("PHONE_CHECKER_WITH_RETRY", "false").equals("true");
+    }
+
     public String getSyntheticsUsers() {
         return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
     }
@@ -538,27 +444,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isRsaSigningAvailable() {
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
-    }
-
-    public String getAuditStorageS3Bucket() {
-        return System.getenv("AUDIT_STORAGE_S3_BUCKET");
-    }
-
-    public String getAuditHmacSecret() {
-        return System.getenv("AUDIT_HMAC_SECRET");
-    }
-
-    public Optional<String> getIPVCapacity() {
-        try {
-            var request =
-                    GetParameterRequest.builder()
-                            .withDecryption(true)
-                            .name(format("{0}-ipv-capacity", getEnvironment()))
-                            .build();
-            return Optional.of(getSsmClient().getParameter(request).parameter().value());
-        } catch (ParameterNotFoundException e) {
-            return Optional.empty();
-        }
     }
 
     private Map<String, String> getSsmRedisParameters() {
@@ -614,16 +499,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("REDIS_KEY");
     }
 
-    public String getBackChannelLogoutQueueUri() {
-        return System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI");
-    }
-
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
 
     public URI getAccountInterventionServiceURI() {
         return URI.create(System.getenv("ACCOUNT_INTERVENTION_SERVICE_URI"));
+    }
+
+    public String getTicfCriServiceURI() {
+        return System.getenv("TICF_CRI_SERVICE_URI");
     }
 
     public boolean abortOnAccountInterventionsErrorResponse() {
@@ -649,7 +534,34 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
     }
 
+    public long getTicfCriServiceCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("TICF_CRI_SERVICE_CALL_TIMEOUT", "2000"));
+    }
+
     public String getAccountInterventionsErrorMetricName() {
         return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
+    }
+
+    public String getIPVAudience() {
+        return System.getenv().getOrDefault("IPV_AUDIENCE", "");
+    }
+
+    public String getMfaResetStorageTokenSigningKeyAlias() {
+        return System.getenv("MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public URI getCredentialStoreURI() {
+        return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
+    }
+
+    private URI getURIOrDefault(String envVar, String defaultUri) {
+        return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
+    }
+
+    private Optional<URI> getOptionalURI(String envVar) {
+        return System.getenv().containsKey(envVar)
+                ? Optional.of(URI.create(System.getenv(envVar)))
+                : Optional.empty();
     }
 }

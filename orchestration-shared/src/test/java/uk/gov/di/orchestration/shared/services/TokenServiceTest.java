@@ -27,6 +27,11 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
+import org.approvaltests.JsonApprovals;
+import org.approvaltests.core.Options;
+import org.approvaltests.scrubbers.GuidScrubber;
+import org.approvaltests.scrubbers.RegExScrubber;
+import org.approvaltests.scrubbers.Scrubbers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,10 +44,8 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
-import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.helper.SubjectHelper;
@@ -51,8 +54,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
@@ -60,7 +61,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -92,6 +92,9 @@ class TokenServiceTest {
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final Subject FIXED_INTERNAL_PAIRWISE_SUBJECT =
+            new Subject("urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0");
+    private static final String JOURNEY_ID = "client-session-id";
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
@@ -105,7 +108,7 @@ class TokenServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String BASE_URL = "https://example.com";
+    private static final String BASE_URL = "https://oidc.test.account.gov.uk";
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
@@ -145,8 +148,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
@@ -156,16 +157,10 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
@@ -191,18 +186,23 @@ class TokenServiceTest {
     }
 
     @Test
-    void shouldGenerateWellFormedStorageToken() throws JOSEException {
+    void shouldGenerateWellFormedStorageToken() throws JOSEException, ParseException {
         when(configurationService.getCredentialStoreURI())
                 .thenReturn(URI.create(CREDENTIAL_STORE_URI));
         when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
         createSignedStorageToken();
 
-        AccessToken token = tokenService.generateStorageToken(new Subject());
-        String[] splitToken = token.toString().split("\\.");
+        AccessToken token = tokenService.generateStorageToken(FIXED_INTERNAL_PAIRWISE_SUBJECT);
+        var parsedToken = SignedJWT.parse(token.getValue());
 
         verify(configurationService).getStorageTokenSigningKeyAlias();
-        assertEquals(3, splitToken.length);
+        assertEquals(3, parsedToken.getParsedParts().length);
         assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
+        var unixTimestampScrubber = new RegExScrubber("\\d{10}", "1700000000");
+        var guidScrubber = new GuidScrubber();
+        JsonApprovals.verifyAsJson(
+                parsedToken.getJWTClaimsSet().toJSONObject(),
+                new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
     }
 
     @Test
@@ -219,8 +219,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
@@ -230,16 +228,10 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
@@ -293,8 +285,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -303,16 +293,10 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
@@ -328,8 +312,6 @@ class TokenServiceTest {
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
-        Set<String> claimsForListOfScopes =
-                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
         OIDCTokenResponse tokenResponse =
                 tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -338,16 +320,10 @@ class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id",
+                        JOURNEY_ID,
                         VOT);
 
         var parsedAccessToken =
@@ -559,7 +535,8 @@ class TokenServiceTest {
                 new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         verify(redisConnectionService)
                 .saveWithExpiry(
                         accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
@@ -595,6 +572,6 @@ class TokenServiceTest {
 
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
-                is("client-session-id"));
+                is(JOURNEY_ID));
     }
 }

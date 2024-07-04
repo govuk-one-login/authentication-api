@@ -23,9 +23,17 @@ public class UpdateClientConfigRequest {
     @Expose
     private List<String> contacts;
 
+    @SerializedName("public_key_source")
+    @Expose
+    private String publicKeySource;
+
     @SerializedName("public_key")
     @Expose
     private String publicKey;
+
+    @SerializedName("jwks_uri")
+    @Expose
+    private String jwksUrl;
 
     @SerializedName("scopes")
     @Expose
@@ -63,6 +71,14 @@ public class UpdateClientConfigRequest {
     @Expose
     private String backChannelLogoutUri;
 
+    @SerializedName("id_token_signing_algorithm")
+    @Expose
+    private String idTokenSigningAlgorithm;
+
+    @SerializedName("identity_verification_supported")
+    @Expose
+    private Boolean identityVerificationSupported;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -81,8 +97,16 @@ public class UpdateClientConfigRequest {
         return contacts;
     }
 
+    public String getPublicKeySource() {
+        return publicKeySource;
+    }
+
     public String getPublicKey() {
         return publicKey;
+    }
+
+    public String getJwksUrl() {
+        return jwksUrl;
     }
 
     public List<String> getScopes() {
@@ -121,6 +145,14 @@ public class UpdateClientConfigRequest {
         return backChannelLogoutUri;
     }
 
+    public String getIdTokenSigningAlgorithm() {
+        return idTokenSigningAlgorithm;
+    }
+
+    public Boolean getidentityVerificationSupported() {
+        return identityVerificationSupported;
+    }
+
     public UpdateClientConfigRequest setClientId(String clientId) {
         this.clientId = clientId;
         return this;
@@ -141,8 +173,18 @@ public class UpdateClientConfigRequest {
         return this;
     }
 
+    public UpdateClientConfigRequest setPublicKeySource(String publicKeySource) {
+        this.publicKeySource = publicKeySource;
+        return this;
+    }
+
     public UpdateClientConfigRequest setPublicKey(String publicKey) {
         this.publicKey = publicKey;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setJwksUrl(String jwksUrl) {
+        this.jwksUrl = jwksUrl;
         return this;
     }
 
@@ -188,6 +230,17 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setBackChannelLogoutUri(String backChannelLogoutUri) {
         this.backChannelLogoutUri = backChannelLogoutUri;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setIdTokenSigningAlgorithm(String idTokenSigningAlgorithm) {
+        this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setIdentityVerificationSupported(
+            Boolean identityVerificationSupported) {
+        this.identityVerificationSupported = identityVerificationSupported;
         return this;
     }
 }

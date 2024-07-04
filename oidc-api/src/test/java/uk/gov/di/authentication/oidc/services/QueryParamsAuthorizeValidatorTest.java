@@ -21,10 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -47,6 +49,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -57,6 +60,8 @@ import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMes
 class QueryParamsAuthorizeValidatorTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final List<String> DEFAULT_CLIENT_LOCS =
+            List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue(), LevelOfConfidence.NONE.getValue());
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
@@ -113,8 +118,18 @@ class QueryParamsAuthorizeValidatorTest {
         assertThat(errorObject, equalTo(Optional.empty()));
     }
 
-    @Test
-    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() {
+    private static Stream<Arguments> invalidVtrAttributes() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cm")),
+                Arguments.of(jsonArrayOf("Cl.Cm.P3")),
+                Arguments.of(jsonArrayOf("Cl.P0", "Cl.Cm.P2")),
+                Arguments.of(jsonArrayOf("Cm.Cl.P1", "P1.Cl")),
+                Arguments.of(jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidVtrAttributes")
+    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest(String invalidVtrAttribute) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -128,7 +143,7 @@ class QueryParamsAuthorizeValidatorTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
+                        invalidVtrAttribute,
                         Optional.empty());
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
@@ -139,6 +154,7 @@ class QueryParamsAuthorizeValidatorTest {
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -216,6 +232,7 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request contains invalid claims")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -270,6 +287,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -308,6 +326,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -327,6 +346,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -353,6 +373,7 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request is missing state parameter")));
+        assertNull(errorObject.get().state());
     }
 
     @Test
@@ -368,7 +389,7 @@ class QueryParamsAuthorizeValidatorTest {
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .state(new State())
+                        .state(STATE)
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
@@ -379,10 +400,34 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request is missing nonce parameter")));
+        assertEquals(STATE, errorObject.get().state());
     }
 
-    @Test
-    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest() {
+    private static Stream<Arguments> requestVtrsNotPermitted() {
+        return Stream.of(
+                Arguments.of(List.of(LevelOfConfidence.NONE.getValue()), jsonArrayOf("Cl.P2.Cm")),
+                Arguments.of(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                        jsonArrayOf("Cl.PCL250.Cm")),
+                Arguments.of(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                        jsonArrayOf("PCL200.Cl.Cm", "Cl.P2.Cm")),
+                Arguments.of(
+                        List.of(
+                                LevelOfConfidence.NONE.getValue(),
+                                LevelOfConfidence.HMRC250.getValue(),
+                                LevelOfConfidence.MEDIUM_LEVEL.getValue()),
+                        jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("requestVtrsNotPermitted")
+    void shouldReturnErrorWhenVtrInAuthRequestIsNotPermittedForGivenClient(
+            List<String> clientLoCs, String vtr) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -390,21 +435,25 @@ class QueryParamsAuthorizeValidatorTest {
                 .thenReturn(
                         Optional.of(
                                 generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+                                        REDIRECT_URI.toString(),
+                                        clientLoCs,
+                                        CLIENT_ID.toString())));
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
+                        .state(STATE)
                         .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf("Cm"))
+                        .customParameter("vtr", vtr)
                         .build();
         var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject.get().errorObject(),
+                errorObject.get().errorObject().toJSONObject(),
                 equalTo(
                         new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request vtr is not permitted")
+                                .toJSONObject()));
     }
 
     @Test
@@ -419,7 +468,7 @@ class QueryParamsAuthorizeValidatorTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                        .state(new State())
+                        .state(STATE)
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
@@ -427,6 +476,7 @@ class QueryParamsAuthorizeValidatorTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
+        assertEquals(STATE, errorObject.get().state());
     }
 
     @Test
@@ -442,7 +492,8 @@ class QueryParamsAuthorizeValidatorTest {
                                         REDIRECT_URI.toString(),
                                         CLIENT_ID.toString(),
                                         singletonList("openid"),
-                                        true)));
+                                        true,
+                                        DEFAULT_CLIENT_LOCS)));
         var authRequest =
                 new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                         .state(new State())
@@ -492,6 +543,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 CLIENT_ID,
                                 REDIRECT_URI)
                         .requestURI(URI.create("https://localhost/redirect-uri"))
+                        .state(STATE)
                         .build();
 
         var authRequestError = queryParamsAuthorizeValidator.validate(authenticationRequest);
@@ -500,25 +552,38 @@ class QueryParamsAuthorizeValidatorTest {
         assertThat(
                 authRequestError.get().errorObject(),
                 equalTo(OAuth2Error.REQUEST_URI_NOT_SUPPORTED));
+        assertEquals(STATE, authRequestError.get().state());
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
-        return generateClientRegistry(redirectURI, clientID, singletonList("openid"), false);
+        return generateClientRegistry(
+                redirectURI, clientID, singletonList("openid"), false, DEFAULT_CLIENT_LOCS);
     }
 
     private ClientRegistry generateClientRegistry(
             String redirectURI, String clientID, List<String> scopes) {
-        return generateClientRegistry(redirectURI, clientID, scopes, false);
+        return generateClientRegistry(redirectURI, clientID, scopes, false, DEFAULT_CLIENT_LOCS);
     }
 
     private ClientRegistry generateClientRegistry(
-            String redirectURI, String clientID, List<String> scopes, boolean testClient) {
+            String redirectURI, List<String> clientLoCs, String clientID) {
+        return generateClientRegistry(
+                redirectURI, clientID, singletonList("openid"), false, clientLoCs);
+    }
+
+    private ClientRegistry generateClientRegistry(
+            String redirectURI,
+            String clientID,
+            List<String> scopes,
+            boolean testClient,
+            List<String> clientLoCs) {
         return new ClientRegistry()
                 .withRedirectUrls(singletonList(redirectURI))
                 .withClientID(clientID)
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .withPublicKey(null)
                 .withTestClient(testClient)
+                .withClientLoCs(clientLoCs)
                 .withScopes(scopes);
     }
 

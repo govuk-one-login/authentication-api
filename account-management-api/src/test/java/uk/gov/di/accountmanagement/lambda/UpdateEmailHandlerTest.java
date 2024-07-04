@@ -6,24 +6,34 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +42,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -43,6 +54,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -50,6 +62,8 @@ class UpdateEmailHandlerTest {
 
     private final Context context = mock(Context.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
+            mock(DynamoEmailCheckResultService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -62,6 +76,7 @@ class UpdateEmailHandlerTest {
     private static final String SESSION_ID = "some-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String OTP = "123456";
+    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -70,16 +85,22 @@ class UpdateEmailHandlerTest {
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
 
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(UpdateEmailHandler.class);
+
     @BeforeEach
     void setUp() {
         handler =
                 new UpdateEmailHandler(
                         dynamoService,
+                        dynamoEmailCheckResultService,
                         sqsClient,
                         codeStorageService,
                         auditService,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 
@@ -90,6 +111,12 @@ class UpdateEmailHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
+        when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
+                .thenReturn(
+                        Optional.of(
+                                new EmailCheckResultStore()
+                                        .withEmail(NEW_EMAIL_ADDRESS)
+                                        .withStatus(EmailCheckResultStatus.ALLOW)));
 
         var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
@@ -105,15 +132,67 @@ class UpdateEmailHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_EMAIL,
+                        CLIENT_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
-                        CLIENT_ID,
                         expectedCommonSubject,
                         NEW_EMAIL_ADDRESS,
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         PERSISTENT_ID,
-                        AuditService.MetadataPair.pair("ReplacedEmail", EXISTING_EMAIL_ADDRESS));
+                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                        AuditService.MetadataPair.pair(
+                                "replacedEmail", EXISTING_EMAIL_ADDRESS, true));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "UpdateEmailHandler: Experian email verification status: ALLOW")));
+    }
+
+    @Test
+    void shouldSubmitAuditEventWhenEmailCheckResultRecordDoesNotExist() {
+        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
+                .thenReturn(true);
+        when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
+                .thenReturn(Optional.empty());
+
+        long mockedTimestamp = 1719376320;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
+                    .thenReturn(mockedTimestamp);
+            var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
+            handler.handleRequest(event, context);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "UpdateEmailHandler: Experian email verification status: PENDING")));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                            CLIENT_ID,
+                            SESSION_ID,
+                            AuditService.UNKNOWN,
+                            INTERNAL_SUBJECT.getValue(),
+                            NEW_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            userProfile.getPhoneNumber(),
+                            PERSISTENT_ID,
+                            new AuditService.RestrictedSection(
+                                    Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                            AuditService.MetadataPair.pair(
+                                    "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                            AuditService.MetadataPair.pair(
+                                    "assessment_checked_at_timestamp", mockedTimestamp),
+                            AuditService.MetadataPair.pair("iss", "AUTH"));
+        }
     }
 
     @Test
@@ -137,7 +216,6 @@ class UpdateEmailHandlerTest {
 
         assertThat(expectedException.getMessage(), equalTo("Invalid Principal in request"));
         verifyNoInteractions(sqsClient);
-        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -254,7 +332,9 @@ class UpdateEmailHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
                         PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
-                        SESSION_ID));
+                        SESSION_ID,
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
 
         return event;
     }

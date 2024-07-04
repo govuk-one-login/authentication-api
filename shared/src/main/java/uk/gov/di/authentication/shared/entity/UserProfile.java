@@ -8,7 +8,6 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecon
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 @DynamoDbBean
 public class UserProfile {
@@ -21,7 +20,6 @@ public class UserProfile {
     public static final String ATTRIBUTE_CREATED = "Created";
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_TERMS_AND_CONDITIONS = "termsAndConditions";
-    public static final String ATTRIBUTE_CLIENT_CONSENT = "ClientConsent";
     public static final String ATTRIBUTE_PUBLIC_SUBJECT_ID = "PublicSubjectID";
     public static final String ATTRIBUTE_LEGACY_SUBJECT_ID = "LegacySubjectID";
     public static final String ATTRIBUTE_SALT = "salt";
@@ -32,7 +30,6 @@ public class UserProfile {
     private String subjectID;
     private boolean emailVerified;
     private String phoneNumber;
-    private List<ClientConsent> clientConsent;
     private boolean phoneNumberVerified;
     private String created;
     private String updated;
@@ -158,25 +155,6 @@ public class UserProfile {
 
     public UserProfile withTermsAndConditions(TermsAndConditions termsAndConditions) {
         this.termsAndConditions = termsAndConditions;
-        return this;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_CLIENT_CONSENT)
-    public List<ClientConsent> getClientConsent() {
-        return clientConsent;
-    }
-
-    public void setClientConsent(List<ClientConsent> clientConsent) {
-        this.clientConsent = clientConsent;
-    }
-
-    public UserProfile withClientConsent(ClientConsent consent) {
-        if (this.clientConsent == null) {
-            this.clientConsent = List.of(consent);
-        } else {
-            this.clientConsent.removeIf(t -> t.getClientId().equals(consent.getClientId()));
-            this.clientConsent.add(consent);
-        }
         return this;
     }
 

@@ -16,7 +16,8 @@ module "frontend_api_verify_mfa_code_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.user_credentials_encryption_policy_arn
+    local.user_credentials_encryption_policy_arn,
+    local.experian_phone_check_sqs_queue_policy_arn
   ]
 }
 
@@ -41,8 +42,11 @@ module "verify_mfa_code" {
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                = var.test_clients_enabled
     INTERNAl_SECTOR_URI                 = var.internal_sector_uri
+    EXPERIAN_PHONE_CHECKER_QUEUE_URL    = local.experian_phone_check_sqs_queue_id
+    PHONE_CHECKER_WITH_RETRY            = var.phone_checker_with_retry
     CODE_MAX_RETRIES_INCREASED          = var.code_max_retries_increased
     REDUCED_LOCKOUT_DURATION            = var.reduced_lockout_duration
+    SQS_ENDPOINT                        = var.use_localstack ? "http://localhost:45678/" : null
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
 

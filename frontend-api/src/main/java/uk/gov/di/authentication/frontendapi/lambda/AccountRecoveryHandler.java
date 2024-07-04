@@ -19,9 +19,11 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -58,6 +60,14 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
         this.auditService = new AuditService(configurationService);
     }
 
+    public AccountRecoveryHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(AccountRecoveryRequest.class, configurationService, redis);
+        this.dynamoAccountModifiersService =
+                new DynamoAccountModifiersService(configurationService);
+        this.auditService = new AuditService(configurationService);
+    }
+
     public AccountRecoveryHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -86,23 +96,25 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                     !dynamoAccountModifiersService.isAccountRecoveryBlockPresent(
                             commonSubjectId.getValue());
             LOG.info("Account recovery is permitted: {}", accountRecoveryPermitted);
+
             var auditableEvent =
                     accountRecoveryPermitted
                             ? ACCOUNT_RECOVERY_PERMITTED
                             : ACCOUNT_RECOVERY_NOT_PERMITTED;
-            auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getClientId(),
-                    commonSubjectId.getValue(),
-                    userContext
-                            .getUserProfile()
-                            .map(UserProfile::getEmail)
-                            .orElse(AuditService.UNKNOWN),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+            var auditContext =
+                    auditContextFromUserContext(
+                            userContext,
+                            commonSubjectId.getValue(),
+                            userContext
+                                    .getUserProfile()
+                                    .map(UserProfile::getEmail)
+                                    .orElse(AuditService.UNKNOWN),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+            auditService.submitAuditEvent(auditableEvent, auditContext);
             var accountRecoveryResponse = new AccountRecoveryResponse(accountRecoveryPermitted);
             LOG.info("Returning response back to frontend");
             return generateApiGatewayProxyResponse(200, accountRecoveryResponse);

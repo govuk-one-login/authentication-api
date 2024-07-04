@@ -21,8 +21,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
-import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
@@ -38,7 +36,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -53,6 +52,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password-1";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeStoreExtension = new AuthCodeExtension(180);
@@ -65,13 +66,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     void setup() throws JOSEException {
         var configurationService =
                 new AuthenticationTokenHandlerIntegrationTest.TestConfigurationService(
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
-                        tokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner);
+                        notificationsQueue, tokenSigner, docAppPrivateKeyJwtSigner);
 
         handler = new TokenHandler(configurationService);
 
@@ -101,7 +96,9 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         var response =
                 makeRequest(
                         Optional.of(requestBody),
-                        Map.of("Content-Type", "application/x-www-form-urlencoded"),
+                        Map.ofEntries(
+                                Map.entry("Content-Type", "application/x-www-form-urlencoded"),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
                         new HashMap<>());
 
         assertThat(response, hasStatus(200));
@@ -124,7 +121,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         assertTrue(authCodeStorePostHanderExecution.isPresent());
         assertTrue(authCodeStorePostHanderExecution.get().isHasBeenUsed());
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(TOKEN_SENT_TO_ORCHESTRATION));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(TOKEN_SENT_TO_ORCHESTRATION));
     }
 
     @Test
@@ -201,20 +199,12 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
     private static class TestConfigurationService extends IntegrationTestConfigurationService {
         public TestConfigurationService(
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
-                TokenSigningExtension ipvPrivateKeyJwtSigner,
-                SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
-                    auditEventTopic,
                     notificationQueue,
-                    auditSigningKey,
                     tokenSigningKey,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

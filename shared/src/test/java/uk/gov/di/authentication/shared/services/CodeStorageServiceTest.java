@@ -32,6 +32,7 @@ class CodeStorageServiceTest {
     private static final String SUBJECT = "some-subject";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long PW_CODE_EXPIRY_TIME = 900;
+    private static final long ACCOUNT_CREATION_CODE_EXPIRY_TIME = 3600;
     private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private final RedisConnectionService redisConnectionService =
@@ -77,6 +78,8 @@ class CodeStorageServiceTest {
         when(configurationService.getLockoutCountTTL()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getIncorrectPasswordLockoutCountTTL())
                 .thenReturn(PW_CODE_EXPIRY_TIME);
+        when(configurationService.getAccountCreationLockoutCountTTL())
+                .thenReturn(ACCOUNT_CREATION_CODE_EXPIRY_TIME);
     }
 
     @Test
@@ -370,6 +373,21 @@ class CodeStorageServiceTest {
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
                         String.valueOf(4),
                         CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    void shouldIncrementCountForIncorrectMfaCodeAttemptsCountAccountCreation() {
+        when(redisConnectionService.getValue(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
+                .thenReturn(String.valueOf(0));
+
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(TEST_EMAIL);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
+                        String.valueOf(1),
+                        ACCOUNT_CREATION_CODE_EXPIRY_TIME);
     }
 
     @ParameterizedTest

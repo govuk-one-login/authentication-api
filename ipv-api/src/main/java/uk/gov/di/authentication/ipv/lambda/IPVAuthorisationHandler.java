@@ -19,6 +19,7 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -103,6 +104,20 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
+    public IPVAuthorisationHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(IPVAuthorisationRequest.class, configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.authorisationService =
+                new IPVAuthorisationService(
+                        configurationService,
+                        redis,
+                        new KmsConnectionService(configurationService));
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -131,7 +146,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var pairwiseSubject =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userContext.getUserProfile().orElseThrow(),
-                            configurationService.getInternalSectorUri(),
+                            configurationService.getInternalSectorURI(),
                             authenticationService);
             var state = new State();
             var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
@@ -183,19 +198,23 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                                                             new ClientNotFoundException(
                                                                     userContext.getSession())),
                                     authenticationService,
-                                    configurationService.getInternalSectorUri())
+                                    configurationService.getInternalSectorURI())
                             .getValue();
+
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(userContext.getSession().getSessionId())
+                            .withUserId(
+                                    userContext.getSession().getInternalCommonSubjectIdentifier())
+                            .withEmail(request.getEmail())
+                            .withIpAddress(IpAddressHelper.extractIpAddress(input))
+                            .withPersistentSessionId(persistentId);
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     rpClientID.orElse(AuditService.UNKNOWN),
-                    clientSessionId,
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    request.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    persistentId,
+                    user,
                     pair(
                             "clientLandingPageUrl",
                             userContext

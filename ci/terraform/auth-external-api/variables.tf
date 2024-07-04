@@ -39,7 +39,7 @@ variable "enable_api_gateway_execution_logging" {
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 1
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
@@ -108,6 +108,12 @@ variable "orch_to_auth_public_signing_key" {
   default     = ""
   type        = string
   description = "A hardcoded value for the public key corresponding to the KMS created in the OIDC module. It is used to validate the signature of a client_assertion JWT (orch<->auth token endpoint)"
+}
+
+variable "orch_api_vpc_endpoint_id" {
+  default     = ""
+  type        = string
+  description = "The ID of the Execute API Gateway vpc endpoint in the orchestration account"
 }
 
 locals {

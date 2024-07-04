@@ -14,6 +14,7 @@ account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
 account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
+call_ticf_cri                               = true
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
@@ -41,17 +42,21 @@ lambda_max_concurrency = 0
 lambda_min_concurrency = 0
 endpoint_memory_size   = 1536
 
-lockout_duration                          = 30
-otp_code_ttl_duration                     = 120
-email_acct_creation_otp_code_ttl_duration = 60
+# lockout config
+lockout_duration                          = 600
+reduced_lockout_duration                  = 300
+incorrect_password_lockout_count_ttl      = 600
+lockout_count_ttl                         = 600
+otp_code_ttl_duration                     = 600
+email_acct_creation_otp_code_ttl_duration = 600
 
 
-orch_client_id = "orchestrationAuth"
+orch_client_id  = "orchestrationAuth"
+orch_account_id = "816047645251"
+
+contra_state_bucket = "di-auth-development-tfstate"
 
 orch_redirect_uri                  = "https://oidc.authdev2.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
-
-support_email_check_enabled = true
-
 
 oidc_origin_domain_enabled = true

@@ -5,15 +5,14 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class SessionService {
 
@@ -71,22 +70,18 @@ public class SessionService {
     }
 
     public Optional<Session> getSessionFromRequestHeaders(Map<String, String> headers) {
-        if (!headersContainValidHeader(
-                headers, SESSION_ID_HEADER, configurationService.getHeadersCaseInsensitive())) {
-            LOG.warn("Headers are missing Session-Id header");
-            return Optional.empty();
-        }
-        String sessionId =
-                getHeaderValueFromHeaders(
+        Optional<String> sessionId =
+                getOptionalHeaderValueFromHeaders(
                         headers,
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        if (sessionId == null) {
-            LOG.warn("Value not found for Session-Id header");
-            return Optional.empty();
+
+        if (sessionId.isEmpty()) {
+            LOG.warn("Value not found for Client-Session-Id header");
         }
 
-        return sanitiseBase64(sessionId)
+        return sessionId
+                .flatMap(InputSanitiser::sanitiseBase64)
                 .flatMap(
                         id -> {
                             try {

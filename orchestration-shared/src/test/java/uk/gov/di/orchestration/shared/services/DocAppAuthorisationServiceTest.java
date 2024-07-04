@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
@@ -92,8 +93,8 @@ class DocAppAuthorisationServiceTest {
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
     @BeforeEach
-    void setUp() throws Json.JsonException, MalformedURLException {
-        when(configurationService.getDocAppJwksUri()).thenReturn(JWKS_URL);
+    void setUp() throws Json.JsonException, MalformedURLException, KeySourceException {
+        when(configurationService.getDocAppJwksURI()).thenReturn(JWKS_URL);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));

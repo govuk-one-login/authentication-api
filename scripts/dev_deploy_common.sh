@@ -38,6 +38,7 @@ function usage() {
     -d, --delivery-receipts   run the delivery receipts terraform
     -u, --utils               run the utils terraform
     -t, --test-services       run the test services terraform
+    --ticf-stub               run the TICF stub terraform
     --destroy                 run all terraform with the -destroy flag (destroys all managed resources)
     -p, --prompt              will prompt for plan review before applying any terraform
     -x, --auth-external       run the auth external api terraform
@@ -57,6 +58,8 @@ RECEIPTS=0
 SHARED=0
 UTILS=0
 TEST_SERVICES=0
+TICF_STUB=0
+
 CLEAN=""
 RUN_SHELL=0
 TERRAFORM_OPTS="-auto-approve"
@@ -68,6 +71,7 @@ if [[ $# == 0 ]] || [[ $* == "-p" ]]; then
     OIDC=1
     INTERVENTIONS=1
     SHARED=1
+    TICF_STUB=1
 fi
 
 while [[ $# -gt 0 ]]; do
@@ -101,6 +105,9 @@ while [[ $# -gt 0 ]]; do
         ;;
     -t | --test-services)
         TEST_SERVICES=1
+        ;;
+    --ticf-stub)
+        TICF_STUB=1
         ;;
     --destroy)
         echo "PLEASE DON'T DESTROY, JUST REAPPLY"
@@ -152,6 +159,10 @@ fi
 
 if [[ $INTERVENTIONS == "1" ]]; then
     runTerraform "interventions-api-stub" "${TERRAFORM_OPTS}"
+fi
+
+if [[ $TICF_STUB == "1" ]]; then
+    runTerraform "ticf-cri-stub" "${TERRAFORM_OPTS}"
 fi
 
 if [[ $AM == "1" ]]; then

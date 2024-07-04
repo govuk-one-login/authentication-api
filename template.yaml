@@ -1,5 +1,7 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
+AWSTemplateFormatVersion: "2010-09-09"
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
 
 Parameters:
   Environment:
@@ -16,80 +18,214 @@ Parameters:
     Type: String
     Description: The ARN of the permissions boundary to apply when creating IAM roles
     Default: none
+  LoggingSubscriptionEndpointArn:
+    Type: String
+    Description: The ARN of the subscription endpoint to send logs to splunk
+    Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
-  UsePermissionsBoundary:
-    !Not [ !Equals [ none, !Ref PermissionsBoundary ] ]
-  UseCodeSigning:
-    !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
+  UsePermissionsBoundary: !Not [!Equals [none, !Ref PermissionsBoundary]]
+  UseCodeSigning: !Not [!Equals [none, !Ref CodeSigningConfigArn]]
+  IsNotDevEnvironment: !Not [!Equals [!Ref Environment, dev]]
+  AisAbortOnError:
+    !Not [
+      !Or [
+        !Equals [integration, !Ref Environment],
+        !Equals [production, !Ref Environment],
+      ],
+    ]
+  IpvExists:
+    !Or [
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
+  SendStorageToken:
+    !Not [
+      !Or [
+        !Equals [integration, !Ref Environment],
+        !Equals [production, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+      ],
+    ]
+  EnableProvisionedConcurrency:
+    !Or [
+      !Equals [!Ref Environment, staging],
+      !Equals [!Ref Environment, build],
+      !Equals [!Ref Environment, integration],
+      !Equals [!Ref Environment, production],
+    ]
+  IsNotProduction: !Not [!Equals [!Ref Environment, production]]
+  IsNotDevOrProd:
+    !Not [
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [production, !Ref Environment],
+      ],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      authApiId: "aqyf5d32s2"
+      authApiId: "dfwubyergf"
+      authExternalApiId: "48oqh70cm7"
       authAccountId: "761723964695"
       authEnvironment: sandpit
       serviceDomain: sandpit.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/87bbefac-6fac-4450-8ed6-9ad75c36fdf1
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/170fc24d-b278-49b0-a860-4fa1f3fa7a48
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8447683f-8800-4920-b4fe-1f410bf52ce0
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/a12c7616-57d4-4d9b-b98a-d0df5ee583d7
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:sandpit-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
+      docAppClientId: orch-dev
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/d2806c70-0832-46f3-9612-75cc9e745186
+      docAppEncryptionKeyId: KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/885ed2d5-21a9-4e26-bb87-24ecbb4b1875
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/daf80bee-5f09-496f-ba91-c1846de193c9
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/79b55133-ed01-45d8-94cd-99be01711e2c
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:816047645251:key/d74787b0-8d11-4dd9-8691-7c0e26856225
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/f2b0090b-56aa-4ff1-80fd-e8f8334199a7
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/51014e2f-859d-436e-ad58-feff9d6cf87b
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/65c56d6b-b341-4be8-aff6-224a2717379a
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
+      defaultProvisionedConcurrency: 0
+      aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
+      authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fcebbac-6a3a-4948-9700-e061ef3d308e
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/227f9cdd-3de3-4519-ab01-45302a10de95
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppCriDataV2Endpoint: credentials/issue
       docAppAud: https://dcmaw-cri.build.stubs.account.gov.uk
+      docAppAuthorisationUrl: https://dcmaw-cri.build.stubs.account.gov.uk/authorize
+      docAppClientId: orch-build
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f2603fe5-7d09-4279-a42d-e2363e11efb5
+      docAppEncryptionKeyId: KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/0096ee31-26aa-4c92-bea4-9dd9fa73dcf6
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/147435a7-f01d-4ed3-9485-ebe7f72808dd
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:767397776536:key/4d851d1e-acd1-4c73-a754-617ffd380b3d
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/1800ecc2-e04d-4cf5-9b4e-72eafa0c71f6
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/b1bc6357-0578-45cc-a192-50e609094b4e
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/fd8afa13-ccee-4199-9a01-d85483f3431d
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
+      defaultProvisionedConcurrency: 1
+      aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
+      authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/01d22c46-bccf-4a2f-bd3b-149fe03f5321
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/91836141-8c92-43ac-99a8-a586c73b6683
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
+      docAppDomain: https://api.review-b.staging.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.staging.account.gov.uk
+      docAppAuthorisationUrl: https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize
+      docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/63ce28d6-5482-4886-933d-33cd27f469d3
+      docAppEncryptionKeyId: ca6d5930-77a6-41a4-8192-125df996c084
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:758531536632:key/00051d8b-de72-4952-baab-3be6460ad844
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/32415ead-d88f-4724-aedf-5fe3ce8ed48e
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:590183975515:key/c653db36-52fa-475c-8866-e167e3e85761
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:758531536632:key/7a18b3e2-b98c-431e-8955-736837ee24cf
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:758531536632:key/d028f444-33fa-47b1-96ac-dcc830e5e37e
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
+      defaultProvisionedConcurrency: 3
+      aisUriSecretId: daea90b7-b7a9-45b1-98fb-7d9ce8da5a72
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
+      authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
+      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/6dccb5b3-2754-4c66-ba66-c11f861ad55f
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/42a8b69b-9488-44d2-94b8-144b4ff3b35c
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
+      docAppDomain: https://api.review-b.integration.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.integration.account.gov.uk
+      docAppAuthorisationUrl: https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize
+      docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/37aea309-c4a2-4ac7-8361-c1789f54df77
+      docAppEncryptionKeyId: 0948190d-384c-498d-81e2-a20dd30f147c
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:761723964695:key/031ece8b-a59a-4991-a2aa-98f486c69f60
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/f8897cf9-760f-463e-bb27-a86cc9e629de
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:058264132019:key/d1aefc2a-038d-460f-b6fd-d0ee749d3ad5
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:761723964695:key/c92ae9b2-2e2e-4476-a7c9-b52010440bc1
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:761723964695:key/96c3e909-da89-4149-9ac1-c782738b8954
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
+      defaultProvisionedConcurrency: 1
+      aisUriSecretId: ""
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
+      authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
       authEnvironment: production
       serviceDomain: account.gov.uk
       idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
+      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
+      storageTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0fce68a7-62bd-407d-919e-07f3fd621304
+      ipvTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/b1897252-b34b-4094-9e0b-466feed2b7f1
+      orchToAuthKeyArn: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
+      docAppDomain: https://api.review-b.account.gov.uk
       docAppCriDataV2Endpoint: userinfo/v2
       docAppAud: https://www.review-b.account.gov.uk
+      docAppAuthorisationUrl: https://www.review-b.account.gov.uk/dca/oauth2/authorize
+      docAppClientId: authOrchestratorDocApp
       docAppCredentialTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/ab10facb-aa4d-47b9-92bb-3974b9585fd4
+      docAppEncryptionKeyId: 7958938d-eea0-4e6d-9ea1-ec0b9d421f77
       docAppSigningKeyArn: arn:aws:kms:eu-west-2:172348255554:key/c6448889-ae6d-4db1-916c-9338a3c2bd1b
+      clientRegistryTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
+      userProfileTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
+      txmaEventEncryptionKeyArn: arn:aws:kms:eu-west-2:533266965190:key/4bc0dac2-f40f-4c3e-9f9e-30549dd8769d
+      orchToAuthTokenSigningKeyAlias: arn:aws:kms:eu-west-2:172348255554:key/cb986cd8-8ac7-43f1-8a74-15d1b77509d9
+      identityCredentialsTableKeyArn: arn:aws:kms:eu-west-2:172348255554:key/36023c7d-ec27-45c8-9edd-0761974dd0d3
+      spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
+      authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
+      defaultProvisionedConcurrency: 3
+      aisUriSecretId: ""
+  ProvisionedConcurrency:
+    staging:
+      TrustmarkFunction: 1
+    production:
+      TrustmarkFunction: 1
 
 Globals:
   Function:
@@ -97,26 +233,52 @@ Globals:
       Variables:
         AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
         DT_CONNECTION_AUTH_TOKEN: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_CONNECTION_BASE_URL: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_CLUSTER_ID: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_LOG_COLLECTION_AUTH_TOKEN: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_TENANT: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
     MemorySize: 1536
     Timeout: 30
     Runtime: java17
     Architectures:
       - x86_64
+    KmsKeyArn: !GetAtt MainKmsKey.Arn
     PermissionsBoundary: !If
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
@@ -127,19 +289,17 @@ Globals:
       - !Ref AWS::NoValue
     Layers:
       - !Sub
-        - '{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}'
-        - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
-    VpcConfig:
-      SecurityGroupIds:
-        - !Ref LambdaSecurityGroup
-      SubnetIds:
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
-        - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
+        - SecretArn:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              dynatraceSecretArn,
+            ]
 
 Resources:
   MainKmskeyAlias:
-    Type: 'AWS::KMS::Alias'
+    Type: "AWS::KMS::Alias"
     Properties:
       AliasName: "alias/mainKmsKey"
       TargetKeyId: !Ref MainKmsKey
@@ -170,29 +330,160 @@ Resources:
               ArnLike:
                 kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
 
+  #region RP Public Key DynamoDB Table
+
+  RpPublicKeyTableEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for RP public key DynamoDB table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIamManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowDynamodbAccessToEncryptionKey
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:dynamodb:table/arn: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*
+
+  RpPublicKeyCacheTable:
+    Type: AWS::DynamoDB::Table
+    # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
+    Properties:
+      TableName: RpPublicKeyCache
+      AttributeDefinitions:
+        - AttributeName: clientId
+          AttributeType: S
+        - AttributeName: keyId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: clientId
+          KeyType: HASH
+        - AttributeName: keyId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+        KMSMasterKeyId: !GetAtt RpPublicKeyTableEncryptionKey.Arn
+        SSEType: KMS
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: Name
+          Value: RpPublicKeyCache
+
+  #endregion
+
+  #region Fetch JWKS Lambda
+
+  FetchJwksFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not required
+    # checkov:skip=CKV_AWS_117: Lambda needs to exist outside our VPC so default AWS Lambda service VPC is OK
+    Properties:
+      FunctionName: !Sub ${Environment}-FetchJwksFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref FetchJwksFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - FetchJwksFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117
+
+  FetchJwksFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-fetch-jwks-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  #endregion
+
+  #region Open ID Configuration Lambda
+
   OpenIdConfigurationFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
+      FunctionName: !Sub ${Environment}-OpenIdConfigurationFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - OpenIdConfigurationFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          OIDC_API_BASE_URL:  !Sub
+          OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ENVIRONMENT: !Sub ${Environment}
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   OpenIdConfigurationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -201,22 +492,36 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   OpenIdConfigurationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-openid-configuration-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
+
+  OpenIdConfigurationSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref OpenIdConfigurationFunctionLogGroup
 
   OpenIdConfigurationFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-openid-configuration-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref OpenIdConfigurationFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-openid-configuration-error-count
@@ -233,8 +538,8 @@ Resources:
       AlarmName: !Sub ${Environment}-openid-configuration-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: OpenIdConfigurationFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: OpenIdConfigurationFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-openid-configuration-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -263,7 +568,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref OpenIdConfigurationFunction.Alias
+                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -275,34 +580,59 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref OpenIdConfigurationFunction.Alias
+                  Value: !Sub ${Environment}-OpenIdConfigurationFunction
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Trustmark Lambda
 
   TrustmarkFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
+      FunctionName: !Sub ${Environment}-TrustmarkFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - TrustmarkFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          OIDC_API_BASE_URL:  !Sub
+          OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ENVIRONMENT: !Sub ${Environment}
-          FRONTEND_BASE_URL: !Sub
-            - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   TrustmarkFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -311,22 +641,36 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/trustmark'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/trustmark"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   TrustmarkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-trustmark-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
+
+  TrustmarkSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TrustmarkFunctionLogGroup
 
   TrustmarkFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-trustmark-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref TrustmarkFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-trustmark-error-count
@@ -343,8 +687,8 @@ Resources:
       AlarmName: !Sub ${Environment}-trustmark-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: TrustmarkFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: TrustmarkFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-trustmark-error-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -373,7 +717,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref TrustmarkFunction.Alias
+                  Value: !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -385,41 +729,54 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref TrustmarkFunction.Alias
+                  Value: !Sub ${Environment}-TrustmarkFunction
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Back Channel Logout Request Lambda
 
   BackChannelLogoutRequestFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
+    # checkov:skip=CKV_AWS_117: Lambda needs open egress so isn't in VPC
     Properties:
+      FunctionName: !Sub ${Environment}-BackChannelLogoutRequestFunction
       AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref BackChannelLogoutRequestFunctionLogGroup
+      Events:
+        BackChannelLogoutQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BackChannelLogoutQueue.Arn
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
           OIDC_API_BASE_URL: !Sub
-          - https://oidc.${ServiceDomain}/
-          - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Policies:
-        Statement:
-          - Sid: AllowIdTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref BackChannelLogoutQueueConsumePolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
 
   BackChannelLogoutRequestFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -427,20 +784,33 @@ Resources:
       FunctionName: !Ref BackChannelLogoutRequestFunction.Alias
       Action: lambda:InvokeFunction
       Principal: sqs.amazonaws.com
-      SourceArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, backchannelLogoutQueueArn ]
+      SourceArn:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          backchannelLogoutQueueArn,
+        ]
 
   BackChannelLogoutRequestFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-backchannel-logout-request-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
+
+  BackChannelLogoutRequestSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref BackChannelLogoutRequestFunctionLogGroup
 
   BackChannelLogoutRequestFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-backchannel-logout-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref BackChannelLogoutRequestFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-backchannel-logout-request-count
@@ -457,8 +827,8 @@ Resources:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-alarm
       ComparisonOperator: GreaterThanOrEqualToThreshold
       EvaluationPeriods: 1
-      MetricName: BackChannelLogoutRequestFunctionErrorMetricFilter.MetricTransformations[0].MetricName
-      Namespace: BackChannelLogoutRequestFunctionErrorMetricFilter.MetricTransformations[0].MetricNamespace
+      MetricName: !Sub ${Environment}-backchannel-logout-request-count
+      Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
       Threshold: 10
@@ -487,7 +857,7 @@ Resources:
               MetricName: Invocations
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref BackChannelLogoutRequestFunction.Alias
+                  Value: !Sub ${Environment}-BackChannelLogoutRequestFunction
             Period: 60
             Stat: Sum
             Unit: Count
@@ -499,115 +869,159 @@ Resources:
               MetricName: Errors
               Dimensions:
                 - Name: FunctionName
-                  Value: !Ref BackChannelLogoutRequestFunction.Alias
+                  Value: !Sub ${Environment}-BackChannelLogoutRequestFunction
             Period: 60
             Stat: Sum
             Unit: Count
+  #endregion
+
+  #region Doc App Callback Lambda
 
   DocAppCallbackFunction:
     Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
-    # checkov:skip=CKV_AWS_117: VPC settings are global
     Properties:
+      FunctionName: !Sub ${Environment}-DocAppCallbackFunction
       AutoPublishAlias: latest
       CodeUri: ./doc-checking-app-api
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
-      ReservedConcurrentExecutions: 1
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - DocAppCallbackFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           CUSTOM_DOC_APP_CLAIM_ENABLED: true
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          DOC_APP_AUTHORISATION_CLIENT_ID: authOrchestratorDocApp
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !Sub
-            - "alias/${AuthEnvironment}-doc-app-auth-kms-key-alias"
-            - AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          DOC_APP_BACKEND_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
-          DOC_APP_CRI_DATA_V2_ENDPOINT: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCriDataV2Endpoint ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DOC_APP_AUTHORISATION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppClientId,
+            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppSigningKeyArn,
+            ]
+          DOC_APP_BACKEND_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppBackendUri,
+            ]
+          DOC_APP_CRI_DATA_V2_ENDPOINT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppCriDataV2Endpoint,
+            ]
           DOC_APP_CRI_DATA_ENDPOINT: unused
-          DOC_APP_V2_DATA_ENDPOINT_ENABLED: true
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
-            - DocAppBackendUri: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
-          DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
+            - DocAppBackendUri:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  docAppBackendUri,
+                ]
+          DOC_APP_AUD:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
-            - https://identity.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          LOGIN_URI: !Sub
-            - https://signin.${ServiceDomain}/doc-app-callback
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
-        Statement:
-          - Sid: AllowGetParameters
-            Effect: "Allow"
-            Action:
-              - "ssm:GetParameter"
-              - "ssm:GetParameters"
-            Resource:
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-master-host"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-tls"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-port"
-              - !Sub "arn:aws:ssm:eu-west-2:816047645251:parameter/${Environment}-session-redis-password"
-          - Sid: AllowDecryptOfParameters
-            Effect: "Allow"
-            Action: "kms:Decrypt"
-            Resource: !GetAtt MainKmsKey.Arn
-          - Sid: AllowDocAppCredentialTableAccess
-            Effect: "Allow"
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:UpdateItem
-              - dynamodb:PutItem
-            Resource: !Sub
-              - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential'
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
-          - Sid: AllowDocAppCredentialTableKms
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-              - kms:ReEncrypt*
-              - kms:GenerateDataKey*
-              - kms:CreateGrant
-              - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
-          - Sid: AllowDocAppSigningKey
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+        - !Ref DocAppCredentialTableReadAccessPolicy
+        - !Ref DocAppCredentialTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref DocAppSigningKmsAccessPolicy
       Tags:
-        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_173
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
   DocAppCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${Environment}-doc-app-callback-lambda
       KmsKeyId: !GetAtt MainKmsKey.Arn
-      RetentionInDays: 14
+      RetentionInDays: 30
+
+  DocAppSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref DocAppCallbackFunctionLogGroup
 
   DocAppCallbackFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
@@ -616,9 +1030,2484 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+  #endregion
+
+  #region Token Lambda
+
+  TokenFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-TokenFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref TokenFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - TokenFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  TokenFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref TokenFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/token"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  TokenFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-token-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  TokenSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref TokenFunctionLogGroup
+
+  TokenFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-token-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref TokenFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-token-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  TokenFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-token-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-token-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  TokenFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-token-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} token lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-TokenFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-TokenFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  #region Logout Lambda
+
+  LogoutFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-LogoutFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref LogoutFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - LogoutFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
+        - !Ref BackChannelLogoutQueueWritePolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  LogoutFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LogoutFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/logout
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  LogoutFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-logout-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  LogoutFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref LogoutFunctionLogGroup
+
+  LogoutFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-logout-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref LogoutFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-logout-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  LogoutFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} logout lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-logout-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-logout-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  LogoutFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-logout-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} logout lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-LogoutFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-LogoutFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region Authentication Callback Lambda
+
+  AuthenticationCallbackFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthenticationCallbackFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - AuthenticationCallbackFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
+            - "{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}"
+            - SecretArn: !Ref AccountInterventionsServiceUriSecret
+              SecretId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  aisUriSecretId,
+                ]
+          AUTHENTICATION_BACKEND_URI: !Sub
+            - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
+            - AuthExternalApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authExternalApiId,
+                ]
+              VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          IDENTITY_ENABLED: true
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          IPV_AUDIENCE: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/ipv-callback
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
+          IPV_AUTHORISATION_URI: !Sub
+            - https://identity.${ServiceDomain}/oauth2/authorize
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              ipvTokenKeyArn,
+            ]
+          ORCH_CLIENT_ID: orchestrationAuth
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchToAuthKeyArn,
+            ]
+          REDIS_KEY: session
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
+            !If [AisAbortOnError, true, false]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              storageTokenKeyArn,
+            ]
+          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [SendStorageToken, true, false]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref AuthenticationCallbackUserInfoTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref StorageTokenSigningKmsAccessPolicy
+        - !Ref IpvTokenSigningKmsAccessPolicy
+        - !Ref OrchToAuthSigningKmsAccessPolicy
+        - !Ref IpvPublicEncryptionKeyAccessPolicy
+        - !Ref AccountInterventionsServiceUriSecretAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  AuthenticationCallbackFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthenticationCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/orchestration-redirect"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  AuthenticationCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-authentication-callback-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  AuthenticationCallbackSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
+
+  AuthenticationCallbackFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-authentication-callback-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-authentication-callback-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthenticationCallbackFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-authentication-callback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-authentication-callback-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthenticationCallbackFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-authentication-callback-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authentication callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthenticationCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region Jwks Lambda
+
+  JwksFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-JwksFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref JwksFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - JwksFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppSigningKeyArn,
+            ]
+      Policies:
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
+        - !Ref DocAppSigningKmsAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  JwksFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref JwksFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/jwks.json"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  JwksFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-jwks-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  JwksSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref JwksFunctionLogGroup
+
+  JwksFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-jwks-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref JwksFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-jwks-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  JwksFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-jwks-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-jwks-error-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  JwksFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-jwks-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} jwks lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-JwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-JwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region Authorisation Lambda
+
+  AuthorisationFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthorisationFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref AuthorisationFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - AuthorisationFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          CUSTOM_DOC_APP_CLAIM_ENABLED: true
+          DOC_APP_AUD:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
+          DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/doc-app-callback
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DOC_APP_AUTHORISATION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppClientId,
+            ]
+          DOC_APP_AUTHORISATION_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppAuthorisationUrl,
+            ]
+          DOC_APP_DOMAIN:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppDomain,
+            ]
+          DOC_APP_ENCRYPTION_KEY_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppEncryptionKeyId,
+            ]
+          DOC_APP_JWKS_URL: !Sub
+            - ${DocAppBackendUri}/.well-known/jwks.json
+            - DocAppBackendUri:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  docAppBackendUri,
+                ]
+          DOC_APP_NEW_AUD_CLAIM_ENABLED: true
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppSigningKeyArn,
+            ]
+          DOMAIN_NAME:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              serviceDomain,
+            ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          ENVIRONMENT: !Sub ${Environment}
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          IDENTITY_ENABLED: true
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ORCH_CLIENT_ID: orchestrationAuth
+          ORCH_REDIRECT_URI: !Sub
+            - https://oidc.${ServiceDomain}/orchestration-redirect
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchToAuthKeyArn,
+            ]
+          REDIS_KEY: session
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref DocAppSigningKmsAccessPolicy
+        - !Ref OrchToAuthSigningKmsAccessPolicy
+        - !Ref AuthPublicEncryptionKeyAccessPolicy
+        - !Ref IpvCapacityAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  AuthorisationFunctionCrossAccountGetPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorisationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/authorize"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  AuthorisationFunctionCrossAccountPostPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthorisationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/authorize"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  AuthorisationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-authorisation-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  AuthorisationSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+
+  AuthorisationFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-authorisation-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthorisationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-authorisation-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthorisationFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-authorisation-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-authorisation-error-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthorisationFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-authorisation-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} authorisation lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthorisationFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthorisationFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  #region User Info Function
+
+  UserInfoFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-UserInfoFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref UserInfoFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - UserInfoFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+      Policies:
+        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref DocAppCredentialTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref AuthenticationCallbackUserInfoTableReadAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IdTokenKmsAccessPolicy
+        - !Ref IdTokenKmsRsaAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  UserInfoFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UserInfoFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/userinfo"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  UserInfoFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-userinfo-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  UserInfoFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UserInfoFunctionLogGroup
+
+  UserInfoFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-userinfo-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref UserInfoFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-userinfo-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  UserInfoFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-userinfo-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-userinfo-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  UserInfoFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-userinfo-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} userinfo lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-UserInfoFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-UserInfoFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  #region Auth Code Function
+
+  AuthCodeFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-AuthCodeFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref AuthCodeFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - AuthCodeFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  AuthCodeFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AuthCodeFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/auth-code"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  AuthCodeFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-auth-code-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  AuthCodeFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref AuthCodeFunctionLogGroup
+
+  AuthCodeFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-auth-code-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref AuthCodeFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-auth-code-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  AuthCodeFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-auth-code-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-auth-code-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  AuthCodeFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-auth-code-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} auth code lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthCodeFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-AuthCodeFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  #region Update Client Config Lambda
+
+  UpdateClientConfigFunction:
+    Type: AWS::Serverless::Function
+    Condition: IsNotProduction
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-UpdateClientConfigFunction
+      AutoPublishAlias: latest
+      CodeUri: ./client-registry-api
+      Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref UpdateClientConfigFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref ClientRegistryTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  UpdateClientConfigFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Condition: IsNotProduction
+    Properties:
+      FunctionName: !Ref UpdateClientConfigFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/PUT/connect/register/{clientId}"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  UpdateClientConfigFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: IsNotProduction
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-update-client-config-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  UpdateClientConfigFunctionSubscriptionFilter:
+    Condition: IsNotDevOrProd
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref UpdateClientConfigFunctionLogGroup
+
+  UpdateClientConfigFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Condition: IsNotProduction
+    Properties:
+      FilterName: !Sub ${Environment}-update-client-config-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref UpdateClientConfigFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-update-client-config-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  UpdateClientConfigFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} update client config lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-update-client-config-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-update-client-config-error-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  UpdateClientConfigFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
+    Properties:
+      AlarmName: !Sub ${Environment}-update-client-config-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} update client config lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-UpdateClientConfigFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-UpdateClientConfigFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region Client Registration Function
+  ClientRegistrationFunction:
+    Type: AWS::Serverless::Function
+    Condition: IsNotProduction
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-ClientRegistrationFunction
+      AutoPublishAlias: latest
+      CodeUri: ./client-registry-api
+      Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref ClientRegistrationFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+      Policies:
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref ClientRegistryTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  ClientRegistrationFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Condition: IsNotProduction
+    Properties:
+      FunctionName: !Ref ClientRegistrationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/connect/register"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  ClientRegistrationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: IsNotProduction
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-register-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  ClientRegistrationFunctionSubscriptionFilter:
+    Condition: IsNotDevOrProd
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref ClientRegistrationFunctionLogGroup
+
+  ClientRegistrationFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Condition: IsNotProduction
+    Properties:
+      FilterName: !Sub ${Environment}-register-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref ClientRegistrationFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-register-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  ClientRegistrationFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} register lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-register-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-register-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  ClientRegistrationFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IsNotProduction
+    Properties:
+      AlarmName: !Sub ${Environment}-register-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} register lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-ClientRegistrationFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-ClientRegistrationFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
+  #endregion
+
+  #region IPV Callback Lambda
+
+  IpvCallbackFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-IpvCallbackFunction
+      AutoPublishAlias: latest
+      CodeUri: ./ipv-api
+      Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref IpvCallbackFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - IpvCallbackFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          REDIS_KEY: session
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
+            - "{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}"
+            - SecretArn: !Ref AccountInterventionsServiceUriSecret
+              SecretId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  aisUriSecretId,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
+            !If [AisAbortOnError, true, false]
+          IPV_AUDIENCE: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_CALLBACK_URI: !If
+            - IpvExists
+            - !Sub
+              - https://oidc.${ServiceDomain}/ipv-callback
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_CLIENT_ID: !If
+            - IpvExists
+            - authOrchestrator
+            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_URI: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}/oauth2/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Ref AWS::NoValue
+          IPV_BACKEND_URI: !If
+            - IpvExists
+            - !Sub
+              - https://api.identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Ref AWS::NoValue
+          IPV_NO_SESSION_RESPONSE_ENABLED: true
+          IPV_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              ipvTokenKeyArn,
+            ]
+          SPOT_QUEUE_URL: !If
+            - IpvExists
+            - !Sub
+              - https://sqs.eu-west-2.amazonaws.com/${AccountId}/${AuthEnvironment}-spot-request-queue
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+            - !Ref AWS::NoValue
+      Policies:
+        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref IdentityCredentialsTableWriteAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref UserProfileTableReadAccessPolicy
+        - !Ref UserProfileTableWriteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref RedisParametersAccessPolicy
+        - !Ref IpvTokenSigningKmsAccessPolicy
+        - !Ref SpotRequestQueueWritePolicy
+        - !Ref AccountInterventionsServiceUriSecretAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  IpvCallbackFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IpvCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/ipv-callback
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  IpvCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-ipv-callback-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  IpvCallbackFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref IpvCallbackFunctionLogGroup
+
+  IpvCallbackFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-ipv-callback-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref IpvCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-ipv-callback-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  IpvCallbackFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-ipv-callback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-ipv-callback-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  IpvCallbackFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-ipv-callback-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} ipv-callback lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-IpvCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-IpvCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region SPOT Response Lambda
+
+  SpotResponseFunction:
+    Type: AWS::Serverless::Function
+    Condition: IpvExists
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-SpotResponseFunction
+      AutoPublishAlias: latest
+      CodeUri: ./ipv-api
+      Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref SpotResponseFunctionLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+      Policies:
+        - !Ref IdentityCredentialsTableReadAccessPolicy
+        - !Ref IdentityCredentialsTableWriteAccessPolicy
+        - !Ref IdentityCredentialsTableDeleteAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref SpotResponseQueueConsumePolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  SpotResponseQueueEventMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: IpvExists
+    Properties:
+      Enabled: true
+      EventSourceArn: !Sub
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
+        - SecretArn: !Ref SpotResponseQueueArnSecret
+      FunctionName: !Ref SpotResponseFunction.Alias
+
+  SpotResponseFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: IpvExists
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-spot-response-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  SpotResponseFunctionSubscriptionFilter:
+    Condition: IpvExists
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref SpotResponseFunctionLogGroup
+
+  SpotResponseFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Condition: IpvExists
+    Properties:
+      FilterName: !Sub ${Environment}-spot-response-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref SpotResponseFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-spot-response-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  SpotResponseFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IpvExists
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-spot-response-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-spot-response-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  SpotResponseFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: IpvExists
+    Properties:
+      AlarmName: !Sub ${Environment}-spot-response-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} spot response lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SpotResponseFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SpotResponseFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  #region Back Channel Logout Queue
+
+  BackChannelLogoutQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-BackChannelLogoutQueue
+      MaximumMessageSize: 2048
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt BackChannelLogoutDeadLetterQueue.Arn
+        maxReceiveCount: 3
+      KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+
+  BackChannelLogoutDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub ${Environment}-BackChannelLogoutDlq
+      KmsMasterKeyId: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+      MessageRetentionPeriod: 21600
+
+  BackChannelLogoutQueueEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS encryption key for back channel logout queue and dlq
+      PendingWindowInDays: 30
+      KeyUsage: ENCRYPT_DECRYPT
+      KeySpec: SYMMETRIC_DEFAULT
+      EnableKeyRotation: true
+  #endregion
+
+  #region Storage Token Jwk Lambda
+
+  StorageTokenJwkFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-StorageTokenJwkFunction
+      AutoPublishAlias: latest
+      CodeUri: ./oidc-api
+      Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref StorageTokenJwkFunctionLogGroup
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - StorageTokenJwkFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              storageTokenKeyArn,
+            ]
+      Policies:
+        - !Ref StorageTokenSigningKmsAccessPolicy
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  StorageTokenJwkFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StorageTokenJwkFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/storage-token-jwk.json
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
+
+  StorageTokenJwkFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-storage-token-jwk-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  StorageTokenJwkFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-storage-token-jwk-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref StorageTokenJwkFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-storage-token-jwk-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  StorageTokenJwkFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-storage-token-jwk-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-storage-token-jwk-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  StorageTokenJwkFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-storage-token-jwk-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} storage-token-jwk lambda.ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-StorageTokenJwkFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-StorageTokenJwkFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
+  AccountInterventionsServiceUriSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: account_interventions_service_uri
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  SpotResponseQueueArnSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: spot_response_queue_arn
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  SpotResponseQueueKeyArnSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: spot_response_queue_key_arn
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  HttpsEgressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow egress to external services
+      VpcId:
+        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outgoing HTTPS requests from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -644,15 +3533,914 @@ Resources:
           FromPort: 443
           ToPort: 443
 
+  #region Policies
+
+  IdentityCredentialsTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIdentityCredentialsTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowIdentityCredentialsTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                identityCredentialsTableKeyArn,
+              ]
+
+  IdentityCredentialsTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIdentityCredentialsTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowIdentityCredentialsTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                identityCredentialsTableKeyArn,
+              ]
+
+  IdentityCredentialsTableDeleteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIdentityCredentialsTableDeleteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DeleteItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowIdentityCredentialsTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                identityCredentialsTableKeyArn,
+              ]
+
+  ClientRegistryTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientRegistryTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowClientRegistryTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                clientRegistryTableKeyArn,
+              ]
+
+  ClientRegistryTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowClientRegistryTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchWriteItem
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowClientRegistryTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                clientRegistryTableKeyArn,
+              ]
+
+  DocAppCredentialTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDocAppCredentialTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeStream
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowDocAppCredentialTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                docAppCredentialTableKeyArn,
+              ]
+
+  DocAppCredentialTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDocAppCredentialTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowDocAppCredentialTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                docAppCredentialTableKeyArn,
+              ]
+
+  UserProfileTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowUserProfileTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeStream
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+          - Sid: AllowUserProfileTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                userProfileTableKeyArn,
+              ]
+
+  UserProfileTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowUserProfileTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowUserProfileTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                userProfileTableKeyArn,
+              ]
+
+  AuthenticationCallbackUserInfoTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthenticationCallbackUserInfoTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:DescribeTable
+              - dynamodb:DescribeStream
+              - dynamodb:Get*
+              - dynamodb:Query
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo/index/*
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
+          - Sid: AllowAuthenticationCallbackUserInfoTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authenticationCallbackUserinfoKeyArn,
+              ]
+
+  AuthenticationCallbackUserInfoTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAuthenticationCallbackUserInfoTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:UpdateItem
+              - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
+            Resource: !Sub
+              - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowAuthenticationCallbackUserInfoTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authenticationCallbackUserinfoKeyArn,
+              ]
+
+  TxmaQueueSendPermissionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowTxMAEventKms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                txmaEventEncryptionKeyArn,
+              ]
+          - Sid: AllowSQSTxMA
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !Sub arn:aws:sqs:eu-west-2:${AWS::AccountId}:orchestration-${Environment}-txma-AuditEventQueue
+
+  RedisParametersAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource:
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-master-host
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-tls
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-port
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-session-redis-password
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
+  IpvPublicEncryptionKeyAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetIpvPublicParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource: !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-public-encryption-key
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
+  AuthPublicEncryptionKeyAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource:
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-auth-public-encryption-key
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
+  IpvCapacityAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowGetParameters
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource:
+              - !Sub arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-ipv-capacity
+          - Sid: AllowDecryptOfParameters
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
+  IdTokenKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIdTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  idTokenKeyArn,
+                ]
+
+  IdTokenKmsRsaAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIdTokenSigningKmsRsa
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  idTokenKeyRsaArn,
+                ]
+
+  DocAppSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDocAppSigningKey
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                docAppSigningKeyArn,
+              ]
+
+  StorageTokenSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowStorageTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  storageTokenKeyArn,
+                ]
+
+  IpvTokenSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIpvTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  ipvTokenKeyArn,
+                ]
+
+  OrchToAuthSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowOrchToAuthSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  orchToAuthKeyArn,
+                ]
+
+  BackChannelLogoutQueueWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowBackChannelLogoutQueueWrite
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt BackChannelLogoutQueue.Arn
+          - Sid: AllowEncryptBackChannelLogoutQueue
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+
+  BackChannelLogoutQueueConsumePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowConsumeFromBackChannelLogout
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt BackChannelLogoutQueue.Arn
+          - Sid: AllowDecryptBackChannelLogoutQueue
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt BackChannelLogoutQueueEncryptionKey.Arn
+
+  SpotResponseQueueConsumePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IpvExists
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowSpotResponseQueueReadAccess
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+            Resource: !Sub
+              - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
+              - SecretArn: !Ref SpotResponseQueueArnSecret
+          - Sid: AllowSpotResponseQueueKms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !Sub
+              - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
+              - SecretArn: !Ref SpotResponseQueueKeyArnSecret
+
+  SpotRequestQueueWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowWriteAccessToSpotQueue
+            Effect: Allow
+            Action:
+              - sqs:SendMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:GetQueueAttributes
+            Resource: !Sub
+              - arn:aws:sqs:eu-west-2:${AccountId}:${AuthEnvironment}-spot-request-queue
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
+          - Sid: AllowEncryptionAccessToSpotQueueKey
+            Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                spotRequestQueueKmsArn,
+              ]
+
+  AccountInterventionsServiceUriSecretAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+            Resource: !Ref AccountInterventionsServiceUriSecret
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: !GetAtt MainKmsKey.Arn
+
+  #endregion
+
+  #region Slack notifications
+
   SlackEvents:
     Type: AWS::SNS::Topic
     Properties:
+      DisplayName: !Sub "Slack Alerts for ${Environment}"
       TopicName: !Sub ${Environment}-slack-events
       KmsMasterKeyId: !GetAtt MainKmsKey.Arn
 
+  SlackEventsPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref SlackEvents
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sns:Publish
+            Effect: Allow
+            Resource: !Ref SlackEvents
+            Principal:
+              Service:
+                - cloudwatch.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceAccount: !Ref AWS::AccountId
+
+  SlackNotificationsFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: SlackNotificationsFunction doesn't need vpc configuration
+    IgnoreGlobals: "*"
+    Properties:
+      AutoPublishAlias: latest
+      FunctionName: !Sub ${Environment}-SlackNotificationsFunction
+      PermissionsBoundary: !If
+        - UsePermissionsBoundary
+        - !Ref PermissionsBoundary
+        - !Ref AWS::NoValue
+      CodeSigningConfigArn: !If
+        - UseCodeSigning
+        - !Ref CodeSigningConfigArn
+        - !Ref AWS::NoValue
+      CodeUri: ./orchestration-alerting
+      Handler: slackNotifications.handler
+      ReservedConcurrentExecutions: 1
+      Runtime: "nodejs20.x"
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          DEPLOY_ENVIRONMENT: !Ref Environment
+      Events:
+        SNS:
+          Type: SNS
+          Properties:
+            Topic: !Ref SlackEvents
+      Policies:
+        - Statement:
+            - Sid: AllowGetParameters
+              Effect: "Allow"
+              Action:
+                - "ssm:GetParameter"
+                - "ssm:GetParameters"
+              Resource:
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-channel-id"
+                - !Sub "arn:aws:ssm:eu-west-2:${AWS::AccountId}:parameter/${Environment}-slack-hook-url"
+
+  SlackNotificationsPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SlackNotificationsFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Ref SlackEvents
+
+  #endregion
+
 Outputs:
   SlackEventsArn:
-    Description: 'ARN of the SlackEvents SNS topic'
+    Description: "ARN of the SlackEvents SNS topic"
     Value: !Ref SlackEvents
     Export:
-      Name: !Sub '${AWS::StackName}-SlackEventsArn'
+      Name: !Sub "${AWS::StackName}-SlackEventsArn"

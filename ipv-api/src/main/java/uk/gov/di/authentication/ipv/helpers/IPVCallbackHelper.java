@@ -15,6 +15,7 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -34,6 +35,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -77,8 +79,30 @@ public class IPVCallbackHelper {
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueUri(),
-                        configurationService.getSqsEndpointUri());
+                        configurationService.getSpotQueueURI(),
+                        configurationService.getSqsEndpointURI());
+        this.authCodeResponseService =
+                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+    }
+
+    public IPVCallbackHelper(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService, redis, SerializationService.getInstance());
+        this.configurationService = configurationService;
+        this.dynamoClientService = new DynamoClientService(configurationService);
+        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
+        this.objectMapper = SerializationService.getInstance();
+        this.sessionService = new SessionService(configurationService, redis);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getSpotQueueURI(),
+                        configurationService.getSqsEndpointURI());
         this.authCodeResponseService =
                 new AuthCodeResponseGenerationService(configurationService, dynamoService);
     }
@@ -122,13 +146,9 @@ public class IPVCallbackHelper {
         auditService.submitAuditEvent(
                 IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                sessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(sessionId));
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -200,15 +220,15 @@ public class IPVCallbackHelper {
         auditService.submitAuditEvent(
                 IPVAuditableEvent.AUTH_CODE_ISSUED,
                 authRequest.getClientID().getValue(),
-                clientSessionId,
-                session.getSessionId(),
-                internalPairwiseSubjectId,
-                Objects.isNull(session.getEmailAddress())
-                        ? AuditService.UNKNOWN
-                        : session.getEmailAddress(),
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(session.getSessionId())
+                        .withUserId(internalPairwiseSubjectId)
+                        .withEmail(
+                                Optional.ofNullable(session.getEmailAddress())
+                                        .orElse(AuditService.UNKNOWN))
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId),
                 pair("internalSubjectId", subjectId),
                 pair("isNewAccount", session.isNewAccount()),
                 pair("rpPairwiseId", rpPairwiseSubject.getValue()),

@@ -8,23 +8,20 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
-import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
@@ -33,6 +30,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -80,6 +79,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
     }
 
+    public SignUpHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        super(SignupRequest.class, configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -100,23 +106,20 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.getPassword());
 
-        if (passwordValidationError.isEmpty()) {
-            LOG.info("No password validation errors found");
-            if (authenticationService.userExists(request.getEmail())) {
-
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+        if (passwordValidationError.isEmpty()) {
+            LOG.info("No password validation errors found");
+            if (authenticationService.userExists(request.getEmail())) {
+
+                auditService.submitAuditEvent(CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
@@ -135,6 +138,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             user.getUserProfile(),
                             configurationService.getInternalSectorUri(),
                             authenticationService);
+            auditContext = auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue());
 
             LOG.info("Calculating RP pairwise identifier");
             var rpPairwiseId =
@@ -151,21 +155,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                                     .getValue())
                             .orElse(AuditService.UNKNOWN);
 
-            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
-
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    internalCommonSubjectIdentifier.getValue(),
-                    request.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    auditContext,
                     pair("internalSubjectId", user.getUserProfile().getSubjectID()),
                     pair("rpPairwiseId", rpPairwiseId));
 
@@ -179,11 +171,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                                     internalCommonSubjectIdentifier.getValue()));
 
             LOG.info("Successfully processed request");
-            try {
-                return generateApiGatewayProxyResponse(200, new SignUpResponse(consentRequired));
-            } catch (JsonException e) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-            }
+            return generateApiGatewayProxyResponse(200, "");
         } else {
             LOG.info("Error message: {}", passwordValidationError.get().getMessage());
             return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());

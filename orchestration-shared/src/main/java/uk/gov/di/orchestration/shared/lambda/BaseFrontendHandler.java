@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
@@ -51,7 +52,6 @@ public abstract class BaseFrontendHandler<T>
     protected final ClientService clientService;
     protected final AuthenticationService authenticationService;
     protected final Json objectMapper = SerializationService.getInstance();
-    protected boolean loadUserCredentials = false;
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -68,24 +68,6 @@ public abstract class BaseFrontendHandler<T>
         this.authenticationService = authenticationService;
     }
 
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            SessionService sessionService,
-            ClientSessionService clientSessionService,
-            ClientService clientService,
-            AuthenticationService authenticationService,
-            boolean loadUserCredentials) {
-        this(
-                clazz,
-                configurationService,
-                sessionService,
-                clientSessionService,
-                clientService,
-                authenticationService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
@@ -98,9 +80,13 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
-            boolean loadUserCredentials) {
-        this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
+            RedisConnectionService redis) {
+        this.clazz = clazz;
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.clientService = new DynamoClientService(configurationService);
+        this.authenticationService = new DynamoService(configurationService);
     }
 
     @Override
@@ -189,15 +175,6 @@ public abstract class BaseFrontendHandler<T>
                                                                 .toLowerCase(Locale.ROOT)))
                                         .withUserAuthenticated(false);
                         });
-
-        if (loadUserCredentials) {
-            session.map(Session::getEmailAddress)
-                    .map(authenticationService::getUserCredentialsFromEmail)
-                    .ifPresent(
-                            userCredentials ->
-                                    userContextBuilder.withUserCredentials(
-                                            Optional.of(userCredentials)));
-        }
 
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
 

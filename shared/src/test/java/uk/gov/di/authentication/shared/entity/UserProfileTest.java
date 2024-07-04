@@ -4,15 +4,12 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.List;
-import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -31,10 +28,6 @@ class UserProfileTest {
             new TermsAndConditions("1.0", CREATED_DATE_TIME.toString());
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
-    private static final Set<String> CLAIMS =
-            ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
-    private static final ClientConsent CLIENT_CONSENT =
-            new ClientConsent(CLIENT_ID, CLAIMS, CREATED_DATE_TIME.toString());
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
 
@@ -51,18 +44,8 @@ class UserProfileTest {
         assertThat(userProfile.getCreated(), equalTo(CREATED_DATE_TIME.toString()));
         assertThat(userProfile.getUpdated(), equalTo(UPDATED_DATE_TIME.toString()));
         assertThat(userProfile.getTermsAndConditions(), equalTo(TERMS_AND_CONDITIONS));
-        assertThat(userProfile.getClientConsent(), equalTo(List.of(CLIENT_CONSENT)));
         assertThat(userProfile.getLegacySubjectID(), equalTo(LEGACY_SUBJECT_ID));
         assertThat(userProfile.getSalt(), equalTo(SALT));
-    }
-
-    private void compareClientConsentList(
-            List<AttributeValue> attributeValueList, List<ClientConsent> clientConsents) {
-        assertThat(attributeValueList.size(), equalTo(clientConsents.size()));
-        for (int i = 0; i < attributeValueList.size(); i++) {
-            assertThat(
-                    attributeValueList.get(i), equalTo(clientConsents.get(i).toAttributeValue()));
-        }
     }
 
     private UserProfile generateUserProfile() {
@@ -74,7 +57,6 @@ class UserProfileTest {
                 .withPublicSubjectID(PUBLIC_SUBJECT_ID)
                 .withSubjectID(SUBJECT_ID)
                 .withLegacySubjectID(LEGACY_SUBJECT_ID)
-                .withClientConsent(CLIENT_CONSENT)
                 .withTermsAndConditions(TERMS_AND_CONDITIONS)
                 .withSalt(SALT)
                 .withCreated(CREATED_DATE_TIME.toString())

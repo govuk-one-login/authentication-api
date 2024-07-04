@@ -17,9 +17,9 @@ on:
       - reopened
       - ready_for_review
       - synchronize
-  merge_group:
-    # merge main
-    branches: [ main ]
+  push:
+    branches:
+      - main
 
 jobs:
   contract-testing:
@@ -39,7 +39,13 @@ jobs:
         run: ./gradlew pactConsumerTests
 
       - name: Upload pacts to broker
-        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
+        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' && github.event_name != 'push' }}
+        run: ./gradlew pactPublish
+
+      - name: Upload pacts to broker on push to main
+        if: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'push' }}
+        env:
+          CONSUMER_APP_VERSION: ${{ github.sha }}
         run: ./gradlew pactPublish
 
 #      - name: Verify pacts

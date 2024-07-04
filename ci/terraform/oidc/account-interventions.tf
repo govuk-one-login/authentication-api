@@ -1,21 +1,26 @@
 module "frontend_api_account_interventions_role" {
+  count = local.deploy_account_interventions_count
+
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "frontend-api-account-interventions-role"
   vpc_arn     = local.authentication_vpc_arn
-  count       = local.deploy_account_interventions_count
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    module.oidc_txma_audit.access_policy_arn
-  ]
+    module.oidc_txma_audit.access_policy_arn,
+    ], local.deploy_ticf_cri_count == 1 ? [
+    aws_iam_policy.ticf_cri_lambda_invocation_policy[0].arn,
+  ] : [])
 }
 
 module "account_interventions" {
+  count = local.deploy_account_interventions_count
+
   source = "../modules/endpoint-module"
 
   endpoint_name   = "account-interventions"
@@ -35,6 +40,8 @@ module "account_interventions" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
+    TICF_CRI_LAMBDA_NAME                        = local.deploy_ticf_cri_count == 1 ? aws_lambda_function.ticf_cri_lambda[0].function_name : null
+    INVOKE_TICF_CRI_LAMBDA                      = var.call_ticf_cri
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler::handleRequest"
@@ -59,7 +66,7 @@ module "account_interventions" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_orch_auth_code_role.arn
+  lambda_role_arn                        = module.frontend_api_account_interventions_role[count.index].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -68,5 +75,4 @@ module "account_interventions" {
   api_key_required                       = true
 
   use_localstack = var.use_localstack
-  count          = local.deploy_account_interventions_count
 }

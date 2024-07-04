@@ -29,6 +29,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -40,10 +41,14 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @BeforeEach
     void setup() {
-        handler = new AccountRecoveryHandler(new AccountRecoveryTestConfigurationService());
+        handler =
+                new AccountRecoveryHandler(
+                        new AccountRecoveryTestConfigurationService(), redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -62,6 +67,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         var response =
                 makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
@@ -81,6 +87,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         var response =
                 makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
@@ -110,12 +117,8 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
         public AccountRecoveryTestConfigurationService() {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

@@ -26,12 +26,9 @@ resource "aws_api_gateway_rest_api" "ticf_cri_stub" {
       "/auth" = {
         post = {
           x-amazon-apigateway-integration = {
-            type       = "aws_proxy"
-            httpMethod = "POST"
-            uri        = module.ticf_cri_stub_lambda.integration_uri
-            requestParameters = {
-              "integration.request.path.internalPairwiseId" = "method.request.path.internalPairwiseId"
-            }
+            type            = "aws_proxy"
+            httpMethod      = "POST"
+            uri             = module.ticf_cri_stub_lambda.integration_uri
             timeoutInMillis = 29000
           }
         }

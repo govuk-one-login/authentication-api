@@ -8,27 +8,37 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import software.amazon.awssdk.services.lambda.LambdaClient;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler;
+import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -43,6 +53,8 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
     private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
+    public static final String ENCODED_DEVICE_DETAILS =
+            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     public static final AccountInterventionsStubExtension accountInterventionsStubExtension =
@@ -53,11 +65,15 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                     new AccountInterventionsTestConfigurationService(
                             accountInterventionsStubExtension);
 
+    protected static final LambdaClient mockLambdaClient = mock(LambdaClient.class);
+
     @BeforeEach
     void setup() throws JOSEException, Json.JsonException {
         handler =
                 new AccountInterventionsHandler(
-                        ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE);
+                        ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE,
+                        redisConnectionService,
+                        new LambdaInvokerService(mockLambdaClient));
         accountInterventionsStubExtension.initWithBlockedUserId(
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS),
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER));
@@ -78,11 +94,13 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     void shouldReturnSuccessful200Response(
             String emailAddress, boolean isUserBlocked, FrontendAuditableEvent expectedAuditEvent)
             throws Json.JsonException {
+
         var response =
                 makeRequest(
-                        Optional.of(new AccountInterventionsRequest(emailAddress)),
-                        getHeaders(),
+                        Optional.of(format("{\"email\":\"%s\"}", emailAddress)),
+                        getHeadersForAuthenticatedSession(),
                         Map.of());
+
         assertThat(response, hasStatus(200));
         var accountInterventionsResponse =
                 new AccountInterventionsResponse(
@@ -91,18 +109,42 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                 response,
                 hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
-                String.format(
+                format(
                         "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false,\"reproveIdentity\":false,\"appliedAt\":\"%s\"}",
                         isUserBlocked, APPLIED_AT_TIMESTAMP),
                 response.getBody());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(expectedAuditEvent));
     }
 
-    private Map<String, String> getHeaders() throws Json.JsonException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldReturnSuccessful200ResponseWhenAuthenticatedFieldIsSent(boolean authenticated)
+            throws Json.JsonException {
+        var body =
+                format(
+                        "{\"email\":\"%s\",\"authenticated\":%b}",
+                        TEST_EMAIL_ADDRESS, authenticated);
+        var response =
+                makeRequest(Optional.of(body), getHeadersForAuthenticatedSession(), Map.of());
+        assertThat(response, hasStatus(200));
+    }
+
+    private Map<String, String> getHeadersForAuthenticatedSession() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
-        var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL_ADDRESS);
+
+        var clientSession =
+                new ClientSession(
+                        null,
+                        LocalDateTime.now(),
+                        new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                        "clientName");
+
+        redis.createClientSession("client-session-id", clientSession);
+
         headers.put("Session-Id", sessionId);
+        headers.put(CLIENT_SESSION_ID_HEADER, "client-session-id");
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         return headers;
     }
 
@@ -114,12 +156,8 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         public AccountInterventionsTestConfigurationService(
                 AccountInterventionsStubExtension accountInterventionsStubExtension) {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.accountInterventionsStubExtension = accountInterventionsStubExtension;

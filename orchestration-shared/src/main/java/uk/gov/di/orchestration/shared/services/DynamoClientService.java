@@ -24,7 +24,13 @@ public class DynamoClientService implements ClientService {
     private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
 
     public DynamoClientService(ConfigurationService configurationService) {
-        String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        var tableName = CLIENT_REGISTRY_TABLE;
+        if (configurationService.getDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getDynamoArnPrefix().get() + tableName;
+        } else {
+            tableName = configurationService.getEnvironment() + "-" + tableName;
+        }
+
         var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
         this.dynamoClientRegistryTable =
                 dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
@@ -34,7 +40,12 @@ public class DynamoClientService implements ClientService {
     public DynamoClientService(
             ConfigurationService configurationService,
             DynamoDbEnhancedClient dynamoDbEnhancedClient) {
-        String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        var tableName = CLIENT_REGISTRY_TABLE;
+        if (configurationService.getDynamoArnPrefix().isPresent()) {
+            tableName = configurationService.getDynamoArnPrefix().get() + CLIENT_REGISTRY_TABLE;
+        } else {
+            tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        }
         this.dynamoClientRegistryTable =
                 dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(ClientRegistry.class));
     }
@@ -51,20 +62,22 @@ public class DynamoClientService implements ClientService {
             String clientName,
             List<String> redirectUris,
             List<String> contacts,
-            List<String> scopes,
+            String publicKeySource,
             String publicKey,
+            String jwksUrl,
+            List<String> scopes,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean consentRequired,
             boolean jarValidationRequired,
             List<String> claims,
             String clientType,
             boolean identityVerificationSupported,
             String clientSecret,
             String tokenAuthMethod,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs) {
         var clientRegistry =
                 new ClientRegistry()
@@ -72,18 +85,20 @@ public class DynamoClientService implements ClientService {
                         .withClientName(clientName)
                         .withRedirectUrls(redirectUris)
                         .withContacts(contacts)
-                        .withScopes(scopes)
+                        .withPublicKeySource(publicKeySource)
                         .withPublicKey(publicKey)
+                        .withJwksUrl(jwksUrl)
+                        .withScopes(scopes)
                         .withPostLogoutRedirectUrls(postLogoutRedirectUris)
                         .withBackChannelLogoutUri(backChannelLogoutUri)
                         .withServiceType(serviceType)
                         .withSectorIdentifierUri(sectorIdentifierUri)
                         .withSubjectType(subjectType)
-                        .withConsentRequired(consentRequired)
                         .withJarValidationRequired(jarValidationRequired)
                         .withClaims(claims)
                         .withClientType(clientType)
                         .withIdentityVerificationSupported(identityVerificationSupported)
+                        .withIdTokenSigningAlgorithm(idTokenSigningAlgorithm)
                         .withTokenAuthMethod(tokenAuthMethod);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
@@ -106,9 +121,14 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getScopes()).ifPresent(clientRegistry::withScopes);
         Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
                 .ifPresent(clientRegistry::withPostLogoutRedirectUrls);
+        Optional.ofNullable(updateRequest.getPublicKeySource())
+                .ifPresent(clientRegistry::withPublicKeySource);
         Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::withPublicKey);
+        Optional.ofNullable(updateRequest.getJwksUrl()).ifPresent(clientRegistry::withJwksUrl);
         Optional.ofNullable(updateRequest.getServiceType())
                 .ifPresent(clientRegistry::withServiceType);
+        Optional.ofNullable(updateRequest.getClientType())
+                .ifPresent(clientRegistry::withClientType);
         Optional.ofNullable(updateRequest.getSectorIdentifierUri())
                 .ifPresent(clientRegistry::withSectorIdentifierUri);
         Optional.of(updateRequest.getJarValidationRequired())
@@ -118,6 +138,10 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withClientLoCs);
         Optional.ofNullable(updateRequest.getBackChannelLogoutUri())
                 .ifPresent(clientRegistry::withBackChannelLogoutUri);
+        Optional.ofNullable(updateRequest.getIdTokenSigningAlgorithm())
+                .ifPresent(clientRegistry::withIdTokenSigningAlgorithm);
+        Optional.ofNullable(updateRequest.getidentityVerificationSupported())
+                .ifPresent(clientRegistry::withIdentityVerificationSupported);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }

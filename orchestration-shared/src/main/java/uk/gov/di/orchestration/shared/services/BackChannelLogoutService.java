@@ -20,8 +20,8 @@ public class BackChannelLogoutService {
         this(
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
-                        configurationService.getBackChannelLogoutQueueUri(),
-                        configurationService.getSqsEndpointUri()),
+                        configurationService.getBackChannelLogoutQueueURI(),
+                        configurationService.getSqsEndpointURI()),
                 new DynamoService(configurationService));
     }
 

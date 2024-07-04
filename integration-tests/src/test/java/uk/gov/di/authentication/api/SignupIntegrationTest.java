@@ -8,9 +8,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -26,13 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -44,27 +40,25 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final Scope OIDC_SCOPE = new Scope(OIDCScopeValue.OPENID);
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new SignUpHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new SignUpHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
-    private static Stream<Boolean> consentValues() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("consentValues")
-    void shouldReturn200WhenValidSignUpRequest(boolean consentRequired) throws Json.JsonException {
-        setUpTest(consentRequired);
+    @Test
+    void shouldReturn200WhenValidSignUpRequest() throws Json.JsonException {
+        setUpTest();
         var sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -76,8 +70,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(200));
-        var signUpResponse = objectMapper.readValue(response.getBody(), SignUpResponse.class);
-        assertFalse(signUpResponse.isConsentRequired());
         assertTrue(
                 Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
@@ -86,13 +78,14 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenCommonPassword() throws Json.JsonException {
-        setUpTest(false);
+        setUpTest();
         var sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -107,7 +100,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
     }
 
-    private void setUpTest(boolean consentRequired) throws Json.JsonException {
+    private void setUpTest() throws Json.JsonException {
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
@@ -120,8 +113,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                consentRequired);
+                "public");
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,

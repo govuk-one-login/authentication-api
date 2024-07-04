@@ -3,12 +3,15 @@ package uk.gov.di.authentication.clientregistry.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.validation.Required;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 
 public class ClientRegistrationRequest {
 
@@ -27,10 +30,17 @@ public class ClientRegistrationRequest {
     @Required
     private List<String> contacts;
 
+    @SerializedName("public_key_source")
+    @Expose
+    private String publicKeySource = PublicKeySource.STATIC.getValue();
+
     @SerializedName("public_key")
     @Expose
-    @Required
     private String publicKey;
+
+    @SerializedName("jwks_uri")
+    @Expose
+    private String jwksUrl;
 
     @SerializedName("scopes")
     @Expose
@@ -59,9 +69,9 @@ public class ClientRegistrationRequest {
     @Required
     private String subjectType;
 
-    @SerializedName("identity_verification_required")
+    @SerializedName("identity_verification_supported")
     @Expose
-    private boolean identityVerificationRequired;
+    private boolean identityVerificationSupported;
 
     @SerializedName("claims")
     @Expose
@@ -79,36 +89,46 @@ public class ClientRegistrationRequest {
     @Expose
     private boolean jarValidationRequired;
 
+    @SerializedName("id_token_signing_algorithm")
+    @Expose
+    private String idTokenSigningAlgorithm = ES256.getName();
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
             String clientName,
             List<String> redirectUris,
             List<String> contacts,
+            String publicKeySource,
             String publicKey,
+            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean identityVerificationRequired,
+            boolean identityVerificationSupported,
             List<String> claims,
-            String clientType) {
+            String clientType,
+            String idTokenSigningAlgorithm) {
         this(
                 clientName,
                 redirectUris,
                 contacts,
+                publicKeySource,
                 publicKey,
+                jwksUrl,
                 scopes,
                 postLogoutRedirectUris,
                 backChannelLogoutUri,
                 serviceType,
                 sectorIdentifierUri,
                 subjectType,
-                identityVerificationRequired,
+                identityVerificationSupported,
                 claims,
                 clientType,
+                idTokenSigningAlgorithm,
                 null);
     }
 
@@ -116,21 +136,28 @@ public class ClientRegistrationRequest {
             String clientName,
             List<String> redirectUris,
             List<String> contacts,
+            String publicKeySource,
             String publicKey,
+            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
             String serviceType,
             String sectorIdentifierUri,
             String subjectType,
-            boolean identityVerificationRequired,
+            boolean identityVerificationSupported,
             List<String> claims,
             String clientType,
+            String idTokenSigningAlgorithm,
             List<String> clientLoCs) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
+        if (Objects.nonNull(publicKeySource)) {
+            this.publicKeySource = publicKeySource;
+        }
         this.publicKey = publicKey;
+        this.jwksUrl = jwksUrl;
         this.scopes = scopes;
         if (Objects.nonNull(postLogoutRedirectUris)) {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
@@ -142,7 +169,7 @@ public class ClientRegistrationRequest {
         this.serviceType = serviceType;
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.subjectType = subjectType;
-        this.identityVerificationRequired = identityVerificationRequired;
+        this.identityVerificationSupported = identityVerificationSupported;
         if (Objects.nonNull(claims)) {
             this.claims = claims;
         }
@@ -150,6 +177,7 @@ public class ClientRegistrationRequest {
             clientType = ClientType.WEB.getValue();
         }
         this.clientType = clientType;
+        this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
         if (Objects.nonNull(clientLoCs)) {
             this.clientLoCs = clientLoCs;
         }
@@ -167,8 +195,16 @@ public class ClientRegistrationRequest {
         return contacts;
     }
 
+    public String getPublicKeySource() {
+        return publicKeySource;
+    }
+
     public String getPublicKey() {
         return publicKey;
+    }
+
+    public String getJwksUrl() {
+        return jwksUrl;
     }
 
     public List<String> getScopes() {
@@ -195,8 +231,8 @@ public class ClientRegistrationRequest {
         return subjectType;
     }
 
-    public boolean isIdentityVerificationRequired() {
-        return identityVerificationRequired;
+    public boolean isIdentityVerificationSupported() {
+        return identityVerificationSupported;
     }
 
     public List<String> getClaims() {
@@ -213,5 +249,9 @@ public class ClientRegistrationRequest {
 
     public boolean isJarValidationRequired() {
         return jarValidationRequired;
+    }
+
+    public String getIdTokenSigningAlgorithm() {
+        return idTokenSigningAlgorithm;
     }
 }

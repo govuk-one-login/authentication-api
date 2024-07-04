@@ -11,10 +11,10 @@ buildscript {
 
 plugins {
     id "com.diffplug.spotless" version "6.25.0"
-    id "com.avast.gradle.docker-compose" version "0.17.6"
+    id "com.avast.gradle.docker-compose" version "0.17.7"
     id "org.sonarqube" version "5.0.0.4638"
     id "jacoco-report-aggregation"
-    id 'com.github.spotbugs' version '6.0.12'
+    id 'com.github.spotbugs' version '6.0.17'
 }
 
 apply plugin: "java"
@@ -23,16 +23,16 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.25.40",
+        aws_sdk_v2_version: "2.26.15",
         aws_lambda_core_version: "1.2.3",
-        aws_lambda_events_version: "3.11.5",
+        aws_lambda_events_version: "3.11.6",
         gson: "2.10.1",
         jetbrains_annotations: "24.1.0",
         nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "9.29",
-        junit: "5.10.2",
-        xray: "2.15.3",
-        pact: "4.6.9"
+        nimbusds_jwt_version: "9.40",
+        junit: "5.10.3",
+        xray: "2.16.0",
+        pact: "4.6.10"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -109,9 +109,10 @@ subprojects {
     }
 
     dependencies {
-        apache "commons-codec:commons-codec:1.16.1",
+        apache "commons-codec:commons-codec:1.17.0",
                 "org.apache.httpcomponents:httpclient:4.5.14",
-                "org.apache.commons:commons-collections4:4.1"
+                "org.apache.commons:commons-collections4:4.1",
+                "commons-net:commons-net:3.11.1"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
@@ -141,7 +142,7 @@ subprojects {
         lettuce "org.apache.commons:commons-pool2:2.12.0",
                 "io.lettuce:lettuce-core:6.3.2.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.35"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.40"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.13"
@@ -161,9 +162,9 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:5.11.0",
+                "org.mockito:mockito-core:5.12.0",
                 "org.awaitility:awaitility:4.2.1",
-                "com.approvaltests:approvaltests:23.1.0",
+                "com.approvaltests:approvaltests:24.2.0",
                 configurations.hamcrest,
                 "org.reflections:reflections:0.10.2"
 
@@ -176,7 +177,7 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        spotbugs "com.github.spotbugs:spotbugs:4.8.4"
+        spotbugs "com.github.spotbugs:spotbugs:4.8.6"
 
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
 
@@ -190,6 +191,12 @@ allprojects {
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:deprecation" << "-Werror"
+        }
+        tasks.withType(AbstractArchiveTask) {
+            // Ensure that the jar / zip files are reproducible
+            includeEmptyDirs = false
+            preserveFileTimestamps = false
+            reproducibleFileOrder = true
         }
     }
 }
@@ -318,6 +325,7 @@ task oidcTerraform (type: Terraform) {
             environment "FRONTEND_API_KEY", json.frontend_api_key.value
             environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
             environment "EMAIL_QUEUE_URL", json.email_queue.value
+            environment "EXPERIAN_PHONE_CHECK_QUEUE_URL", json.experian_phone_check_queue.value
         }
         allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
             environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value

@@ -208,6 +208,17 @@ variable "lockout_count_ttl" {
   default = 900
 }
 
+variable "account_creation_lockout_count_ttl" {
+  type    = number
+  default = 3600
+}
+
+variable "support_account_creation_count_ttl" {
+  default     = false
+  type        = bool
+  description = "Feature flag which enables using a designated variable for count TTL in the account creation journey"
+}
+
 variable "incorrect_password_lockout_count_ttl" {
   type    = number
   default = 7200
@@ -244,12 +255,11 @@ variable "shared_state_bucket" {
 }
 
 variable "contra_state_bucket" {
-  type    = string
-  default = "digital-identity-dev-tfstate"
+  type = string
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 1
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
@@ -325,6 +335,11 @@ variable "ipv_backend_uri" {
 variable "ipv_no_session_response_enabled" {
   type    = bool
   default = false
+}
+
+variable "phone_checker_with_retry" {
+  type    = bool
+  default = true
 }
 
 variable "internal_sector_uri" {
@@ -513,18 +528,70 @@ variable "orch_doc_app_callback_enabled" {
   default     = false
 }
 
-variable "orch_openid_configuration_name" {
-  type    = string
-  default = ""
-}
-variable "orch_trustmark_name" {
-  type    = string
-  default = ""
+variable "orch_token_enabled" {
+  description = "Flag to enable routing token traffic to the orchestration account"
+  type        = bool
+  default     = false
 }
 
-variable "orch_doc_app_callback_name" {
-  type    = string
-  default = ""
+variable "orch_jwks_enabled" {
+  description = "Flag to enable routing jwks traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_authorisation_enabled" {
+  description = "Flag to enable routing authorisation endpoint traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "auth_spot_response_disabled" {
+  description = "Flag to disable routing spot response traffic to the authentication account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_logout_enabled" {
+  description = "Flag to enable routing logout traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_ipv_callback_enabled" {
+  description = "Flag to enable routing ipv callback traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_register_enabled" {
+  description = "Flag to enable routing register traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_authentication_callback_enabled" {
+  description = "Flag to enable routing authentication callback traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_auth_code_enabled" {
+  description = "Flag to enable routing auth code traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_userinfo_enabled" {
+  description = "Flag to enable routing userinfo traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_storage_token_jwk_enabled" {
+  description = "Flag to enable routing storage token jwk traffic to the orchestration account"
+  type        = bool
+  default     = false
 }
 
 variable "account_intervention_service_action_enabled" {
@@ -551,6 +618,17 @@ variable "account_intervention_service_call_timeout" {
   default     = 3000
   type        = number
   description = "The HTTP Client connection timeout for requests to Account Intervention Service (in milliseconds)."
+}
+
+variable "ticf_cri_service_uri" {
+  default = "undefined"
+  type    = string
+}
+
+variable "ticf_cri_service_call_timeout" {
+  default     = 2000
+  type        = number
+  description = "The HTTP Client connection timeout for requests to TICF CRI Service (in milliseconds)."
 }
 
 variable "orch_redirect_uri" {
@@ -581,22 +659,10 @@ variable "orch_account_id" {
   default = ""
 }
 
-variable "back_channel_logout_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by orchestration to the back channel logout queue"
-}
-
 variable "cmk_for_back_channel_logout_enabled" {
   default     = false
   type        = bool
   description = "Feature flag which toggles whether the back channel logout queue is encrypted using CMK"
-}
-
-variable "kms_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by the orchestration account to kms"
 }
 
 variable "oidc_origin_domain_enabled" {
@@ -605,10 +671,32 @@ variable "oidc_origin_domain_enabled" {
   description = "Feature flag to control the creation of DNS records for the origin.oidc domain"
 }
 
-variable "txma_audit_encoded_enabled" {
-  default     = false
+variable "oidc_cloudfront_dns_enabled" {
   type        = bool
-  description = "Whether the service should pass cloudfront header to txma"
+  default     = false
+  description = "Feature flag controlling the DNS cutover between API Gateway and Cloudfront for the OIDC API"
+}
+
+variable "oidc_origin_cloaking_header" {
+  type        = string
+  description = "Secret header to prove the origin request comes via cloudfront. Set using secrets manager and the read secrets script."
+}
+
+variable "previous_oidc_origin_cloaking_header" {
+  type        = string
+  description = "Used in rotation of the origin cloaking header. Set using secrets manager and the read secrets script."
+}
+
+variable "enforce_cloudfront" {
+  type        = bool
+  default     = false
+  description = "Feature flag to switch the WAF on the OIDC API Gateway to the Origin Cloaking WAF to mandate CloudFront"
+}
+
+variable "call_ticf_cri" {
+  type        = bool
+  default     = false
+  description = "Feature flag to switch on invoking TICF CRI lambda."
 }
 
 locals {

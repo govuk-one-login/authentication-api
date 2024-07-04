@@ -3,7 +3,6 @@ package uk.gov.di.authentication.sharedtest.helper;
 import com.google.gson.JsonElement;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.authentication.sharedtest.matchers.JsonMatcher;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -14,7 +13,9 @@ import java.util.stream.Collectors;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 
 public class AuditAssertionsHelper {
 
@@ -26,16 +27,15 @@ public class AuditAssertionsHelper {
                         () -> assertThat(txmaAuditQueue.getApproximateMessageCount(), equalTo(0)));
     }
 
-    public static void assertTxmaAuditEventsReceived(
+    public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
-
-        var txmaEvents =
+        var expectedTxmaEvents =
                 events.stream()
                         .map(Objects::toString)
                         .map("AUTH_"::concat)
                         .collect(Collectors.toList());
 
-        if (txmaEvents.isEmpty()) {
+        if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
@@ -45,18 +45,82 @@ public class AuditAssertionsHelper {
                         () ->
                                 assertThat(
                                         queue.getApproximateMessageCount(),
-                                        equalTo(txmaEvents.size())));
+                                        equalTo(expectedTxmaEvents.size())));
 
-        var receivedEvents =
-                queue.getRawMessages().stream()
-                        .map(JsonMatcher::asJson)
-                        .map(JsonElement::getAsJsonObject)
-                        .map(json -> json.get("event_name"))
-                        .map(JsonElement::getAsString)
-                        .collect(Collectors.toSet());
+        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
 
-        txmaEvents.stream()
-                .map(Object::toString)
-                .forEach(expected -> assertThat(receivedEvents, hasItem(expected)));
+        var namesOfSentEvents =
+                sentEvents.stream()
+                        .map(
+                                event ->
+                                        asJson(event)
+                                                .getAsJsonObject()
+                                                .get("event_name")
+                                                .getAsString())
+                        .toList();
+
+        // Check all expected events have been sent
+        // Check no unexpected events were sent
+        assertTrue(
+                expectedTxmaEvents.containsAll(namesOfSentEvents)
+                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+    }
+
+    public static void assertTxmaAuditEventsReceived(
+            SqsQueueExtension queue, Collection<AuditableEvent> events) {
+
+        var expectedTxmaEvents =
+                events.stream()
+                        .map(Objects::toString)
+                        .map("AUTH_"::concat)
+                        .collect(Collectors.toList());
+
+        if (expectedTxmaEvents.isEmpty()) {
+            throw new RuntimeException(
+                    "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
+        }
+
+        await().atMost(TIMEOUT)
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                        queue.getApproximateMessageCount(),
+                                        equalTo(expectedTxmaEvents.size())));
+
+        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+
+        var namesOfSentEvents =
+                sentEvents.stream()
+                        .map(
+                                event ->
+                                        asJson(event)
+                                                .getAsJsonObject()
+                                                .get("event_name")
+                                                .getAsString())
+                        .toList();
+
+        // Check all expected events have been sent
+        // Check no unexpected events were sent
+        assertTrue(
+                expectedTxmaEvents.containsAll(namesOfSentEvents)
+                        && namesOfSentEvents.containsAll(expectedTxmaEvents));
+
+        // Check all sent events applied business rules, i.e. include a device_information section.
+        sentEvents.stream()
+                .forEach(
+                        sentEvent -> {
+                            var event = asJson(sentEvent);
+                            assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
+                        });
+    }
+
+    private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(
+            JsonElement event) {
+        assertNotNull(event.getAsJsonObject().get("restricted"));
+        assertNotNull(
+                event.getAsJsonObject()
+                        .get("restricted")
+                        .getAsJsonObject()
+                        .get("device_information"));
     }
 }

@@ -1,4 +1,5 @@
 resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
+  count            = var.support_email_check_enabled ? 1 : 0
   event_source_arn = var.email_check_results_sqs_queue_arn
   function_name    = aws_lambda_function.email_check_results_writer_lambda.arn
 
@@ -25,14 +26,13 @@ module "email_check_results_writer_role" {
 
 resource "aws_lambda_function" "email_check_results_writer_lambda" {
   #checkov:skip=CKV_AWS_116:No DLQ is required for this lambda, as it is SQS driven, and the SQS has a DLQ
-  function_name                  = "${var.environment}-email-check-writer"
-  role                           = module.email_check_results_writer_role.arn
-  handler                        = "uk.gov.di.authentication.utils.lambda.EmailCheckResultWriterHandler::handleRequest"
-  timeout                        = 30
-  memory_size                    = 512
-  runtime                        = "java17"
-  publish                        = true
-  reserved_concurrent_executions = 1000
+  function_name = "${var.environment}-email-check-writer"
+  role          = module.email_check_results_writer_role.arn
+  handler       = "uk.gov.di.authentication.utils.lambda.EmailCheckResultWriterHandler::handleRequest"
+  timeout       = 30
+  memory_size   = 512
+  runtime       = "java17"
+  publish       = true
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket
   s3_key            = aws_s3_object.utils_release_zip.key
@@ -74,6 +74,11 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.email_check_results_writer_lambda.name
 
   provisioned_concurrent_executions = var.email_check_results_writer_provisioned_concurrency
+
+  lifecycle {
+    ignore_changes = [provisioned_concurrent_executions]
+  }
+
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {

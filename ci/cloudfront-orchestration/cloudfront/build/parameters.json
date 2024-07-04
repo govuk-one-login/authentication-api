@@ -1,0 +1,26 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc.build.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "arn:aws:acm:us-east-1:761723964695:certificate/735ec64a-4ce1-4cf3-a879-1be78c6ae6f2"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "false"
+  },
+  {
+    "ParameterKey": "CloudFrontWafACL",
+    "ParameterValue": "arn:aws:wafv2:us-east-1:761723964695:global/webacl/build-oidc-cloudfront-waf/a7aab4bf-255d-4d4c-a2a1-36079913dd09"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue":  "csls_cw_logs_destination_prodpython"
+  }
+]

@@ -38,6 +38,9 @@ data "aws_dynamodb_table" "authentication_callback_userinfo_table" {
   name = "${var.environment}-authentication-callback-userinfo"
 }
 
+data "aws_dynamodb_table" "email_check_results_table" {
+  name = "${var.environment}-email-check-result"
+}
 
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
@@ -539,6 +542,21 @@ data "aws_iam_policy_document" "dynamo_auth_code_store_read_access_policy_docume
   }
 }
 
+data "aws_iam_policy_document" "check_email_fraud_block_read_dynamo_read_access_policy" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      data.aws_dynamodb_table.email_check_results_table.arn,
+      "${data.aws_dynamodb_table.email_check_results_table.arn}/index/*",
+    ]
+  }
+}
 
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
@@ -698,4 +716,12 @@ resource "aws_iam_policy" "dynamo_auth_code_store_read_access_policy" {
   description = "IAM policy for managing read permissions to the Dynamo Auth Code table (code used orch<->auth NOT RP<->orch)"
 
   policy = data.aws_iam_policy_document.dynamo_auth_code_store_read_access_policy_document.json
+}
+
+resource "aws_iam_policy" "check_email_fraud_block_read_dynamo_read_access_policy" {
+  name_prefix = "dynamo-email-check-results-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the Dynamo Email Check Results table"
+
+  policy = data.aws_iam_policy_document.check_email_fraud_block_read_dynamo_read_access_policy.json
 }

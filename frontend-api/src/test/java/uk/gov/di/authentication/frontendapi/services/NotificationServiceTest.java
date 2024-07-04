@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.TemplateAware;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
@@ -18,7 +19,6 @@ import static uk.gov.di.authentication.frontendapi.services.NotificationServiceT
 class NotificationServiceTest {
 
     private static final String TEST_EMAIL = "test@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "01234567890";
     private final NotificationClient notificationClient = mock(NotificationClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final NotificationService notificationService =
@@ -48,8 +48,11 @@ class NotificationServiceTest {
     public void shouldCallNotifyClientToSendText() throws NotificationClientException {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", "some-code");
-        notificationService.sendText(TEST_PHONE_NUMBER, phonePersonalisation, FAKE_SMS);
+        notificationService.sendText(
+                CommonTestVariables.UK_MOBILE_NUMBER, phonePersonalisation, FAKE_SMS);
 
-        verify(notificationClient).sendSms("FAKE_SMS", TEST_PHONE_NUMBER, phonePersonalisation, "");
+        verify(notificationClient)
+                .sendSms(
+                        "FAKE_SMS", CommonTestVariables.UK_MOBILE_NUMBER, phonePersonalisation, "");
     }
 }

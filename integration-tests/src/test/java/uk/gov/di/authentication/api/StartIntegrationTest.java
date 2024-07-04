@@ -52,7 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -63,10 +64,12 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String TEST_CLIENT_NAME = "test-client-name";
     private static final State STATE = new State();
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
-        handler = new StartHandler(new TestConfigurationService());
+        handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -101,7 +104,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -111,7 +114,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 format(
                         """
                 {
-                "consentRequired":false,
                 "upliftRequired":false,
                 "identityRequired":%b,
                 "authenticated":%b,
@@ -142,7 +144,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(JsonParser.parseString(response.getBody()), is(equalTo(expectedJson)));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -163,7 +165,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
@@ -176,7 +178,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     private static Stream<MFAMethodType> mfaMethodTypes() {
@@ -212,7 +214,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -223,10 +225,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().mfaMethodType(), equalTo(mfaMethodType));
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.user(), true);
+        verifyStandardUserInformationSetOnResponse(startResponse.user());
         assertThat(startResponse.user().isAuthenticated(), equalTo(true));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -259,7 +261,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(keyPair, ClientType.APP, true);
+        registerClient(keyPair, ClientType.APP);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -271,13 +273,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertFalse(startResponse.user().isAuthenticated());
         assertFalse(startResponse.user().isIdentityRequired());
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
-        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
+        verifyStandardUserInformationSetOnResponse(startResponse.user());
 
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
         assertNotNull(clientSession.getDocAppSubjectId());
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -296,7 +298,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = redis.createSession(true);
         redis.addEmailToSession(sessionId, userEmail);
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, false);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
@@ -306,13 +308,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
-        verifyStandardUserInformationSetOnResponse(startResponse.user(), false);
+        verifyStandardUserInformationSetOnResponse(startResponse.user());
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
-    private void registerClient(KeyPair keyPair, ClientType clientType, boolean consentRequired) {
+    private void registerClient(KeyPair keyPair, ClientType clientType) {
         clientStore.registerClient(
                 CLIENT_ID,
                 TEST_CLIENT_NAME,
@@ -325,7 +327,6 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                consentRequired,
                 clientType,
                 true);
     }
@@ -362,9 +363,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(clientStartInfo.state().getValue(), equalTo(state.getValue()));
     }
 
-    private void verifyStandardUserInformationSetOnResponse(
-            UserStartInfo userStartInfo, Boolean consentRequired) {
-        assertFalse(userStartInfo.isConsentRequired());
+    private void verifyStandardUserInformationSetOnResponse(UserStartInfo userStartInfo) {
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo(null));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(null));
@@ -375,6 +374,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
         return headers;
     }
 
@@ -392,12 +392,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         public TestConfigurationService() {
             super(
-                    auditTopic,
                     notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
         }

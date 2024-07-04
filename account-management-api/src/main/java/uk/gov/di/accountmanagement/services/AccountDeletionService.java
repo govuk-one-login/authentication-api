@@ -9,7 +9,9 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -20,6 +22,8 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class AccountDeletionService {
     private static final Logger LOG = LogManager.getLogger(AccountDeletionService.class);
@@ -45,7 +49,9 @@ public class AccountDeletionService {
     }
 
     public DeletedAccountIdentifiers removeAccount(
-            Optional<APIGatewayProxyRequestEvent> input, UserProfile userProfile)
+            Optional<APIGatewayProxyRequestEvent> input,
+            UserProfile userProfile,
+            AuditService.RestrictedSection restrictedSection)
             throws Json.JsonException {
         var accountIdentifiers =
                 new DeletedAccountIdentifiers(
@@ -77,9 +83,24 @@ public class AccountDeletionService {
             LOG.error("Failed to send account deletion email: ", e);
         }
 
+        String persistentSessionID = AuditService.UNKNOWN;
+        String ipAddress = AuditService.UNKNOWN;
+        if (input.isPresent()) {
+            ipAddress = PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
+            attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
+            ipAddress = IpAddressHelper.extractIpAddress(input.get());
+        }
+
         try {
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.DELETE_ACCOUNT,
+                    input.map(
+                                    n ->
+                                            n.getRequestContext()
+                                                    .getAuthorizer()
+                                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                                    .toString())
+                            .orElse(null),
                     input.map(
                                     n ->
                                             ClientSessionIdHelper.extractSessionIdFromHeaders(
@@ -90,18 +111,12 @@ public class AccountDeletionService {
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
                             .orElse(null),
-                    input.map(
-                                    n ->
-                                            n.getRequestContext()
-                                                    .getAuthorizer()
-                                                    .getOrDefault("clientId", AuditService.UNKNOWN)
-                                                    .toString())
-                            .orElse(null),
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
-                    AuditService.UNKNOWN,
+                    ipAddress,
                     userProfile.getPhoneNumber(),
-                    AuditService.UNKNOWN);
+                    persistentSessionID,
+                    restrictedSection);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

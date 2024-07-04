@@ -1,5 +1,9 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.audit.TxmaAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
@@ -7,30 +11,27 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
+    private static final Logger LOG = LogManager.getLogger(AuditService.class);
 
     public static final String UNKNOWN = "";
+    public static final String COMPONENT_ID = "AUTH";
 
     private final Clock clock;
-    private final ConfigurationService configurationService;
     private final AwsSqsClient txmaQueueClient;
 
-    public AuditService(
-            Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
+    public AuditService(Clock clock, AwsSqsClient txmaQueueClient) {
         this.clock = clock;
-        this.configurationService = configurationService;
         this.txmaQueueClient = txmaQueueClient;
     }
 
     public AuditService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.clock = Clock.systemUTC();
         this.txmaQueueClient =
                 new AwsSqsClient(
@@ -39,88 +40,104 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri());
     }
 
-    public void submitAuditEvent(
-            AuditableEvent event,
-            String clientSessionId,
-            String sessionId,
-            String clientId,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
+    private static void addRestrictedSectionToAuditEvent(
+            Optional<String> txmaAuditEncoded,
+            TxmaAuditEvent txmaAuditEvent,
             MetadataPair... metadataPairs) {
-
-        var user =
-                TxmaAuditUser.user()
-                        .withUserId(subjectId)
-                        .withPhone(phoneNumber)
-                        .withEmail(email)
-                        .withIpAddress(ipAddress)
-                        .withSessionId(sessionId)
-                        .withPersistentSessionId(persistentSessionId)
-                        .withGovukSigninJourneyId(clientSessionId);
-
-        var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
-                        .withClientId(clientId)
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
-                        .withUser(user);
-
         Arrays.stream(metadataPairs)
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+                .filter(MetadataPair::isRestricted)
+                .forEach(pair -> txmaAuditEvent.addRestricted(pair.key(), pair.value()));
 
-        Optional.ofNullable(phoneNumber)
+        txmaAuditEncoded.ifPresentOrElse(
+                s -> {
+                    if (!s.isEmpty()) {
+                        txmaAuditEvent.addRestricted("device_information", Map.of("encoded", s));
+                    } else {
+                        LOG.warn("Encoded device information for audit event present but empty.");
+                    }
+                },
+                () -> LOG.warn("Encoded device information for audit event is not present."));
+    }
+
+    private static void addExtensionSectionToAuditEvent(
+            TxmaAuditUser user, TxmaAuditEvent txmaAuditEvent, MetadataPair... metadataPairs) {
+        Arrays.stream(metadataPairs)
+                .filter(not(MetadataPair::isRestricted))
+                .forEach(pair -> txmaAuditEvent.addExtension(pair.key(), pair.value()));
+
+        Optional.ofNullable(user.getPhone())
                 .filter(not(String::isBlank))
                 .flatMap(PhoneNumberHelper::maybeGetCountry)
                 .ifPresent(
                         country ->
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
+    }
+
+    public record RestrictedSection(Optional<String> encoded) {
+        public static final RestrictedSection empty = new RestrictedSection(Optional.empty());
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
+
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId(auditContext.subjectId())
+                        .withPhone(auditContext.phoneNumber())
+                        .withEmail(auditContext.email())
+                        .withIpAddress(auditContext.ipAddress())
+                        .withSessionId(auditContext.sessionId())
+                        .withPersistentSessionId(auditContext.persistentSessionId())
+                        .withGovukSigninJourneyId(auditContext.clientSessionId());
+
+        var txmaAuditEvent =
+                auditEventWithTime(event, () -> Date.from(clock.instant()))
+                        .withClientId(auditContext.clientId())
+                        .withComponentId(COMPONENT_ID)
+                        .withUser(user);
+
+        addRestrictedSectionToAuditEvent(
+                auditContext.txmaAuditEncoded(), txmaAuditEvent, metadataPairs);
+        addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
-    public static class MetadataPair {
-        private final String key;
-        private final Object value;
+    public void submitAuditEvent(
+            AuditableEvent event,
+            String clientId,
+            String clientSessionId,
+            String sessionId,
+            String subjectId,
+            String email,
+            String ipAddress,
+            String phoneNumber,
+            String persistentSessionId,
+            RestrictedSection restrictedSection,
+            MetadataPair... metadataPairs) {
 
-        private MetadataPair(String key, Object value) {
-            this.key = key;
-            this.value = value;
-        }
+        var auditContext =
+                new AuditContext(
+                        clientId,
+                        clientSessionId,
+                        sessionId,
+                        subjectId,
+                        email,
+                        ipAddress,
+                        phoneNumber,
+                        persistentSessionId,
+                        restrictedSection.encoded);
 
-        public static MetadataPair pair(String key, Object value) {
-            return new MetadataPair(key, value);
-        }
-
-        public String getKey() {
-            return key;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("[%s: %s]", key, value);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            MetadataPair that = (MetadataPair) o;
-            return Objects.equals(key, that.key) && Objects.equals(value, that.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(key, value);
-        }
+        submitAuditEvent(event, auditContext, metadataPairs);
     }
 
-    static void addField(String value, Consumer<String> setter) {
-        Optional.ofNullable(value).ifPresent(setter);
+    public record MetadataPair(String key, Object value, boolean isRestricted) {
+        public static MetadataPair pair(String key, Object value) {
+            return new MetadataPair(key, value, false);
+        }
+
+        public static MetadataPair pair(String key, Object value, boolean restricted) {
+            return new MetadataPair(key, value, restricted);
+        }
     }
 }

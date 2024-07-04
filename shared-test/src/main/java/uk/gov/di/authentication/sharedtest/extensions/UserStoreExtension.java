@@ -11,7 +11,6 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -128,10 +127,6 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.getUserProfileFromEmail(email);
     }
 
-    public void updateConsent(String email, ClientConsent clientConsent) {
-        dynamoService.updateConsent(email, clientConsent);
-    }
-
     public void addVerifiedPhoneNumber(String email, String phoneNumber) {
         setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
     }
@@ -157,10 +152,6 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(email).orElseThrow();
 
         return dynamoService.getOrGenerateSalt(userProfile);
-    }
-
-    public Optional<List<ClientConsent>> getUserConsents(String email) {
-        return dynamoService.getUserConsents(email);
     }
 
     public void updateTermsAndConditions(String email, String version) {

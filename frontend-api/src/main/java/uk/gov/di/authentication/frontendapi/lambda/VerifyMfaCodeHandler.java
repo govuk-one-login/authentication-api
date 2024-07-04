@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -30,6 +29,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -37,8 +37,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Map.entry;
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
@@ -88,6 +90,21 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     public VerifyMfaCodeHandler(ConfigurationService configurationService) {
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.mfaCodeProcessorFactory =
+                new MfaCodeProcessorFactory(
+                        configurationService,
+                        codeStorageService,
+                        new DynamoService(configurationService),
+                        auditService,
+                        new DynamoAccountModifiersService(configurationService));
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+    }
+
+    public VerifyMfaCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(VerifyMfaCodeRequest.class, configurationService, redis);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.mfaCodeProcessorFactory =
                 new MfaCodeProcessorFactory(
@@ -223,15 +240,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .map(this::errorResponseAsFrontendAuditableEvent)
                         .orElse(CODE_VERIFIED);
 
-        submitAuditEvent(
-                auditableEvent,
-                session,
-                userContext,
-                input,
-                codeRequest.getMfaMethodType(),
-                codeRequest.getCode(),
-                codeRequest.getJourneyType(),
-                codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()));
+
+        var metadataPairs = metadataPairsForEvent(auditableEvent, session, codeRequest);
+
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         if (errorResponse.isEmpty()) {
             mfaCodeProcessor.processSuccessfulCodeRequest(
@@ -274,51 +294,28 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private void submitAuditEvent(
+    private AuditService.MetadataPair[] metadataPairsForEvent(
             FrontendAuditableEvent auditableEvent,
             Session session,
-            UserContext userContext,
-            APIGatewayProxyRequestEvent input,
-            MFAMethodType mfaMethodType,
-            String code,
-            JourneyType journeyType,
-            boolean isAccountRecovery) {
-        var metadataPairs =
+            VerifyMfaCodeRequest codeRequest) {
+        var basicMetadataPairs =
+                List.of(
+                        pair("mfa-type", codeRequest.getMfaMethodType().getValue()),
+                        pair(
+                                "account-recovery",
+                                codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY),
+                        pair("journey-type", codeRequest.getJourneyType()));
+        var additionalPairs =
                 switch (auditableEvent) {
                     case CODE_MAX_RETRIES_REACHED -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
-                            pair("journey-type", journeyType));
+                            pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
                     case INVALID_CODE_SENT -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
                             pair("loginFailureCount", session.getRetryCount()),
-                            pair("MFACodeEntered", code),
-                            pair("journey-type", journeyType));
-                    case CODE_VERIFIED -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("MFACodeEntered", code),
-                            pair("journey-type", journeyType));
-                    default -> List.of(
-                            pair("mfa-type", mfaMethodType.getValue()),
-                            pair("account-recovery", isAccountRecovery),
-                            pair("journey-type", journeyType));
+                            pair("MFACodeEntered", codeRequest.getCode()));
+                    case CODE_VERIFIED -> List.of(pair("MFACodeEntered", codeRequest.getCode()));
+                    default -> List.<AuditService.MetadataPair>of();
                 };
-        auditService.submitAuditEvent(
-                auditableEvent,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                metadataPairs.toArray(new AuditService.MetadataPair[0]));
+        return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
+                .toArray(AuditService.MetadataPair[]::new);
     }
 }

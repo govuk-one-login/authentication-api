@@ -26,7 +26,7 @@ module "authorize" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "authorize"
-  path_part       = "authorize"
+  path_part       = var.orch_authorisation_enabled ? "authorize-auth" : "authorize"
   endpoint_method = ["GET", "POST"]
   environment     = var.environment
 
@@ -37,7 +37,7 @@ module "authorize" {
     HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
     IDENTITY_ENABLED                     = var.ipv_api_enabled
     LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
-    LOGIN_URI                            = "https://${local.frontend_fqdn}/"
+    FRONTEND_BASE_URL                    = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                    = local.api_base_url
     ORCH_CLIENT_ID                       = var.orch_client_id
     REDIS_KEY                            = local.redis_key
@@ -57,7 +57,6 @@ module "authorize" {
     CUSTOM_DOC_APP_CLAIM_ENABLED         = var.custom_doc_app_claim_enabled
     ORCH_REDIRECT_URI                    = var.orch_redirect_uri
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
-    TXMA_AUDIT_ENCODED_ENABLED           = var.txma_audit_encoded_enabled
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

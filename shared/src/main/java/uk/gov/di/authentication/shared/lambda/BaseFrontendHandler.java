@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -38,12 +39,14 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueOrElse;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
+    public static final String TXMA_AUDIT_ENCODED_HEADER = "txma-audit-encoded";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;
@@ -98,8 +101,29 @@ public abstract class BaseFrontendHandler<T>
     protected BaseFrontendHandler(
             Class<T> clazz,
             ConfigurationService configurationService,
+            RedisConnectionService redis) {
+        this.clazz = clazz;
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.clientService = new DynamoClientService(configurationService);
+        this.authenticationService = new DynamoService(configurationService);
+    }
+
+    protected BaseFrontendHandler(
+            Class<T> clazz,
+            ConfigurationService configurationService,
             boolean loadUserCredentials) {
         this(clazz, configurationService);
+        this.loadUserCredentials = loadUserCredentials;
+    }
+
+    protected BaseFrontendHandler(
+            Class<T> clazz,
+            ConfigurationService configurationService,
+            boolean loadUserCredentials,
+            RedisConnectionService redis) {
+        this(clazz, configurationService, redis);
         this.loadUserCredentials = loadUserCredentials;
     }
 
@@ -111,9 +135,9 @@ public abstract class BaseFrontendHandler<T>
                 () -> validateAndHandleRequest(input, context));
     }
 
-    public void onRequestReceived(String clientSessionId) {}
+    public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {}
 
-    public void onRequestValidationError(String clientSessionId) {}
+    public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {}
 
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
@@ -130,17 +154,26 @@ public abstract class BaseFrontendHandler<T>
                         input.getHeaders(),
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
+        String txmaAuditEncoded =
+                getHeaderValueOrElse(input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, null);
 
-        onRequestReceived(clientSessionId);
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        Optional<ClientSession> clientSession =
-                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
+
         if (session.isEmpty()) {
             LOG.warn("Session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
             attachSessionIdToLogs(session.get());
         }
+
+        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
+
+        onRequestReceived(clientSessionId, txmaAuditEncoded);
+
+        Optional<ClientSession> clientSession =
+                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
+
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -152,11 +185,9 @@ public abstract class BaseFrontendHandler<T>
             request = objectMapper.readValue(input.getBody(), clazz);
         } catch (JsonException e) {
             LOG.warn("Request is missing parameters.");
-            onRequestValidationError(clientSessionId);
+            onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-
-        UserContext.Builder userContextBuilder = UserContext.builder(session.get());
 
         userContextBuilder.withClientSessionId(clientSessionId);
 
@@ -200,6 +231,8 @@ public abstract class BaseFrontendHandler<T>
         }
 
         userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
+
+        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }

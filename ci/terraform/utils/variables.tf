@@ -56,7 +56,7 @@ variable "logging_endpoint_arns" {
 }
 
 variable "cloudwatch_log_retention" {
-  default     = 5
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
@@ -183,4 +183,10 @@ variable "email_check_results_sqs_queue_arn" {
 
 variable "email_check_results_sqs_queue_encryption_key_arn" {
   description = "ARN of the CMK used for server side encryption on the SQS email results check queue"
+}
+
+variable "support_email_check_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles the Experian email check on and off"
 }

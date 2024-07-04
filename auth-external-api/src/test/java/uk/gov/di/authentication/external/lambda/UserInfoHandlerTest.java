@@ -93,6 +93,7 @@ class UserInfoHandlerTest {
                         eq("test@test.com"),
                         any(),
                         eq("0123456789"),
+                        any(),
                         any());
     }
 

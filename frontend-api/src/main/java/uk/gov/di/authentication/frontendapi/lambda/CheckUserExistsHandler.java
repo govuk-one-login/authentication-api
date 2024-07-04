@@ -12,7 +12,6 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.entity.LockoutInformation;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -28,12 +27,14 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -79,6 +80,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         this.codeStorageService = new CodeStorageService(configurationService);
     }
 
+    public CheckUserExistsHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(CheckUserExistsRequest.class, configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -102,20 +110,20 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     ValidationHelper.validateEmailAddress(emailAddress);
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+            var auditContext =
+                    auditContextFromUserContext(
+                            userContext,
+                            AuditService.UNKNOWN,
+                            emailAddress,
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            persistentSessionId);
+
             if (errorResponse.isPresent()) {
+
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId);
+                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -123,22 +131,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var userExists = userProfile.isPresent();
             userContext.getSession().setEmailAddress(emailAddress);
 
-            var incorrectPasswordCount = codeStorageService.getIncorrectPasswordCount(emailAddress);
-
-            if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+            if (codeStorageService.isBlockedForEmail(
+                    emailAddress,
+                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
                 LOG.info("User account is locked");
                 sessionService.save(userContext.getSession());
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getClientId(),
-                        AuditService.UNKNOWN,
-                        emailAddress,
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
+                        auditContext,
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
@@ -148,7 +149,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
-            var internalPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
@@ -159,7 +159,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
                                 .getValue();
-                internalPairwiseId =
+                var internalPairwiseId =
                         ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                         userProfile.get(),
                                         configurationService.getInternalSectorUri(),
@@ -178,23 +178,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 userCredentials,
                                 userProfile.get().getPhoneNumber(),
                                 isPhoneNumberVerified);
+                auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
+
             auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    internalPairwiseId,
-                    emailAddress,
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    persistentSessionId,
-                    pair("rpPairwiseId", rpPairwiseId));
+                    auditableEvent, auditContext, pair("rpPairwiseId", rpPairwiseId));
 
             var lockoutInformation =
                     Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
@@ -220,8 +210,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userExists,
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
-                            lockoutInformation,
-                            userMfaDetail.isMfaMethodVerified());
+                            lockoutInformation);
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");

@@ -21,7 +21,7 @@ module "auth-code" {
   source = "../modules/endpoint-module"
 
   endpoint_name   = "auth-code"
-  path_part       = "auth-code"
+  path_part       = var.orch_auth_code_enabled ? "auth-code-auth" : "auth-code"
   endpoint_method = ["GET"]
 
   handler_environment_variables = {
@@ -32,6 +32,7 @@ module "auth-code" {
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     INTERNAl_SECTOR_URI      = var.internal_sector_uri
+    OIDC_API_BASE_URL        = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest"
 

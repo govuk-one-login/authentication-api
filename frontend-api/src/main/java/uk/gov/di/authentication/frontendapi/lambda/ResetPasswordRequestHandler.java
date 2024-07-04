@@ -7,10 +7,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequestHandlerResponse;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -29,12 +29,14 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
@@ -96,6 +98,19 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.auditService = new AuditService(configurationService);
     }
 
+    public ResetPasswordRequestHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(ResetPasswordRequest.class, configurationService, redis);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.codeGeneratorService = new CodeGeneratorService();
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -121,22 +136,30 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             userContext, configurationService);
             int passwordResetCounter = userContext.getSession().getPasswordResetCount();
             var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
-            auditService.submitAuditEvent(
+            var passwordResetTypePair =
+                    request.isWithinForcedPasswordResetJourney()
+                            ? pair(
+                                    "passwordResetType",
+                                    PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET)
+                            : pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
+
+            LOG.info("passwordResetType: {}", passwordResetTypePair);
+
+            var auditContext =
+                    auditContextFromUserContext(
+                            userContext,
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            request.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            var eventName =
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
-                            : PASSWORD_RESET_REQUESTED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    request.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    passwordResetCounterPair);
+                            : PASSWORD_RESET_REQUESTED;
+
+            auditService.submitAuditEvent(
+                    eventName, auditContext, passwordResetCounterPair, passwordResetTypePair);
 
             return validatePasswordResetCount(request.getEmail(), userContext)
                     .map(t -> generateApiGatewayProxyErrorResponse(400, t))

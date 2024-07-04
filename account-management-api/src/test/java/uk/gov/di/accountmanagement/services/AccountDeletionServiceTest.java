@@ -89,7 +89,9 @@ class AccountDeletionServiceTest {
         when(userProfile.getSubjectID()).thenReturn(expectedSubjectId);
 
         // when
-        var deletedAccountIdentifiers = underTest.removeAccount(Optional.of(input), userProfile);
+        var deletedAccountIdentifiers =
+                underTest.removeAccount(
+                        Optional.of(input), userProfile, AuditService.RestrictedSection.empty);
 
         // then
         assertEquals(expectedPublicSubjectId, deletedAccountIdentifiers.publicSubjectId());
@@ -116,7 +118,8 @@ class AccountDeletionServiceTest {
         when(userProfile.getEmail()).thenReturn(expectedEmail);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         // when
-        underTest.removeAccount(Optional.of(input), userProfile);
+        underTest.removeAccount(
+                Optional.of(input), userProfile, AuditService.RestrictedSection.empty);
         // then
         verify(dynamoDeleteService).deleteAccount(eq(expectedEmail), any());
     }
@@ -132,7 +135,11 @@ class AccountDeletionServiceTest {
         // then
         assertThrows(
                 expectedException.getClass(),
-                () -> underTest.removeAccount(Optional.of(input), userProfile));
+                () ->
+                        underTest.removeAccount(
+                                Optional.of(input),
+                                userProfile,
+                                AuditService.RestrictedSection.empty));
     }
 
     @Test
@@ -143,7 +150,8 @@ class AccountDeletionServiceTest {
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
 
         // when
-        underTest.removeAccount(Optional.of(input), userProfile);
+        underTest.removeAccount(
+                Optional.of(input), userProfile, AuditService.RestrictedSection.empty);
 
         // then
         var captor = ArgumentCaptor.forClass(String.class);
@@ -163,7 +171,12 @@ class AccountDeletionServiceTest {
         doThrow(new RuntimeException()).when(sqsClient).send(any());
 
         // then
-        assertDoesNotThrow(() -> underTest.removeAccount(Optional.of(input), userProfile));
+        assertDoesNotThrow(
+                () ->
+                        underTest.removeAccount(
+                                Optional.of(input),
+                                userProfile,
+                                AuditService.RestrictedSection.empty));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to send account deletion email")));
@@ -186,20 +199,22 @@ class AccountDeletionServiceTest {
         when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
 
         // when
-        underTest.removeAccount(Optional.of(input), userProfile);
+        underTest.removeAccount(
+                Optional.of(input), userProfile, AuditService.RestrictedSection.empty);
 
         // then
         verify(auditService)
                 .submitAuditEvent(
                         eq(DELETE_ACCOUNT),
+                        eq(TEST_CLIENT_ID),
                         eq(TEST_CLIENT_SESSION_ID),
                         eq(AuditService.UNKNOWN),
-                        eq(TEST_CLIENT_ID),
                         anyString(),
                         eq(expectedEmail),
                         eq(AuditService.UNKNOWN),
                         eq(expectedPhoneNumber),
-                        eq(AuditService.UNKNOWN));
+                        eq(AuditService.UNKNOWN),
+                        eq(AuditService.RestrictedSection.empty));
     }
 
     @Test
@@ -209,10 +224,25 @@ class AccountDeletionServiceTest {
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         doThrow(new RuntimeException())
                 .when(auditService)
-                .submitAuditEvent(any(), any(), any(), any(), any(), any(), any(), any(), any());
+                .submitAuditEvent(
+                        any(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        anyString(),
+                        any());
 
         // then
-        assertDoesNotThrow(() -> underTest.removeAccount(Optional.of(input), userProfile));
+        assertDoesNotThrow(
+                () ->
+                        underTest.removeAccount(
+                                Optional.of(input),
+                                userProfile,
+                                AuditService.RestrictedSection.empty));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to audit account deletion")));

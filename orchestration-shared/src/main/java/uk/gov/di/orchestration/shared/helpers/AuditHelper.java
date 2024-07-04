@@ -34,7 +34,7 @@ public class AuditHelper {
         try {
             var txmaEncoded =
                     RequestHeaderHelper.getHeaderValueFromHeaders(
-                            headers, "txma-audit-encoded", false);
+                            headers, "Txma-Audit-Encoded", false);
             if (txmaEncoded != null) {
                 attachAuditField(TXMA_ENCODED_HEADER, txmaEncoded);
             }

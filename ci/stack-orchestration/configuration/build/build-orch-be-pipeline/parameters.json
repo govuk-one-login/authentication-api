@@ -1,5 +1,29 @@
 [
   {
+    "ParameterKey": "AccessCrossAccountSQS",
+    "ParameterValue": "761723964695"
+  },
+  {
+    "ParameterKey": "AccessDynamoDBAccounts",
+    "ParameterValue": "761723964695"
+  },
+  {
+    "ParameterKey": "AllowedServiceOne",
+    "ParameterValue": "DynamoDB"
+  },
+  {
+    "ParameterKey": "AllowedServiceTwo",
+    "ParameterValue": "SSM"
+  },
+  {
+    "ParameterKey": "AllowedServiceThree",
+    "ParameterValue": "SQS"
+  },
+  {
+    "ParameterKey": "AllowedServiceFour",
+    "ParameterValue": "EC2"
+  },
+  {
     "ParameterKey": "AdditionalCodeSigningVersionArns",
     "ParameterValue": "arn:aws:signer:eu-west-2:216552277552:/signing-profiles/DynatraceSigner/5uwzCCGTPq"
   },
@@ -18,6 +42,10 @@
   {
     "ParameterKey": "IncludePromotion",
     "ParameterValue": "Yes"
+  },
+  {
+    "ParameterKey": "ProgrammaticPermissionsBoundary",
+    "ParameterValue": "True"
   },
   {
     "ParameterKey": "OneLoginRepositoryName",
@@ -42,5 +70,21 @@
   {
     "ParameterKey": "VpcStackName",
     "ParameterValue": "vpc"
+  },
+  {
+    "ParameterKey": "TestImageRepositoryUri",
+    "ParameterValue": "767397776536.dkr.ecr.eu-west-2.amazonaws.com/pipeline-test-image"
+  },
+  {
+    "ParameterKey": "TestReportFormat",
+    "ParameterValue": "CUCUMBERJSON"
+  },
+  {
+    "ParameterKey": "BuildNotificationStackName",
+    "ParameterValue": "build-notifications"
+  },
+  {
+    "ParameterKey": "SlackNotificationType",
+    "ParameterValue": "Failures"
   }
 ]

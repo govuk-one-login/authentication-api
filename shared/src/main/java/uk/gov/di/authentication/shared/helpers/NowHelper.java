@@ -25,6 +25,10 @@ public class NowHelper {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS").format(date);
     }
 
+    public static long toUnixTimestamp(Date date) {
+        return date.toInstant().getEpochSecond();
+    }
+
     public static class NowClock {
         private final Clock clock;
 

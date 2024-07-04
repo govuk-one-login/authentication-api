@@ -6,7 +6,6 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public record UserStartInfo(
-        @SerializedName("consentRequired") @Expose @Required boolean isConsentRequired,
         @SerializedName("upliftRequired") @Expose @Required boolean isUpliftRequired,
         @SerializedName("identityRequired") @Expose @Required boolean isIdentityRequired,
         @SerializedName("authenticated") @Expose @Required boolean isAuthenticated,

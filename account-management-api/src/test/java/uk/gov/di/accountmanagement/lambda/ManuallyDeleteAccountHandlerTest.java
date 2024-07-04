@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Optional;
@@ -30,7 +31,7 @@ class ManuallyDeleteAccountHandlerTest {
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
-        when(accountDeletionService.removeAccount(any(), any()))
+        when(accountDeletionService.removeAccount(any(), any(), any()))
                 .thenReturn(mock(AccountDeletionService.DeletedAccountIdentifiers.class));
 
         // when
@@ -38,7 +39,8 @@ class ManuallyDeleteAccountHandlerTest {
 
         // then
         verify(authenticationService).getUserProfileByEmailMaybe(expectedEmail);
-        verify(accountDeletionService).removeAccount(Optional.empty(), userProfile);
+        verify(accountDeletionService)
+                .removeAccount(Optional.empty(), userProfile, AuditService.RestrictedSection.empty);
     }
 
     @Test
@@ -57,7 +59,7 @@ class ManuallyDeleteAccountHandlerTest {
         var userProfile = mock(UserProfile.class);
         when(authenticationService.getUserProfileByEmailMaybe(any()))
                 .thenReturn(Optional.ofNullable(userProfile));
-        when(accountDeletionService.removeAccount(any(), any()))
+        when(accountDeletionService.removeAccount(any(), any(), any()))
                 .thenThrow(Json.JsonException.class);
 
         // then

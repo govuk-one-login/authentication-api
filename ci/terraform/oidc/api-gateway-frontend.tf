@@ -36,6 +36,12 @@ resource "aws_api_gateway_usage_plan_key" "di_auth_frontend_usage_plan_key" {
   usage_plan_id = aws_api_gateway_usage_plan.di_auth_frontend_usage_plan.id
 }
 
+resource "aws_api_gateway_resource" "auth_frontend_wellknown_resource" {
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_frontend_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
+  path_part   = ".well-known"
+}
+
 locals {
   frontend_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.environment}/_user_request_" : "https://${local.frontend_api_fqdn}/"
 }
@@ -69,20 +75,24 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.reset_password.method_trigger_value,
       module.reset-password-request.integration_trigger_value,
       module.reset-password-request.method_trigger_value,
-      module.ipv-authorize.integration_trigger_value,
-      module.ipv-authorize.method_trigger_value,
       module.processing-identity.integration_trigger_value,
       module.processing-identity.method_trigger_value,
-      module.doc-app-authorize.integration_trigger_value,
-      module.doc-app-authorize.method_trigger_value,
       module.orch_auth_code.integration_trigger_value,
       module.orch_auth_code.method_trigger_value,
       module.identity_progress.integration_trigger_value,
       module.identity_progress.method_trigger_value,
+      module.mfa_reset_storage_token_jwk.integration_trigger_value,
+      module.mfa_reset_storage_token_jwk.method_trigger_value,
+      module.reverification_result.integration_trigger_value,
+      module.reverification_result.method_trigger_value,
+      module.mfa_reset_authorize.integration_trigger_value,
+      module.mfa_reset_authorize.method_trigger_value,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].integration_trigger_value : null,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].method_trigger_value : null,
       local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].integration_trigger_value : null,
       local.deploy_reauth_user_count == 1 ? module.check_reauth_user[0].method_trigger_value : null,
+      local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].integration_trigger_value : null,
+      local.deploy_check_email_fraud_block_count == 1 ? module.check_email_fraud_block[0].method_trigger_value : null,
       local.account_modifiers_encryption_policy_arn,
     ]))
   }
@@ -104,10 +114,11 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.reset_password,
     module.reset-password-request,
     module.processing-identity,
-    module.ipv-authorize,
-    module.doc-app-authorize,
     module.orch_auth_code,
     module.check_reauth_user,
+    module.mfa_reset_authorize,
+    module.mfa_reset_storage_token_jwk,
+    module.reverification_result,
   ]
 }
 
@@ -202,11 +213,13 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.verify_mfa_code,
     module.reset_password,
     module.reset-password-request,
-    module.ipv-authorize,
     module.processing-identity,
-    module.doc-app-authorize,
     module.orch_auth_code,
     module.check_reauth_user,
+    module.check_email_fraud_block,
+    module.mfa_reset_storage_token_jwk,
+    module.reverification_result,
+    module.mfa_reset_authorize,
     aws_api_gateway_deployment.deployment,
   ]
 }
@@ -336,7 +349,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
 
   logging_filter {
-    default_behavior = "DROP"
+    default_behavior = "KEEP"
 
     filter {
       behavior = "KEEP"

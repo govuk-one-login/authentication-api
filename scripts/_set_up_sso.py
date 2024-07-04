@@ -32,18 +32,16 @@ except ImportError:
 StrAnyDict = dict[str, object()]
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("set-up-sso")
 
 INCLUDE_PROD = os.getenv("INCLUDE_PROD", "false") == "YES I AM SURE"
 if INCLUDE_PROD:
-    logging.warning(
+    logger.warning(
         "You have enabled production account profiles. This is not recommended"
         " unless you are about to perform a production operation."
     )
-    logging.warning(
+    logger.warning(
         "Run again without setting `INCLUDE_PROD` environment variable once you are"
         " done."
     )
@@ -51,6 +49,8 @@ if INCLUDE_PROD:
 # Global constants
 AWS_CONFIG_DIR: Path = Path.home() / ".aws"
 AWS_CONFIG_FILE: Path = AWS_CONFIG_DIR / "config"
+AWS_CONFIG_BACKUP_DIR: Path = AWS_CONFIG_DIR / "auth-set-up-sso-backups"
+
 DEFAULT_REGION = "eu-west-2"
 SESSION_NAME = "di-sso"
 SESSION_START_URL = "https://uk-digital-identity.awsapps.com/start"
@@ -61,16 +61,39 @@ oidc_client_cache: Path = (
 )
 
 
+def backup_existing_config(retain_count: int = 20):
+    AWS_CONFIG_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+    backup_file = AWS_CONFIG_BACKUP_DIR / f"config.backup.{datetime.now().isoformat()}"
+    logger.info("Backing up existing AWS config to %s", backup_file)
+    shutil.copy2(AWS_CONFIG_FILE, backup_file)
+
+    # Get the number of existing backups, sorted by date (oldest -> newest)
+    existing_backups = sorted(AWS_CONFIG_BACKUP_DIR.glob("config.backup.*"))
+
+    deleted_backups = 0
+    while len(existing_backups) > retain_count:
+        # Delete oldest backup
+        oldest_backup = existing_backups.pop(0)
+        oldest_backup.unlink()
+        logger.debug("Deleted old backup %s", oldest_backup)
+        deleted_backups += 1
+
+    if deleted_backups > 0:
+        logger.info(
+            "Deleted %d old backup%s",
+            deleted_backups,
+            "s" if deleted_backups > 1 else "",
+        )
+
+
 def setup_aws_config():
     # Check if AWS config directory exists, if not, create it
     AWS_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     # Backup existing config file
     if AWS_CONFIG_FILE.exists():
-        backup_file = AWS_CONFIG_FILE.with_suffix(
-            f".backup.{datetime.now().isoformat()}"
-        )
-        shutil.copy2(AWS_CONFIG_FILE, backup_file)
+        backup_existing_config()
 
     # Load AWS config file
     config = configparser.ConfigParser()
@@ -111,8 +134,8 @@ def login_to_sso() -> StrAnyDict:
             client_creds["clientSecretExpiresAt"] > datetime.now().timestamp()
         ), "Client has expired."
     except (FileNotFoundError, json.JSONDecodeError, AssertionError, KeyError) as e:
-        logging.debug("Error loading cached client: %s", e)
-        logging.debug("Registering new client.")
+        logger.debug("Error loading cached client: %s", e)
+        logger.debug("Registering new client.")
         client_creds = sso_client.register_client(
             clientName="set-up-sso.py",
             clientType="public",
@@ -226,7 +249,11 @@ def role_is_admin(role: StrAnyDict) -> bool:
 
 
 def role_is_readonly(role: StrAnyDict) -> bool:
-    return role_ends_with(role, "readonly") or role_ends_with(role, "read-only")
+    return (
+        role_ends_with(role, "readonly")
+        or role_ends_with(role, "read-only")
+        or role_ends_with(role, "ReadOnlyAccess")
+    )
 
 
 def create_aws_profiles(accounts: list[StrAnyDict]):
@@ -253,7 +280,7 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
                     profile_name = _name
 
             if profile_name is None:
-                logging.warning(
+                logger.warning(
                     "Role name %s does not match any known patterns or is"
                     " already in use. Using %s-%s instead.",
                     role_name,
@@ -263,21 +290,25 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
                 profile_name = f"{account_name}-{role_name}"
 
             profile_section_title = f"profile {profile_name}"
-            if account_is_prod(account) and not INCLUDE_PROD:
+            if (
+                account_is_prod(account)
+                and not INCLUDE_PROD
+                and not role_is_readonly(role)
+            ):
                 if profile_section_title in config:
                     config.remove_section(profile_section_title)
-                    logging.warning(
+                    logger.warning(
                         "Removed profile %s as it is a production account.",
                         profile_name,
                     )
                 else:
-                    logging.warning(
+                    logger.warning(
                         "Not adding profile %s as it is a production account.",
                         profile_name,
                     )
                 continue
             if profile_section_title in config:
-                logging.info(
+                logger.info(
                     "Updating profile %s: %s:%s",
                     profile_name,
                     account["accountId"],
@@ -285,7 +316,7 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
                 )
                 config.remove_section(profile_section_title)
             else:
-                logging.info(
+                logger.info(
                     "Adding profile %s: %s:%s",
                     profile_name,
                     account["accountId"],

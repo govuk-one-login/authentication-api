@@ -7,11 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -35,6 +36,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
@@ -43,7 +45,9 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -108,6 +112,23 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 new DynamoAccountModifiersService(configurationService);
     }
 
+    public ResetPasswordHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(ResetPasswordCompletionRequest.class, configurationService, redis);
+        this.authenticationService = new DynamoService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.dynamoAccountModifiersService =
+                new DynamoAccountModifiersService(configurationService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -152,14 +173,33 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                             configurationService.getInternalSectorUri(),
                             authenticationService);
 
+            var auditContext =
+                    auditContextFromUserContext(
+                            userContext,
+                            internalCommonSubjectId.getValue(),
+                            userCredentials.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            userContext
+                                    .getUserProfile()
+                                    .map(UserProfile::getPhoneNumber)
+                                    .orElse(AuditService.UNKNOWN),
+                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
             updateAccountRecoveryBlockTable(
-                    userProfile, userCredentials, internalCommonSubjectId, userContext, input);
+                    userProfile, userCredentials, internalCommonSubjectId, auditContext);
 
             var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
             if (incorrectPasswordCount != 0) {
                 codeStorageService.deleteIncorrectPasswordCount(userCredentials.getEmail());
             }
+
+            String codeBlockedKeyPrefix =
+                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
+
+            codeStorageService.deleteBlockForEmail(
+                    userCredentials.getEmail(), codeBlockedKeyPrefix);
+
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
@@ -182,37 +222,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     sqsClient.send(serialiseRequest(smsNotifyRequest));
                 }
             }
+
             if (request.isForcedPasswordReset()) {
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
-                        internalCommonSubjectId.getValue(),
-                        userCredentials.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        userContext
-                                .getUserProfile()
-                                .map(UserProfile::getPhoneNumber)
-                                .orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                auditService.submitAuditEvent(PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
             }
-            auditService.submitAuditEvent(
-                    auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    internalCommonSubjectId.getValue(),
-                    userCredentials.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            auditService.submitAuditEvent(auditableEvent, auditContext);
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
@@ -242,8 +256,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             UserProfile userProfile,
             UserCredentials userCredentials,
             Subject internalCommonSubjectId,
-            UserContext userContext,
-            APIGatewayProxyRequestEvent input) {
+            AuditContext auditContext) {
         var authAppVerified =
                 Optional.ofNullable(userCredentials.getMfaMethods())
                         .orElseGet(Collections::emptyList)
@@ -262,19 +275,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Adding block to account modifiers table");
             dynamoAccountModifiersService.setAccountRecoveryBlock(
                     internalCommonSubjectId.getValue(), true);
-            auditService.submitAuditEvent(
-                    ACCOUNT_RECOVERY_BLOCK_ADDED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    internalCommonSubjectId.getValue(),
-                    userCredentials.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+            auditService.submitAuditEvent(ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
         }
     }
 }

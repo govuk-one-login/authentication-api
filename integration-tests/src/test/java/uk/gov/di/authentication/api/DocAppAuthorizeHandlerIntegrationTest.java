@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -60,7 +61,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     @RegisterExtension
     public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new DocAppTestConfigurationService(jwksExtension);
 
     @BeforeEach
@@ -71,7 +72,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
                         .keyID(ENCRYPTION_KEY_ID)
                         .build();
         jwksExtension.init(new JWKSet(jwkKey));
-        handler = new DocAppAuthorizeHandler(configurationService);
+        handler = new DocAppAuthorizeHandler(configurationService, redisConnectionService);
         redis.createSession(SESSION_ID);
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
@@ -96,8 +97,9 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                false,
-                ClientType.APP);
+                ClientType.APP,
+                ES256.getName(),
+                false);
 
         var response =
                 makeRequest(
@@ -151,7 +153,8 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         }
     }
 
-    private class DocAppTestConfigurationService extends IntegrationTestConfigurationService {
+    private static class DocAppTestConfigurationService
+            extends IntegrationTestConfigurationService {
 
         private final DocAppJwksExtension jwksExtension;
 
@@ -182,7 +185,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         }
 
         @Override
-        public URI getDocAppJwksUri() {
+        public URI getDocAppJwksURI() {
             try {
                 return new URIBuilder()
                         .setHost("localhost")

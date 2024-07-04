@@ -81,4 +81,34 @@ class JwksServiceTest {
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.RS256));
         assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
+
+    @Test
+    void shouldRetrievePublicMfaResetStorageTokenSigningKeyFromKmsAndParseToJwk() {
+        byte[] publicKey =
+                Base64.getDecoder()
+                        .decode(
+                                "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEQjB7lXZryah6F/TgHVYro1tfifvMAOJsOa/kQzbOYjxGnAoGzW4NRJfn/K7caroQKYWTERFljryeSsaPFLXUOw==");
+
+        System.out.println(publicKey);
+        when(configurationService.getMfaResetStorageTokenSigningKeyAlias())
+                .thenReturn("94542364374354");
+
+        var result =
+                GetPublicKeyResponse.builder()
+                        .keyUsage(KeyUsageType.SIGN_VERIFY)
+                        .keyId("94542364374354")
+                        .signingAlgorithms(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .publicKey(SdkBytes.fromByteArray(publicKey))
+                        .build();
+
+        System.out.println(result.signingAlgorithms());
+
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
+
+        JWK publicKeyJwk = jwksService.getPublicMfaResetStorageTokenJwkWithOpaqueId();
+
+        assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String("94542364374354")));
+        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
+    }
 }

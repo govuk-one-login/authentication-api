@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -8,6 +9,7 @@ import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -72,7 +74,9 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "The test client",
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
+                        PublicKeySource.STATIC.getValue(),
                         VALID_PUBLIC_CERT,
+                        null,
                         singletonList("openid"),
                         postlogoutUris,
                         backChannelLogoutUri,
@@ -81,7 +85,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         "public",
                         false,
                         claims,
-                        ClientType.WEB.getValue());
+                        ClientType.WEB.getValue(),
+                        JWSAlgorithm.ES256.getName());
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 

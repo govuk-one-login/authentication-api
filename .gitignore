@@ -3,6 +3,8 @@
 build/
 .gradle
 build
+!ci/cloudfront-orchestration/*/build
+!ci/stack-orchestration/**/build
 **/.terraform/
 │**/*.tfstate*
 **/out
@@ -17,6 +19,7 @@ ci/terraform/**/*.tfstate*
 logs/
 .vscode/
 .venv/
+.aws-sam
 
 # Approval Tests
 *.received.txt
@@ -24,3 +27,5 @@ logs/
 
 # Contract Tests
 pact/
+node_modules
+.infracost

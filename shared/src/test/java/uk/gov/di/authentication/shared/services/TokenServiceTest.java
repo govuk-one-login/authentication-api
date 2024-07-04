@@ -16,6 +16,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -26,6 +27,11 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
+import org.approvaltests.JsonApprovals;
+import org.approvaltests.core.Options;
+import org.approvaltests.scrubbers.GuidScrubber;
+import org.approvaltests.scrubbers.RegExScrubber;
+import org.approvaltests.scrubbers.Scrubbers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +44,6 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -48,9 +53,8 @@ import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.URI;
 import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
@@ -66,6 +70,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -89,6 +94,8 @@ public class TokenServiceTest {
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final Subject FIXED_INTERNAL_PAIRWISE_SUBJECT =
+            new Subject("urn:fdc:gov.uk:2022:TJLt3WaiGkLh8UqeisH2zVKGAP0");
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
@@ -106,6 +113,10 @@ public class TokenServiceTest {
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
+    private static final String STORAGE_TOKEN_PREFIX =
+            "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
+    private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
+    private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
 
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -135,7 +146,7 @@ public class TokenServiceTest {
             throws ParseException, JOSEException, Json.JsonException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -149,12 +160,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -184,6 +189,27 @@ public class TokenServiceTest {
     }
 
     @Test
+    void shouldGenerateWellFormedStorageTokenForMfaReset() throws JOSEException, ParseException {
+        when(configurationService.getCredentialStoreURI())
+                .thenReturn(URI.create(CREDENTIAL_STORE_URI));
+        when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
+        createSignedToken();
+
+        AccessToken token =
+                tokenService.generateStorageTokenForMfaReset(FIXED_INTERNAL_PAIRWISE_SUBJECT);
+        var parsedToken = SignedJWT.parse(token.getValue());
+
+        verify(configurationService).getMfaResetStorageTokenSigningKeyAlias();
+        assertEquals(3, parsedToken.getParsedParts().length);
+        assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
+        var unixTimestampScrubber = new RegExScrubber("\\d{10}", "1700000000");
+        var guidScrubber = new GuidScrubber();
+        JsonApprovals.verifyAsJson(
+                parsedToken.getJWTClaimsSet().toJSONObject(),
+                new Options(Scrubbers.scrubAll(unixTimestampScrubber, guidScrubber)));
+    }
+
+    @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
             throws ParseException,
                     JOSEException,
@@ -194,7 +220,7 @@ public class TokenServiceTest {
 
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -208,12 +234,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
@@ -268,7 +288,7 @@ public class TokenServiceTest {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -281,12 +301,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -303,7 +317,7 @@ public class TokenServiceTest {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
-        createSignedAccessToken();
+        createSignedToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         additionalTokenClaims.put("nonce", nonce);
         Set<String> claimsForListOfScopes =
@@ -316,12 +330,6 @@ public class TokenServiceTest {
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
                         INTERNAL_PAIRWISE_SUBJECT,
-                        Collections.singletonList(
-                                new ClientConsent(
-                                        CLIENT_ID,
-                                        claimsForListOfScopes,
-                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
-                        false,
                         null,
                         false,
                         JWSAlgorithm.ES256,
@@ -483,7 +491,7 @@ public class TokenServiceTest {
                 CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, ecSigningKey, expiryDate);
     }
 
-    private void createSignedAccessToken() throws JOSEException {
+    private void createSignedToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
@@ -498,16 +506,15 @@ public class TokenServiceTest {
                         signer,
                         PUBLIC_SUBJECT,
                         ecSigningKey.getKeyID());
-        byte[] accessTokenSignatureDer =
-                ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        SignResponse accessTokenResult =
+        byte[] tokenSignatureDer = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+        SignResponse tokenResult =
                 SignResponse.builder()
-                        .signature(SdkBytes.fromByteArray(accessTokenSignatureDer))
+                        .signature(SdkBytes.fromByteArray(tokenSignatureDer))
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .keyId(KEY_ID)
                         .build();
 
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(tokenResult);
     }
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)

@@ -9,4 +9,8 @@ public enum Environment {
     Environment(String value) {
         this.value = value;
     }
+
+    public String getValue() {
+        return value;
+    }
 }

@@ -9,24 +9,31 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultSqsMessage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.NowHelper.now;
 
 public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, Void> {
 
     private static final Logger LOG = LogManager.getLogger(EmailCheckResultWriterHandler.class);
     private final Json objectMapper = SerializationService.getInstance();
     private final DynamoEmailCheckResultService db;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
-    public EmailCheckResultWriterHandler(DynamoEmailCheckResultService databaseService) {
+    public EmailCheckResultWriterHandler(
+            DynamoEmailCheckResultService databaseService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.db = databaseService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public EmailCheckResultWriterHandler(ConfigurationService configService) {
         this.db = new DynamoEmailCheckResultService(configService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configService);
     }
 
     public EmailCheckResultWriterHandler() {
@@ -51,15 +58,17 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                         objectMapper.readValue(msg.getBody(), EmailCheckResultSqsMessage.class);
 
                 db.saveEmailCheckResult(
-                        emailCheckResult.email(),
-                        emailCheckResult.emailCheckResultStatus(),
+                        emailCheckResult.emailAddress(),
+                        emailCheckResult.status(),
                         emailCheckResult.timeToExist(),
-                        emailCheckResult.referenceNumber());
+                        emailCheckResult.requestReference());
 
                 LOG.info(
                         "Message for email check reference {} written to database",
-                        emailCheckResult.referenceNumber());
+                        emailCheckResult.requestReference());
+                var duration = now().getTime() - emailCheckResult.timeOfInitialRequest();
 
+                cloudwatchMetricsService.logEmailCheckDuration(duration);
             } catch (JsonException e) {
                 LOG.error("Error when mapping message from queue to a EmailCheckResultSqsMessage");
                 throw new RuntimeException(

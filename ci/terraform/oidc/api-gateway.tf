@@ -105,7 +105,7 @@ resource "aws_api_gateway_resource" "connect_resource" {
 resource "aws_api_gateway_resource" "register_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_resource.connect_resource.id
-  path_part   = "register"
+  path_part   = var.orch_register_enabled ? "register-auth" : "register"
 }
 
 data "aws_region" "current" {
@@ -113,6 +113,8 @@ data "aws_region" "current" {
 
 locals {
   api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.environment}/_user_request_" : "https://${local.oidc_api_fqdn}/"
+
+  cloudfront_origin_cloaking_header_name = "origin-cloaking-secret"
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -155,7 +157,17 @@ resource "aws_api_gateway_deployment" "deployment" {
       jsonencode(aws_api_gateway_method.orch_frontend_proxy_method),
       var.orch_openid_configuration_enabled,
       var.orch_trustmark_enabled,
-      var.orch_doc_app_callback_enabled
+      var.orch_doc_app_callback_enabled,
+      var.orch_token_enabled,
+      var.orch_jwks_enabled,
+      var.orch_authorisation_enabled,
+      var.orch_logout_enabled,
+      var.orch_ipv_callback_enabled,
+      var.orch_register_enabled,
+      var.orch_authentication_callback_enabled,
+      var.orch_auth_code_enabled,
+      var.orch_userinfo_enabled,
+      var.orch_storage_token_jwk_enabled,
     ]))
   }
 
@@ -177,6 +189,20 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.ipv-callback,
     module.ipv-capacity,
     module.doc-app-callback,
+    aws_api_gateway_integration.orch_openid_configuration_integration,
+    aws_api_gateway_integration.orch_trustmark_integration,
+    aws_api_gateway_integration.orch_doc_app_callback_integration,
+    aws_api_gateway_integration.orch_token_integration,
+    aws_api_gateway_integration.orch_jwks_integration,
+    aws_api_gateway_integration.orch_authorisation_integration,
+    aws_api_gateway_integration.orch_logout_integration,
+    aws_api_gateway_integration.orch_ipv_callback_integration,
+    aws_api_gateway_integration.orch_register_integration,
+    aws_api_gateway_integration.orch_authentication_callback_integration,
+    aws_api_gateway_integration.orch_auth_code_integration,
+    aws_api_gateway_integration.orch_userinfo_integration,
+    aws_api_gateway_integration.orch_update_client_integration,
+    aws_api_gateway_integration.orch_storage_token_jwk_integration
   ]
 }
 
@@ -240,6 +266,25 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "orch_frontend_authorizer_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.orch_frontend_authorizer.function_name}"
+  tags              = local.default_tags
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "orch-frontend-authorizer-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.orch_frontend_authorizer_logs.name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
+
 resource "aws_api_gateway_stage" "endpoint_stage" {
   deployment_id = aws_api_gateway_deployment.deployment.id
   rest_api_id   = aws_api_gateway_rest_api.di_authentication_api.id
@@ -278,6 +323,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
   ]
 }
 
+# TODO: Investigate if this can be done better in multi-env aws accounts
 resource "aws_api_gateway_account" "api_gateway_logging_role" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_logging_iam_role.arn
 
@@ -333,6 +379,49 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       rate_based_statement {
         limit              = var.environment == "staging" ? 600000 : 3600
         aggregate_key_type = "IP"
+        scope_down_statement {
+          and_statement {
+            statement {
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    field_to_match {
+                      single_header {
+                        name = local.cloudfront_origin_cloaking_header_name
+                      }
+                    }
+                    positional_constraint = "EXACTLY"
+                    search_string         = var.oidc_origin_cloaking_header
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+
+            statement {
+              not_statement {
+                statement {
+                  byte_match_statement {
+                    field_to_match {
+                      single_header {
+                        name = local.cloudfront_origin_cloaking_header_name
+                      }
+                    }
+                    positional_constraint = "EXACTLY"
+                    search_string         = var.previous_oidc_origin_cloaking_header
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
     visibility_config {
@@ -553,6 +642,62 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       sampled_requests_enabled   = true
     }
   }
+
+  rule {
+    name     = "count_not_cloudfront"
+    priority = 99
+
+    action {
+      count {}
+    }
+
+    statement {
+      not_statement {
+        statement {
+          or_statement {
+            statement {
+              byte_match_statement {
+                field_to_match {
+                  single_header {
+                    name = local.cloudfront_origin_cloaking_header_name
+                  }
+                }
+                positional_constraint = "EXACTLY"
+                search_string         = var.oidc_origin_cloaking_header
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+
+            statement {
+              byte_match_statement {
+                field_to_match {
+                  single_header {
+                    name = local.cloudfront_origin_cloaking_header_name
+                  }
+                }
+                positional_constraint = "EXACTLY"
+                search_string         = var.previous_oidc_origin_cloaking_header
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafNotCloudFrontCount"
+      sampled_requests_enabled   = true
+    }
+  }
+
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "${replace(var.environment, "-", "")}OidcWafRules"
@@ -561,7 +706,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
 }
 
 resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
-  count        = var.use_localstack ? 0 : 1
+  count        = var.enforce_cloudfront ? 0 : 1
   resource_arn = aws_api_gateway_stage.endpoint_stage.arn
   web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
 
@@ -571,12 +716,23 @@ resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
   ]
 }
 
+data "aws_cloudformation_export" "oidc_origin_cloaking_waf_arn" {
+  count = var.enforce_cloudfront ? 1 : 0
+  name  = "${local.secure_pipelines_environment}-oidc-cloudfront-CloakingOriginWebACLArn"
+}
+
+resource "aws_wafv2_web_acl_association" "oidc_origin_cloaking_waf" {
+  count        = var.enforce_cloudfront ? 1 : 0
+  resource_arn = aws_api_gateway_stage.endpoint_stage.arn
+  web_acl_arn  = data.aws_cloudformation_export.oidc_origin_cloaking_waf_arn[0].value
+}
+
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api" {
   count                   = var.use_localstack ? 0 : 1
   log_destination_configs = [aws_cloudwatch_log_group.oidc_waf_logs[count.index].arn]
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
   logging_filter {
-    default_behavior = "DROP"
+    default_behavior = "KEEP"
 
     filter {
       behavior = "KEEP"
@@ -695,7 +851,8 @@ resource "aws_api_gateway_method" "orch_frontend_proxy_method" {
   depends_on = [
     aws_api_gateway_resource.orch_frontend_resource_proxy
   ]
-  authorization = "NONE"
+  authorization = "CUSTOM"
+  authorizer_id = aws_api_gateway_authorizer.orch_frontend_authorizer.id
 
   request_parameters = {
     "method.request.path.proxy" = true
@@ -704,7 +861,7 @@ resource "aws_api_gateway_method" "orch_frontend_proxy_method" {
 
 data "aws_cloudformation_stack" "orch_frontend_stack" {
   count = var.orch_frontend_api_gateway_integration_enabled ? 1 : 0
-  name  = "${var.environment}-orch-fe-deploy"
+  name  = var.environment == "sandpit" ? "dev-orch-fe-deploy" : "${var.environment}-orch-fe-deploy"
 }
 
 locals {
@@ -769,7 +926,7 @@ resource "aws_api_gateway_integration" "orch_openid_configuration_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_openid_configuration_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-OpenIdConfigurationFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_trustmark_resource" {
@@ -777,6 +934,9 @@ resource "aws_api_gateway_resource" "orch_trustmark_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "trustmark"
+  depends_on = [
+    module.trustmarks
+  ]
 }
 
 resource "aws_api_gateway_method" "orch_trustmark_method" {
@@ -801,7 +961,7 @@ resource "aws_api_gateway_integration" "orch_trustmark_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_trustmark_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-TrustmarkFunction:latest/invocations"
 }
 
 resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
@@ -809,6 +969,9 @@ resource "aws_api_gateway_resource" "orch_doc_app_callback_resource" {
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
   parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   path_part   = "doc-app-callback"
+  depends_on = [
+    module.doc-app-callback
+  ]
 }
 
 resource "aws_api_gateway_method" "orch_doc_app_callback_method" {
@@ -833,5 +996,397 @@ resource "aws_api_gateway_integration" "orch_doc_app_callback_integration" {
   ]
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
-  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${var.orch_doc_app_callback_name}:latest/invocations"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-DocAppCallbackFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_token_resource" {
+  count       = var.orch_token_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "token"
+  depends_on = [
+    module.token
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_token_method" {
+  count       = var.orch_token_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_token_resource[0].id
+  http_method = "POST"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_token_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_token_integration" {
+  count       = var.orch_token_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_token_resource[0].id
+  http_method = aws_api_gateway_method.orch_token_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_token_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-TokenFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_jwks_resource" {
+  count       = var.orch_jwks_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.wellknown_resource.id
+  path_part   = "jwks.json"
+  depends_on = [
+    aws_api_gateway_resource.wellknown_resource,
+    module.jwks
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_jwks_method" {
+  count       = var.orch_jwks_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_jwks_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_jwks_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_jwks_integration" {
+  count       = var.orch_jwks_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_jwks_resource[0].id
+  http_method = aws_api_gateway_method.orch_jwks_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_jwks_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-JwksFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_authorisation_resource" {
+  count       = var.orch_authorisation_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "authorize"
+  depends_on = [
+    module.authorize
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_authorisation_method" {
+  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
+  http_method = each.key
+
+  depends_on = [
+    aws_api_gateway_resource.orch_authorisation_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_resource" "orch_auth_code_resource" {
+  count       = var.orch_auth_code_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "auth-code"
+  depends_on = [
+    module.auth-code
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_auth_code_method" {
+  count       = var.orch_auth_code_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_auth_code_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_auth_code_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_authorisation_integration" {
+  for_each    = var.orch_authorisation_enabled ? toset(["GET", "POST"]) : []
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authorisation_resource[0].id
+  http_method = aws_api_gateway_method.orch_authorisation_method[each.key].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_authorisation_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthorisationFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_logout_resource" {
+  count       = var.orch_logout_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "logout"
+  depends_on = [
+    module.logout
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_logout_method" {
+  count       = var.orch_logout_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_logout_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_logout_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_logout_integration" {
+  count       = var.orch_logout_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_logout_resource[0].id
+  http_method = aws_api_gateway_method.orch_logout_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_logout_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-LogoutFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_ipv_callback_resource" {
+  count       = var.orch_ipv_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "ipv-callback"
+  depends_on = [
+    module.ipv-callback
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_ipv_callback_method" {
+  count       = var.orch_ipv_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_ipv_callback_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_ipv_callback_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_ipv_callback_integration" {
+  count       = var.orch_ipv_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_ipv_callback_resource[0].id
+  http_method = aws_api_gateway_method.orch_ipv_callback_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_ipv_callback_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-IpvCallbackFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_register_resource" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.connect_resource.id
+  path_part   = "register"
+  depends_on = [
+    module.register
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_register_method" {
+  count            = var.orch_register_enabled ? 1 : 0
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id      = aws_api_gateway_resource.orch_register_resource[0].id
+  http_method      = "POST"
+  api_key_required = true
+
+  depends_on = [
+    aws_api_gateway_resource.orch_register_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_register_integration" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_register_resource[0].id
+  http_method = aws_api_gateway_method.orch_register_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_register_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-ClientRegistrationFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_update_client_resource" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.orch_register_resource[0].id
+  path_part   = "{clientId}"
+  depends_on = [
+    module.update
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_update_client_method" {
+  count              = var.orch_register_enabled ? 1 : 0
+  rest_api_id        = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id        = aws_api_gateway_resource.orch_update_client_resource[0].id
+  http_method        = "PUT"
+  api_key_required   = true
+  request_parameters = { "method.request.path.clientId" = true }
+
+  depends_on = [
+    aws_api_gateway_resource.orch_update_client_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_update_client_integration" {
+  count       = var.orch_register_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_update_client_resource[0].id
+  http_method = aws_api_gateway_method.orch_update_client_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_update_client_resource
+  ]
+  request_parameters      = { "integration.request.path.clientId" = "method.request.path.clientId" }
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-UpdateClientConfigFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_authentication_callback_resource" {
+  count       = var.orch_authentication_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "orchestration-redirect"
+  depends_on = [
+    module.authentication_callback
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_authentication_callback_method" {
+  count       = var.orch_authentication_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_authentication_callback_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_authentication_callback_integration" {
+  count       = var.orch_authentication_callback_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_authentication_callback_resource[0].id
+  http_method = aws_api_gateway_method.orch_authentication_callback_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_authentication_callback_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthenticationCallbackFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_integration" "orch_auth_code_integration" {
+  count       = var.orch_auth_code_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_auth_code_resource[0].id
+  http_method = aws_api_gateway_method.orch_auth_code_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_auth_code_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-AuthCodeFunction:latest/invocations"
+}
+
+
+resource "aws_api_gateway_resource" "orch_userinfo_resource" {
+  count       = var.orch_userinfo_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
+  path_part   = "userinfo"
+  depends_on = [
+    module.userinfo
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_userinfo_method" {
+  count       = var.orch_userinfo_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_userinfo_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_userinfo_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_userinfo_integration" {
+  count       = var.orch_userinfo_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_userinfo_resource[0].id
+  http_method = aws_api_gateway_method.orch_userinfo_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_userinfo_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-UserInfoFunction:latest/invocations"
+}
+
+resource "aws_api_gateway_resource" "orch_storage_token_jwk_resource" {
+  count       = var.orch_storage_token_jwk_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.wellknown_resource.id
+  path_part   = "storage-token-jwk.json"
+  depends_on = [
+    aws_api_gateway_resource.wellknown_resource,
+    module.storage_token_jwk
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_storage_token_jwk_method" {
+  count       = var.orch_storage_token_jwk_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_storage_token_jwk_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_storage_token_jwk_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_storage_token_jwk_integration" {
+  count       = var.orch_storage_token_jwk_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_storage_token_jwk_resource[0].id
+  http_method = aws_api_gateway_method.orch_storage_token_jwk_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_storage_token_jwk_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = "arn:aws:apigateway:eu-west-2:lambda:path/2015-03-31/functions/arn:aws:lambda:eu-west-2:${var.orch_account_id}:function:${local.secure_pipelines_environment}-StorageTokenJwkFunction:latest/invocations"
 }

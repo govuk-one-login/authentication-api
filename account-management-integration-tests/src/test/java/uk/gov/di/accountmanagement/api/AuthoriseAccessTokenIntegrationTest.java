@@ -133,8 +133,7 @@ class AuthoriseAccessTokenIntegrationTest
                 "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
     }
 
     private AccessToken generateSignedAccessToken(

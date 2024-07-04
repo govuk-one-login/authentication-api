@@ -15,12 +15,16 @@ import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -28,12 +32,14 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -48,6 +54,7 @@ public class UpdateEmailHandler
 
     private final Json objectMapper = SerializationService.getInstance();
     private final DynamoService dynamoService;
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdateEmailHandler.class);
@@ -60,11 +67,13 @@ public class UpdateEmailHandler
 
     public UpdateEmailHandler(
             DynamoService dynamoService,
+            DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             AuditService auditService,
             ConfigurationService configurationService) {
         this.dynamoService = dynamoService;
+        this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
@@ -73,6 +82,8 @@ public class UpdateEmailHandler
 
     public UpdateEmailHandler(ConfigurationService configurationService) {
         this.dynamoService = new DynamoService(configurationService);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
@@ -106,6 +117,7 @@ public class UpdateEmailHandler
         try {
             UpdateEmailRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
+
             boolean isValidOtpCode =
                     codeStorageService.isValidOtpCode(
                             updateInfoRequest.getReplacementEmailAddress(),
@@ -114,6 +126,7 @@ public class UpdateEmailHandler
             if (!isValidOtpCode) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
+
             Optional<ErrorResponse> emailValidationErrors =
                     ValidationHelper.validateEmailAddressUpdate(
                             updateInfoRequest.getExistingEmailAddress(),
@@ -121,9 +134,11 @@ public class UpdateEmailHandler
             if (emailValidationErrors.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
             }
+
             if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
+
             var userProfile =
                     dynamoService
                             .getUserProfileByEmailMaybe(updateInfoRequest.getExistingEmailAddress())
@@ -131,6 +146,38 @@ public class UpdateEmailHandler
                                     () ->
                                             new UserNotFoundException(
                                                     "User not found with given email"));
+
+            AtomicReference<EmailCheckResultStatus> resultStatus =
+                    new AtomicReference<>(EmailCheckResultStatus.PENDING);
+            dynamoEmailCheckResultService
+                    .getEmailCheckStore(updateInfoRequest.getReplacementEmailAddress())
+                    .ifPresent(result -> resultStatus.set(result.getStatus()));
+            LOG.info(
+                    "UpdateEmailHandler: Experian email verification status: {}",
+                    resultStatus.get());
+            if (configurationService.isEmailCheckEnabled()
+                    && resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
+                auditService.submitAuditEvent(
+                        AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                        input.getRequestContext()
+                                .getAuthorizer()
+                                .getOrDefault("clientId", AuditService.UNKNOWN)
+                                .toString(),
+                        ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                        sessionId,
+                        userProfile.getSubjectID(),
+                        updateInfoRequest.getReplacementEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        userProfile.getPhoneNumber(),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        AuditHelper.buildRestrictedSection(input.getHeaders()),
+                        AuditService.MetadataPair.pair(
+                                "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
+                        AuditService.MetadataPair.pair(
+                                "assessment_checked_at_timestamp",
+                                NowHelper.toUnixTimestamp(NowHelper.now())),
+                        AuditService.MetadataPair.pair("iss", AuditService.COMPONENT_ID));
+            }
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
             if (PrincipalValidationHelper.principleIsInvalid(
@@ -166,19 +213,20 @@ public class UpdateEmailHandler
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_EMAIL,
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
                     input.getRequestContext()
                             .getAuthorizer()
                             .getOrDefault("clientId", AuditService.UNKNOWN)
                             .toString(),
+                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                    sessionId,
                     internalCommonSubjectIdentifier.getValue(),
                     updateInfoRequest.getReplacementEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditHelper.buildRestrictedSection(input.getHeaders()),
                     AuditService.MetadataPair.pair(
-                            "ReplacedEmail", updateInfoRequest.getExistingEmailAddress()));
+                            "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();

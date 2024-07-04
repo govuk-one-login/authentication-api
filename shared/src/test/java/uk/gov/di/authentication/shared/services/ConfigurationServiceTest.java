@@ -36,6 +36,18 @@ class ConfigurationServiceTest {
         assertEquals("Secure; HttpOnly;", configurationService.getSessionCookieAttributes());
     }
 
+    @Test
+    void getAccountCreationLockoutCountTTLShouldEqualDefaultWhenEnvVarUnset() {
+        ConfigurationService configurationService = new ConfigurationService();
+        assertEquals(3600, configurationService.getAccountCreationLockoutCountTTL());
+    }
+
+    @Test
+    void supportAccountCreationTTLShouldEqualDefaultWhenEnvVarUnset() {
+        ConfigurationService configurationService = new ConfigurationService();
+        assertEquals(false, configurationService.supportAccountCreationTTL());
+    }
+
     private static Stream<Arguments> commaSeparatedStringContains() {
         return Stream.of(
                 Arguments.of("1234", null, false),

@@ -89,7 +89,7 @@ variable "logging_endpoint_arns" {
 
 variable "stub_rp_clients" {
   default     = []
-  type        = list(object({ client_name : string, sector_identifier_uri : string, callback_urls : list(string), logout_urls : list(string), test_client : string, scopes : list(string), client_type : string, identity_verification_supported : string, consent_required : string, one_login_service : bool, service_type : string }))
+  type        = list(object({ client_name : string, sector_identifier_uri : string, callback_urls : list(string), logout_urls : list(string), test_client : string, scopes : list(string), client_type : string, identity_verification_supported : string, one_login_service : bool, service_type : string }))
   description = "The details of RP clients to provision in the Client table"
 }
 
@@ -180,39 +180,8 @@ variable "orch_privatesub_cidr_blocks" {
   default     = []
 }
 
-variable "authentication_callback_userinfo_table_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the authentication callback userinfo table"
-}
-
-variable "client_registry_table_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the client registry table"
-}
-
-variable "doc_app_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Feature flag to control cross-account access to the doc app signing key"
-}
-
-variable "identity_credentials_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the identity credentials table"
-}
-
-variable "kms_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access by the orchestration account to kms"
-}
-
-
-variable "user_profile_table_cross_account_access_enabled" {
-  default     = false
-  type        = bool
-  description = "Whether the service should allow cross-account access to the user profile table"
+variable "orch_protectedsub_cidr_blocks" {
+  type        = list(string)
+  description = "Orchestration protected subnet cidr blocks"
+  default     = []
 }

@@ -4,7 +4,7 @@ resource "aws_kms_key" "id_token_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.id_token_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.id_token_signing_key_access_policy.json
+  policy = data.aws_iam_policy_document.id_token_signing_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -14,7 +14,7 @@ resource "aws_kms_alias" "id_token_signing_key_alias" {
   target_key_id = aws_kms_key.id_token_signing_key.key_id
 }
 
-data "aws_iam_policy_document" "id_token_signing_key_access_policy_with_orch_access" {
+data "aws_iam_policy_document" "id_token_signing_key_access_policy" {
   statement {
     sid    = "DefaultAccessPolicy"
     effect = "Allow"
@@ -43,23 +43,6 @@ data "aws_iam_policy_document" "id_token_signing_key_access_policy_with_orch_acc
     principals {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "id_token_signing_key_access_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
     }
   }
 }
@@ -345,7 +328,7 @@ resource "aws_kms_key" "ipv_token_auth_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.ipv_token_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.ipv_token_signing_key_access_policy.json
+  policy = data.aws_iam_policy_document.ipv_token_signing_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -355,7 +338,7 @@ resource "aws_kms_alias" "ipv_token_auth_signing_key_alias" {
   target_key_id = aws_kms_key.ipv_token_auth_signing_key.key_id
 }
 
-data "aws_iam_policy_document" "ipv_token_signing_key_access_policy_with_orch_access" {
+data "aws_iam_policy_document" "ipv_token_signing_key_access_policy" {
   statement {
     sid    = "DefaultAccessPolicy"
     effect = "Allow"
@@ -388,23 +371,6 @@ data "aws_iam_policy_document" "ipv_token_signing_key_access_policy_with_orch_ac
   }
 }
 
-data "aws_iam_policy_document" "ipv_token_signing_key_access_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
-}
-
 # Doc Checking App Authentication Signing KMS key
 
 resource "aws_kms_key" "doc_app_auth_signing_key" {
@@ -415,24 +381,7 @@ resource "aws_kms_key" "doc_app_auth_signing_key" {
 
   tags = local.default_tags
 
-  policy = var.doc_app_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_doc_app_auth_signing_key_policy.json : data.aws_iam_policy_document.doc_app_auth_signing_key_policy.json
-}
-
-data "aws_iam_policy_document" "doc_app_auth_signing_key_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
+  policy = data.aws_iam_policy_document.cross_account_doc_app_auth_signing_key_policy.json
 }
 
 data "aws_iam_policy_document" "cross_account_doc_app_auth_signing_key_policy" {
@@ -481,7 +430,7 @@ resource "aws_kms_key" "orchestration_to_auth_signing_key" {
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
 
-  policy = var.kms_cross_account_access_enabled ? data.aws_iam_policy_document.orch_to_auth_signing_key_access_policy_with_orch_access.json : data.aws_iam_policy_document.orch_to_auth_signing_key_access_policy.json
+  policy = data.aws_iam_policy_document.orch_to_auth_signing_key_access_policy.json
 
   tags = local.default_tags
 }
@@ -491,7 +440,7 @@ resource "aws_kms_alias" "orchestration_to_auth_signing_key_alias" {
   target_key_id = aws_kms_key.orchestration_to_auth_signing_key.key_id
 }
 
-data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy_with_orch_access" {
+data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy" {
   statement {
     sid    = "DefaultAccessPolicy"
     effect = "Allow"
@@ -520,23 +469,6 @@ data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy_with_orch
     principals {
       type        = "AWS"
       identifiers = ["arn:aws:iam::${var.orchestration_account_id}:root"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "orch_to_auth_signing_key_access_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
     }
   }
 }
@@ -636,7 +568,7 @@ resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.authentication_callback_userinfo_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
   tags                     = local.default_tags
 }
 
@@ -722,25 +654,8 @@ resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.doc_app_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_doc_app_credential_table_encryption_key_policy.json : data.aws_iam_policy_document.doc_app_credential_table_encryption_key_policy.json
+  policy                   = data.aws_iam_policy_document.cross_account_doc_app_credential_table_encryption_key_policy.json
   tags                     = local.default_tags
-}
-
-data "aws_iam_policy_document" "doc_app_credential_table_encryption_key_policy" {
-  statement {
-    sid    = "DefaultAccessPolicy"
-    effect = "Allow"
-
-    actions = [
-      "kms:*"
-    ]
-    resources = ["*"]
-
-    principals {
-      type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
-    }
-  }
 }
 
 data "aws_iam_policy_document" "cross_account_doc_app_credential_table_encryption_key_policy" {
@@ -786,7 +701,7 @@ resource "aws_kms_key" "client_registry_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.client_registry_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
   tags                     = local.default_tags
 }
 
@@ -801,28 +716,13 @@ resource "aws_kms_key" "identity_credentials_table_encryption_key" {
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
-  policy                   = var.identity_credentials_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy                   = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
   tags                     = local.default_tags
 }
 
 resource "aws_kms_alias" "identity_credentials_table_encryption_key_alias" {
   name          = "alias/${var.environment}-identity-credentials-table-encryption-key"
   target_key_id = aws_kms_key.identity_credentials_table_encryption_key.key_id
-}
-
-data "aws_iam_policy_document" "table_encryption_key_access_policy" {
-  statement {
-    sid    = "key-policy-dynamodb"
-    effect = "Allow"
-    actions = [
-      "kms:*",
-    ]
-    principals {
-      identifiers = [data.aws_caller_identity.current.account_id]
-      type        = "AWS"
-    }
-    resources = ["*"]
-  }
 }
 
 data "aws_iam_policy_document" "cross_account_table_encryption_key_access_policy" {
@@ -867,7 +767,7 @@ resource "aws_kms_key" "user_profile_table_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   enable_key_rotation      = true
 
-  policy = var.user_profile_table_cross_account_access_enabled ? data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json : data.aws_iam_policy_document.table_encryption_key_access_policy.json
+  policy = data.aws_iam_policy_document.cross_account_table_encryption_key_access_policy.json
 
   tags = local.default_tags
 }

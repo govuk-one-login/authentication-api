@@ -13,13 +13,30 @@ authorize_protected_subnet_enabled   = true
 lockout_duration                     = 7200
 reduced_lockout_duration             = 900
 incorrect_password_lockout_count_ttl = 7200
+support_account_creation_count_ttl   = true
+call_ticf_cri                        = true
+ticf_cri_service_call_timeout        = 20000
 
-orch_openid_configuration_name = "staging-orch-be-deploy-OpenIdConfigurationFunction-wWh577dlDcFl"
+orch_account_id                     = "590183975515"
+cmk_for_back_channel_logout_enabled = true
 
-orch_account_id                                  = "590183975515"
-orch_doc_app_callback_enabled                    = true
-orch_doc_app_callback_name                       = "staging-orch-be-deploy-DocAppCallbackFunction-9CU8q80ZrDRZ"
-back_channel_logout_cross_account_access_enabled = true
-kms_cross_account_access_enabled                 = true
-cmk_for_back_channel_logout_enabled              = true
-txma_audit_encoded_enabled                       = true
+contra_state_bucket = "di-auth-staging-tfstate"
+
+oidc_origin_domain_enabled  = true
+oidc_cloudfront_dns_enabled = true
+enforce_cloudfront          = true
+
+orch_openid_configuration_enabled    = true
+orch_doc_app_callback_enabled        = true
+orch_token_enabled                   = true
+orch_jwks_enabled                    = true
+orch_authorisation_enabled           = true
+orch_logout_enabled                  = true
+orch_ipv_callback_enabled            = true
+orch_register_enabled                = true
+orch_authentication_callback_enabled = true
+auth_spot_response_disabled          = true
+orch_auth_code_enabled               = true
+orch_userinfo_enabled                = true
+orch_storage_token_jwk_enabled       = true
+orch_trustmark_enabled               = true

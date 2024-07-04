@@ -16,8 +16,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class ClientSessionService {
 
@@ -95,25 +94,16 @@ public class ClientSessionService {
     }
 
     public Optional<ClientSession> getClientSessionFromRequestHeaders(Map<String, String> headers) {
-        if (!headersContainValidHeader(
-                headers,
-                CLIENT_SESSION_ID_HEADER,
-                configurationService.getHeadersCaseInsensitive())) {
-            return Optional.empty();
-        }
-        String clientSessionId =
-                getHeaderValueFromHeaders(
+        Optional<String> clientSessionId =
+                getOptionalHeaderValueFromHeaders(
                         headers,
                         CLIENT_SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        if (clientSessionId == null) {
+
+        if (clientSessionId.isEmpty()) {
             LOG.warn("Value not found for Client-Session-Id header");
-            return Optional.empty();
         }
-        try {
-            return getClientSession(clientSessionId);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+
+        return clientSessionId.flatMap(this::getClientSession);
     }
 }

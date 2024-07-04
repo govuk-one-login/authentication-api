@@ -34,7 +34,9 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordRequestHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new ResetPasswordRequestHandler(
+                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
     }
 
     @Test

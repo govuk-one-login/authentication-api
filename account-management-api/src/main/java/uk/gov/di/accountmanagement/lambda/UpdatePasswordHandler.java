@@ -17,6 +17,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
+import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -169,17 +170,18 @@ public class UpdatePasswordHandler
 
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
-                    sessionId,
                     input.getRequestContext()
                             .getAuthorizer()
                             .getOrDefault("clientId", AuditService.UNKNOWN)
                             .toString(),
+                    ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
+                    sessionId,
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditHelper.buildRestrictedSection(input.getHeaders()));
 
             return generateEmptySuccessApiGatewayResponse();
 

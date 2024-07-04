@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -53,6 +54,12 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
 
     public AuthenticationAuthCodeHandler(ConfigurationService configurationService) {
         super(AuthCodeRequest.class, configurationService);
+        this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
+    }
+
+    public AuthenticationAuthCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(AuthCodeRequest.class, configurationService, redis);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
     }
 

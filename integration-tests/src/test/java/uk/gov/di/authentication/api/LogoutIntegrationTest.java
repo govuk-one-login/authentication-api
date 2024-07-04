@@ -38,12 +38,13 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
-import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.LOG_OUT_SUCCESS;
+import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
 import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
-import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.redirectQueryParameters;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParameters;
 
 public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
@@ -52,10 +53,11 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String REDIRECT_URL = "https://rp-build.build.stubs.account.gov.uk/";
     public static final String SESSION_ID = "session-id";
     public static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String DEFAULT_LOGOUT_PATH = "signed-out";
 
     @BeforeEach
     void setup() {
-        handler = new LogoutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new LogoutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -82,7 +84,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 isRedirectTo(
                         allOf(
                                 baseUri(URI.create(REDIRECT_URL)),
-                                redirectQueryParameters(hasEntry("state", STATE)))));
+                                queryParameters(hasEntry("state", STATE)))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
@@ -110,7 +112,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 isRedirectTo(
                         allOf(
                                 baseUri(URI.create(REDIRECT_URL)),
-                                redirectQueryParameters(hasEntry("state", STATE)))));
+                                queryParameters(hasEntry("state", STATE)))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
@@ -131,8 +133,11 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 isRedirectTo(
                         allOf(
-                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
-                                redirectQueryParameters(hasEntry("state", STATE)))));
+                                baseUri(
+                                        buildURI(
+                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                DEFAULT_LOGOUT_PATH)),
+                                queryParameters(hasEntry("state", STATE)))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
@@ -163,9 +168,11 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 isRedirectTo(
                         allOf(
-                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
-                                redirectQueryParameters(
-                                        hasEntry("error_code", "invalid_request")))));
+                                baseUri(
+                                        buildURI(
+                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                DEFAULT_LOGOUT_PATH)),
+                                queryParameters(hasEntry("error_code", "invalid_request")))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
@@ -186,8 +193,11 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 isRedirectTo(
                         allOf(
-                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
-                                redirectQueryParameters(hasEntry("state", STATE)))));
+                                baseUri(
+                                        buildURI(
+                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                DEFAULT_LOGOUT_PATH)),
+                                queryParameters(hasEntry("state", STATE)))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
@@ -214,10 +224,12 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 response,
                 isRedirectTo(
                         allOf(
-                                baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
-                                redirectQueryParameters(hasEntry("state", STATE)),
-                                redirectQueryParameters(
-                                        hasEntry("error_code", "invalid_request")))));
+                                baseUri(
+                                        buildURI(
+                                                TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(),
+                                                DEFAULT_LOGOUT_PATH)),
+                                queryParameters(hasEntry("state", STATE)),
+                                queryParameters(hasEntry("error_code", "invalid_request")))));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
@@ -253,8 +265,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                true);
+                "public");
 
         return signedJWT;
     }

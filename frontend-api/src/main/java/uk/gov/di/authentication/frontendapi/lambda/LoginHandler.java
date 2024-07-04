@@ -6,12 +6,13 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
+import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -32,13 +33,16 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
@@ -96,6 +100,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
     }
 
+    public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        super(LoginRequest.class, configurationService, true, redis);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.userMigrationService =
+                new UserMigrationService(
+                        new DynamoService(configurationService), configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+    }
+
     public LoginHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -113,33 +128,34 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             LoginRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getSession().getSessionId());
-
-        LOG.info("Request received");
-        try {
-            var persistentSessionId =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-            var clientId = userContext.getClientId();
-            Optional<UserProfile> userProfileMaybe =
-                    authenticationService.getUserProfileByEmailMaybe(request.getEmail());
-            if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
-
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
+        AuditContext auditContext =
+                auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
+        attachSessionIdToLogs(userContext.getSession().getSessionId());
+
+        LOG.info("Request received");
+        try {
+            var clientId = userContext.getClientId();
+
+            Optional<UserProfile> userProfileMaybe =
+                    authenticationService.getUserProfileByEmailMaybe(request.getEmail());
+
+            if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
+                auditService.submitAuditEvent(NO_ACCOUNT_WITH_EMAIL, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
 
             UserProfile userProfile = userProfileMaybe.get();
             UserCredentials userCredentials = userContext.getUserCredentials().get();
+            auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
+
             var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
             attachLogFieldToLogs(
                     JOURNEY_TYPE,
@@ -151,6 +167,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userProfile,
                             configurationService.getInternalSectorUri(),
                             authenticationService);
+            auditContext = auditContext.withUserId(internalCommonSubjectIdentifier.getValue());
 
             int incorrectPasswordCount =
                     isReauthJourney
@@ -159,19 +176,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             : codeStorageService.getIncorrectPasswordCount(request.getEmail());
             LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
 
-            if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+            String codeBlockedKeyPrefix =
+                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
+            if (codeStorageService.isBlockedForEmail(
+                    userProfile.getEmail(), codeBlockedKeyPrefix)) {
                 LOG.info("User has exceeded max password retries");
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
-                        internalCommonSubjectIdentifier.getValue(),
-                        userProfile.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        userProfile.getPhoneNumber(),
-                        persistentSessionId,
+                        auditContext,
                         pair("internalSubjectId", userProfile.getSubjectID()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
                         pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
@@ -181,43 +194,34 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!credentialsAreValid(request, userProfile)) {
                 LOG.info("credentials are invalid");
-                if (isReauthJourney) {
-                    codeStorageService.increaseIncorrectPasswordCountReauthJourney(
-                            request.getEmail());
-                } else {
-                    codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-                }
+                var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
-                        internalCommonSubjectIdentifier.getValue(),
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        persistentSessionId,
+                        auditContext,
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair(
-                                "incorrectPasswordCount",
-                                codeStorageService.getIncorrectPasswordCount(request.getEmail())),
+                        pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
-                if (incorrectPasswordCount + 1 >= configurationService.getMaxPasswordRetries()) {
-                    LOG.info("User has now exceeded max password retries");
+                if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+                    LOG.info("User has now exceeded max password retries, setting block");
+
+                    codeStorageService.saveBlockedForEmail(
+                            request.getEmail(),
+                            codeBlockedKeyPrefix,
+                            configurationService.getLockoutDuration());
+
+                    if (isReauthJourney) {
+                        codeStorageService.deleteIncorrectPasswordCountReauthJourney(
+                                request.getEmail());
+                    } else {
+                        codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
+                    }
 
                     auditService.submitAuditEvent(
                             FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
-                            clientId,
-                            internalCommonSubjectIdentifier.getValue(),
-                            userProfile.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            userProfile.getPhoneNumber(),
-                            persistentSessionId,
+                            auditContext,
                             pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair("attemptNoFailedAt", incorrectPasswordCount),
+                            pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
                             pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxPasswordRetries()));
@@ -225,17 +229,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
                 }
 
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
-            }
-
-            if (incorrectPasswordCount != 0) {
-                LOG.info("deleting incorrectPasswordCount");
                 if (isReauthJourney) {
-                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
+                    codeStorageService.increaseIncorrectPasswordCountReauthJourney(
                             request.getEmail());
                 } else {
-                    codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
+                    codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
                 }
+
+                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
 
             LOG.info("Setting internal common subject identifier in user session");
@@ -263,7 +264,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 isSmokeTestClient);
             }
             sessionService.save(userContext.getSession().setNewAccount(EXISTING));
-            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
             var userMfaDetail =
                     getUserMFADetail(
@@ -273,23 +273,26 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             isPhoneNumberVerified);
 
             boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
+            var pairs = new AuditService.MetadataPair[] {};
+            if (isPasswordChangeRequired) {
+                pairs =
+                        new AuditService.MetadataPair[] {
+                            pair("internalSubjectId", userProfile.getSubjectID()),
+                            pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD)
+                        };
+            } else {
+                pairs =
+                        new AuditService.MetadataPair[] {
+                            pair("internalSubjectId", userProfile.getSubjectID())
+                        };
+            }
 
             LOG.info(
                     "User has successfully logged in with MFAType: {}. MFAVerified: {}",
                     userMfaDetail.getMfaMethodType().getValue(),
                     userMfaDetail.isMfaMethodVerified());
 
-            auditService.submitAuditEvent(
-                    LOG_IN_SUCCESS,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    clientId,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getEmail(),
-                    IpAddressHelper.extractIpAddress(input),
-                    userProfile.getPhoneNumber(),
-                    persistentSessionId,
-                    pair("internalSubjectId", userProfile.getSubjectID()));
+            auditService.submitAuditEvent(LOG_IN_SUCCESS, auditContext, pairs);
 
             if (!userMfaDetail.isMfaRequired()) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(
@@ -306,7 +309,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             redactedPhoneNumber,
                             userMfaDetail.isMfaRequired(),
                             termsAndConditionsAccepted,
-                            consentRequired,
                             userMfaDetail.getMfaMethodType(),
                             userMfaDetail.isMfaMethodVerified(),
                             isPasswordChangeRequired));

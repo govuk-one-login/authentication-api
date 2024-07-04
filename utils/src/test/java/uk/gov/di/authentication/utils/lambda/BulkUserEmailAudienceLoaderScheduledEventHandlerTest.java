@@ -2,6 +2,7 @@ package uk.gov.di.authentication.utils.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,6 +52,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         "subject-id-1", "subject-id-2", "subject-id-3", "subject-id-4", "subject-id-5",
     };
 
+    private final String functionName = "BULK_USER_EMAIL_AUDIENCE_LOADER";
+
     @BeforeEach
     void setUp() {
         bulkUserEmailAudienceLoaderScheduledEventHandler =
@@ -58,6 +62,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                         dynamoService,
                         configurationService,
                         lambdaInvokerService);
+        when(configurationService.getBulkEmailLoaderLambdaName()).thenReturn(functionName);
     }
 
     @Test
@@ -137,9 +142,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                         null, List.of("1.5", "1.6")))
                 .thenReturn(userProfiles);
 
-        when(scheduledEvent.getDetail()).thenReturn(null);
+        var event = new ScheduledEvent().withDetail(Map.of());
 
-        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(event, mockContext);
 
         subjectIds.forEach(
                 subjectId ->
@@ -153,14 +158,21 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                                         .addUser(otherSubjectId, BulkEmailStatus.PENDING));
 
         var expectedLastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
-        verify(scheduledEvent, times(1))
-                .setDetail(
-                        Map.of(
-                                "lastEvaluatedKey",
-                                expectedLastEvaluatedEmail,
-                                "globalUsersAddedCount",
-                                Integer.toUnsignedLong(subjectIds.size())));
-        verify(lambdaInvokerService, times(1)).invokeWithPayload(scheduledEvent);
+        assertEquals(
+                Map.of(
+                        "lastEvaluatedKey",
+                        expectedLastEvaluatedEmail,
+                        "globalUsersAddedCount",
+                        Integer.toUnsignedLong(subjectIds.size())),
+                event.getDetail());
+        JSONObject detail =
+                new JSONObject()
+                        .appendField("lastEvaluatedKey", expectedLastEvaluatedEmail)
+                        .appendField(
+                                "globalUsersAddedCount", Integer.toUnsignedLong(subjectIds.size()));
+        String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
+
+        verify(lambdaInvokerService, times(1)).invokeAsyncWithPayload(payloadString, functionName);
     }
 
     @Test
@@ -171,9 +183,17 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                 .thenReturn(List.of("1.5", "1.6"));
 
         var lastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
-
         var lastEvaluatedKey =
                 Map.of("Email", AttributeValue.builder().s(lastEvaluatedEmail).build());
+
+        var event =
+                new ScheduledEvent()
+                        .withDetail(
+                                Map.of(
+                                        "lastEvaluatedKey",
+                                        lastEvaluatedEmail,
+                                        "globalUsersAddedCount",
+                                        2L));
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[3], TEST_SUBJECT_IDS[4]);
 
@@ -181,15 +201,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                         lastEvaluatedKey, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(subjectIds));
 
-        when(scheduledEvent.getDetail())
-                .thenReturn(
-                        Map.of(
-                                "lastEvaluatedKey",
-                                lastEvaluatedEmail,
-                                "globalUsersAddedCount",
-                                2L));
-
-        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(event, mockContext);
 
         subjectIds.forEach(
                 id -> verify(bulkEmailUsersService, times(1)).addUser(id, BulkEmailStatus.PENDING));
@@ -200,14 +212,22 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                                 verify(bulkEmailUsersService, never())
                                         .addUser(id, BulkEmailStatus.PENDING));
 
-        verify(scheduledEvent, times(1))
-                .setDetail(
-                        Map.of(
-                                "lastEvaluatedKey",
-                                emailFromSubjectId(TEST_SUBJECT_IDS[4]),
-                                "globalUsersAddedCount",
-                                4L));
-        verify(lambdaInvokerService, times(1)).invokeWithPayload(scheduledEvent);
+        var lastEmail = emailFromSubjectId(TEST_SUBJECT_IDS[4]);
+
+        Map<String, Object> expectedUpdatedDetailsMap =
+                Map.ofEntries(
+                        Map.entry("lastEvaluatedKey", lastEmail),
+                        Map.entry("globalUsersAddedCount", 4L));
+
+        assertEquals(expectedUpdatedDetailsMap, event.getDetail());
+
+        JSONObject detail =
+                new JSONObject()
+                        .appendField("lastEvaluatedKey", lastEmail)
+                        .appendField("globalUsersAddedCount", 4L);
+        String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
+
+        verify(lambdaInvokerService, times(1)).invokeAsyncWithPayload(payloadString, functionName);
     }
 
     @Test
@@ -237,7 +257,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                                         .addUser(id, BulkEmailStatus.PENDING));
 
         verify(scheduledEvent, never()).setDetail(any());
-        verify(lambdaInvokerService, never()).invokeWithPayload(any());
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
     }
 
     @Test

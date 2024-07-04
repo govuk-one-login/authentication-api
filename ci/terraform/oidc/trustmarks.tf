@@ -9,7 +9,7 @@ module "oidc_trustmarks_role" {
 module "trustmarks" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = var.orch_trustmark_enabled ? "trustmark-auth" : "trustmark"
+  endpoint_name   = "trustmark"
   path_part       = var.orch_trustmark_enabled ? "trustmark-auth" : "trustmark"
   endpoint_method = ["GET"]
   environment     = var.environment

@@ -118,6 +118,27 @@ public class TokenHandler
                         configurationService, new DynamoClientService(configurationService));
     }
 
+    public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        var kms = new KmsConnectionService(configurationService);
+
+        this.configurationService = configurationService;
+        this.redisConnectionService = redis;
+        this.tokenService =
+                new TokenService(configurationService, this.redisConnectionService, kms);
+        this.dynamoService = new DynamoService(configurationService);
+        this.authorisationCodeService =
+                new AuthorisationCodeService(
+                        configurationService, redisConnectionService, objectMapper);
+        this.clientSessionService =
+                new ClientSessionService(configurationService, redisConnectionService);
+        this.tokenValidationService =
+                new TokenValidationService(
+                        new JwksService(configurationService, kms), configurationService);
+        this.tokenClientAuthValidatorFactory =
+                new TokenClientAuthValidatorFactory(
+                        configurationService, new DynamoClientService(configurationService));
+    }
+
     public TokenHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -314,7 +335,9 @@ public class TokenHandler
 
     private JWSAlgorithm getSigningAlgorithm(ClientRegistry clientRegistry) {
         return configurationService.isRsaSigningAvailable()
-                        && "RSA256".equals(clientRegistry.getIdTokenSigningAlgorithm())
+                        && clientRegistry
+                                .getIdTokenSigningAlgorithm()
+                                .equals(JWSAlgorithm.RS256.getName())
                 ? JWSAlgorithm.RS256
                 : JWSAlgorithm.ES256;
     }
@@ -357,8 +380,6 @@ public class TokenHandler
 
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
 
-        var isConsentRequired =
-                clientRegistry.isConsentRequired() && !vtr.containsLevelOfConfidence();
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =
@@ -372,8 +393,6 @@ public class TokenHandler
                                             additionalTokenClaims,
                                             clientSession.getDocAppSubjectId(),
                                             clientSession.getDocAppSubjectId(),
-                                            null,
-                                            false,
                                             finalClaimsRequest,
                                             true,
                                             signingAlgorithm,
@@ -387,11 +406,11 @@ public class TokenHandler
                             userProfile,
                             clientRegistry,
                             dynamoService,
-                            configurationService.getInternalSectorUri());
+                            configurationService.getInternalSectorURI());
             Subject internalPairwiseSubject =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
-                            configurationService.getInternalSectorUri(),
+                            configurationService.getInternalSectorURI(),
                             dynamoService);
             tokenResponse =
                     segmentedFunctionCall(
@@ -404,8 +423,6 @@ public class TokenHandler
                                             additionalTokenClaims,
                                             rpPairwiseSubject,
                                             internalPairwiseSubject,
-                                            userProfile.getClientConsent(),
-                                            isConsentRequired,
                                             finalClaimsRequest,
                                             false,
                                             signingAlgorithm,

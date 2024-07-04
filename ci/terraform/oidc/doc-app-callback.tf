@@ -19,7 +19,7 @@ module "doc_app_callback_role" {
 
 module "doc-app-callback" {
   source          = "../modules/endpoint-module"
-  endpoint_name   = var.orch_doc_app_callback_enabled ? "doc-app-callback-auth" : "doc-app-callback"
+  endpoint_name   = "doc-app-callback"
   path_part       = var.orch_doc_app_callback_enabled ? "doc-app-callback-auth" : "doc-app-callback"
   endpoint_method = ["GET"]
   environment     = var.environment
@@ -39,7 +39,7 @@ module "doc-app-callback" {
     ENVIRONMENT                        = var.environment
     INTERNAl_SECTOR_URI                = var.internal_sector_uri
     LOCALSTACK_ENDPOINT                = var.use_localstack ? var.localstack_endpoint : null
-    LOGIN_URI                          = "https://${local.frontend_fqdn}/"
+    FRONTEND_BASE_URL                  = "https://${local.frontend_fqdn}/"
     REDIS_KEY                          = local.redis_key
     TXMA_AUDIT_QUEUE_URL               = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                  = local.api_base_url

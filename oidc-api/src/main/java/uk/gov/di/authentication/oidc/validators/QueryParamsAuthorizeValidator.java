@@ -54,19 +54,34 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             authRequest.getRedirectionURI().toString()));
         }
         var redirectURI = authRequest.getRedirectionURI();
+
+        if (authRequest.getState() == null) {
+            LOG.error("State is missing from authRequest");
+            return Optional.of(
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Request is missing state parameter"),
+                            redirectURI,
+                            null));
+        }
+        var state = authRequest.getState();
+
         if (authRequest.getRequestURI() != null) {
             LOG.error("Request URI is not supported");
             return Optional.of(
-                    new AuthRequestError(OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI));
+                    new AuthRequestError(
+                            OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI, state));
         }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
             LOG.error(
                     "Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(
-                    new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
+                    new AuthRequestError(
+                            OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI, state));
         }
         if (!areScopesValid(authRequest.getScope().toStringList(), client)) {
-            return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
+            return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI, state));
         }
         if (!areClaimsValid(authRequest.getOIDCClaims(), client)) {
             return Optional.of(
@@ -74,7 +89,8 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "Request contains invalid claims"),
-                            redirectURI));
+                            redirectURI,
+                            state));
         }
         if (authRequest.getNonce() == null) {
             LOG.error("Nonce is missing from authRequest");
@@ -83,25 +99,31 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "Request is missing nonce parameter"),
-                            redirectURI));
-        }
-        if (authRequest.getState() == null) {
-            LOG.error("State is missing from authRequest");
-            return Optional.of(
-                    new AuthRequestError(
-                            new ErrorObject(
-                                    OAuth2Error.INVALID_REQUEST_CODE,
-                                    "Request is missing state parameter"),
-                            redirectURI));
+                            redirectURI,
+                            state));
         }
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+            var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
+            if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
+                LOG.error(
+                        "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
+                        levelOfConfidenceValues);
+                return Optional.of(
+                        new AuthRequestError(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request vtr is not permitted"),
+                                redirectURI,
+                                state));
+            }
             if (vtrList.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
                 return Optional.of(
-                        new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
+                        new AuthRequestError(
+                                OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI, state));
             }
         } catch (IllegalArgumentException e) {
             LOG.error(
@@ -112,7 +134,8 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                     new AuthRequestError(
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"),
-                            redirectURI));
+                            redirectURI,
+                            state));
         }
         return Optional.empty();
     }

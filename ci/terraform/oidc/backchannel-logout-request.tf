@@ -76,7 +76,6 @@ resource "aws_lambda_event_source_mapping" "backchannel_logout_lambda_sqs_mappin
 
   depends_on = [
     aws_sqs_queue.back_channel_logout_queue,
-    aws_sqs_queue_policy.back_channel_logout_queue_policy,
     aws_lambda_function.backchannel_logout_request_lambda
   ]
 }

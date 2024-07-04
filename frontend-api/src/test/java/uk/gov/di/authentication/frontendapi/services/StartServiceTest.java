@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -62,7 +63,7 @@ import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArr
 class StartServiceTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final String EMAIL = "joe.bloggs@example.com";
+    private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final ClientID CLIENT_ID = new ClientID("client-id");
     private static final String CLIENT_NAME = "test-client";
     private static final Session SESSION = new Session("a-session-id").setEmailAddress(EMAIL);
@@ -179,7 +180,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         vtr,
-                        false,
                         true,
                         ClientType.WEB,
                         null,
@@ -197,7 +197,6 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo(cookieConsent));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(gaTrackingId));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
@@ -224,7 +223,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         vtr,
-                        false,
                         true,
                         ClientType.WEB,
                         null,
@@ -243,7 +241,6 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
@@ -262,7 +259,6 @@ class StartServiceTest {
                 buildUserContext(
                         null,
                         false,
-                        false,
                         clientType,
                         generateSignedJWT(),
                         true,
@@ -277,7 +273,6 @@ class StartServiceTest {
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
@@ -414,7 +409,6 @@ class StartServiceTest {
                 buildUserContext(
                         null,
                         false,
-                        false,
                         ClientType.WEB,
                         generateSignedJWT(),
                         true,
@@ -442,7 +436,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         vtr,
-                        false,
                         true,
                         ClientType.WEB,
                         null,
@@ -461,7 +454,6 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
@@ -479,7 +471,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         cookieConsentShared,
                         clientType,
                         signedJWT,
@@ -601,7 +592,6 @@ class StartServiceTest {
 
     private UserContext buildUserContext(
             String vtrValue,
-            boolean consentRequired,
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT requestObject,
@@ -648,7 +638,6 @@ class StartServiceTest {
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
                         .withClientName(CLIENT_NAME)
-                        .withConsentRequired(consentRequired)
                         .withCookieConsentShared(cookieConsentShared)
                         .withClientType(clientType.getValue())
                         .withIdentityVerificationSupported(identityVerificationSupport)

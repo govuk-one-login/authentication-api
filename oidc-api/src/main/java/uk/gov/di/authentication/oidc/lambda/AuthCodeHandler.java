@@ -18,6 +18,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -36,10 +37,12 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
@@ -102,6 +105,22 @@ public class AuthCodeHandler
         orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
+        auditService = new AuditService(configurationService);
+        cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.configurationService = configurationService;
+        dynamoService = new DynamoService(configurationService);
+        dynamoClientService = new DynamoClientService(configurationService);
+        authCodeResponseService =
+                new AuthCodeResponseGenerationService(configurationService, dynamoService);
+    }
+
+    public AuthCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        sessionService = new SessionService(configurationService, redis);
+        authorisationCodeService = new AuthorisationCodeService(configurationService);
+        orchestrationAuthorizationService =
+                new OrchestrationAuthorizationService(configurationService);
+        clientSessionService = new ClientSessionService(configurationService, redis);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
@@ -214,15 +233,17 @@ public class AuthCodeHandler
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTH_CODE_ISSUED,
                     clientID.getValue(),
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalCommonPairwiseSubjectId,
-                    Objects.isNull(session.getEmailAddress())
-                            ? AuditService.UNKNOWN
-                            : session.getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(internalCommonPairwiseSubjectId)
+                            .withEmail(
+                                    Optional.ofNullable(session.getEmailAddress())
+                                            .orElse(AuditService.UNKNOWN))
+                            .withIpAddress(IpAddressHelper.extractIpAddress(input))
+                            .withPersistentSessionId(
+                                    PersistentIdHelper.extractPersistentIdFromHeaders(
+                                            input.getHeaders())),
                     pair("internalSubjectId", subjectId),
                     pair("isNewAccount", session.isNewAccount()),
                     pair("rpPairwiseId", rpPairwiseId),

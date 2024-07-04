@@ -21,6 +21,8 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -57,6 +59,7 @@ import java.util.Objects;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -82,11 +85,8 @@ public class IPVCallbackHandler
     private final AccountInterventionService accountInterventionService;
     private final IPVCallbackHelper ipvCallbackHelper;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final AuthFrontend authFrontend;
     protected final Json objectMapper = SerializationService.getInstance();
-    private static final String REDIRECT_PATH = "ipv-callback";
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
-    private static final String ERROR_PAGE_REDIRECT_PATH_NO_SESSION =
-            "ipv-callback-session-expiry-error";
     private final CookieHelper cookieHelper;
 
     public IPVCallbackHandler() {
@@ -106,7 +106,8 @@ public class IPVCallbackHandler
             AccountInterventionService accountInterventionService,
             CookieHelper cookieHelper,
             NoSessionOrchestrationService noSessionOrchestrationService,
-            IPVCallbackHelper ipvCallbackHelper) {
+            IPVCallbackHelper ipvCallbackHelper,
+            AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -120,6 +121,7 @@ public class IPVCallbackHandler
         this.cookieHelper = cookieHelper;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
+        this.authFrontend = authFrontend;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -146,6 +148,32 @@ public class IPVCallbackHandler
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
+    }
+
+    public IPVCallbackHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.configurationService = configurationService;
+        this.ipvAuthorisationService =
+                new IPVAuthorisationService(configurationService, redis, kmsConnectionService);
+        this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
+        this.sessionService = new SessionService(configurationService, redis);
+        this.dynamoService = new DynamoService(configurationService);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.dynamoClientService = new DynamoClientService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.logoutService = new LogoutService(configurationService, redis);
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService,
+                        new CloudwatchMetricsService(configurationService),
+                        auditService);
+        this.cookieHelper = new CookieHelper();
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redis);
+        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService, redis);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     @Override
@@ -153,6 +181,7 @@ public class IPVCallbackHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         LOG.info("Request received to IPVCallbackHandler");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             if (!configurationService.isIdentityEnabled()) {
                 throw new IpvCallbackException("Identity is not enabled");
@@ -216,7 +245,7 @@ public class IPVCallbackHandler
                                             session.getSessionId()));
             var userProfile =
                     dynamoService
-                            .getUserProfileFromEmail(session.getEmailAddress())
+                            .getUserProfileByEmailMaybe(session.getEmailAddress())
                             .orElseThrow(
                                     () ->
                                             new IpvCallbackException(
@@ -226,15 +255,24 @@ public class IPVCallbackHandler
                             userProfile,
                             clientRegistry,
                             dynamoService,
-                            configurationService.getInternalSectorUri());
+                            configurationService.getInternalSectorURI());
 
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorUri()),
+                            URI.create(configurationService.getInternalSectorURI()),
                             dynamoService.getOrGenerateSalt(userProfile));
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
+            var user =
+                    TxmaAuditUser.user()
+                            .withGovukSigninJourneyId(clientSessionId)
+                            .withSessionId(session.getSessionId())
+                            .withUserId(internalPairwiseSubjectId)
+                            .withEmail(session.getEmailAddress())
+                            .withPhone(userProfile.getPhoneNumber())
+                            .withPersistentSessionId(persistentId);
+
             var auditContext =
                     new AuditContext(
                             clientSessionId,
@@ -270,15 +308,7 @@ public class IPVCallbackHandler
             }
 
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+                    IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             var tokenResponse =
                     segmentedFunctionCall(
@@ -291,28 +321,11 @@ public class IPVCallbackHandler
                         "IPV TokenResponse was not successful: {}",
                         tokenResponse.toErrorResponse().toJSONObject());
                 auditService.submitAuditEvent(
-                        IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        clientId,
-                        clientSessionId,
-                        session.getSessionId(),
-                        internalPairwiseSubjectId,
-                        userProfile.getEmail(),
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        persistentId);
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                        IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+                    IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
 
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
@@ -326,15 +339,7 @@ public class IPVCallbackHandler
                                             .getBearerAccessToken()));
 
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+                    IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId, user);
             var vtrList = clientSession.getVtrList();
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
@@ -415,50 +420,34 @@ public class IPVCallbackHandler
             ipvCallbackHelper.queueSPOTRequest(
                     logIds,
                     getSectorIdentifierForClient(
-                            clientRegistry, configurationService.getInternalSectorUri()),
+                            clientRegistry, configurationService.getInternalSectorURI()),
                     userProfile,
                     rpPairwiseSubject,
                     userIdentityUserInfo,
                     clientId);
 
-            auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                    clientId,
-                    clientSessionId,
-                    session.getSessionId(),
-                    internalPairwiseSubjectId,
-                    userProfile.getEmail(),
-                    AuditService.UNKNOWN,
-                    userProfile.getPhoneNumber(),
-                    persistentId);
+            auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
             segmentedFunctionCall(
                     "saveIdentityClaims",
                     () ->
                             ipvCallbackHelper.saveIdentityClaimsToDynamo(
                                     rpPairwiseSubject, userIdentityUserInfo));
-            var redirectURI =
-                    ConstructUriHelper.buildURI(
-                            configurationService.getLoginURI().toString(), REDIRECT_PATH);
+            var redirectURI = authFrontend.ipvCallbackURI();
             LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(),
-                    ERROR_PAGE_REDIRECT_PATH_NO_SESSION);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorIpvCallbackURI());
         } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
             LOG.warn(e.getMessage());
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
-            return RedirectService.redirectToFrontendErrorPage(
-                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
         } catch (UserNotFoundException e) {
             LOG.error(e.getMessage());
             throw new RuntimeException(e);

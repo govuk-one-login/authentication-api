@@ -4,8 +4,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 
+import java.net.URI;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -13,15 +13,10 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 public class RedirectService {
     private static final Logger LOG = LogManager.getLogger(RedirectService.class);
 
-    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPage(
-            String loginUri, String errorPagePath) {
-        LOG.info("Redirecting to frontend error page: {}", errorPagePath);
+    public static APIGatewayProxyResponseEvent redirectToFrontendErrorPage(URI errorPageUri) {
+        var errorPageUriStr = errorPageUri.toString();
+        LOG.info("Redirecting to frontend error page: {}", errorPageUriStr);
         return generateApiGatewayProxyResponse(
-                302,
-                "",
-                Map.of(
-                        ResponseHeaders.LOCATION,
-                        ConstructUriHelper.buildURI(loginUri, errorPagePath).toString()),
-                null);
+                302, "", Map.of(ResponseHeaders.LOCATION, errorPageUriStr), null);
     }
 }

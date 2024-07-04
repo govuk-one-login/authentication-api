@@ -74,7 +74,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub,
                     auditTopic,
@@ -97,7 +97,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @BeforeEach
     void setup() {
         ipvStub.init();
-        handler = new IPVCallbackHandler(configurationService);
+        handler = new IPVCallbackHandler(configurationService, redisConnectionService);
         txmaAuditQueue.clear();
         spotQueue.clear();
     }
@@ -141,7 +141,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -320,7 +320,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
     }
 
     @ParameterizedTest
@@ -378,7 +378,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         if (validLoC) {
             assertThat(
                     response.getHeaders().get(ResponseHeaders.LOCATION),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                    startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,
@@ -527,7 +527,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
                 List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
 

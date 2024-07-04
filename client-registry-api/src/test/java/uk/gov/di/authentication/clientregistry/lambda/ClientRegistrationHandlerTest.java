@@ -15,7 +15,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -43,6 +45,7 @@ import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAudit
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
+import static uk.gov.di.orchestration.audit.TxmaAuditUser.user;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -56,7 +59,8 @@ class ClientRegistrationHandlerTest {
     private static final List<String> REDIRECT_URIS = List.of("http://localhost:8080/redirect-uri");
     private static final List<String> CONTACTS = List.of("joe.bloggs@test.com");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
-    private static final boolean CONSENT_REQUIRED_FIXED_VALUE = false;
+    public static final TxmaAuditUser USER =
+            user().withIpAddress("").withTransactionId("request-id");
     private final String clientId = IdGenerator.generate();
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -93,7 +97,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\",  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -110,65 +114,22 @@ class ClientRegistrationHandlerTest {
                         CLIENT_NAME,
                         REDIRECT_URIS,
                         CONTACTS,
-                        singletonList("openid"),
+                        PublicKeySource.STATIC.getValue(),
                         "some-public-key",
+                        null,
+                        singletonList("openid"),
                         singletonList("http://localhost:8080/post-logout-redirect-uri"),
                         "http://localhost:8080/back-channel-logout-uri",
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        CONSENT_REQUIRED_FIXED_VALUE,
                         false,
                         emptyList(),
                         ClientType.WEB.getValue(),
                         false,
                         null,
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
-                        emptyList());
-    }
-
-    @Test
-    void shouldSetConsentRequiredToFalseWhenIdentityVerificationIsRequired()
-            throws Json.JsonException {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.empty());
-        when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-
-        event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\",  \"identity_verification_required\": \"true\"}");
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(200));
-        ClientRegistrationResponse clientRegistrationResponseResult =
-                objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
-        assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
-        assertThat(
-                clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
-        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(SUBJECT_TYPE));
-        assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
-        verify(clientService)
-                .addClient(
-                        clientId,
-                        CLIENT_NAME,
-                        REDIRECT_URIS,
-                        CONTACTS,
-                        singletonList("openid"),
-                        "some-public-key",
-                        singletonList("http://localhost:8080/post-logout-redirect-uri"),
-                        "http://localhost:8080/back-channel-logout-uri",
-                        SERVICE_TYPE,
-                        SECTOR_IDENTIFIER,
-                        SUBJECT_TYPE,
-                        CONSENT_REQUIRED_FIXED_VALUE,
-                        false,
-                        emptyList(),
-                        ClientType.WEB.getValue(),
-                        true,
-                        null,
-                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        "ES256",
                         emptyList());
     }
 
@@ -182,7 +143,7 @@ class ClientRegistrationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
 
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key_source\": \"STATIC\", \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(200));
@@ -192,20 +153,61 @@ class ClientRegistrationHandlerTest {
                         CLIENT_NAME,
                         REDIRECT_URIS,
                         CONTACTS,
-                        singletonList("openid"),
+                        PublicKeySource.STATIC.getValue(),
                         "some-public-key",
+                        null,
+                        singletonList("openid"),
                         singletonList("http://localhost:8080/post-logout-redirect-uri"),
                         null,
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        CONSENT_REQUIRED_FIXED_VALUE,
                         false,
                         emptyList(),
                         ClientType.WEB.getValue(),
                         false,
                         null,
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        "ES256",
+                        emptyList());
+    }
+
+    @Test
+    void shouldAllowPublicKeySourceToBeAbsentIfPublicKeyProvidedButNoJwksUri() {
+        when(configValidationService.validateClientRegistrationConfig(
+                        any(ClientRegistrationRequest.class)))
+                .thenReturn(Optional.empty());
+        when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+
+        event.setBody(
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"], \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\", \"id_token_signing_algorithm\": \"ES256\"}");
+        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+
+        assertThat(result, hasStatus(200));
+        verify(clientService)
+                .addClient(
+                        clientId,
+                        CLIENT_NAME,
+                        REDIRECT_URIS,
+                        CONTACTS,
+                        PublicKeySource.STATIC.getValue(),
+                        "some-public-key",
+                        null,
+                        singletonList("openid"),
+                        singletonList("http://localhost:8080/post-logout-redirect-uri"),
+                        "http://localhost:8080/back-channel-logout-uri",
+                        SERVICE_TYPE,
+                        SECTOR_IDENTIFIER,
+                        SUBJECT_TYPE,
+                        false,
+                        emptyList(),
+                        ClientType.WEB.getValue(),
+                        false,
+                        null,
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        "ES256",
                         emptyList());
     }
 
@@ -219,8 +221,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", "", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     @Test
@@ -230,15 +231,13 @@ class ClientRegistrationHandlerTest {
                 .thenReturn(Optional.of(INVALID_PUBLIC_KEY));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\", \"identity_verification_required\": \"false\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key_source\": \"STATIC\", \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\", \"identity_verification_supported\": \"false\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_PUBLIC_KEY.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "", "request-id", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     @Test
@@ -248,15 +247,13 @@ class ClientRegistrationHandlerTest {
                 .thenReturn(Optional.of(INVALID_SCOPE));
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\", \"identity_verification_required\": \"false\"}");
+                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key_source\": \"STATIC\", \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"service_type\": \"MANDATORY\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"public\", \"identity_verification_supported\": \"false\"}");
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(INVALID_SCOPE.toJSONObject().toJSONString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "", "request-id", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", USER);
     }
 
     private static Stream<String> clientTypes() {
@@ -278,6 +275,7 @@ class ClientRegistrationHandlerTest {
                                 + "\"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], "
                                 + "\"contacts\": [\"joe.bloggs@test.com\"], "
                                 + "\"scopes\": [\"openid\"],  "
+                                + "\"public_key_source\": \"STATIC\", "
                                 + "\"public_key\": \"some-public-key\", "
                                 + "\"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], "
                                 + "\"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout\", "
@@ -298,9 +296,7 @@ class ClientRegistrationHandlerTest {
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         var response = handler.handleRequest(event, context);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_RECEIVED, "", "request-id", "", "", "", "", "", "");
+        verify(auditService).submitAuditEvent(REGISTER_CLIENT_REQUEST_RECEIVED, "", USER);
 
         return response;
     }

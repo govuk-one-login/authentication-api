@@ -81,14 +81,18 @@ public class AccessTokenService {
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
             var clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
-            var client = clientService.getClient(clientID).orElse(null);
-
+            if (Objects.isNull(clientID)) {
+                LOG.warn("ClientID is null");
+                throw new AccessTokenException("ClientID is null", BearerTokenError.INVALID_TOKEN);
+            }
             attachLogFieldToLogs(CLIENT_ID, clientID);
 
+            var client = clientService.getClient(clientID).orElse(null);
             if (Objects.isNull(client)) {
                 LOG.warn("Client not found");
                 throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
             }
+
             var scopes =
                     JSONArrayUtils.parse(
                                     new Gson()

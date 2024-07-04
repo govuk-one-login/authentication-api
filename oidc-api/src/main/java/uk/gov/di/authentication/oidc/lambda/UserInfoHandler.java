@@ -14,6 +14,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
@@ -35,6 +36,9 @@ import static uk.gov.di.orchestration.shared.domain.RequestHeaders.AUTHORIZATION
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
@@ -77,6 +81,30 @@ public class UserInfoHandler
         this.accessTokenService =
                 new AccessTokenService(
                         new RedisConnectionService(configurationService),
+                        new DynamoClientService(configurationService),
+                        new TokenValidationService(
+                                new JwksService(
+                                        configurationService,
+                                        new KmsConnectionService(configurationService)),
+                                configurationService));
+        this.auditService = new AuditService(configurationService);
+    }
+
+    public UserInfoHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this.configurationService = configurationService;
+        this.userInfoService =
+                new UserInfoService(
+                        new DynamoService(configurationService),
+                        new DynamoIdentityService(configurationService),
+                        new DynamoClientService(configurationService),
+                        new DynamoDocAppService(configurationService),
+                        new CloudwatchMetricsService(),
+                        configurationService,
+                        new AuthenticationUserInfoStorageService(configurationService));
+        this.accessTokenService =
+                new AccessTokenService(
+                        redis,
                         new DynamoClientService(configurationService),
                         new TokenValidationService(
                                 new JwksService(
@@ -129,6 +157,9 @@ public class UserInfoHandler
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+        String journeyId = accessTokenInfo.getAccessTokenStore().getJourneyId();
+        attachLogFieldToLogs(CLIENT_SESSION_ID, journeyId);
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, journeyId);
         var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
         LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
@@ -143,13 +174,9 @@ public class UserInfoHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
                 accessTokenInfo.getClientID(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                subjectForAudit,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
+                TxmaAuditUser.user()
+                        .withUserId(subjectForAudit)
+                        .withGovukSigninJourneyId(journeyId),
                 metadataPairs);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());

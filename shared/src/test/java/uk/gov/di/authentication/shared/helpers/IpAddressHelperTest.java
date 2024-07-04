@@ -36,6 +36,16 @@ class IpAddressHelperTest {
     }
 
     @Test
+    void shouldExtractFromXForwardedHeaderRegardlessOfCase() {
+        var request = new APIGatewayProxyRequestEvent();
+
+        request.setHeaders(Map.of("x-forwarded-for", "123.123.123.123"));
+        request.setRequestContext(stubContextWithSourceIp());
+
+        assertThat(extractIpAddress(request), is("123.123.123.123"));
+    }
+
+    @Test
     void shouldChooseSourceIpAsLastResort() {
         var request = new APIGatewayProxyRequestEvent();
         request.setRequestContext(stubContextWithSourceIp());

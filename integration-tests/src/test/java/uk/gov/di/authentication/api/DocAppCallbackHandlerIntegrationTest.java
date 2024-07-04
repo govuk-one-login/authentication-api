@@ -33,8 +33,6 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
@@ -47,6 +45,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -88,12 +87,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected static final DocumentAppCredentialStoreExtension credentialExtension =
             new DocumentAppCredentialStoreExtension(180);
 
-    protected final ConfigurationService configurationService =
+    protected static final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
                     criStub,
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
@@ -106,7 +102,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setup() throws JOSEException {
-        handler = new DocAppCallbackHandler(configurationService);
+        handler = new DocAppCallbackHandler(configurationService, redisConnectionService);
         docAppSubjectId =
                 new Subject(
                         ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -126,8 +122,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true,
-                ClientType.APP);
+                ClientType.APP,
+                ES256.getName(),
+                true);
         txmaAuditQueue.clear();
     }
 
@@ -208,7 +205,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -235,7 +232,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -294,7 +291,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -374,9 +371,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         public TestConfigurationService(
                 CriStubExtension criStubExtension,
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
@@ -412,11 +406,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public URI getDocAppAuthorisationCallbackURI() {
             return URI.create("http://localhost/redirect");
-        }
-
-        @Override
-        public String getDocAppCriDataEndpoint() {
-            return "/userinfo/v2";
         }
 
         @Override

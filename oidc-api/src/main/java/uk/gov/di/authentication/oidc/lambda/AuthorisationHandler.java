@@ -23,7 +23,6 @@ import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -36,6 +35,8 @@ import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -67,7 +68,6 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -103,7 +103,6 @@ public class AuthorisationHandler
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
     public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -115,9 +114,9 @@ public class AuthorisationHandler
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DocAppAuthorisationService docAppAuthorisationService;
-
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final TokenValidationService tokenValidationService;
+    private final AuthFrontend authFrontend;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -131,7 +130,8 @@ public class AuthorisationHandler
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
-            TokenValidationService tokenValidationService) {
+            TokenValidationService tokenValidationService,
+            AuthFrontend authFrontend) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -144,6 +144,7 @@ public class AuthorisationHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.tokenValidationService = tokenValidationService;
+        this.authFrontend = authFrontend;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -170,6 +171,32 @@ public class AuthorisationHandler
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
+    }
+
+    public AuthorisationHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        this.configurationService = configurationService;
+        this.sessionService = new SessionService(configurationService, redis);
+        this.clientSessionService = new ClientSessionService(configurationService, redis);
+        this.orchestrationAuthorizationService =
+                new OrchestrationAuthorizationService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.queryParamsAuthorizeValidator =
+                new QueryParamsAuthorizeValidator(configurationService);
+        this.requestObjectAuthorizeValidator =
+                new RequestObjectAuthorizeValidator(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var jwksService = new JwksService(configurationService, kmsConnectionService);
+        this.docAppAuthorisationService =
+                new DocAppAuthorisationService(
+                        configurationService, redis, kmsConnectionService, jwksService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService, redis);
+        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
+        this.authFrontend = new AuthFrontend(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -198,16 +225,14 @@ public class AuthorisationHandler
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
 
+        var user =
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId);
+
         auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId);
+                OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED, AuditService.UNKNOWN, user);
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Received authentication request");
@@ -250,7 +275,7 @@ public class AuthorisationHandler
                         "Redirect URI or ClientID is missing from auth request", e);
             }
             LOG.warn("Authentication request could not be parsed", e);
-            throwError(e.getErrorObject(), ipAddress, persistentSessionId, clientSessionId);
+            throwError(e.getErrorObject(), user);
             throw new AssertionError("Not reached");
         } catch (NullPointerException e) {
             LOG.warn(
@@ -282,8 +307,7 @@ public class AuthorisationHandler
                         null);
             } else {
                 LOG.warn("Redirect URI not found in client registry");
-                return RedirectService.redirectToFrontendErrorPage(
-                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
         }
         if (authRequest.getRequestObject() == null) {
@@ -297,13 +321,11 @@ public class AuthorisationHandler
         if (authRequestError.isPresent()) {
             return generateErrorResponse(
                     authRequestError.get().redirectURI(),
-                    authRequest.getState(),
+                    authRequestError.get().state(),
                     authRequest.getResponseMode(),
                     authRequestError.get().errorObject(),
-                    ipAddress,
-                    persistentSessionId,
                     authRequest.getClientID().getValue(),
-                    clientSessionId);
+                    user);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
@@ -329,13 +351,7 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
                 authRequest.getClientID().getValue(),
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("rpSid", getRpSid(authRequest)),
                 pair("identityRequested", identityRequested),
                 pair("reauthRequested", reauthRequested));
@@ -356,19 +372,19 @@ public class AuthorisationHandler
                     authRequest,
                     client,
                     clientSessionId,
-                    ipAddress,
-                    persistentSessionId);
+                    persistentSessionId,
+                    user);
         }
         return handleAuthJourney(
                 session,
                 clientSession,
                 authRequest,
-                ipAddress,
                 persistentSessionId,
                 client,
                 clientSessionId,
                 reauthRequested,
-                vtrList);
+                vtrList,
+                user);
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {
@@ -412,8 +428,8 @@ public class AuthorisationHandler
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
             String clientSessionId,
-            String ipAddress,
-            String persistentSessionId) {
+            String persistentSessionId,
+            TxmaAuditUser user) {
 
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
@@ -464,13 +480,8 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                 client.getClientID(),
-                clientSessionId,
-                session.getSessionId(),
-                clientSession.getDocAppSubjectId().toString(),
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId);
+                user.withSessionId(session.getSessionId())
+                        .withUserId(clientSession.getDocAppSubjectId().getValue()));
 
         URI authorisationRequestUri = authorisationRequest.toURI();
         LOG.info(
@@ -494,26 +505,21 @@ public class AuthorisationHandler
             Optional<Session> existingSession,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
-            String ipAddress,
             String persistentSessionId,
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            List<VectorOfTrust> vtrList,
+            TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
-                && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
-                        || authenticationRequest
-                                .getPrompt()
-                                .contains(Prompt.Type.SELECT_ACCOUNT))) {
+                && authenticationRequest.getPrompt().contains(Prompt.Type.SELECT_ACCOUNT)) {
             return generateErrorResponse(
                     authenticationRequest.getRedirectionURI(),
                     authenticationRequest.getState(),
                     authenticationRequest.getResponseMode(),
                     OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
-                    ipAddress,
-                    persistentSessionId,
                     authenticationRequest.getClientID().getValue(),
-                    clientSessionId);
+                    user);
         }
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
@@ -528,16 +534,12 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
 
+        user = user.withSessionId(session.getSessionId());
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                 authenticationRequest.getClientID().getValue(),
-                clientSessionId,
-                session.getSessionId(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("client-name", client.getClientName()));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
@@ -551,46 +553,43 @@ public class AuthorisationHandler
                 session,
                 clientSessionId,
                 authenticationRequest,
-                ipAddress,
                 persistentSessionId,
                 client,
                 reauthRequested,
-                vtrList);
+                vtrList,
+                user);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
             Session session,
             String clientSessionId,
             AuthenticationRequest authenticationRequest,
-            String ipAddress,
             String persistentSessionId,
             ClientRegistry client,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            List<VectorOfTrust> vtrList,
+            TxmaAuditUser user) {
         LOG.info("Redirecting");
-        String redirectURI;
-        try {
-            var redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
 
-            redirectUriBuilder.setPath("authorize");
+        Optional<Prompt.Type> prompt =
+                Objects.nonNull(authenticationRequest.getPrompt())
+                                && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)
+                        ? Optional.of(Prompt.Type.LOGIN)
+                        : Optional.empty();
 
-            if (Objects.nonNull(authenticationRequest.getPrompt())
-                    && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
-                redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
-            }
-
-            List<String> optionalGaTrackingParameter =
-                    authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
-            if (Objects.nonNull(optionalGaTrackingParameter)
-                    && !optionalGaTrackingParameter.isEmpty()) {
-                redirectUriBuilder.addParameter(
-                        GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY, optionalGaTrackingParameter.get(0));
-            }
-
-            redirectURI = redirectUriBuilder.build().toString();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("Error constructing redirect URI", e);
+        List<String> optionalGaTrackingParameter =
+                authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
+        Optional<String> googleAnalytics =
+                Objects.nonNull(optionalGaTrackingParameter)
+                                && !optionalGaTrackingParameter.isEmpty()
+                        ? Optional.of(optionalGaTrackingParameter.get(0))
+                        : Optional.empty();
+        if (Objects.nonNull(optionalGaTrackingParameter)
+                && !optionalGaTrackingParameter.isEmpty()) {
+            googleAnalytics = Optional.of(optionalGaTrackingParameter.get(0));
         }
+
+        var redirectURI = authFrontend.authorizeURI(prompt, googleAnalytics).toString();
 
         List<String> cookies =
                 handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
@@ -599,7 +598,7 @@ public class AuthorisationHandler
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var rpSectorIdentifierHost =
                 ClientSubjectHelper.getSectorIdentifierForClient(
-                        client, configurationService.getInternalSectorUri());
+                        client, configurationService.getInternalSectorURI());
         var state = new State();
         orchestrationAuthorizationService.storeState(session.getSessionId(), state);
         String reauthenticateClaim;
@@ -613,17 +612,15 @@ public class AuthorisationHandler
                     authenticationRequest.getState(),
                     authenticationRequest.getResponseMode(),
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
-                    ipAddress,
-                    persistentSessionId,
                     authenticationRequest.getClientID().getValue(),
-                    clientSessionId);
+                    user);
         }
 
         var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getOrchestrationClientId())
-                        .audience(configurationService.getLoginURI().toString())
+                        .audience(authFrontend.baseURI().toString())
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .notBeforeTime(NowHelper.now())
@@ -634,14 +631,13 @@ public class AuthorisationHandler
                         .claim("rp_state", authenticationRequest.getState().getValue())
                         .claim("client_name", client.getClientName())
                         .claim("cookie_consent_shared", client.isCookieConsentShared())
-                        .claim("consent_required", client.isConsentRequired())
                         .claim("is_one_login_service", client.isOneLoginService())
                         .claim("service_type", client.getServiceType())
                         .claim("govuk_signin_journey_id", clientSessionId)
                         .claim("confidence", confidence)
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
-                        .claim("redirect_uri", configurationService.getOrchestrationRedirectUri())
+                        .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthenticateClaim);
 
         var claimsSetRequest =
@@ -672,21 +668,13 @@ public class AuthorisationHandler
             State state,
             ResponseMode responseMode,
             ErrorObject errorObject,
-            String ipAddress,
-            String persistentSessionId,
             String clientId,
-            String clientSessionId) {
+            TxmaAuditUser user) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 clientId,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("description", errorObject.getDescription()));
 
         LOG.warn(
@@ -699,22 +687,12 @@ public class AuthorisationHandler
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
     }
 
-    private void throwError(
-            ErrorObject errorObject,
-            String ipAddress,
-            String persistentSessionId,
-            String clientSessionId) {
+    private void throwError(ErrorObject errorObject, TxmaAuditUser user) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId,
+                user,
                 pair("description", errorObject.getDescription()));
 
         LOG.warn("Throwing auth error: {} {}", errorObject.getCode(), errorObject.getDescription());

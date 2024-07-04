@@ -4,6 +4,8 @@ locals {
   otherenv       = var.environment != "production" && var.environment != "authdev1" && var.environment != "authdev2" ? "${var.environment}.account.gov.uk" : ""
   service_domain = coalesce(local.prod, local.sandpitdevs, local.otherenv)
 
+  oidc_cloudfront_id_export_name = var.environment == "sandpit" ? "dev-oidc-cloudfront-DistributionId" : "${var.environment}-oidc-cloudfront-DistributionId"
+
   account_management_fqdn     = local.service_domain
   account_management_api_fqdn = "manage.${local.service_domain}"
   frontend_fqdn               = "signin.${local.service_domain}"
@@ -86,6 +88,16 @@ resource "aws_api_gateway_domain_name" "oidc_api" {
   }
 }
 
+data "aws_cloudformation_export" "oidc_cloudfront_distribution_id" {
+  count = var.oidc_cloudfront_dns_enabled ? 1 : 0
+  name  = local.oidc_cloudfront_id_export_name
+}
+
+data "aws_cloudfront_distribution" "oidc_cloudfront_distribution" {
+  count = var.oidc_cloudfront_dns_enabled ? 1 : 0
+  id    = data.aws_cloudformation_export.oidc_cloudfront_distribution_id[0].value
+}
+
 resource "aws_route53_record" "oidc_api" {
   name    = local.oidc_api_fqdn
   type    = "A"
@@ -93,8 +105,8 @@ resource "aws_route53_record" "oidc_api" {
 
   alias {
     evaluate_target_health = true
-    name                   = aws_api_gateway_domain_name.oidc_api.regional_domain_name
-    zone_id                = aws_api_gateway_domain_name.oidc_api.regional_zone_id
+    name                   = var.oidc_cloudfront_dns_enabled ? data.aws_cloudfront_distribution.oidc_cloudfront_distribution[0].domain_name : aws_api_gateway_domain_name.oidc_api.regional_domain_name
+    zone_id                = var.oidc_cloudfront_dns_enabled ? data.aws_cloudfront_distribution.oidc_cloudfront_distribution[0].hosted_zone_id : aws_api_gateway_domain_name.oidc_api.regional_zone_id
   }
 }
 

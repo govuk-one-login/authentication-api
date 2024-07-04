@@ -15,11 +15,10 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
-import java.net.URI;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public class TokenRequestValidator {
     private static final Logger LOG = LogManager.getLogger(TokenRequestValidator.class);
@@ -72,7 +71,7 @@ public class TokenRequestValidator {
     }
 
     public void validatePrivateKeyJwtClientAuth(
-            String requestBody, URI expectedAudience, String publicKey)
+            String requestBody, Set<Audience> expectedAudience, String publicKey)
             throws TokenAuthInvalidException {
         try {
             PrivateKeyJWT privateKeyJWT = PrivateKeyJWT.parse(requestBody);
@@ -80,7 +79,7 @@ public class TokenRequestValidator {
             ClientAuthenticationVerifier<?> signatureVerifier =
                     new ClientAuthenticationVerifier<>(
                             new PrivateKeyJwtAuthPublicKeySelector(publicKey, KeyType.EC),
-                            Collections.singleton(new Audience(expectedAudience)));
+                            expectedAudience);
             signatureVerifier.verify(privateKeyJWT, null, null);
         } catch (ParseException e) {
             LOG.warn("Unable to parse private_key_jwt", e);

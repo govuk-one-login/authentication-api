@@ -29,11 +29,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -51,10 +53,14 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final State STATE = new State();
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
-        handler = new ProcessingIdentityHandler(TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE);
+        handler =
+                new ProcessingIdentityHandler(
+                        TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -73,6 +79,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -106,6 +113,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -132,6 +140,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -158,6 +167,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
 
         var response =
                 makeRequest(
@@ -209,8 +219,8 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 String.valueOf(ServiceType.MANDATORY),
                 CLIENT_SECTOR,
                 "pairwise",
-                true,
                 ClientType.WEB,
+                ES256.getName(),
                 true);
     }
 

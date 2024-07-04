@@ -27,14 +27,14 @@ resource "aws_sqs_queue" "spot_request_dead_letter_queue" {
   tags = local.default_tags
 }
 
-data "aws_iam_policy_document" "spot_request_queue_policy_document" {
+data "aws_iam_policy_document" "cross_account_spot_request_queue_policy_document" {
   statement {
     sid    = "AllowSpotAccountToReceive"
     effect = "Allow"
 
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
+      identifiers = [aws_ssm_parameter.spot_account_number.value]
     }
 
     actions = [
@@ -48,15 +48,30 @@ data "aws_iam_policy_document" "spot_request_queue_policy_document" {
       aws_sqs_queue.spot_request_queue.arn
     ]
   }
+
+  statement {
+    sid    = "AllowOrchAccountSendSQS-${var.environment}"
+    effect = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = [var.orch_account_id]
+    }
+
+    actions = [
+      "sqs:SendMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:GetQueueAttributes",
+    ]
+    resources = [
+      aws_sqs_queue.spot_request_queue.arn
+    ]
+  }
 }
 
 resource "aws_sqs_queue_policy" "spot_request_queue_policy" {
-  depends_on = [
-    data.aws_iam_policy_document.spot_request_queue_policy_document,
-  ]
-
   queue_url = aws_sqs_queue.spot_request_queue.id
-  policy    = data.aws_iam_policy_document.spot_request_queue_policy_document.json
+  policy    = data.aws_iam_policy_document.cross_account_spot_request_queue_policy_document.json
 }
 
 data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
@@ -84,15 +99,16 @@ data "aws_iam_policy_document" "spot_request_dlq_queue_policy_document" {
 
 resource "aws_sqs_queue_policy" "spot_request_dlq_queue_policy" {
   depends_on = [
-    data.aws_iam_policy_document.spot_request_queue_policy_document,
+    data.aws_iam_policy_document.cross_account_spot_request_kms_key_policy,
   ]
 
   queue_url = aws_sqs_queue.spot_request_dead_letter_queue.id
   policy    = data.aws_iam_policy_document.spot_request_dlq_queue_policy_document.json
 }
 
-data "aws_iam_policy_document" "spot_request_kms_key_policy" {
-  policy_id = "key-policy-ssm"
+data "aws_iam_policy_document" "cross_account_spot_request_kms_key_policy" {
+  policy_id = "cross-account-key-policy-ssm"
+
   statement {
     sid = "Enable IAM User Permissions for root user"
     actions = [
@@ -101,10 +117,11 @@ data "aws_iam_policy_document" "spot_request_kms_key_policy" {
     effect = "Allow"
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+      identifiers = [data.aws_caller_identity.current.account_id]
     }
     resources = ["*"]
   }
+
   statement {
     sid = "Give SPOT permissions to SQS KMS key"
     actions = [
@@ -113,16 +130,32 @@ data "aws_iam_policy_document" "spot_request_kms_key_policy" {
     effect = "Allow"
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${aws_ssm_parameter.spot_account_number.value}:root"]
+      identifiers = [aws_ssm_parameter.spot_account_number.value]
     }
     resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowOrchAccessToSpotRequestQueueEncryptionKey-${var.environment}"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey"
+    ]
+    resources = ["*"]
+
+    principals {
+      type        = "AWS"
+      identifiers = [var.orch_account_id]
+    }
   }
 }
 
 resource "aws_kms_key" "spot_request_sqs_key" {
   description             = "KMS key for SPOT request SQS queue encryption"
   deletion_window_in_days = 30
-  policy                  = data.aws_iam_policy_document.spot_request_kms_key_policy.json
+  policy                  = data.aws_iam_policy_document.cross_account_spot_request_kms_key_policy.json
 
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"

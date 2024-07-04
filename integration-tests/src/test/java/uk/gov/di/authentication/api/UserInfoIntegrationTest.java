@@ -2,7 +2,6 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -53,6 +52,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -60,6 +60,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -81,10 +82,13 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
+    private static final String JOURNEY_ID = "client-session-id";
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
     private static String DOC_APP_CREDENTIAL;
+    public static final String ENCODED_DEVICE_INFORMATION =
+            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     private static final List<String> SCOPES =
             List.of(
@@ -107,24 +111,25 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
 
+    private static final IntegrationTestConfigurationService configuration =
+            new IntegrationTestConfigurationService(
+                    externalTokenSigner,
+                    storageTokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
+
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {
-        var configuration =
-                new IntegrationTestConfigurationService(
-                        externalTokenSigner,
-                        storageTokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
 
-                    @Override
-                    public String getTxmaAuditQueueUrl() {
-                        return txmaAuditQueue.getQueueUrl();
-                    }
-                };
-
-        handler = new UserInfoHandler(configuration);
+        handler = new UserInfoHandler(configuration, redisConnectionService);
         DOC_APP_CREDENTIAL = generateSignedJWT(new JWTClaimsSet.Builder().build()).serialize();
 
         userInfoStorageExtension.addAuthenticationUserInfoData(
@@ -149,7 +154,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
@@ -160,7 +166,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
                         Map.of());
 
         assertThat(response, hasStatus(200));
@@ -178,7 +186,13 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturnInvalidTokenErrorWhenAccessTokenIsInvalid() {
-        var response = makeRequest(Optional.empty(), Map.of("Authorization", "ru"), Map.of());
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", "ru"),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
+                        Map.of());
 
         assertThat(response, hasStatus(401));
 
@@ -346,7 +360,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet)
             throws JOSEException, NoSuchAlgorithmException {
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var jwsHeader = new JWSHeader(ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
 
         var keyPairGenerator = KeyPairGenerator.getInstance("EC");
@@ -395,7 +409,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 objectMapper.writeValueAsString(accessTokenStore),
@@ -403,7 +418,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         return makeRequest(
                 Optional.empty(),
-                Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                Map.ofEntries(
+                        Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
                 Map.of());
     }
 
@@ -424,7 +441,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new AccessTokenStore(
                         accessToken.getValue(),
                         INTERNAL_SUBJECT.getValue(),
-                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+                        INTERNAL_PAIRWISE_SUBJECT.getValue(),
+                        JOURNEY_ID);
         var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
         redis.addToRedis(
                 ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
@@ -432,7 +450,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 300L);
         return makeRequest(
                 Optional.empty(),
-                Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                Map.ofEntries(
+                        Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
                 Map.of());
     }
 
@@ -467,8 +487,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true,
                 ClientType.WEB,
+                ES256.getName(),
                 identitySupported);
     }
 
@@ -486,8 +506,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                false,
-                ClientType.APP);
+                ClientType.APP,
+                ES256.getName(),
+                false);
     }
 
     private static class UserInfoConfigurationService extends IntegrationTestConfigurationService {

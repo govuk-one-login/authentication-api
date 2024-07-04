@@ -3,10 +3,12 @@ package uk.gov.di.authentication.utils.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import net.minidev.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
+import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -145,9 +147,26 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
             LOG.info(
                     "Bulk User Email re-invoke.  Total users added so far {}",
                     totalUsersAddedSoFar);
-            lambdaInvokerService.invokeWithPayload(event);
+            reinvokeLambdaAsync(event);
         }
 
         return null;
+    }
+
+    private void reinvokeLambdaAsync(ScheduledEvent event) {
+        String lambdaName = configurationService.getBulkEmailLoaderLambdaName();
+
+        if (lambdaName == null || lambdaName.isEmpty()) {
+            throw new LambdaInvokerServiceException(
+                    "BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME environment variable not set");
+        }
+
+        JSONObject detail = new JSONObject();
+        detail.appendField(LAST_EVALUATED_KEY, event.getDetail().get(LAST_EVALUATED_KEY));
+        detail.appendField(
+                GLOBAL_USERS_ADDED_COUNT, event.getDetail().get(GLOBAL_USERS_ADDED_COUNT));
+
+        String jsonPayload = new JSONObject().appendField("detail", detail).toJSONString();
+        lambdaInvokerService.invokeAsyncWithPayload(jsonPayload, lambdaName);
     }
 }

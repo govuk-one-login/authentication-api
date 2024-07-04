@@ -6,11 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -29,13 +29,16 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.util.Map.entry;
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -94,6 +97,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
     }
 
+    public VerifyCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(VerifyCodeRequest.class, configurationService, redis);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -117,6 +129,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            var auditContext =
+                    auditContextFromUserContext(
+                            userContext,
+                            session.getInternalCommonSubjectIdentifier(),
+                            session.getEmailAddress(),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            extractPersistentIdFromHeaders(input.getHeaders()));
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
@@ -137,7 +157,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             codeRequest.code(),
                             codeStorageService,
                             session.getEmailAddress(),
-                            configurationService.getCodeMaxRetries());
+                            configurationService);
 
             if (errorResponse.stream().anyMatch(ErrorResponse.ERROR_1002::equals)) {
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -147,7 +167,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             if (errorResponse.isPresent()) {
                 processBlockedCodeSession(
-                        errorResponse.get(), session, codeRequest, input, userContext, journeyType);
+                        errorResponse.get(), session, codeRequest, journeyType, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
@@ -158,7 +178,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         sessionService,
                         session);
             }
-            processSuccessfulCodeRequest(session, codeRequest, input, userContext, journeyType);
+            processSuccessfulCodeRequest(
+                    session, codeRequest, userContext, journeyType, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -196,19 +217,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private void processSuccessfulCodeRequest(
             Session session,
             VerifyCodeRequest codeRequest,
-            APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
-        var accountRecoveryJourney =
-                codeRequest.notificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         int loginFailureCount = session.getRetryCount();
-        var metadataPairs =
-                new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name()),
-                    pair("account-recovery", accountRecoveryJourney),
-                    pair("journey-type", String.valueOf(journeyType))
-                };
         var clientSession = userContext.getClientSession();
         var clientId = userContext.getClient().get().getClientID();
         var levelOfConfidence =
@@ -222,16 +235,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     MFAMethodType.SMS.getValue(),
                     false);
             sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", accountRecoveryJourney),
-                        pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.code()),
-                        pair("journey-type", String.valueOf(journeyType))
-                    };
-            clearAccountRecoveryBlockIfPresent(session, userContext, input);
+            clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,
@@ -241,40 +245,44 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     true);
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
-        submitAuditEvent(
-                session, input, userContext, FrontendAuditableEvent.CODE_VERIFIED, metadataPairs);
+
+        var metadataPairArray =
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.CODE_VERIFIED, auditContext, metadataPairArray);
+    }
+
+    private AuditService.MetadataPair[] metadataPairs(
+            NotificationType notificationType,
+            JourneyType journeyType,
+            VerifyCodeRequest codeRequest,
+            Integer loginFailureCount,
+            boolean isBlockedRequest) {
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(pair("notification-type", notificationType.name()));
+        metadataPairs.add(pair("account-recovery", journeyType == JourneyType.ACCOUNT_RECOVERY));
+        metadataPairs.add(pair("journey-type", String.valueOf(journeyType)));
+        if (notificationType == MFA_SMS) {
+            metadataPairs.add(pair("mfa-type", MFAMethodType.SMS.getValue()));
+            metadataPairs.add(pair("loginFailureCount", loginFailureCount));
+            metadataPairs.add(pair("MFACodeEntered", codeRequest.code()));
+        }
+        if (notificationType == MFA_SMS && isBlockedRequest) {
+            metadataPairs.add(pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+        }
+        return metadataPairs.toArray(AuditService.MetadataPair[]::new);
     }
 
     private void processBlockedCodeSession(
             ErrorResponse errorResponse,
             Session session,
             VerifyCodeRequest codeRequest,
-            APIGatewayProxyRequestEvent input,
-            UserContext userContext,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
-        var accountRecoveryJourney = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        var metadataPairs =
-                new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name()),
-                    pair("account-recovery", accountRecoveryJourney),
-                    pair("journey-type", String.valueOf(journeyType))
-                };
         int loginFailureCount = session.getRetryCount();
-        if (notificationType.equals(MFA_SMS)) {
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", accountRecoveryJourney),
-                        pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", codeRequest.code()),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
-                        pair("journey-type", String.valueOf(journeyType))
-                    };
-        }
         AuditableEvent auditableEvent;
         switch (errorResponse) {
             case ERROR_1027:
@@ -292,29 +300,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
                 break;
         }
-        submitAuditEvent(session, input, userContext, auditableEvent, metadataPairs);
-    }
-
-    private void submitAuditEvent(
-            Session session,
-            APIGatewayProxyRequestEvent input,
-            UserContext userContext,
-            AuditableEvent auditableEvent,
-            AuditService.MetadataPair... metadataPairs) {
-        auditService.submitAuditEvent(
-                auditableEvent,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                metadataPairs);
+        var metadataPairArray =
+                metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
+        auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
     }
 
     private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
@@ -332,8 +320,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         };
     }
 
-    private void clearAccountRecoveryBlockIfPresent(
-            Session session, UserContext userContext, APIGatewayProxyRequestEvent input) {
+    private void clearAccountRecoveryBlockIfPresent(Session session, AuditContext auditContext) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
                         session.getInternalCommonSubjectIdentifier());
@@ -341,11 +328,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
                     session.getInternalCommonSubjectIdentifier());
-            submitAuditEvent(
-                    session,
-                    input,
-                    userContext,
+            auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                    auditContext,
                     pair("mfa-type", MFAMethodType.SMS.getValue()));
         }
     }

@@ -29,6 +29,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
@@ -38,6 +39,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
@@ -59,6 +61,18 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
         this.logoutService = new LogoutService(configurationService);
+    }
+
+    public ProcessingIdentityHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(ProcessingIdentityRequest.class, configurationService);
+        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService, cloudwatchMetricsService, auditService);
+        this.logoutService = new LogoutService(configurationService, redis);
     }
 
     public ProcessingIdentityHandler() {
@@ -103,6 +117,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             ProcessingIdentityRequest request,
             UserContext userContext) {
         LOG.info("ProcessingIdentity request received");
+        attachTxmaAuditFieldFromHeaders(input.getHeaders());
         try {
             UserProfile userProfile = userContext.getUserProfile().orElseThrow();
             ClientRegistry client = userContext.getClient().orElseThrow();
@@ -111,11 +126,11 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userProfile,
                             client,
                             authenticationService,
-                            configurationService.getInternalSectorUri());
+                            configurationService.getInternalSectorURI());
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            URI.create(configurationService.getInternalSectorUri()),
+                            URI.create(configurationService.getInternalSectorURI()),
                             authenticationService.getOrGenerateSalt(userProfile));
             int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
             LOG.info(

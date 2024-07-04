@@ -2,7 +2,6 @@ package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -18,7 +17,6 @@ import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -32,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.jose.JWSAlgorithm.ES256;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.EMAIL;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.PHONE;
@@ -59,17 +58,17 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-    private final String publicKey =
+    private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded())
                     + "\n-----END PUBLIC KEY-----\n";
 
-    private final ConfigurationService configurationService =
+    private static final ConfigurationService configurationService =
             new OrchestrationToAuthenticationAuthorizeIntegrationTest.TestConfigurationService();
 
     @BeforeEach
     void setup() {
-        handler = new AuthorisationHandler(configurationService);
+        handler = new AuthorisationHandler(configurationService, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -233,7 +232,9 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
             APIGatewayProxyResponseEvent response) throws ParseException {
         assertThat(response, hasStatus(302));
         var redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
         var authorizationRequest = AuthorizationRequest.parse(URI.create(redirectUri));
         assertThat(authorizationRequest.getClientID().getValue(), equalTo(AUTH_INTERNAL_CLIENT_ID));
         assertThat(authorizationRequest.getResponseType(), equalTo(ResponseType.CODE));
@@ -261,7 +262,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_name")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("cookie_consent_shared")));
-        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("consent_required")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("is_one_login_service")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("service_type")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("rp_client_id")));
@@ -289,8 +289,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 (boolean) signedJWT.getJWTClaimsSet().getClaim("cookie_consent_shared"),
                 equalTo(false));
         assertThat(
-                (boolean) signedJWT.getJWTClaimsSet().getClaim("consent_required"), equalTo(false));
-        assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("service_type"),
                 equalTo(ServiceType.MANDATORY.toString()));
         assertThat(
@@ -300,7 +298,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("rp_sector_host"),
                 equalTo("rp-sector-uri.com"));
-        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {
@@ -320,8 +318,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 RP_SECTOR_URI,
                 "public",
-                false,
                 ClientType.WEB,
+                ES256.getName(),
                 identitySupported);
     }
 
@@ -330,7 +328,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         return encryptedJWT.getPayload().toSignedJWT();
     }
 
-    private class TestConfigurationService extends IntegrationTestConfigurationService {
+    private static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         public TestConfigurationService() {
             super(
@@ -358,18 +356,12 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         }
 
         @Override
-        public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
-            return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
-                    || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
-        }
-
-        @Override
         public String getOrchestrationClientId() {
             return AUTH_INTERNAL_CLIENT_ID;
         }
 
         @Override
-        public String getOrchestrationRedirectUri() {
+        public String getOrchestrationRedirectURI() {
             return ORCHESTRATION_REDIRECT_URI;
         }
 

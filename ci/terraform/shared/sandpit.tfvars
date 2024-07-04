@@ -17,14 +17,13 @@ stub_rp_clients = [
       "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "0"
-    consent_required                = "0"
     client_type                     = "web"
     identity_verification_supported = "0"
     scopes = [
       "openid",
       "email",
       "phone",
-      "wallet-subject-id",
+      "wallet-subject-id"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
@@ -39,7 +38,6 @@ stub_rp_clients = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
-    consent_required                = "0"
     client_type                     = "app"
     identity_verification_supported = "1"
     scopes = [
@@ -47,6 +45,7 @@ stub_rp_clients = [
       "email",
       "phone",
       "wallet-subject-id",
+      "doc-checking-app"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
@@ -57,8 +56,5 @@ logging_endpoint_enabled = false
 enforce_code_signing     = false
 orchestration_account_id = "816047645251"
 
-orch_privatesub_cidr_blocks = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
-
-kms_cross_account_access_enabled                = true
-doc_app_cross_account_access_enabled            = true
-user_profile_table_cross_account_access_enabled = true
+orch_privatesub_cidr_blocks   = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
+orch_protectedsub_cidr_blocks = ["10.1.4.0/23", "10.1.6.0/23", "10.1.8.0/23"]

@@ -91,9 +91,6 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
     CookieConsentShared = {
       N = "1"
     }
-    ConsentRequired = {
-      N = each.value.consent_required
-    }
     IdentityVerificationSupported = {
       N = each.value.identity_verification_supported
     }

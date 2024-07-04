@@ -4,3 +4,6 @@ di_tools_signing_profile_version_arn = "arn:aws:signer:eu-west-2:114407264696:/s
 tools_account_id                     = 114407264696
 orchestration_account_id             = "533266965190"
 dlq_alarm_threshold                  = 999999
+
+orch_privatesub_cidr_blocks   = ["10.1.10.0/23", "10.1.12.0/23", "10.1.14.0/23"]
+orch_protectedsub_cidr_blocks = ["10.1.4.0/23", "10.1.6.0/23", "10.1.8.0/23"]

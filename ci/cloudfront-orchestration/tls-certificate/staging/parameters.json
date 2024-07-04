@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "HostedZoneID",
+    "ParameterValue": "Z013545810R9Q9A5U2JW5"
+  },
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": "oidc.staging.account.gov.uk"
+  }
+]
