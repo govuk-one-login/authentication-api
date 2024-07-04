@@ -1,5 +1,5 @@
 resource "aws_iam_role" "codedeploy_deployment_group_auth" {
-  name_prefix  = "authCodeDeployDeploymentGroupRole"
+  name_prefix = "authCodeDeployDeploymentGroupRole"
 
   assume_role_policy = jsonencode(
     {
