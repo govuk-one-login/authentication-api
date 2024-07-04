@@ -60,8 +60,6 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         updateRequest.setRedirectUris(expectedRedirectUris);
         var expectedContacts = List.of("test1@example.com", "test2@example.com");
         updateRequest.setContacts(expectedContacts);
-        var expectedPublicKeySource = "STATIC";
-        updateRequest.setPublicKeySource(expectedPublicKeySource);
         var expectedPublicKey =
                 Base64.getMimeEncoder()
                         .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded());
@@ -122,7 +120,6 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(persistedClient.getClientName(), equalTo(expectedClientName));
         assertThat(persistedClient.getRedirectUrls(), equalTo(expectedRedirectUris));
         assertThat(persistedClient.getContacts(), equalTo(expectedContacts));
-        assertThat(persistedClient.getPublicKeySource(), equalTo(expectedPublicKeySource));
         assertThat(persistedClient.getPublicKey(), equalTo(expectedPublicKey));
         assertThat(persistedClient.getScopes(), equalTo(expectedScopes));
         assertThat(

@@ -23,17 +23,9 @@ public class UpdateClientConfigRequest {
     @Expose
     private List<String> contacts;
 
-    @SerializedName("public_key_source")
-    @Expose
-    private String publicKeySource;
-
     @SerializedName("public_key")
     @Expose
     private String publicKey;
-
-    @SerializedName("jwks_uri")
-    @Expose
-    private String jwksUrl;
 
     @SerializedName("scopes")
     @Expose
@@ -97,16 +89,8 @@ public class UpdateClientConfigRequest {
         return contacts;
     }
 
-    public String getPublicKeySource() {
-        return publicKeySource;
-    }
-
     public String getPublicKey() {
         return publicKey;
-    }
-
-    public String getJwksUrl() {
-        return jwksUrl;
     }
 
     public List<String> getScopes() {
@@ -173,18 +157,8 @@ public class UpdateClientConfigRequest {
         return this;
     }
 
-    public UpdateClientConfigRequest setPublicKeySource(String publicKeySource) {
-        this.publicKeySource = publicKeySource;
-        return this;
-    }
-
     public UpdateClientConfigRequest setPublicKey(String publicKey) {
         this.publicKey = publicKey;
-        return this;
-    }
-
-    public UpdateClientConfigRequest setJwksUrl(String jwksUrl) {
-        this.jwksUrl = jwksUrl;
         return this;
     }
 

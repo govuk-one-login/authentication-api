@@ -28,19 +28,6 @@ public class ClientRegistrationResponse {
     @Required
     private List<String> contacts;
 
-    @SerializedName("public_key_source")
-    @Expose
-    @Required
-    private String publicKeySource;
-
-    @SerializedName("public_key")
-    @Expose
-    private String publicKey;
-
-    @SerializedName("jwks_uri")
-    @Expose
-    private String jwksUrl;
-
     @SerializedName("scopes")
     @Expose
     @Required
@@ -101,9 +88,6 @@ public class ClientRegistrationResponse {
             String clientId,
             List<String> redirectUris,
             List<String> contacts,
-            String publicKeySource,
-            String publicKey,
-            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
@@ -118,9 +102,6 @@ public class ClientRegistrationResponse {
         this.clientId = clientId;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
-        this.publicKeySource = publicKeySource;
-        this.publicKey = publicKey;
-        this.jwksUrl = jwksUrl;
         this.scopes = scopes;
         this.postLogoutRedirectUris = postLogoutRedirectUris;
         this.backChannelLogoutUri = backChannelLogoutUri;
@@ -155,18 +136,6 @@ public class ClientRegistrationResponse {
 
     public List<String> getContacts() {
         return contacts;
-    }
-
-    public String getPublicKeySource() {
-        return publicKeySource;
-    }
-
-    public String getPublicKey() {
-        return publicKey;
-    }
-
-    public String getJwksUrl() {
-        return jwksUrl;
     }
 
     public List<String> getScopes() {

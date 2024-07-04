@@ -62,10 +62,8 @@ public class DynamoClientService implements ClientService {
             String clientName,
             List<String> redirectUris,
             List<String> contacts,
-            String publicKeySource,
-            String publicKey,
-            String jwksUrl,
             List<String> scopes,
+            String publicKey,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
             String serviceType,
@@ -85,10 +83,8 @@ public class DynamoClientService implements ClientService {
                         .withClientName(clientName)
                         .withRedirectUrls(redirectUris)
                         .withContacts(contacts)
-                        .withPublicKeySource(publicKeySource)
-                        .withPublicKey(publicKey)
-                        .withJwksUrl(jwksUrl)
                         .withScopes(scopes)
+                        .withPublicKey(publicKey)
                         .withPostLogoutRedirectUrls(postLogoutRedirectUris)
                         .withBackChannelLogoutUri(backChannelLogoutUri)
                         .withServiceType(serviceType)
@@ -121,10 +117,7 @@ public class DynamoClientService implements ClientService {
         Optional.ofNullable(updateRequest.getScopes()).ifPresent(clientRegistry::withScopes);
         Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
                 .ifPresent(clientRegistry::withPostLogoutRedirectUrls);
-        Optional.ofNullable(updateRequest.getPublicKeySource())
-                .ifPresent(clientRegistry::withPublicKeySource);
         Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::withPublicKey);
-        Optional.ofNullable(updateRequest.getJwksUrl()).ifPresent(clientRegistry::withJwksUrl);
         Optional.ofNullable(updateRequest.getServiceType())
                 .ifPresent(clientRegistry::withServiceType);
         Optional.ofNullable(updateRequest.getClientType())
