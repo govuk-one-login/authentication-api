@@ -91,16 +91,3 @@ EOT
   }
 
 }
-
-### Simple deployment this will be errored if lambda changes every deployment 
-#resource "null_resource" "run_codedeploy" {
-#  triggers = {
-# Run codedeploy when lambda version is updated
-#    lambda_version = var.lambda_version
-#  }
-
-#  provisioner "local-exec" {
-#    # Only trigger deploy when lambda version is updated (-gt lambda Alias version)
-#    command = "if [ ${var.lambda_version} -gt ${var.lambda_alias_version} ] ;then aws deploy create-deployment --application-name ${aws_codedeploy_app.auth.name} --deployment-group-name ${aws_codedeploy_deployment_group.auth.deployment_group_name} --revision '{\"revisionType\":\"AppSpecContent\",\"appSpecContent\":{\"content\":\"{\\\"version\\\":0,\\\"Resources\\\":[{\\\"${var.lambda_function_name}\\\":{\\\"Type\\\":\\\"AWS::Lambda::Function\\\",\\\"Properties\\\":{\\\"Name\\\":\\\"${var.lambda_function_name}\\\",\\\"Alias\\\":\\\"${var.lambda_alias_name}\\\",\\\"CurrentVersion\\\":\\\"${var.lambda_alias_version}\\\",\\\"TargetVersion\\\":\\\"${var.lambda_version}\\\"}}}]}\"}}';fi"
-#  }
-#}
