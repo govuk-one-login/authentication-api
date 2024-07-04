@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   Stack to create a WAF to attach to the Cloudfront distribution for the OIDC API
 
@@ -11,10 +11,12 @@ Parameters:
     Default: none
 
 Conditions:
-  IsStaging:
-    !Equals [ staging, !Ref Environment ]
+  IsStaging: !Equals [staging, !Ref Environment]
   ApplySmokeTestException:
-    !Or [ !Equals [ dev, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
 
 Rules:
   productionSmokeTestExceptionConfigured:
@@ -23,8 +25,7 @@ Rules:
       - production
     Assertions:
       - Assert: !Not [!Equals [!Ref SmokeTestClientId, none]]
-        AssertDescription: 'The SmokeTestClientId must be set in Production'
-
+        AssertDescription: "The SmokeTestClientId must be set in Production"
 
 Resources:
   WAF:
@@ -197,7 +198,6 @@ Resources:
             Condition:
               ArnEquals:
                 "kms:EncryptionContext:aws:logs:arn": !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:aws-waf-logs-cf-oidc-${Environment}"
-
 
   LogGroup:
     Type: AWS::Logs::LogGroup

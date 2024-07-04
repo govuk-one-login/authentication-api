@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform:
   - AWS::LanguageExtensions
   - AWS::Serverless-2016-10-31
@@ -24,24 +24,45 @@ Parameters:
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
 
 Conditions:
-  UsePermissionsBoundary:
-    !Not [ !Equals [ none, !Ref PermissionsBoundary ] ]
-  UseCodeSigning:
-    !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
-  IsNotDevEnvironment:
-    !Not [ !Equals [!Ref Environment, dev] ]
+  UsePermissionsBoundary: !Not [!Equals [none, !Ref PermissionsBoundary]]
+  UseCodeSigning: !Not [!Equals [none, !Ref CodeSigningConfigArn]]
+  IsNotDevEnvironment: !Not [!Equals [!Ref Environment, dev]]
   AisAbortOnError:
-    !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
+    !Not [
+      !Or [
+        !Equals [integration, !Ref Environment],
+        !Equals [production, !Ref Environment],
+      ],
+    ]
   IpvExists:
-    !Or [ !Equals [ staging, !Ref Environment ], !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ] ]
+    !Or [
+      !Equals [staging, !Ref Environment],
+      !Equals [integration, !Ref Environment],
+      !Equals [production, !Ref Environment],
+    ]
   SendStorageToken:
-    !Not [ !Or [ !Equals [ integration, !Ref Environment ], !Equals [ production, !Ref Environment ], !Equals [ staging, !Ref Environment] ] ]
+    !Not [
+      !Or [
+        !Equals [integration, !Ref Environment],
+        !Equals [production, !Ref Environment],
+        !Equals [staging, !Ref Environment],
+      ],
+    ]
   EnableProvisionedConcurrency:
-    !Or [ !Equals [!Ref Environment, staging], !Equals [!Ref Environment, build], !Equals [!Ref Environment, integration], !Equals [!Ref Environment, production]]
-  IsNotProduction:
-    !Not [ !Equals [!Ref Environment, production] ]
+    !Or [
+      !Equals [!Ref Environment, staging],
+      !Equals [!Ref Environment, build],
+      !Equals [!Ref Environment, integration],
+      !Equals [!Ref Environment, production],
+    ]
+  IsNotProduction: !Not [!Equals [!Ref Environment, production]]
   IsNotDevOrProd:
-    !Not [ !Or [ !Equals [ dev, !Ref Environment ], !Equals [ production, !Ref Environment ] ] ]
+    !Not [
+      !Or [
+        !Equals [dev, !Ref Environment],
+        !Equals [production, !Ref Environment],
+      ],
+    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -168,7 +189,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       defaultProvisionedConcurrency: 1
-      aisUriSecretId: ''
+      aisUriSecretId: ""
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -199,7 +220,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:172348255554:key/4a4d1b21-d38d-4ce3-bf7f-6778423b297b
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       defaultProvisionedConcurrency: 3
-      aisUriSecretId: ''
+      aisUriSecretId: ""
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
@@ -212,20 +233,45 @@ Globals:
       Variables:
         AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
         DT_CONNECTION_AUTH_TOKEN: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_CONNECTION_BASE_URL: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_CLUSTER_ID: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_LOG_COLLECTION_AUTH_TOKEN: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_TENANT: !Sub
-          - '{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}'
-          - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}"
+          - SecretArn:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                dynatraceSecretArn,
+              ]
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
     MemorySize: 1536
     Timeout: 30
@@ -243,12 +289,17 @@ Globals:
       - !Ref AWS::NoValue
     Layers:
       - !Sub
-        - '{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}'
-        - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
+        - SecretArn:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              dynatraceSecretArn,
+            ]
 
 Resources:
   MainKmskeyAlias:
-    Type: 'AWS::KMS::Alias'
+    Type: "AWS::KMS::Alias"
     Properties:
       AliasName: "alias/mainKmsKey"
       TargetKeyId: !Ref MainKmsKey
@@ -353,14 +404,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
             - ProvisionedConcurrency
             - !Ref Environment
             - FetchJwksFunction
-            - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117
@@ -387,14 +442,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - OpenIdConfigurationFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - OpenIdConfigurationFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -406,13 +465,23 @@ Resources:
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          OIDC_API_BASE_URL:  !Sub
+          OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ENVIRONMENT: !Sub ${Environment}
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -423,9 +492,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   OpenIdConfigurationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -446,7 +521,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-openid-configuration-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref OpenIdConfigurationFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-openid-configuration-error-count
@@ -524,14 +599,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - TrustmarkFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - TrustmarkFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -543,9 +622,14 @@ Resources:
       Environment:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
-          OIDC_API_BASE_URL:  !Sub
+          OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ENVIRONMENT: !Sub ${Environment}
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
@@ -557,9 +641,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/trustmark'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/trustmark"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   TrustmarkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -580,7 +670,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-trustmark-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref TrustmarkFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-trustmark-error-count
@@ -668,10 +758,20 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
           OIDC_API_BASE_URL: !Sub
-          - https://oidc.${ServiceDomain}/
-          - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref BackChannelLogoutQueueConsumePolicy
@@ -684,7 +784,12 @@ Resources:
       FunctionName: !Ref BackChannelLogoutRequestFunction.Alias
       Action: lambda:InvokeFunction
       Principal: sqs.amazonaws.com
-      SourceArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, backchannelLogoutQueueArn ]
+      SourceArn:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          backchannelLogoutQueueArn,
+        ]
 
   BackChannelLogoutRequestFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -705,7 +810,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-backchannel-logout-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref BackChannelLogoutRequestFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-backchannel-logout-request-count
@@ -783,14 +888,18 @@ Resources:
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - DocAppCallbackFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - DocAppCallbackFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -806,34 +915,90 @@ Resources:
           CUSTOM_DOC_APP_CLAIM_ENABLED: true
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          DOC_APP_AUTHORISATION_CLIENT_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppClientId ]
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
-          DOC_APP_BACKEND_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
-          DOC_APP_CRI_DATA_V2_ENDPOINT: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCriDataV2Endpoint ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DOC_APP_AUTHORISATION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppClientId,
+            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppSigningKeyArn,
+            ]
+          DOC_APP_BACKEND_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppBackendUri,
+            ]
+          DOC_APP_CRI_DATA_V2_ENDPOINT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppCriDataV2Endpoint,
+            ]
           DOC_APP_CRI_DATA_ENDPOINT: unused
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
-            - DocAppBackendUri: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
-          DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
+            - DocAppBackendUri:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  docAppBackendUri,
+                ]
+          DOC_APP_AUD:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           ENVIRONMENT: !Sub ${Environment}
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
         - !Ref DocAppCredentialTableReadAccessPolicy
         - !Ref DocAppCredentialTableWriteAccessPolicy
@@ -865,9 +1030,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/doc-app-callback"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
   #endregion
 
   #region Token Lambda
@@ -883,14 +1054,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TokenFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - TokenFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - TokenFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -903,21 +1078,51 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -936,9 +1141,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/token'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/token"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   TokenFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -959,7 +1170,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-token-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref TokenFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-token-count
@@ -1038,14 +1249,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref LogoutFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - LogoutFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - LogoutFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -1058,25 +1273,60 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
             - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
           BACK_CHANNEL_LOGOUT_QUEUE_URI: !GetAtt BackChannelLogoutQueue.QueueUrl
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1097,8 +1347,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/logout
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   LogoutFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1119,7 +1375,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-logout-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref LogoutFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-logout-count
@@ -1197,14 +1453,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - AuthenticationCallbackFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - AuthenticationCallbackFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -1220,51 +1480,122 @@ Resources:
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}'
+            - "{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}"
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
-              SecretId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, aisUriSecretId ]
+              SecretId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  aisUriSecretId,
+                ]
           AUTHENTICATION_BACKEND_URI: !Sub
             - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
-            - AuthExternalApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authExternalApiId ]
+            - AuthExternalApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authExternalApiId,
+                ]
               VpcId: !ImportValue vpc-ExecuteApiGatewayEndpointId
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           IPV_AUDIENCE: !If
             - IpvExists
             - !Sub
               - https://identity.${ServiceDomain}
-              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/ipv-callback
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !Sub
             - https://identity.${ServiceDomain}/oauth2/authorize
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              ipvTokenKeyArn,
+            ]
           ORCH_CLIENT_ID: orchestrationAuth
-          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchToAuthKeyArn,
+            ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
-          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
-          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [ SendStorageToken, true, false ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
+            !If [AisAbortOnError, true, false]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              storageTokenKeyArn,
+            ]
+          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [SendStorageToken, true, false]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1288,9 +1619,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/orchestration-redirect'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/orchestration-redirect"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   AuthenticationCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1311,7 +1648,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-authentication-callback-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthenticationCallbackFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-authentication-callback-count
@@ -1389,14 +1726,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref JwksFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - JwksFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - JwksFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -1409,9 +1750,24 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppSigningKeyArn,
+            ]
       Policies:
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
@@ -1426,9 +1782,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/jwks.json'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/jwks.json"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   JwksFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1449,7 +1811,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-jwks-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref JwksFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-jwks-error-count
@@ -1527,14 +1889,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthorisationFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - AuthorisationFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - AuthorisationFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -1548,41 +1914,122 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           CUSTOM_DOC_APP_CLAIM_ENABLED: true
-          DOC_APP_AUD: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAud ]
+          DOC_APP_AUD:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, docAppAud]
           DOC_APP_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/doc-app-callback
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          DOC_APP_AUTHORISATION_CLIENT_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppClientId ]
-          DOC_APP_AUTHORISATION_URI: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppAuthorisationUrl ]
-          DOC_APP_DOMAIN: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppDomain ]
-          DOC_APP_ENCRYPTION_KEY_ID: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppEncryptionKeyId ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DOC_APP_AUTHORISATION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppClientId,
+            ]
+          DOC_APP_AUTHORISATION_URI:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppAuthorisationUrl,
+            ]
+          DOC_APP_DOMAIN:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppDomain,
+            ]
+          DOC_APP_ENCRYPTION_KEY_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppEncryptionKeyId,
+            ]
           DOC_APP_JWKS_URL: !Sub
             - ${DocAppBackendUri}/.well-known/jwks.json
-            - DocAppBackendUri: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppBackendUri ]
+            - DocAppBackendUri:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  docAppBackendUri,
+                ]
           DOC_APP_NEW_AUD_CLAIM_ENABLED: true
-          DOC_APP_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
-          DOMAIN_NAME: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+          DOC_APP_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              docAppSigningKeyArn,
+            ]
+          DOMAIN_NAME:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              serviceDomain,
+            ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_REDIRECT_URI: !Sub
             - https://oidc.${ServiceDomain}/orchestration-redirect
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
-          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              orchToAuthKeyArn,
+            ]
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
@@ -1606,9 +2053,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/authorize'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/authorize"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   AuthorisationFunctionCrossAccountPostPermission:
     Type: AWS::Lambda::Permission
@@ -1617,9 +2070,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/authorize'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/authorize"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   AuthorisationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1640,7 +2099,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-authorisation-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthorisationFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-authorisation-error-count
@@ -1719,14 +2178,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UserInfoFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - UserInfoFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - UserInfoFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -1740,21 +2203,51 @@ Resources:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
           IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyArn,
+            ]
+          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              idTokenKeyRsaArn,
+            ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -1775,9 +2268,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/userinfo'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/userinfo"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   UserInfoFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1798,7 +2297,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-userinfo-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref UserInfoFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-userinfo-count
@@ -1877,14 +2376,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthCodeFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - AuthCodeFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - AuthCodeFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -1902,14 +2405,34 @@ Resources:
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1926,9 +2449,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/auth-code'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/auth-code"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   AuthCodeFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -1949,7 +2478,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-auth-code-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref AuthCodeFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-auth-code-count
@@ -2043,9 +2572,19 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -2061,9 +2600,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/PUT/connect/register/{clientId}'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/PUT/connect/register/{clientId}"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   UpdateClientConfigFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2086,7 +2631,7 @@ Resources:
     Condition: IsNotProduction
     Properties:
       FilterName: !Sub ${Environment}-update-client-config-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref UpdateClientConfigFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-update-client-config-error-count
@@ -2180,9 +2725,19 @@ Resources:
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -2198,9 +2753,15 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
-        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/connect/register'
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - "arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/POST/connect/register"
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   ClientRegistrationFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2223,7 +2784,7 @@ Resources:
     Condition: IsNotProduction
     Properties:
       FilterName: !Sub ${Environment}-register-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref ClientRegistrationFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-register-count
@@ -2304,14 +2865,18 @@ Resources:
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - IpvCallbackFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - IpvCallbackFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -2328,38 +2893,79 @@ Resources:
           IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           REDIS_KEY: session
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
           ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
-            - '{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}'
+            - "{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}"
             - SecretArn: !Ref AccountInterventionsServiceUriSecret
-              SecretId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, aisUriSecretId ]
-          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR: !If [ AisAbortOnError, true, false ]
+              SecretId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  aisUriSecretId,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
+            !If [AisAbortOnError, true, false]
           IPV_AUDIENCE: !If
             - IpvExists
             - !Sub
               - https://identity.${ServiceDomain}
-              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CALLBACK_URI: !If
             - IpvExists
             - !Sub
               - https://oidc.${ServiceDomain}/ipv-callback
-              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
             - !Ref AWS::NoValue
           IPV_AUTHORISATION_CLIENT_ID: !If
             - IpvExists
@@ -2369,22 +2975,47 @@ Resources:
             - IpvExists
             - !Sub
               - https://identity.${ServiceDomain}/oauth2/authorize
-              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
             - !Ref AWS::NoValue
           IPV_BACKEND_URI: !If
             - IpvExists
             - !Sub
               - https://api.identity.${ServiceDomain}
-              - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
             - !Ref AWS::NoValue
           IPV_NO_SESSION_RESPONSE_ENABLED: true
-          IPV_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              ipvTokenKeyArn,
+            ]
           SPOT_QUEUE_URL: !If
             - IpvExists
             - !Sub
               - https://sqs.eu-west-2.amazonaws.com/${AccountId}/${AuthEnvironment}-spot-request-queue
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
             - !Ref AWS::NoValue
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
@@ -2408,8 +3039,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/ipv-callback
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   IpvCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2430,7 +3067,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-ipv-callback-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref IpvCallbackFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-ipv-callback-count
@@ -2522,19 +3159,44 @@ Resources:
           ENVIRONMENT: !Sub ${Environment}
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           FRONTEND_BASE_URL: !Sub
             - https://signin.${ServiceDomain}/
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
-            - ServiceDomain: !FindInMap [ EnvironmentConfiguration, !Ref Environment, serviceDomain ]
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
-            - 'arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-'
-            - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-              AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
       Policies:
         - !Ref IdentityCredentialsTableReadAccessPolicy
         - !Ref IdentityCredentialsTableWriteAccessPolicy
@@ -2550,7 +3212,7 @@ Resources:
     Properties:
       Enabled: true
       EventSourceArn: !Sub
-        - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
         - SecretArn: !Ref SpotResponseQueueArnSecret
       FunctionName: !Ref SpotResponseFunction.Alias
 
@@ -2575,7 +3237,7 @@ Resources:
     Condition: IpvExists
     Properties:
       FilterName: !Sub ${Environment}-spot-response-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref SpotResponseFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-spot-response-count
@@ -2688,14 +3350,18 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
-      ProvisionedConcurrencyConfig:
-        !If
+      ProvisionedConcurrencyConfig: !If
         - EnableProvisionedConcurrency
         - ProvisionedConcurrentExecutions: !FindInMap
-          - ProvisionedConcurrency
-          - !Ref Environment
-          - StorageTokenJwkFunction
-          - DefaultValue: !FindInMap [ EnvironmentConfiguration, !Ref Environment, defaultProvisionedConcurrency ]
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - StorageTokenJwkFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
         - !Ref AWS::NoValue
       VpcConfig:
         SecurityGroupIds:
@@ -2708,7 +3374,12 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              storageTokenKeyArn,
+            ]
       Policies:
         - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
@@ -2722,8 +3393,14 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub
         - arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/storage-token-jwk.json
-        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+        - AccountId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccountId,
+            ]
+          ApiId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, authApiId]
 
   StorageTokenJwkFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -2736,7 +3413,7 @@ Resources:
     Type: AWS::Logs::MetricFilter
     Properties:
       FilterName: !Sub ${Environment}-storage-token-jwk-request-errors
-      FilterPattern: "{($.level = \"ERROR\")}"
+      FilterPattern: '{($.level = "ERROR")}'
       LogGroupName: !Ref StorageTokenJwkFunctionLogGroup
       MetricTransformations:
         - MetricName: !Sub ${Environment}-storage-token-jwk-count
@@ -2874,8 +3551,18 @@ Resources:
               - dynamodb:Scan
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowIdentityCredentialsTableKeyAccess
             Effect: Allow
             Action:
@@ -2885,7 +3572,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                identityCredentialsTableKeyArn,
+              ]
 
   IdentityCredentialsTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2900,8 +3592,18 @@ Resources:
               - dynamodb:PutItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowIdentityCredentialsTableKeyAccess
             Effect: Allow
             Action:
@@ -2911,7 +3613,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                identityCredentialsTableKeyArn,
+              ]
 
   IdentityCredentialsTableDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2925,8 +3632,18 @@ Resources:
               - dynamodb:DeleteItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-identity-credentials
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowIdentityCredentialsTableKeyAccess
             Effect: Allow
             Action:
@@ -2936,7 +3653,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, identityCredentialsTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                identityCredentialsTableKeyArn,
+              ]
 
   ClientRegistryTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2954,8 +3676,18 @@ Resources:
               - dynamodb:Scan
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowClientRegistryTableKeyAccess
             Effect: Allow
             Action:
@@ -2965,7 +3697,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                clientRegistryTableKeyArn,
+              ]
 
   ClientRegistryTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -2981,8 +3718,18 @@ Resources:
               - dynamodb:PutItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-client-registry
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowClientRegistryTableKeyAccess
             Effect: Allow
             Action:
@@ -2992,7 +3739,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, clientRegistryTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                clientRegistryTableKeyArn,
+              ]
 
   DocAppCredentialTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3011,8 +3763,18 @@ Resources:
               - dynamodb:Scan
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowDocAppCredentialTableKeyAccess
             Effect: Allow
             Action:
@@ -3022,7 +3784,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                docAppCredentialTableKeyArn,
+              ]
 
   DocAppCredentialTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3037,8 +3804,18 @@ Resources:
               - dynamodb:PutItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-doc-app-credential
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowDocAppCredentialTableKeyAccess
             Effect: Allow
             Action:
@@ -3048,7 +3825,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppCredentialTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                docAppCredentialTableKeyArn,
+              ]
 
   UserProfileTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3068,12 +3850,32 @@ Resources:
             Resource:
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile/index/*
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
           - Sid: AllowUserProfileTableKeyAccess
             Effect: Allow
             Action:
@@ -3083,7 +3885,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                userProfileTableKeyArn,
+              ]
 
   UserProfileTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3099,8 +3906,18 @@ Resources:
               - dynamodb:BatchWriteItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-user-profile
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowUserProfileTableKeyAccess
             Effect: Allow
             Action:
@@ -3110,7 +3927,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, userProfileTableKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                userProfileTableKeyArn,
+              ]
 
   AuthenticationCallbackUserInfoTableReadAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3130,12 +3952,32 @@ Resources:
             Resource:
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
               - !Sub
                 - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo/index/*
-                - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                  AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+                - AccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authAccountId,
+                    ]
+                  AuthEnvironment:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      authEnvironment,
+                    ]
           - Sid: AllowAuthenticationCallbackUserInfoTableKeyAccess
             Effect: Allow
             Action:
@@ -3145,7 +3987,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authenticationCallbackUserinfoKeyArn,
+              ]
 
   AuthenticationCallbackUserInfoTableWriteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3161,8 +4008,18 @@ Resources:
               - dynamodb:BatchWriteItem
             Resource: !Sub
               - arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-authentication-callback-userinfo
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowAuthenticationCallbackUserInfoTableKeyAccess
             Effect: Allow
             Action:
@@ -3172,7 +4029,12 @@ Resources:
               - kms:GenerateDataKey*
               - kms:CreateGrant
               - kms:DescribeKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authenticationCallbackUserinfoKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                authenticationCallbackUserinfoKeyArn,
+              ]
 
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3185,7 +4047,12 @@ Resources:
             Action:
               - kms:Decrypt
               - kms:GenerateDataKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, txmaEventEncryptionKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                txmaEventEncryptionKeyArn,
+              ]
           - Sid: AllowSQSTxMA
             Effect: Allow
             Action:
@@ -3279,7 +4146,11 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyArn ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  idTokenKeyArn,
+                ]
 
   IdTokenKmsRsaAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3293,7 +4164,11 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, idTokenKeyRsaArn ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  idTokenKeyRsaArn,
+                ]
 
   DocAppSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3306,7 +4181,12 @@ Resources:
             Action:
               - kms:Sign
               - kms:GetPublicKey
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, docAppSigningKeyArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                docAppSigningKeyArn,
+              ]
 
   StorageTokenSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3320,7 +4200,11 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, storageTokenKeyArn ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  storageTokenKeyArn,
+                ]
 
   IpvTokenSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3334,7 +4218,11 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, ipvTokenKeyArn ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  ipvTokenKeyArn,
+                ]
 
   OrchToAuthSigningKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3348,7 +4236,11 @@ Resources:
               - kms:Sign
               - kms:GetPublicKey
             Resource:
-              - !FindInMap [ EnvironmentConfiguration, !Ref Environment, orchToAuthKeyArn ]
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  orchToAuthKeyArn,
+                ]
 
   BackChannelLogoutQueueWritePolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3404,14 +4296,14 @@ Resources:
               - sqs:GetQueueAttributes
               - sqs:ChangeMessageVisibility
             Resource: !Sub
-              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+              - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
               - SecretArn: !Ref SpotResponseQueueArnSecret
           - Sid: AllowSpotResponseQueueKms
             Effect: Allow
             Action:
               - kms:Decrypt
             Resource: !Sub
-              - '{{resolve:secretsmanager:${SecretArn}:SecretString}}'
+              - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
               - SecretArn: !Ref SpotResponseQueueKeyArnSecret
 
   SpotRequestQueueWritePolicy:
@@ -3428,14 +4320,29 @@ Resources:
               - sqs:GetQueueAttributes
             Resource: !Sub
               - arn:aws:sqs:eu-west-2:${AccountId}:${AuthEnvironment}-spot-request-queue
-              - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-                AuthEnvironment: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authEnvironment ]
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authAccountId,
+                  ]
+                AuthEnvironment:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authEnvironment,
+                  ]
           - Sid: AllowEncryptionAccessToSpotQueueKey
             Effect: Allow
             Action:
               - kms:GenerateDataKey
               - kms:Decrypt
-            Resource: !FindInMap [ EnvironmentConfiguration, !Ref Environment, spotRequestQueueKmsArn ]
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                spotRequestQueueKmsArn,
+              ]
 
   AccountInterventionsServiceUriSecretAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -3484,7 +4391,7 @@ Resources:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: SlackNotificationsFunction doesn't need vpc configuration
-    IgnoreGlobals: '*'
+    IgnoreGlobals: "*"
     Properties:
       AutoPublishAlias: latest
       FunctionName: !Sub ${Environment}-SlackNotificationsFunction
