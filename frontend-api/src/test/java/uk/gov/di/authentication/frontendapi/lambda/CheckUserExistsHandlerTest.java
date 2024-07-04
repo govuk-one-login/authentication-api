@@ -83,10 +83,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class CheckUserExistsHandlerTest {
 
-    static {
-        System.setProperty("TEST", "TRUE");
-    }
-
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
