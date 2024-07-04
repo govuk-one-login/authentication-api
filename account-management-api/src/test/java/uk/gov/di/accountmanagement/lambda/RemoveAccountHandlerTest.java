@@ -6,12 +6,12 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -89,9 +89,7 @@ class RemoveAccountHandlerTest {
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.of(event),
-                        userProfile,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)));
+                        Optional.of(event), userProfile, Optional.of(TXMA_ENCODED_HEADER_VALUE));
     }
 
     @Test
@@ -109,8 +107,7 @@ class RemoveAccountHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
-                .removeAccount(
-                        Optional.of(event), userProfile, AuditService.RestrictedSection.empty);
+                .removeAccount(Optional.of(event), userProfile, Optional.empty());
     }
 
     @Test

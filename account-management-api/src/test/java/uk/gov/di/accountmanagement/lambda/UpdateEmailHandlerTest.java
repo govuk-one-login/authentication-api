@@ -13,14 +13,15 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -81,6 +82,17 @@ class UpdateEmailHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
+    private final AuditContext auditContext =
+            new AuditContext(
+                    CLIENT_ID,
+                    SESSION_ID,
+                    AuditService.UNKNOWN,
+                    expectedCommonSubject,
+                    NEW_EMAIL_ADDRESS,
+                    "123.123.123.123",
+                    null,
+                    PERSISTENT_ID,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
@@ -132,15 +144,7 @@ class UpdateEmailHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_EMAIL,
-                        CLIENT_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        NEW_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                        auditContext,
                         AuditService.MetadataPair.pair(
                                 "replacedEmail", EXISTING_EMAIL_ADDRESS, true));
         assertThat(
@@ -177,16 +181,7 @@ class UpdateEmailHandlerTest {
             verify(auditService)
                     .submitAuditEvent(
                             AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
-                            CLIENT_ID,
-                            SESSION_ID,
-                            AuditService.UNKNOWN,
-                            INTERNAL_SUBJECT.getValue(),
-                            NEW_EMAIL_ADDRESS,
-                            "123.123.123.123",
-                            userProfile.getPhoneNumber(),
-                            PERSISTENT_ID,
-                            new AuditService.RestrictedSection(
-                                    Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                            auditContext.withSubjectId(INTERNAL_SUBJECT.getValue()),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                             AuditService.MetadataPair.pair(
