@@ -131,6 +131,8 @@ jobs:
                 if (result[key] == null) {
                     result[key] = "";
                 }
+                // strip non-ascii characters from all values
+                result[key] = result[key].replace(/[^\x20-\x7E]/g, '');
             }
 
             console.log(result);
