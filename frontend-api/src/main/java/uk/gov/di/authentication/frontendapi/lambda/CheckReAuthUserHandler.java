@@ -38,11 +38,29 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    // INIT PHASE
     private static final Logger LOG = LogManager.getLogger(CheckReAuthUserHandler.class);
+    private static RedisConnectionService redis;
 
-    private final AuditService auditService;
-    private final CodeStorageService codeStorageService;
+    static {
+        if (System.getProperty("TEST") == null) {
+            redis = new RedisConnectionService(ConfigurationService.getInstance());
+        }
+    }
 
+    // FUNCTION INIT
+    public CheckReAuthUserHandler() {
+        this(ConfigurationService.getInstance(), redis);
+    }
+
+    public CheckReAuthUserHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(CheckReauthUserRequest.class, configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+    }
+
+    // TEST ONLY CONSTRUCTORS
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
@@ -68,16 +86,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.codeStorageService = new CodeStorageService(configurationService);
     }
 
-    public CheckReAuthUserHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(CheckReauthUserRequest.class, configurationService, redis);
-        this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
-    }
-
-    public CheckReAuthUserHandler() {
-        this(ConfigurationService.getInstance());
-    }
+    // INVOKE PHASE
+    private final AuditService auditService;
+    private final CodeStorageService codeStorageService;
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
