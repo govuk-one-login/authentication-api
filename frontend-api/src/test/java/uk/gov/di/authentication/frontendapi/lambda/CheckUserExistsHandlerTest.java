@@ -97,7 +97,7 @@ class CheckUserExistsHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session = new Session(SESSION_ID);
+    private final Session session = mock(Session.class);
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
@@ -133,6 +133,7 @@ class CheckUserExistsHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(session.getSessionId()).thenReturn(SESSION_ID);
 
         handler =
                 new CheckUserExistsHandler(
@@ -157,7 +158,7 @@ class CheckUserExistsHandlerTest {
         }
 
         @Test
-        void shouldReturn200WithRelevantMfaMethod() throws Json.JsonException {
+        void shouldReturn200WithRelevantMfaMethod() {
             MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
             MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
@@ -181,6 +182,7 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
+            verify(session).setInternalCommonSubjectIdentifier(getExpectedInternalPairwiseId());
         }
 
         @Test
@@ -190,17 +192,12 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
             assertThat(result, hasStatus(200));
-            var expectedRpPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), "sector-identifier", SALT.array());
-            var expectedInternalPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                            AUDIT_CONTEXT.withSubjectId(expectedInternalPairwiseId),
-                            AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
+                            AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
+                            AuditService.MetadataPair.pair(
+                                    "rpPairwiseId", getExpectedRpPairwiseId()));
         }
 
         @Test
@@ -213,19 +210,14 @@ class CheckUserExistsHandlerTest {
             var result = handler.handleRequest(req, context);
 
             assertThat(result, hasStatus(200));
-            var expectedRpPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), "sector-identifier", SALT.array());
-            var expectedInternalPairwiseId =
-                    ClientSubjectHelper.calculatePairwiseIdentifier(
-                            SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
             verify(auditService)
                     .submitAuditEvent(
                             FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
                             AUDIT_CONTEXT
-                                    .withSubjectId(expectedInternalPairwiseId)
+                                    .withSubjectId(getExpectedInternalPairwiseId())
                                     .withTxmaAuditEncoded(Optional.empty()),
-                            AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
+                            AuditService.MetadataPair.pair(
+                                    "rpPairwiseId", getExpectedRpPairwiseId()));
         }
 
         @Test
@@ -308,6 +300,7 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.getEmail(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
+        verify(session).setInternalCommonSubjectIdentifier(null);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
@@ -394,6 +387,16 @@ class CheckUserExistsHandlerTest {
 
         return new ClientSession(
                 authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+    }
+
+    private static String getExpectedRpPairwiseId() {
+        return ClientSubjectHelper.calculatePairwiseIdentifier(
+                SUBJECT.getValue(), "sector-identifier", SALT.array());
+    }
+
+    private static String getExpectedInternalPairwiseId() {
+        return ClientSubjectHelper.calculatePairwiseIdentifier(
+                SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
     }
 
     private void setupUserProfileAndClient(Optional<UserProfile> maybeUserProfile) {
