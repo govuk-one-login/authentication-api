@@ -62,31 +62,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
-    private static RedisConnectionService redis;
 
-    static {
-        if (System.getProperty("TEST") == null) {
-            redis = new RedisConnectionService(ConfigurationService.getInstance());
-        }
-    }
-
-    // Function Init
-    public LoginHandler() {
-        this(ConfigurationService.getInstance(), redis);
-    }
-
-    public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        super(LoginRequest.class, configurationService, true);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.userMigrationService =
-                new UserMigrationService(
-                        new DynamoService(configurationService), configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.commonPasswordsService = new CommonPasswordsService(configurationService);
-    }
-
-    // Test Only Constructor
     public LoginHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
@@ -122,6 +98,21 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
+    }
+
+    public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
+        super(LoginRequest.class, configurationService, true, redis);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.userMigrationService =
+                new UserMigrationService(
+                        new DynamoService(configurationService), configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+    }
+
+    public LoginHandler() {
+        this(ConfigurationService.getInstance());
     }
 
     @Override
