@@ -3,7 +3,6 @@ package uk.gov.di.authentication.clientregistry.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.validation.Required;
 
@@ -30,17 +29,10 @@ public class ClientRegistrationRequest {
     @Required
     private List<String> contacts;
 
-    @SerializedName("public_key_source")
-    @Expose
-    private String publicKeySource = PublicKeySource.STATIC.getValue();
-
     @SerializedName("public_key")
     @Expose
+    @Required
     private String publicKey;
-
-    @SerializedName("jwks_uri")
-    @Expose
-    private String jwksUrl;
 
     @SerializedName("scopes")
     @Expose
@@ -99,9 +91,7 @@ public class ClientRegistrationRequest {
             String clientName,
             List<String> redirectUris,
             List<String> contacts,
-            String publicKeySource,
             String publicKey,
-            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
@@ -116,9 +106,7 @@ public class ClientRegistrationRequest {
                 clientName,
                 redirectUris,
                 contacts,
-                publicKeySource,
                 publicKey,
-                jwksUrl,
                 scopes,
                 postLogoutRedirectUris,
                 backChannelLogoutUri,
@@ -136,9 +124,7 @@ public class ClientRegistrationRequest {
             String clientName,
             List<String> redirectUris,
             List<String> contacts,
-            String publicKeySource,
             String publicKey,
-            String jwksUrl,
             List<String> scopes,
             List<String> postLogoutRedirectUris,
             String backChannelLogoutUri,
@@ -153,11 +139,7 @@ public class ClientRegistrationRequest {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
-        if (Objects.nonNull(publicKeySource)) {
-            this.publicKeySource = publicKeySource;
-        }
         this.publicKey = publicKey;
-        this.jwksUrl = jwksUrl;
         this.scopes = scopes;
         if (Objects.nonNull(postLogoutRedirectUris)) {
             this.postLogoutRedirectUris = postLogoutRedirectUris;
@@ -195,16 +177,8 @@ public class ClientRegistrationRequest {
         return contacts;
     }
 
-    public String getPublicKeySource() {
-        return publicKeySource;
-    }
-
     public String getPublicKey() {
         return publicKey;
-    }
-
-    public String getJwksUrl() {
-        return jwksUrl;
     }
 
     public List<String> getScopes() {
