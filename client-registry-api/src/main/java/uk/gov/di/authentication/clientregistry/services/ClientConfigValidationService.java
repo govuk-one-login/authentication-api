@@ -6,6 +6,7 @@ import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -34,8 +35,14 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Post logout redirect URIs");
     public static final ErrorObject INVALID_SCOPE =
             new ErrorObject("invalid_client_metadata", "Insufficient Scope");
+    public static final ErrorObject INVALID_PUBLIC_KEY_SOURCE =
+            new ErrorObject("invalid_client_metadata", "Invalid Public Key Source");
+    public static final ErrorObject INCONSISTENT_PUBLIC_KEY_SOURCE =
+            new ErrorObject("invalid_client_metadata", "Inconsistent Public Key Source");
     public static final ErrorObject INVALID_PUBLIC_KEY =
             new ErrorObject("invalid_client_metadata", "Invalid Public Key");
+    public static final ErrorObject INVALID_JWKS_URI =
+            new ErrorObject("invalid_client_metadata", "Invalid JWKS URI");
     public static final ErrorObject INVALID_SERVICE_TYPE =
             new ErrorObject("invalid_client_metadata", "Invalid Service Type");
     public static final ErrorObject INVALID_SUBJECT_TYPE =
@@ -74,8 +81,24 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
-        if (!isPublicKeyValid(registrationRequest.getPublicKey())) {
+        if (!isPublicKeySourceValid(registrationRequest.getPublicKeySource())) {
+            return Optional.of(INVALID_PUBLIC_KEY_SOURCE);
+        }
+        if (!Optional.ofNullable(registrationRequest.getPublicKey())
+                .map(this::isPublicKeyValid)
+                .orElse(true)) {
             return Optional.of(INVALID_PUBLIC_KEY);
+        }
+        if (!Optional.ofNullable(registrationRequest.getJwksUrl())
+                .map(uri -> areUrisValid(singletonList(uri)))
+                .orElse(true)) {
+            return Optional.of(INVALID_JWKS_URI);
+        }
+        if (!isPublicKeySourceConsistent(
+                registrationRequest.getPublicKeySource(),
+                registrationRequest.getPublicKey(),
+                registrationRequest.getJwksUrl())) {
+            return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
         if (!areScopesValid(registrationRequest.getScopes())) {
             return Optional.of(INVALID_SCOPE);
@@ -118,10 +141,26 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
+        if (!Optional.ofNullable(updateRequest.getPublicKeySource())
+                .map(this::isPublicKeySourceValid)
+                .orElse(true)) {
+            return Optional.of(INVALID_PUBLIC_KEY_SOURCE);
+        }
         if (!Optional.ofNullable(updateRequest.getPublicKey())
                 .map(this::isPublicKeyValid)
                 .orElse(true)) {
             return Optional.of(INVALID_PUBLIC_KEY);
+        }
+        if (!Optional.ofNullable(updateRequest.getJwksUrl())
+                .map(uri -> areUrisValid(singletonList(uri)))
+                .orElse(true)) {
+            return Optional.of(INVALID_JWKS_URI);
+        }
+        if (!isPublicKeySourceConsistent(
+                updateRequest.getPublicKeySource(),
+                updateRequest.getPublicKey(),
+                updateRequest.getJwksUrl())) {
+            return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
         if (!Optional.ofNullable(updateRequest.getScopes())
                 .map(this::areScopesValid)
@@ -165,6 +204,23 @@ public class ClientConfigValidationService {
             return false;
         }
         return true;
+    }
+
+    private boolean isPublicKeySourceValid(String publicKeySource) {
+        return Arrays.stream(PublicKeySource.values())
+                .map(PublicKeySource::getValue)
+                .anyMatch(pks -> pks.equals(publicKeySource));
+    }
+
+    private boolean isPublicKeySourceConsistent(
+            String publicKeySource, String publicKey, String jwksUri) {
+        return (publicKeySource == null && publicKey == null && jwksUri == null)
+                || (PublicKeySource.STATIC.getValue().equals(publicKeySource)
+                        && publicKey != null
+                        && jwksUri == null)
+                || (PublicKeySource.JWKS.getValue().equals(publicKeySource)
+                        && publicKey == null
+                        && jwksUri != null);
     }
 
     private boolean isPublicKeyValid(String publicKey) {
