@@ -45,7 +45,6 @@ Conditions:
       !Or [
         !Equals [integration, !Ref Environment],
         !Equals [production, !Ref Environment],
-        !Equals [staging, !Ref Environment],
       ],
     ]
   EnableProvisionedConcurrency:
