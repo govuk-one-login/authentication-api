@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -192,6 +193,13 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             if (incorrectPasswordCount != 0) {
                 codeStorageService.deleteIncorrectPasswordCount(userCredentials.getEmail());
             }
+
+            String codeBlockedKeyPrefix =
+                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
+
+            codeStorageService.deleteBlockForEmail(
+                    userCredentials.getEmail(), codeBlockedKeyPrefix);
+
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;

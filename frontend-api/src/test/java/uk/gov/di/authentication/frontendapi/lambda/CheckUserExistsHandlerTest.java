@@ -127,7 +127,7 @@ class CheckUserExistsHandlerTest {
     void setup() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(0);
+        when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
 
         handler =
@@ -275,7 +275,7 @@ class CheckUserExistsHandlerTest {
 
         @Test
         void shouldReturn400AndSaveEmailInUserSessionIfUserAccountIsLocked() {
-            when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(5);
+            when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 

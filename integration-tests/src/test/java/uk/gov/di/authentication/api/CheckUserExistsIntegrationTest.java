@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.net.URI;
@@ -176,12 +177,9 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws JsonException {
         String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
         String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
-        redis.incrementPasswordCount(emailAddress);
-        redis.incrementPasswordCount(emailAddress);
-        redis.incrementPasswordCount(emailAddress);
-        redis.incrementPasswordCount(emailAddress);
-        redis.incrementPasswordCount(emailAddress);
-        redis.incrementPasswordCount(emailAddress);
+        redis.blockMfaCodesForEmail(
+                emailAddress,
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
 
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 

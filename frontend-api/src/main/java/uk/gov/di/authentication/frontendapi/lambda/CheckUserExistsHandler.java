@@ -131,9 +131,9 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var userExists = userProfile.isPresent();
             userContext.getSession().setEmailAddress(emailAddress);
 
-            var incorrectPasswordCount = codeStorageService.getIncorrectPasswordCount(emailAddress);
-
-            if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+            if (codeStorageService.isBlockedForEmail(
+                    emailAddress,
+                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
                 LOG.info("User account is locked");
                 sessionService.save(userContext.getSession());
 
