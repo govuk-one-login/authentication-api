@@ -94,7 +94,7 @@ public class ClientRegistry {
 
     @DynamoDbAttribute("PublicKey")
     public String getPublicKey() {
-        return PublicKeySource.STATIC.getValue().equals(publicKeySource) ? publicKey : null;
+        return PublicKeySource.JWKS.getValue().equals(publicKeySource) ? null : publicKey;
     }
 
     public void setPublicKey(String publicKey) {
