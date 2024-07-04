@@ -92,7 +92,7 @@ EOT
 
 }
 
-####Simple deployment this will be errored if lambda changes every deployment 
+### Simple deployment this will be errored if lambda changes every deployment 
 #resource "null_resource" "run_codedeploy" {
 #  triggers = {
 # Run codedeploy when lambda version is updated
