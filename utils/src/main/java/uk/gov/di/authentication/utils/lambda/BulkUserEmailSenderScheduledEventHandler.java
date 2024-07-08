@@ -26,6 +26,7 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.audit.AuditContext.emptyAuditContext;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -260,15 +261,9 @@ public class BulkUserEmailSenderScheduledEventHandler
                         : AuditService.UNKNOWN;
         auditService.submitAuditEvent(
                 utilsAuditableEvent,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                internalCommonSubjectIdentifier,
-                userProfile.getEmail(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.RestrictedSection.empty,
+                emptyAuditContext()
+                        .withEmail(userProfile.getEmail())
+                        .withSubjectId(internalCommonSubjectIdentifier),
                 pair("internalSubjectId", userProfile.getSubjectID()),
                 pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
     }
