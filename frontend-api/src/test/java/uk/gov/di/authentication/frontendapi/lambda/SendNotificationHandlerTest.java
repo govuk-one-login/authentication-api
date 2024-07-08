@@ -410,17 +410,8 @@ class SendNotificationHandlerTest {
                                         isSessionWithEmailSent(
                                                 session, notificationType, journeyType)));
 
-        var testClientAuditContext =
-                new AuditContext(
-                        TEST_CLIENT_ID,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        expectedCommonSubject,
-                        EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        DI_PERSISTENT_SESSION_ID,
-                        Optional.of(ENCODED_DEVICE_DETAILS));
+        var testClientAuditContext = auditContext.withClientId(TEST_CLIENT_ID);
+
         verify(auditService)
                 .submitAuditEvent(
                         notificationType.equals(VERIFY_EMAIL)
