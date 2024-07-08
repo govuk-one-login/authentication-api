@@ -65,6 +65,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -126,6 +127,7 @@ import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.hasContextData;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessage;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
@@ -676,6 +678,29 @@ class AuthorisationHandlerTest {
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER,
                             pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
+        }
+
+        @Test
+        void shouldReturn400WhenAuthorisationRequestContainsInvalidRedirectUri() {
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenThrow(ClientRedirectUriValidationException.class);
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("GET");
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id", "test-id",
+                            "redirect_uri", "http://incorrect-redirect-uri",
+                            "scope", "email,openid,profile",
+                            "response_type", "code",
+                            "state", "test-state"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasBody("Invalid request"));
         }
 
         @Test
