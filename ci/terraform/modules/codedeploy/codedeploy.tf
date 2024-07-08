@@ -4,7 +4,7 @@
 
 resource "aws_codedeploy_app" "auth" {
   compute_platform = "Lambda"
-  name             = replace("${var.environment}-${var.endpoint_name}-auth", ".", "")
+  name             = replace("${var.environment}-${var.endpoint_name}", ".", "")
 }
 
 resource "aws_codedeploy_deployment_group" "auth" {
