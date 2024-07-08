@@ -1503,6 +1503,14 @@ Resources:
                   authEnvironment,
                 ]
           ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
+          CREDENTIAL_STORE_URI: !Sub
+            - https://credential-store.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
             - AccountId:
