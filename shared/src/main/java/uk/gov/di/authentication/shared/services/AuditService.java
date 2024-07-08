@@ -103,34 +103,6 @@ public class AuditService {
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
-    public void submitAuditEvent(
-            AuditableEvent event,
-            String clientId,
-            String clientSessionId,
-            String sessionId,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
-            RestrictedSection restrictedSection,
-            MetadataPair... metadataPairs) {
-
-        var auditContext =
-                new AuditContext(
-                        clientId,
-                        clientSessionId,
-                        sessionId,
-                        subjectId,
-                        email,
-                        ipAddress,
-                        phoneNumber,
-                        persistentSessionId,
-                        restrictedSection.encoded);
-
-        submitAuditEvent(event, auditContext, metadataPairs);
-    }
-
     public record MetadataPair(String key, Object value, boolean isRestricted) {
         public static MetadataPair pair(String key, Object value) {
             return new MetadataPair(key, value, false);
