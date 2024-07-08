@@ -21,7 +21,7 @@ module "mfa_reset_jar_signing_jwk" {
     ENVIRONMENT                     = var.environment
     MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
   }
-  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarTokenJwkHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_resource.auth_frontend_wellknown_resource.id
