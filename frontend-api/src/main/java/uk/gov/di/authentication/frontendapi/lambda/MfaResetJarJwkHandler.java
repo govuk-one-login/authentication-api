@@ -42,10 +42,10 @@ public class MfaResetJarJwkHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent event, Context context) {
         return segmentedFunctionCall(
-                "frontend-api::" + getClass().getSimpleName(), this::mfaResetJarTokenJwkHandler);
+                "frontend-api::" + getClass().getSimpleName(), this::mfaResetJarJwkHandler);
     }
 
-    public APIGatewayProxyResponseEvent mfaResetJarTokenJwkHandler() {
+    public APIGatewayProxyResponseEvent mfaResetJarJwkHandler() {
         LOG.info("MFA reset JAR Signing JWK request received");
         try {
 
