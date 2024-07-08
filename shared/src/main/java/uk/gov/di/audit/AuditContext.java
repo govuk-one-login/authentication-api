@@ -138,4 +138,30 @@ public record AuditContext(
                 persistentSessionId,
                 txmaAuditEncoded);
     }
+
+    public AuditContext withClientSessionId(String clientSessionId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
+
+    public AuditContext withSessionId(String sessionId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
 }
