@@ -396,19 +396,8 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
-      ProvisionedConcurrencyConfig: !If
-        - EnableProvisionedConcurrency
-        - ProvisionedConcurrentExecutions: !FindInMap
-            - ProvisionedConcurrency
-            - !Ref Environment
-            - FetchJwksFunction
-            - DefaultValue:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  defaultProvisionedConcurrency,
-                ]
-        - !Ref AWS::NoValue
+      SnapStart:
+        ApplyOn: PublishedVersions
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117
 
