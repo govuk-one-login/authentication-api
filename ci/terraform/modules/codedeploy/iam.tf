@@ -19,5 +19,5 @@ resource "aws_iam_role" "codedeploy_deployment_group_auth" {
 
 resource "aws_iam_role_policy_attachment" "codedeploy_deployment_group_auth" {
   role       = aws_iam_role.codedeploy_deployment_group_auth.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambdaLimited"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda"
 }
