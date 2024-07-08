@@ -73,6 +73,7 @@ module "check_email_fraud_block" {
   ]
 }
 module "codedeploy_check_email_fraud_block" {
+  count                = local.deploy_check_email_fraud_block_count
   source               = "../modules/codedeploy"
   endpoint_name        = "check-email-fraud-block"
   environment          = var.environment

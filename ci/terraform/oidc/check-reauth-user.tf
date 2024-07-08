@@ -73,6 +73,7 @@ module "check_reauth_user" {
 }
 
 module "codedeploy_check_reauth_user" {
+  count                = local.deploy_check_email_fraud_block_count
   source               = "../modules/codedeploy"
   endpoint_name        = "check-reauth-user"
   environment          = var.environment
