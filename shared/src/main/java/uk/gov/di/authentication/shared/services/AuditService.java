@@ -73,10 +73,6 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
     }
 
-    public record RestrictedSection(Optional<String> encoded) {
-        public static final RestrictedSection empty = new RestrictedSection(Optional.empty());
-    }
-
     public void submitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 
