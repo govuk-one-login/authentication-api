@@ -58,7 +58,7 @@ module "notify_callback" {
 
 module "codedeploy_notify_callback" {
   source               = "../modules/codedeploy"
-  endpoint_name        = "notify_callback"
+  endpoint_name        = "notify-callback"
   environment          = var.environment
   lambda_function_name = module.notify_callback.lambda_function_name
   lambda_version       = module.notify_callback.lambda_version

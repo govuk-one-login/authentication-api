@@ -46,7 +46,7 @@ module "ticf_cri_stub_lambda" {
 
 module "codedeploy_ticf_cri_stub_" {
   source               = "../modules/codedeploy"
-  endpoint_name        = "ticf_cri_stub"
+  endpoint_name        = "ticf-cri-stub"
   environment          = var.environment
   lambda_function_name = module.ticf_cri_stub_lambda.lambda_function_name
   lambda_version       = module.ticf_cri_stub_lambda.lambda_version

@@ -236,7 +236,7 @@ resource "aws_lambda_alias" "sqs_lambda_active" {
 
 module "codedeploy_email_sqs_lambda" {
   source               = "../modules/codedeploy"
-  endpoint_name        = "email_sqs_lambda"
+  endpoint_name        = "email-sqs-lambda"
   environment          = var.environment
   lambda_function_name = aws_lambda_function.email_sqs_lambda.function_name
   lambda_version       = aws_lambda_function.email_sqs_lambda.version

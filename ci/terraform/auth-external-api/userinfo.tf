@@ -69,7 +69,7 @@ module "auth_userinfo" {
 
 module "codedeploy_auth_userinfo" {
   source               = "../modules/codedeploy"
-  endpoint_name        = "auth_userinfo"
+  endpoint_name        = "auth-userinfo"
   environment          = var.environment
   lambda_function_name = module.auth_userinfo.lambda_function_name
   lambda_version       = module.auth_userinfo.lambda_version

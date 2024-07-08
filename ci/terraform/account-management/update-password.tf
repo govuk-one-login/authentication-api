@@ -65,7 +65,7 @@ module "update_password" {
 
 module "codedeploy_update_password" {
   source               = "../modules/codedeploy"
-  endpoint_name        = "update_password"
+  endpoint_name        = "update-password"
   environment          = var.environment
   lambda_function_name = module.update_password.lambda_function_name
   lambda_version       = module.update_password.lambda_version

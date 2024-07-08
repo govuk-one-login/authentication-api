@@ -76,7 +76,7 @@ module "auth_token" {
 
 module "codedeploy_auth_token" {
   source               = "../modules/codedeploy"
-  endpoint_name        = "auth_token"
+  endpoint_name        = "auth-token"
   environment          = var.environment
   lambda_function_name = module.auth_token.lambda_function_name
   lambda_version       = module.auth_token.lambda_version
