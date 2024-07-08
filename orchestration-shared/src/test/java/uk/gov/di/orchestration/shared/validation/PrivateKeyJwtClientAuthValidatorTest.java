@@ -209,6 +209,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
                 .withRedirectUrls(singletonList("https://localhost:8080"))
                 .withClientID(CLIENT_ID.getValue())
                 .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
+                .withPublicKeySource("STATIC")
                 .withPublicKey(publicKey)
                 .withScopes(singletonList("openid"))
                 .withCookieConsentShared(true)
