@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -15,6 +14,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public abstract class MfaCodeProcessor {
@@ -69,24 +69,18 @@ public abstract class MfaCodeProcessor {
             String persistentSessionId,
             boolean accountRecovery) {
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        emailAddress,
+                        ipAddress,
+                        phoneNumber,
+                        persistentSessionId);
 
         auditService.submitAuditEvent(
                 auditableEvent,
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
-                userContext.getSession().getInternalCommonSubjectIdentifier(),
-                emailAddress,
-                ipAddress,
-                phoneNumber,
-                persistentSessionId,
-                restrictedSection,
+                auditContext,
                 pair("mfa-type", mfaMethodType.getValue()),
                 pair("account-recovery", accountRecovery));
     }
@@ -100,20 +94,17 @@ public abstract class MfaCodeProcessor {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
                     userContext.getSession().getInternalCommonSubjectIdentifier());
+            var auditContext =
+                    auditContextFromUserContext(
+                            userContext,
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            emailAddress,
+                            ipAddress,
+                            AuditService.UNKNOWN,
+                            persistentSessionId);
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getSession().getInternalCommonSubjectIdentifier(),
-                    emailAddress,
-                    ipAddress,
-                    AuditService.UNKNOWN,
-                    persistentSessionId,
-                    AuditService.RestrictedSection.empty,
+                    auditContext,
                     pair("mfa-type", mfaMethodType.getValue()));
         }
     }

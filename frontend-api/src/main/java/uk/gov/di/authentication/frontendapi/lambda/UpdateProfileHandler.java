@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
+import static uk.gov.di.audit.AuditContext.emptyAuditContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
@@ -161,15 +162,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     private AuditContext auditContextWithOnlyClientSessionId(
             String clientSessionId, String txmaAuditEncoded) {
-        return new AuditContext(
-                AuditService.UNKNOWN,
-                clientSessionId,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                Optional.ofNullable(txmaAuditEncoded));
+        return emptyAuditContext()
+                .withClientSessionId(clientSessionId)
+                .withTxmaAuditEncoded(Optional.ofNullable(txmaAuditEncoded));
     }
 }

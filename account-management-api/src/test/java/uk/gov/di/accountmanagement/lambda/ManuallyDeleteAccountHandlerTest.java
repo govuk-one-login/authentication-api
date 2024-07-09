@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Optional;
@@ -40,7 +39,7 @@ class ManuallyDeleteAccountHandlerTest {
         // then
         verify(authenticationService).getUserProfileByEmailMaybe(expectedEmail);
         verify(accountDeletionService)
-                .removeAccount(Optional.empty(), userProfile, AuditService.RestrictedSection.empty);
+                .removeAccount(Optional.empty(), userProfile, Optional.empty());
     }
 
     @Test

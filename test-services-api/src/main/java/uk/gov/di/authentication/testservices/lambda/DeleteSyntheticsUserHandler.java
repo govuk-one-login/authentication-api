@@ -6,16 +6,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent.SYNTHETICS_USER_DELETED;
+import static uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent.SYNTHETICS_USER_NOT_FOUND_FOR_DELETION;
 
 public class DeleteSyntheticsUserHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -57,6 +59,11 @@ public class DeleteSyntheticsUserHandler
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.ERROR_1010);
         }
 
+        var auditContext =
+                AuditContext.emptyAuditContext()
+                        .withIpAddress(IpAddressHelper.extractIpAddress(input))
+                        .withEmail(email);
+
         return authenticationService
                 .getUserProfileByEmailMaybe(email)
                 .map(
@@ -64,17 +71,7 @@ public class DeleteSyntheticsUserHandler
                             authenticationService.removeAccount(userProfile.getEmail());
                             LOG.info("Synthetics user account removed.");
 
-                            auditService.submitAuditEvent(
-                                    TestServicesAuditableEvent.SYNTHETICS_USER_DELETED,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    userProfile.getEmail(),
-                                    IpAddressHelper.extractIpAddress(input),
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.RestrictedSection.empty);
+                            auditService.submitAuditEvent(SYNTHETICS_USER_DELETED, auditContext);
 
                             return generateApiGatewayProxyResponse(204, "");
                         })
@@ -83,17 +80,7 @@ public class DeleteSyntheticsUserHandler
                             LOG.info("Synthetics user account not found.");
 
                             auditService.submitAuditEvent(
-                                    TestServicesAuditableEvent
-                                            .SYNTHETICS_USER_NOT_FOUND_FOR_DELETION,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    email,
-                                    IpAddressHelper.extractIpAddress(input),
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.RestrictedSection.empty);
+                                    SYNTHETICS_USER_NOT_FOUND_FOR_DELETION, auditContext);
 
                             return generateApiGatewayProxyErrorResponse(
                                     404, ErrorResponse.ERROR_1010);

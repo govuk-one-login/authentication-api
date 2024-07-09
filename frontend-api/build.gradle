@@ -8,21 +8,22 @@ version "unspecified"
 
 dependencies {
 
+    implementation project(path: ':shared')
     compileOnly configurations.lambda,
             configurations.sqs,
             configurations.ssm,
             configurations.sns,
             configurations.s3,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.kms
 
     implementation configurations.govuk_notify,
             configurations.apache,
             configurations.gson,
             configurations.nimbus,
             configurations.cloudwatch,
-            configurations.bouncycastle
-
-    implementation project(":shared")
+            configurations.bouncycastle,
+            configurations.kms
 
     runtimeOnly configurations.logging_runtime
 

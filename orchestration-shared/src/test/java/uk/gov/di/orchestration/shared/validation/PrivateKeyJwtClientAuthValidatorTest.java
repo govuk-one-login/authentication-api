@@ -15,9 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
@@ -34,6 +35,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
@@ -41,7 +44,8 @@ import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI
 class PrivateKeyJwtClientAuthValidatorTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final ClientSignatureValidationService clientSignatureValidationService =
+            mock(ClientSignatureValidationService.class);
     private static final String OIDC_BASE_URL = "https://example.com";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -50,8 +54,8 @@ class PrivateKeyJwtClientAuthValidatorTest {
     @BeforeEach
     void setUp() {
         privateKeyJwtClientAuthValidator =
-                new PrivateKeyJwtClientAuthValidator(dynamoClientService, configurationService);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
+                new PrivateKeyJwtClientAuthValidator(
+                        dynamoClientService, clientSignatureValidationService);
     }
 
     private static Stream<JWSAlgorithm> supportedAlgorithms() {
@@ -166,7 +170,8 @@ class PrivateKeyJwtClientAuthValidatorTest {
     }
 
     @Test
-    void shouldThrowIfUnableToValidatePrivateKeyJWTSignature() throws JOSEException {
+    void shouldThrowIfUnableToValidatePrivateKeyJWTSignature()
+            throws JOSEException, ClientSignatureValidationException {
         var invalidKeyPair = generateRsaKeyPair();
         var publicKey =
                 Base64.getMimeEncoder().encodeToString(invalidKeyPair.getPublic().getEncoded());
@@ -176,6 +181,10 @@ class PrivateKeyJwtClientAuthValidatorTest {
         var requestString =
                 generateSerialisedPrivateKeyJWT(
                         JWSAlgorithm.RS256, NowHelper.nowPlus(5, ChronoUnit.MINUTES).getTime());
+
+        doThrow(ClientSignatureValidationException.class)
+                .when(clientSignatureValidationService)
+                .validateTokenClientAssertion(any(PrivateKeyJWT.class), any(ClientRegistry.class));
 
         TokenAuthInvalidException tokenAuthInvalidException =
                 assertThrows(

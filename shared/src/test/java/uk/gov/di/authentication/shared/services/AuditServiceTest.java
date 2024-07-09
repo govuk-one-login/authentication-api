@@ -37,6 +37,18 @@ class AuditServiceTest {
 
     private final ArgumentCaptor<String> txmaMessageCaptor = ArgumentCaptor.forClass(String.class);
 
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    "client-id",
+                    "request-id",
+                    "session-id",
+                    "subject-id",
+                    "email",
+                    "ip-address",
+                    "phone-number",
+                    "persistent-session-id",
+                    Optional.empty());
+
     enum TestEvents implements AuditableEvent {
         TEST_EVENT_ONE;
 
@@ -54,51 +66,6 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEvent() {
-
-        auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id",
-                AuditService.RestrictedSection.empty);
-
-        verify(awsSqsClient).send(txmaMessageCaptor.capture());
-
-        var txmaMessage = asJson(txmaMessageCaptor.getValue());
-
-        var expected =
-                """
-                {
-                "timestamp":1630534200,
-                "event_timestamp_ms":1630534200012,
-                "event_name":"AUTH_TEST_EVENT_ONE",
-                "client_id":"client-id",
-                "component_id":"AUTH",
-                "user": {
-                    "user_id":"subject-id",
-                    "transaction_id":null,
-                    "email":"email",
-                    "phone":"phone-number",
-                    "ip_address":"ip-address",
-                    "session_id":"session-id",
-                    "persistent_session_id":"persistent-session-id",
-                    "govuk_signin_journey_id":"request-id"
-                },
-                "platform":null,
-                "restricted":null,
-                "extensions":null}
-                """;
-
-        assertEquals(asJson(expected), txmaMessage);
-    }
-
-    @Test
-    void checkSimplifiedMethodCall() {
         var myContext =
                 new AuditContext(
                         "client-id",
@@ -145,18 +112,9 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
-
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id",
-                AuditService.RestrictedSection.empty,
+                AUDIT_CONTEXT,
                 pair("key", "value"),
                 pair("key2", "value2"),
                 pair("restrictedKey1", "restrictedValue1", true),
@@ -184,15 +142,7 @@ class AuditServiceTest {
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "07700900000",
-                "persistent-session-id",
-                AuditService.RestrictedSection.empty,
+                AUDIT_CONTEXT.withPhoneNumber("07700900000"),
                 pair("key", "value"),
                 pair("key2", "value2"));
 
@@ -212,20 +162,9 @@ class AuditServiceTest {
         var auditEncodedHeaderValue =
                 "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
-        var restrictedSection =
-                new AuditService.RestrictedSection(Optional.of(auditEncodedHeaderValue));
-
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id",
-                restrictedSection,
+                AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.of(auditEncodedHeaderValue)),
                 pair("restrictedKey1", "restrictedValue1", true));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
@@ -235,47 +174,20 @@ class AuditServiceTest {
 
     @Test
     void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenNoOtherRestrictedData() {
-        // Arrange
-        var restrictedSection = new AuditService.RestrictedSection(Optional.of(""));
-
-        // Act
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id",
-                restrictedSection);
+                TEST_EVENT_ONE, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
 
-        // Assert
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         assertThatTheRestrictedSectionDoesNotExist();
     }
 
     @Test
     void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenOtherRestrictedDataHasBeenWritten() {
-        // Arrange
-        var restrictedSection = new AuditService.RestrictedSection(Optional.of(""));
-
-        // Act
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
-                "client-id",
-                "request-id",
-                "session-id",
-                "subject-id",
-                "email",
-                "ip-address",
-                "phone-number",
-                "persistent-session-id",
-                restrictedSection,
+                AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                 pair("restrictedKey1", "restrictedValue1", true));
 
-        // Assert
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         assertThatTheRestrictedSectionDoesNotContainADeviceInformationObject();
     }

@@ -3,9 +3,9 @@ package uk.gov.di.accountmanagement.services;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -51,7 +52,7 @@ public class AccountDeletionService {
     public DeletedAccountIdentifiers removeAccount(
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
-            AuditService.RestrictedSection restrictedSection)
+            Optional<String> txmaAuditEncoded)
             throws Json.JsonException {
         var accountIdentifiers =
                 new DeletedAccountIdentifiers(
@@ -92,31 +93,38 @@ public class AccountDeletionService {
         }
 
         try {
-            auditService.submitAuditEvent(
-                    AccountManagementAuditableEvent.DELETE_ACCOUNT,
+            var clientId =
                     input.map(
                                     n ->
                                             n.getRequestContext()
                                                     .getAuthorizer()
                                                     .getOrDefault("clientId", AuditService.UNKNOWN)
                                                     .toString())
-                            .orElse(null),
+                            .orElse(AuditService.UNKNOWN);
+            var clientSessionId =
                     input.map(
                                     n ->
                                             ClientSessionIdHelper.extractSessionIdFromHeaders(
                                                     n.getHeaders()))
-                            .orElse(null),
+                            .orElse(AuditService.UNKNOWN);
+            var sessionId =
                     input.map(
                                     n ->
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
-                            .orElse(null),
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getEmail(),
-                    ipAddress,
-                    userProfile.getPhoneNumber(),
-                    persistentSessionID,
-                    restrictedSection);
+                            .orElse(AuditService.UNKNOWN);
+            var auditContext =
+                    new AuditContext(
+                            clientId,
+                            clientSessionId,
+                            sessionId,
+                            internalCommonSubjectIdentifier.getValue(),
+                            userProfile.getEmail(),
+                            ipAddress,
+                            userProfile.getPhoneNumber(),
+                            persistentSessionID,
+                            txmaAuditEncoded);
+            auditService.submitAuditEvent(DELETE_ACCOUNT, auditContext);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

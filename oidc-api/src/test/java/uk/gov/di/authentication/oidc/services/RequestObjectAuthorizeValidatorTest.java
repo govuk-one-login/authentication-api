@@ -20,6 +20,9 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -40,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
@@ -51,6 +56,8 @@ class RequestObjectAuthorizeValidatorTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
+    private final ClientSignatureValidationService clientSignatureValidationService =
+            mock(ClientSignatureValidationService.class);
     private KeyPair keyPair;
     private static final String SCOPE = "openid doc-checking-app";
     private static final State STATE = new State();
@@ -66,7 +73,10 @@ class RequestObjectAuthorizeValidatorTest {
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service =
                 new RequestObjectAuthorizeValidator(
-                        dynamoClientService, configurationService, ipvCapacityService);
+                        configurationService,
+                        dynamoClientService,
+                        ipvCapacityService,
+                        clientSignatureValidationService);
         var clientRegistry =
                 generateClientRegistry(
                         ClientType.APP.getValue(),
@@ -142,7 +152,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
-                RuntimeException.class,
+                ClientRedirectUriValidationException.class,
                 () -> service.validate(authRequest),
                 "Expected to throw exception");
     }
@@ -161,7 +171,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
-                RuntimeException.class,
+                ClientRedirectUriValidationException.class,
                 () -> service.validate(authRequest),
                 "Expected to throw exception");
     }
@@ -523,7 +533,7 @@ class RequestObjectAuthorizeValidatorTest {
 
     @Test
     void shouldThrowWhenUnableToValidateRequestJwtSignature()
-            throws JOSEException, NoSuchAlgorithmException {
+            throws JOSEException, NoSuchAlgorithmException, ClientSignatureValidationException {
         var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -537,6 +547,9 @@ class RequestObjectAuthorizeValidatorTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
+        doThrow(new RuntimeException())
+                .when(clientSignatureValidationService)
+                .validate(any(SignedJWT.class), any(ClientRegistry.class));
         assertThrows(
                 RuntimeException.class,
                 () -> service.validate(authRequest),

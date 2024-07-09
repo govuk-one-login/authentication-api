@@ -46,6 +46,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
@@ -79,6 +80,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -310,12 +312,18 @@ public class AuthorisationHandler
                 return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
             }
         }
-        if (authRequest.getRequestObject() == null) {
-            LOG.info("Validating request query params");
-            authRequestError = queryParamsAuthorizeValidator.validate(authRequest);
-        } else {
-            LOG.info("Validating request object");
-            authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
+
+        try {
+            if (authRequest.getRequestObject() == null) {
+                LOG.info("Validating request query params");
+                authRequestError = queryParamsAuthorizeValidator.validate(authRequest);
+            } else {
+                LOG.info("Validating request object");
+                authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
+            }
+        } catch (ClientRedirectUriValidationException e) {
+            return generateApiGatewayProxyResponse(
+                    INVALID_REQUEST.getHTTPStatusCode(), INVALID_REQUEST.getDescription());
         }
 
         if (authRequestError.isPresent()) {

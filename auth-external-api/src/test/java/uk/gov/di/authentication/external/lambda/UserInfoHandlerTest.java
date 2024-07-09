@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
@@ -27,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -85,16 +85,17 @@ class UserInfoHandlerTest {
         verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
         verify(auditService)
                 .submitAuditEvent(
-                        eq(AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION),
-                        any(),
-                        any(),
-                        any(),
-                        eq(TEST_SUBJECT.getValue()),
-                        eq("test@test.com"),
-                        any(),
-                        eq("0123456789"),
-                        any(),
-                        any());
+                        AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION,
+                        new AuditContext(
+                                "",
+                                "",
+                                "",
+                                TEST_SUBJECT.getValue(),
+                                "test@test.com",
+                                "",
+                                "0123456789",
+                                "",
+                                Optional.empty()));
     }
 
     @Test

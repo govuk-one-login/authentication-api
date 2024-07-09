@@ -11,7 +11,7 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.exceptions.AuthCodeStoreRetreivalException;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -180,17 +181,16 @@ public class TokenHandler
                                     URI.create(configurationService.getInternalSectorUri()),
                                     SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
-            auditService.submitAuditEvent(
-                    AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
-                    Optional.ofNullable(requestBody.get("client_id")).orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    Optional.ofNullable(internalPairwiseId).orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
-                    AuditService.RestrictedSection.empty);
+            var auditContext =
+                    AuditContext.emptyAuditContext()
+                            .withClientId(
+                                    Optional.ofNullable(requestBody.get("client_id"))
+                                            .orElse(AuditService.UNKNOWN))
+                            .withSubjectId(
+                                    Optional.ofNullable(internalPairwiseId)
+                                            .orElse(AuditService.UNKNOWN));
+
+            auditService.submitAuditEvent(TOKEN_SENT_TO_ORCHESTRATION, auditContext);
 
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");

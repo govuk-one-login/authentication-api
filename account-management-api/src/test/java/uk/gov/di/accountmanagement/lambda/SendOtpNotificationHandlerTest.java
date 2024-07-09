@@ -12,13 +12,14 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.AuditHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -84,6 +85,19 @@ class SendOtpNotificationHandlerTest {
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private static final String PERSISTENT_ID = "some-persistent-session-id";
+
+    private final AuditContext auditContext =
+            new AuditContext(
+                    TEST_CLIENT_ID,
+                    SESSION_ID,
+                    AuditService.UNKNOWN,
+                    expectedCommonSubject,
+                    TEST_EMAIL_ADDRESS,
+                    "123.123.123.123",
+                    TEST_PHONE_NUMBER,
+                    PERSISTENT_ID,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
     private APIGatewayProxyRequestEvent.ProxyRequestContext eventContext;
 
     private final SendOtpNotificationHandler handler =
@@ -117,7 +131,6 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws Json.JsonException {
-        String persistentIdValue = "some-persistent-session-id";
         NotifyRequest notifyRequest =
                 new NotifyRequest(
                         TEST_EMAIL_ADDRESS,
@@ -130,7 +143,7 @@ class SendOtpNotificationHandlerTest {
         event.setHeaders(
                 Map.of(
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        persistentIdValue,
+                        PERSISTENT_ID,
                         RequestHeaders.SESSION_ID_HEADER,
                         "some-session-id",
                         RequestHeaders.CLIENT_SESSION_ID_HEADER,
@@ -178,16 +191,7 @@ class SendOtpNotificationHandlerTest {
                 verify(auditService)
                         .submitAuditEvent(
                                 AccountManagementAuditableEvent.SEND_OTP,
-                                TEST_CLIENT_ID,
-                                SESSION_ID,
-                                AuditService.UNKNOWN,
-                                expectedCommonSubject,
-                                TEST_EMAIL_ADDRESS,
-                                "123.123.123.123",
-                                null,
-                                persistentIdValue,
-                                new AuditService.RestrictedSection(
-                                        Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                                auditContext.withPhoneNumber(null),
                                 pair("notification-type", VERIFY_EMAIL),
                                 pair("test-user", false));
             }
@@ -245,6 +249,8 @@ class SendOtpNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_ID,
                         ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
                         SESSION_ID,
                         AuditHelper.TXMA_ENCODED_HEADER_NAME,
@@ -269,15 +275,7 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
-                        TEST_CLIENT_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        TEST_PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                        auditContext,
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
     }
@@ -318,15 +316,7 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
-                        TEST_CLIENT_ID,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        TEST_TEST_USER_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        null,
-                        persistentIdValue,
-                        new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE)),
+                        auditContext.withPhoneNumber(null).withEmail(TEST_TEST_USER_EMAIL_ADDRESS),
                         pair("notification-type", VERIFY_EMAIL),
                         pair("test-user", true));
     }

@@ -5,9 +5,9 @@ module "reverification_result_role" {
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
+    aws_iam_policy.mfa_reset_jar_kms_signing_policy.arn
   ]
 }
-
 
 module "reverification_result" {
   source = "../modules/endpoint-module"
@@ -18,6 +18,11 @@ module "reverification_result" {
   environment     = var.environment
 
   handler_environment_variables = {
+    IPV_AUDIENCE                    = var.ipv_audience
+    IPV_AUTHORISATION_CALLBACK_URI  = var.ipv_authorisation_callback_uri
+    IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
+    ENVIRONMENT                     = var.environment
+    MFA_RESET_JAR_SIGNING_KEY_ALIAS = aws_kms_alias.mfa_reset_jar_signing_key_alias.name
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ReverificationResultHandler::handleRequest"

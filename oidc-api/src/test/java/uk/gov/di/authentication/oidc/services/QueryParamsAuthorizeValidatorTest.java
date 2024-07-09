@@ -28,6 +28,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -508,7 +509,7 @@ class QueryParamsAuthorizeValidatorTest {
     @Test
     void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        String redirectURi = "http://localhost/redirect";
+        String redirectUri = "http://localhost/redirect";
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -519,14 +520,14 @@ class QueryParamsAuthorizeValidatorTest {
 
         var exception =
                 assertThrows(
-                        RuntimeException.class,
+                        ClientRedirectUriValidationException.class,
                         () ->
                                 queryParamsAuthorizeValidator.validate(
-                                        generateAuthRequest(redirectURi, responseType, scope)),
+                                        generateAuthRequest(redirectUri, responseType, scope)),
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
-                equalTo(format("Invalid Redirect in request %s", redirectURi)));
+                equalTo(format("Invalid Redirect in request %s", redirectUri)));
     }
 
     @Test

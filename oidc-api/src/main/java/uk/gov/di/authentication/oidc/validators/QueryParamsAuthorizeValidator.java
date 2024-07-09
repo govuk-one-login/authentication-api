@@ -12,7 +12,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.ClientRegistryValidationException;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
@@ -48,7 +48,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
 
         if (!client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
-            throw new ClientRegistryValidationException(
+            throw new ClientRedirectUriValidationException(
                     format(
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));

@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -42,6 +43,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -68,9 +70,17 @@ class PhoneNumberCodeProcessorTest {
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
-
-    private static final AuditService.RestrictedSection restrictedSection =
-            new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE));
+    private static final AuditContext AUDIT_CONTEXT =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    INTERNAL_SUB_ID,
+                    CommonTestVariables.EMAIL,
+                    IP_ADDRESS,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
+                    PERSISTENT_ID,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     void setup() {
@@ -259,15 +269,7 @@ class PhoneNumberCodeProcessorTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        INTERNAL_SUB_ID,
-                        CommonTestVariables.EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
-                        restrictedSection,
+                        AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false));
     }
@@ -293,15 +295,7 @@ class PhoneNumberCodeProcessorTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        INTERNAL_SUB_ID,
-                        CommonTestVariables.EMAIL,
-                        IP_ADDRESS,
-                        CommonTestVariables.UK_MOBILE_NUMBER,
-                        PERSISTENT_ID,
-                        restrictedSection,
+                        AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", true));
     }
@@ -401,6 +395,7 @@ class PhoneNumberCodeProcessorTest {
         when(session.getSessionId()).thenReturn(SESSION_ID);
         when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.isPhoneNumberVerified()).thenReturn(true);

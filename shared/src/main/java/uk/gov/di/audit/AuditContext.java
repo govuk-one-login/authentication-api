@@ -1,5 +1,6 @@
 package uk.gov.di.audit;
 
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -32,6 +33,19 @@ public record AuditContext(
                 phoneNumber,
                 persistentSessionId,
                 Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+    }
+
+    public static AuditContext emptyAuditContext() {
+        return new AuditContext(
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                Optional.empty());
     }
 
     public AuditContext withPhoneNumber(String phoneNumber) {
@@ -87,6 +101,58 @@ public record AuditContext(
     }
 
     public AuditContext withEmail(String email) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
+
+    public AuditContext withIpAddress(String ipAddress) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
+
+    public AuditContext withClientId(String clientId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
+
+    public AuditContext withClientSessionId(String clientSessionId) {
+        return new AuditContext(
+                clientId,
+                clientSessionId,
+                sessionId,
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                txmaAuditEncoded);
+    }
+
+    public AuditContext withSessionId(String sessionId) {
         return new AuditContext(
                 clientId,
                 clientSessionId,

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -40,6 +41,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -63,8 +65,17 @@ class AuthAppCodeProcessorTest {
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private final int MAX_RETRIES = 5;
 
-    private static final AuditService.RestrictedSection restrictedSection =
-            new AuditService.RestrictedSection(Optional.of(TXMA_ENCODED_HEADER_VALUE));
+    private final AuditContext auditContext =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    INTERNAL_SUB_ID,
+                    CommonTestVariables.EMAIL,
+                    IP_ADDRESS,
+                    AuditService.UNKNOWN,
+                    PERSISTENT_ID,
+                    Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
     void setUp() {
@@ -184,7 +195,6 @@ class AuthAppCodeProcessorTest {
 
     @Test
     void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
-        when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -201,22 +211,13 @@ class AuthAppCodeProcessorTest {
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        INTERNAL_SUB_ID,
-                        CommonTestVariables.EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID,
-                        restrictedSection,
+                        auditContext,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false));
     }
 
     @Test
     void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
-        when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -233,15 +234,7 @@ class AuthAppCodeProcessorTest {
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        INTERNAL_SUB_ID,
-                        CommonTestVariables.EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID,
-                        restrictedSection,
+                        auditContext,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", true));
     }
@@ -260,15 +253,7 @@ class AuthAppCodeProcessorTest {
         verify(mockAuditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                        AuditService.UNKNOWN,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        INTERNAL_SUB_ID,
-                        CommonTestVariables.EMAIL,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID,
-                        AuditService.RestrictedSection.empty,
+                        auditContext,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
     }
 
@@ -293,6 +278,8 @@ class AuthAppCodeProcessorTest {
         when(mockSession.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(mockUserContext.getSession()).thenReturn(mockSession);
+        when(mockUserContext.getClientId()).thenReturn(CLIENT_ID);
+        when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(

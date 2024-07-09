@@ -61,4 +61,67 @@ class ClientRegistryTest {
         clientRegistry.setIdTokenSigningAlgorithm(null);
         assertThat(clientRegistry.getIdTokenSigningAlgorithm(), equalTo(null));
     }
+
+    /**
+     * Old client registry entries will have a public key but no public key source in the DB.
+     * getPublicKeySource should therefore return STATIC by default.
+     */
+    @Test
+    void shouldReturnCorrectlyPublicKeyAndSourceForOldFormatClient() {
+        var clientRegistry = new ClientRegistry();
+
+        var actualKey = "example-key";
+        clientRegistry.setPublicKey(actualKey);
+
+        assertThat(clientRegistry.getPublicKey(), equalTo(actualKey));
+        assertThat(clientRegistry.getPublicKeySource(), equalTo(PublicKeySource.STATIC.getValue()));
+        assertThat(clientRegistry.getJwksUrl(), equalTo(null));
+    }
+
+    @Test
+    void shouldReturnCorrectlyPublicKeyAndSourceForNewFormatClient() {
+        var clientRegistry = new ClientRegistry();
+
+        var actualKey = "example-key";
+        clientRegistry.setPublicKey(actualKey);
+        clientRegistry.setPublicKeySource(PublicKeySource.STATIC.getValue());
+
+        assertThat(clientRegistry.getPublicKey(), equalTo(actualKey));
+        assertThat(clientRegistry.getPublicKeySource(), equalTo(PublicKeySource.STATIC.getValue()));
+        assertThat(clientRegistry.getJwksUrl(), equalTo(null));
+    }
+
+    @Test
+    void shouldReturnCorrectlyJwksUrlAndSourceForNewFormatClient() {
+        var clientRegistry = new ClientRegistry();
+
+        var actualUrl = "example-url";
+        clientRegistry.setJwksUrl(actualUrl);
+        clientRegistry.setPublicKeySource(PublicKeySource.JWKS.getValue());
+
+        assertThat(clientRegistry.getPublicKey(), equalTo(null));
+        assertThat(clientRegistry.getPublicKeySource(), equalTo(PublicKeySource.JWKS.getValue()));
+        assertThat(clientRegistry.getJwksUrl(), equalTo(actualUrl));
+    }
+
+    /**
+     * When an existing client is updated with a JWKS URL, we should hide the existing public key in
+     * the DB.
+     */
+    @Test
+    void shouldReturnCorrectlyJwksUrlAndSourceForOldFormatThatGetUpdateWithAJwksUrlClient() {
+        var clientRegistry = new ClientRegistry();
+
+        var oldKey = "example-key";
+        clientRegistry.setPublicKey(oldKey);
+        clientRegistry.setPublicKeySource(PublicKeySource.STATIC.getValue());
+
+        var actualUrl = "example-url";
+        clientRegistry.setJwksUrl(actualUrl);
+        clientRegistry.setPublicKeySource(PublicKeySource.JWKS.getValue());
+
+        assertThat(clientRegistry.getPublicKey(), equalTo(null));
+        assertThat(clientRegistry.getPublicKeySource(), equalTo(PublicKeySource.JWKS.getValue()));
+        assertThat(clientRegistry.getJwksUrl(), equalTo(actualUrl));
+    }
 }

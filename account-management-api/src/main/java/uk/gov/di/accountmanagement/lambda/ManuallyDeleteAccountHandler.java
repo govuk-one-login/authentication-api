@@ -56,7 +56,7 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
         try {
             var userIdentifiers =
                     accountDeletionService.removeAccount(
-                            Optional.empty(), userProfile, AuditService.RestrictedSection.empty);
+                            Optional.empty(), userProfile, Optional.empty());
             return userIdentifiers.toString();
         } catch (Json.JsonException e) {
             throw new RuntimeException(e);

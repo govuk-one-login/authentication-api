@@ -73,10 +73,6 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
     }
 
-    public record RestrictedSection(Optional<String> encoded) {
-        public static final RestrictedSection empty = new RestrictedSection(Optional.empty());
-    }
-
     public void submitAuditEvent(
             AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
 
@@ -101,34 +97,6 @@ public class AuditService {
         addExtensionSectionToAuditEvent(user, txmaAuditEvent, metadataPairs);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
-    }
-
-    public void submitAuditEvent(
-            AuditableEvent event,
-            String clientId,
-            String clientSessionId,
-            String sessionId,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
-            RestrictedSection restrictedSection,
-            MetadataPair... metadataPairs) {
-
-        var auditContext =
-                new AuditContext(
-                        clientId,
-                        clientSessionId,
-                        sessionId,
-                        subjectId,
-                        email,
-                        ipAddress,
-                        phoneNumber,
-                        persistentSessionId,
-                        restrictedSection.encoded);
-
-        submitAuditEvent(event, auditContext, metadataPairs);
     }
 
     public record MetadataPair(String key, Object value, boolean isRestricted) {

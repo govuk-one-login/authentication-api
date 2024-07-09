@@ -85,6 +85,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.mfa_reset_storage_token_jwk.method_trigger_value,
       module.reverification_result.integration_trigger_value,
       module.reverification_result.method_trigger_value,
+      module.mfa_reset_jar_signing_jwk.integration_trigger_value,
+      module.mfa_reset_jar_signing_jwk.method_trigger_value,
       module.mfa_reset_authorize.integration_trigger_value,
       module.mfa_reset_authorize.method_trigger_value,
       local.deploy_account_interventions_count == 1 ? module.account_interventions[0].integration_trigger_value : null,
@@ -119,6 +121,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.mfa_reset_authorize,
     module.mfa_reset_storage_token_jwk,
     module.reverification_result,
+    module.mfa_reset_jar_signing_jwk
   ]
 }
 
