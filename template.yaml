@@ -357,7 +357,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
     Properties:
-      TableName: RpPublicKeyCache
+      TableName: !Sub ${Environment}-RpPublicKeyCache
       AttributeDefinitions:
         - AttributeName: clientId
           AttributeType: S
