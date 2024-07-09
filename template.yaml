@@ -3218,6 +3218,7 @@ Resources:
     Condition: IpvExists
     Properties:
       Enabled: true
+      BatchSize: 1
       EventSourceArn: !Sub
         - "{{resolve:secretsmanager:${SecretArn}:SecretString}}"
         - SecretArn: !Ref SpotResponseQueueArnSecret
