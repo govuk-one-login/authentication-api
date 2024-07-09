@@ -20,6 +20,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -151,7 +152,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
-                RuntimeException.class,
+                ClientRedirectUriValidationException.class,
                 () -> service.validate(authRequest),
                 "Expected to throw exception");
     }
@@ -170,7 +171,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
-                RuntimeException.class,
+                ClientRedirectUriValidationException.class,
                 () -> service.validate(authRequest),
                 "Expected to throw exception");
     }

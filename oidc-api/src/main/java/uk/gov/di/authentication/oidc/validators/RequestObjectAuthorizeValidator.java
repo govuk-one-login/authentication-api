@@ -15,6 +15,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
@@ -31,6 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
+import static java.lang.String.format;
 import static java.util.Collections.emptyList;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -75,7 +77,13 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
                     || !client.getRedirectUrls()
                             .contains(jwtClaimsSet.getStringClaim("redirect_uri"))) {
-                throw new RuntimeException("Invalid Redirect URI in request JWT");
+                LOG.warn(
+                        "Invalid Redirect URI in request {}",
+                        jwtClaimsSet.getStringClaim("redirect_uri"));
+                throw new ClientRedirectUriValidationException(
+                        format(
+                                "Invalid Redirect in request %s",
+                                jwtClaimsSet.getStringClaim("redirect_uri")));
             }
 
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
