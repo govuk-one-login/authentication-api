@@ -64,3 +64,5 @@ orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-
 authorize_protected_subnet_enabled = true
 
 oidc_origin_domain_enabled = true
+
+notify_test_destinations = "07700900000,07700900111,07700900222,07700900333,07700900444,07700900555,07700900666,07700900777,07700900888,simulate-delivered@notifications.service.gov.uk,simulate-delivered-2@notifications.service.gov.uk,simulate-delivered-3@notifications.service.gov.uk,+447700900000,+447700900111,+447700900222"
