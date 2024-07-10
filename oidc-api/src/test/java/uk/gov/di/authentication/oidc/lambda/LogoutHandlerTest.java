@@ -98,11 +98,7 @@ class LogoutHandlerTest {
     void setUp() throws JOSEException {
         handler =
                 new LogoutHandler(
-                        sessionService,
-                        dynamoClientService,
-                        tokenValidationService,
-                        cloudwatchMetricsService,
-                        logoutService);
+                        sessionService, dynamoClientService, tokenValidationService, logoutService);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
@@ -115,7 +111,7 @@ class LogoutHandlerTest {
         idTokenHint = signedIDToken.serialize();
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(logoutService.handleLogout(any(), any(), any(), any(), any(), any()))
+        when(logoutService.handleLogout(any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new APIGatewayProxyResponseEvent());
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(dynamoClientService.getClient("client-id"))
@@ -147,10 +143,9 @@ class LogoutHandlerTest {
 
         handler.handleRequest(event, context);
 
-        verify(logoutService, times(1)).destroySessions(session);
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(logoutService, times(1))
                 .handleLogout(
+                        Optional.of(session),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
@@ -178,10 +173,9 @@ class LogoutHandlerTest {
 
         handler.handleRequest(event, context);
 
-        verify(logoutService, times(0)).destroySessions(any());
-        verify(cloudwatchMetricsService, times(0)).incrementLogout(any());
         verify(logoutService, times(1))
                 .handleLogout(
+                        Optional.empty(),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),
@@ -218,10 +212,9 @@ class LogoutHandlerTest {
 
         handler.handleRequest(event, context);
 
-        verify(logoutService, times(1)).destroySessions(session);
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(logoutService, times(1))
                 .handleLogout(
+                        Optional.of(session),
                         Optional.empty(),
                         Optional.of(CLIENT_LOGOUT_URI),
                         Optional.of(STATE.toString()),

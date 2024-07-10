@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -13,6 +14,7 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -80,21 +82,15 @@ public class LogoutService {
 
     private APIGatewayProxyResponseEvent generateLogoutResponse(
             URI logoutUri,
-            Optional<String> state,
             TxmaAuditUser auditUser,
             Optional<String> clientId,
             Optional<String> rpPairwiseId) {
         LOG.info("Generating logout response using URI: {}", logoutUri);
-        var uri =
-                state.map(s -> buildURI(logoutUri, Map.of(STATE_PARAMETER_KEY, s)))
-                        .orElse(logoutUri);
-
         sendAuditEvent(auditUser, clientId, rpPairwiseId);
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
+        return generateApiGatewayProxyResponse(302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
 
-    public void destroySessions(Session session) {
+    private void destroySessions(Session session) {
         for (String clientSessionId : session.getClientSessions()) {
             clientSessionService
                     .getClientSession(clientSessionId)
@@ -117,12 +113,15 @@ public class LogoutService {
     }
 
     public APIGatewayProxyResponseEvent handleLogout(
+            Optional<Session> session,
             Optional<ErrorObject> errorObject,
             Optional<URI> redirectURI,
             Optional<String> state,
             TxmaAuditUser auditUser,
             Optional<String> clientId,
             Optional<String> rpPairwiseId) {
+
+        session.ifPresent(this::destroySessions);
 
         URI logoutUri;
         if (errorObject.isPresent()) {
@@ -142,8 +141,14 @@ public class LogoutService {
                     logoutUri);
         }
 
-        return generateLogoutResponse(logoutUri, state, auditUser, clientId, rpPairwiseId);
+        var uri =
+                state.map(s -> buildURI(logoutUri, Map.of(STATE_PARAMETER_KEY, s)))
+                        .orElse(logoutUri);
+
+        cloudwatchMetricsService.incrementLogout(clientId);
+        return generateLogoutResponse(uri, auditUser, clientId, rpPairwiseId);
     }
+
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
             Session session,
@@ -177,7 +182,10 @@ public class LogoutService {
 
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(intervention));
         return generateLogoutResponse(
-                redirectURI, Optional.empty(), auditUser, Optional.of(clientId), Optional.empty());
+                redirectURI,
+                auditUser,
+                Optional.of(clientId),
+                Optional.empty());
     }
 
     private void sendAuditEvent(
