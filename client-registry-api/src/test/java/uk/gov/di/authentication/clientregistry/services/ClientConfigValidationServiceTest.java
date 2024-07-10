@@ -84,7 +84,7 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/post-redirect-logout",
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
-                        PublicKeySource.STATIC.getValue(),
+                        null,
                         VALID_PUBLIC_KEY,
                         null,
                         List.of(
@@ -436,7 +436,9 @@ class ClientConfigValidationServiceTest {
                         RS256.getName(),
                         PublicKeySource.JWKS.getValue(),
                         null,
-                        "https://valid.jwks.url.gov.uk"));
+                        "https://valid.jwks.url.gov.uk"),
+                Arguments.of(RS256.getName(), null, VALID_PUBLIC_KEY, null),
+                Arguments.of(RS256.getName(), null, null, null));
     }
 
     @Test
