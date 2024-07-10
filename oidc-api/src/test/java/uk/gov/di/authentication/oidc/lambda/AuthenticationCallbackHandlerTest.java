@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.*;
@@ -18,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
@@ -139,6 +141,18 @@ class AuthenticationCallbackHandlerTest {
     void setUp() {
         reset(initiateIPVAuthorisationService);
         reset(logoutService);
+        reset(authorizationService);
+        when(logoutService.handleReauthenticationFailureLogout(any(), any(), any(), any()))
+                .thenAnswer(
+                        args -> {
+                            var errorRedirectUri = (URI) args.getArgument(3);
+                            return new APIGatewayProxyResponseEvent()
+                                    .withStatusCode(302)
+                                    .withHeaders(
+                                            Map.of(
+                                                    ResponseHeaders.LOCATION,
+                                                    errorRedirectUri.toString()));
+                        });
         handler =
                 new AuthenticationCallbackHandler(
                         configurationService,
@@ -168,7 +182,6 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
 
-        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
@@ -252,13 +265,16 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToRpWithErrorWhenRequestIsInvalid() {
+    void shouldRedirectToRpWithErrorWhenRequestIsInvalid()
+            throws AuthenticationCallbackValidationException {
         usingValidSession();
         usingValidClientSession();
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
-        when(authorizationService.validateRequest(any(), any())).thenReturn(false);
+        doThrow(new AuthenticationCallbackValidationException())
+                .when(authorizationService)
+                .validateRequest(any(), any());
 
         var response = handler.handleRequest(event, null);
 
@@ -272,6 +288,38 @@ class AuthenticationCallbackHandlerTest {
                 List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED),
                 auditService);
 
+        verifyNoInteractions(
+                tokenService, userInfoStorageService, cloudwatchMetricsService, logoutService);
+    }
+
+    @Test
+    void shouldLogoutAndRedirectToRpWithErrorWhenRequestIsInvalid()
+            throws AuthenticationCallbackValidationException {
+        usingValidSession();
+        usingValidClientSession();
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
+        doThrow(new AuthenticationCallbackValidationException(OIDCError.LOGIN_REQUIRED, true))
+                .when(authorizationService)
+                .validateRequest(any(), any());
+
+        var response = handler.handleRequest(event, null);
+
+        assertThat(response, hasStatus(302));
+        String locationHeaderRedirect = response.getHeaders().get("Location");
+        assertThat(locationHeaderRedirect, containsString(REDIRECT_URI.toString()));
+        assertThat(locationHeaderRedirect, containsString(OIDCError.LOGIN_REQUIRED.getCode()));
+        assertThat(locationHeaderRedirect, containsString("&state=" + RP_STATE));
+
+        verifyAuditEvents(
+                List.of(OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED),
+                auditService);
+
+        verify(logoutService, times(1))
+                .handleReauthenticationFailureLogout(
+                        eq(session), eq(event), eq(CLIENT_ID.toString()), any());
+
         verifyNoInteractions(tokenService, userInfoStorageService, cloudwatchMetricsService);
     }
 
@@ -283,7 +331,6 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
         when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
-        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
 
         var response = handler.handleRequest(event, null);
 
@@ -309,7 +356,6 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                 .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
-        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
 
         var response = handler.handleRequest(event, null);
 
@@ -328,11 +374,6 @@ class AuthenticationCallbackHandlerTest {
     @Nested
     class AccountInterventions {
         private static MockedStatic<IdentityHelper> mockedIdentityHelper;
-
-        @BeforeAll
-        static void init() {
-            when(authorizationService.validateRequest(any(), any())).thenReturn(true);
-        }
 
         @BeforeEach
         void setup() throws UnsuccessfulCredentialResponseException {
