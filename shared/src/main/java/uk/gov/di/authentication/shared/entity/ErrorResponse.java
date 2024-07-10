@@ -68,8 +68,9 @@ public enum ErrorResponse {
     ERROR_1054(1054, "Account Interventions API Gateway Timeout"),
     ERROR_1055(1055, "Account Interventions API Unexpected Error"),
     ERROR_1056(1056, "User not found or no match"),
-    ERROR_1057(1057, "User entered invalid email too many times");
-
+    ERROR_1057(1057, "User entered invalid email too many times"),
+    ERROR_1058(1058, "IPV TokenResponse was not successful"),
+    ERROR_1059(1059, "Error getting reverification result");
     private int code;
 
     private String message;
