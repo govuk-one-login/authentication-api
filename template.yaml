@@ -40,13 +40,7 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  SendStorageToken:
-    !Not [
-      !Or [
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
+  SendStorageToken: !Not [!Equals [production, !Ref Environment]]
   EnableProvisionedConcurrency:
     !Or [
       !Equals [build, !Ref Environment],
