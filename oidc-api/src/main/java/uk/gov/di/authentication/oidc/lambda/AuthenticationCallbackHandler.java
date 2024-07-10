@@ -4,8 +4,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.TokenResponse;
@@ -23,6 +21,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
@@ -228,6 +227,7 @@ public class AuthenticationCallbackHandler
         ThreadContext.clearMap();
         LOG.info("Request received to AuthenticationCallbackHandler");
         attachTxmaAuditFieldFromHeaders(input.getHeaders());
+
         try {
             CookieHelper.SessionCookieIds sessionCookiesIds =
                     cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
@@ -273,13 +273,11 @@ public class AuthenticationCallbackHandler
             String clientId = authenticationRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
 
-            boolean requestValid =
-                    authorisationService.validateRequest(
-                            input.getQueryStringParameters(), userSession.getSessionId());
-
-            if (!requestValid) {
-                return generateAuthenticationErrorResponse(
-                        authenticationRequest, OAuth2Error.SERVER_ERROR, user);
+            var validationFailureResponse =
+                    generateAuthenticationErrorResponseIfRequestInvalid(
+                            authenticationRequest, input, user, userSession);
+            if (validationFailureResponse.isPresent()) {
+                return validationFailureResponse.get();
             }
 
             auditService.submitAuditEvent(
@@ -542,26 +540,57 @@ public class AuthenticationCallbackHandler
         return dimensions;
     }
 
+    private Optional<APIGatewayProxyResponseEvent>
+            generateAuthenticationErrorResponseIfRequestInvalid(
+                    AuthenticationRequest authenticationRequest,
+                    APIGatewayProxyRequestEvent input,
+                    TxmaAuditUser user,
+                    Session session) {
+        try {
+            authorisationService.validateRequest(
+                    input.getQueryStringParameters(), session.getSessionId());
+        } catch (AuthenticationCallbackValidationException e) {
+            return Optional.of(
+                    generateAuthenticationErrorResponse(
+                            authenticationRequest, input, e, user, session));
+        }
+        return Optional.empty();
+    }
+
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
             AuthenticationRequest authenticationRequest,
-            ErrorObject errorObject,
-            TxmaAuditUser user) {
+            APIGatewayProxyRequestEvent input,
+            AuthenticationCallbackValidationException exception,
+            TxmaAuditUser user,
+            Session session) {
+        var error = exception.getError();
         LOG.warn(
-                "Error in Authentication Authorisation Response. ErrorCode: {}. ErrorDescription: {}",
-                errorObject.getCode(),
-                errorObject.getDescription());
+                "Error in Authentication Authorisation Response. ErrorCode: {}. ErrorDescription: {}.{}",
+                error.getCode(),
+                error.getDescription(),
+                exception.getLogoutRequired() ? " Logging out." : "");
         auditService.submitAuditEvent(
                 OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_CALLBACK_RESPONSE_RECEIVED,
                 authenticationRequest.getClientID().getValue(),
                 user);
-        var errorResponse =
+        var errorResponseUri =
                 new AuthenticationErrorResponse(
-                        authenticationRequest.getRedirectionURI(),
-                        errorObject,
-                        authenticationRequest.getState(),
-                        authenticationRequest.getResponseMode());
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
+                                authenticationRequest.getRedirectionURI(),
+                                error,
+                                authenticationRequest.getState(),
+                                authenticationRequest.getResponseMode())
+                        .toURI();
+
+        if (exception.getLogoutRequired()) {
+            return logoutService.handleReauthenticationFailureLogout(
+                    session,
+                    input,
+                    authenticationRequest.getClientID().getValue(),
+                    errorResponseUri);
+        } else {
+            return generateApiGatewayProxyResponse(
+                    302, "", Map.of(ResponseHeaders.LOCATION, errorResponseUri.toString()), null);
+        }
     }
 
     private Long getPasswordResetTimeClaim(UserInfo userInfo) {

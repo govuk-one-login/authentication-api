@@ -51,8 +51,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent.LOG_OUT_SUCCESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -307,6 +307,20 @@ class LogoutServiceTest {
     }
 
     @Test
+    void doseNotIncrementLogoutMetricIfSessionNotPresent() {
+        logoutService.handleLogout(
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(CLIENT_LOGOUT_URI),
+                Optional.of(STATE.getValue()),
+                auditUser,
+                Optional.of(audience.get()),
+                rpPairwiseId);
+
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
         AccountIntervention intervention =
                 new AccountIntervention(new AccountInterventionState(true, false, false, false));
@@ -474,7 +488,7 @@ class LogoutServiceTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
     }
-    
+
     public static ArgumentMatcher<ClientRegistry> withClientId(String clientId) {
         return new ArgumentMatcher<>() {
             @Override
@@ -487,6 +501,29 @@ class LogoutServiceTest {
                 return "a ClientRegistry with client_id " + clientId;
             }
         };
+    }
+
+    @Test
+    void successfullyLogsOutAndGeneratesRedirectResponseForeReauthenticationFailure() {
+        var response =
+                logoutService.handleReauthenticationFailureLogout(
+                        session, event, CLIENT_ID, REAUTH_FAILURE_URI);
+
+        verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
+        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(backChannelLogoutService)
+                .sendLogoutMessage(
+                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
+        verify(auditService)
+                .submitAuditEvent(
+                        LOG_OUT_SUCCESS,
+                        CLIENT_ID,
+                        auditUser,
+                        AuditService.MetadataPair.pair("logoutReason", "reauthentication-failure"));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                is(equalTo(REAUTH_FAILURE_URI.toString())));
     }
 
     private void setupAdditionalClientSessions() {
