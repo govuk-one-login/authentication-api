@@ -51,7 +51,7 @@ public class ClientSignatureValidationService {
                 | NoSuchAlgorithmException
                 | InvalidKeySpecException
                 | JOSEException e) {
-            logError("Signed JWT", client);
+            LOG.error("Error validating Signed JWT for Client: {}", client.getClientID());
             throw e instanceof ClientSignatureValidationException clientSigValException
                     ? clientSigValException
                     : new ClientSignatureValidationException(e);
@@ -71,7 +71,9 @@ public class ClientSignatureValidationService {
                 | NoSuchAlgorithmException
                 | InvalidKeySpecException
                 | JOSEException e) {
-            logError("Token Client Assertion JWT", client);
+            LOG.error(
+                    "Error validating Token Client Assertion JWT for Client: {}",
+                    client.getClientID());
             throw new ClientSignatureValidationException(e);
         }
     }
@@ -82,10 +84,6 @@ public class ClientSignatureValidationService {
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
         KeyFactory kf = KeyFactory.getInstance(KeyType.RSA.getValue());
         return kf.generatePublic(keySpec);
-    }
-
-    private void logError(String description, ClientRegistry client) {
-        LOG.error("Error validating {} for Client: {}.", description, client.getClientID());
     }
 
     private URI getTokenURI() {
