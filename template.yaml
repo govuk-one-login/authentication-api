@@ -40,7 +40,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  SendStorageToken: !Not [!Equals [production, !Ref Environment]]
   EnableProvisionedConcurrency:
     !Or [
       !Equals [build, !Ref Environment],
@@ -1596,7 +1595,7 @@ Resources:
               !Ref Environment,
               storageTokenKeyArn,
             ]
-          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: !If [SendStorageToken, true, false]
+          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
