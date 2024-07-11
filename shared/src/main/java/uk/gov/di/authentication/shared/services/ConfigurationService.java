@@ -559,6 +559,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
     }
 
+    public String getLegacyAccountDeletionTopicArn() {
+        return System.getenv("LEGACY_ACCOUNT_DELETION_TOPIC_ARN");
+    }
+
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }

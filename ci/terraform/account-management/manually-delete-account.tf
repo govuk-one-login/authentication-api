@@ -12,7 +12,8 @@ module "account_management_manually_delete_account_role" {
     aws_iam_policy.dynamo_am_account_modifiers_read_access_policy.arn,
     aws_iam_policy.dynamo_am_account_modifiers_delete_access_policy.arn,
     local.account_modifiers_encryption_policy_arn,
-    aws_iam_policy.permit_send_email_queue_policy.arn
+    aws_iam_policy.permit_send_email_queue_policy.arn,
+    aws_iam_policy.legacy_account_deletion_topic.arn
   ]
 }
 
@@ -39,11 +40,12 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
 
   environment {
     variables = {
-      JAVA_TOOL_OPTIONS    = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-      ENVIRONMENT          = var.environment
-      EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-      TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
-      INTERNAl_SECTOR_URI  = var.internal_sector_uri
+      JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+      ENVIRONMENT                       = var.environment
+      EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
+      TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
+      INTERNAl_SECTOR_URI               = var.internal_sector_uri
+      LEGACY_ACCOUNT_DELETION_TOPIC_ARN = local.account_deletion_topic_arn
     }
   }
 
@@ -88,4 +90,35 @@ resource "aws_iam_policy" "permit_send_email_queue_policy" {
   description = "IAM policy to allow sending messages to the account management email queue"
 
   policy = data.aws_iam_policy_document.permit_send_email_queue_policy_document.json
+}
+
+data "aws_iam_policy_document" "legacy_account_deletion_topic" {
+  statement {
+    sid    = "SendAccountDeletionSNS"
+    effect = "Allow"
+
+    actions = [
+      "sns:Publish"
+    ]
+
+    resources = [
+      local.account_deletion_topic_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "legacy_account_deletion_topic" {
+  name_prefix = "permit-send-legacy-account-deletion-topic"
+  path        = "/${var.environment}/am/"
+  description = "Allow the manual account deletion lambda to post to the SNS topic owned by Home"
+  policy      = data.aws_iam_policy_document.legacy_account_deletion_topic.json
+}
+
+resource "aws_sns_topic" "mock_account_deletion_topic" {
+  count = var.legacy_account_deletion_topic_arn == null ? 1 : 0
+  name  = "${var.environment}-mock-account-deletion-topic"
+}
+
+locals {
+  account_deletion_topic_arn = coalesce(var.legacy_account_deletion_topic_arn, aws_sns_topic.mock_account_deletion_topic[0].arn)
 }
