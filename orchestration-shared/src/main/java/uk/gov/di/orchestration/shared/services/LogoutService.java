@@ -8,11 +8,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
+import uk.gov.di.orchestration.shared.entity.LogoutReason;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 
 import java.net.URI;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
 
@@ -36,6 +38,7 @@ public class LogoutService {
     private final BackChannelLogoutService backChannelLogoutService;
     private final AuthFrontend authFrontend;
     private static final String STATE_PARAMETER_KEY = "state";
+    private static final String LOGOUT_REASON = "logoutReason";
 
     public LogoutService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
@@ -80,13 +83,14 @@ public class LogoutService {
 
     private APIGatewayProxyResponseEvent generateLogoutResponse(
             URI logoutUri,
+            LogoutReason logoutReason,
             TxmaAuditUser auditUser,
             Optional<String> clientId,
             Optional<String> rpPairwiseId) {
         LOG.info(
                 "Generating logout response using URI: {}",
                 logoutUri.getHost() + logoutUri.getPath());
-        sendAuditEvent(auditUser, clientId, rpPairwiseId);
+        sendAuditEvent(auditUser, logoutReason, clientId, rpPairwiseId);
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, logoutUri.toString()), null);
     }
@@ -150,7 +154,8 @@ public class LogoutService {
                 state.map(s -> buildURI(logoutUri, Map.of(STATE_PARAMETER_KEY, s)))
                         .orElse(logoutUri);
 
-        return generateLogoutResponse(uri, auditUser, clientId, rpPairwiseId);
+        return generateLogoutResponse(
+                uri, LogoutReason.FRONT_CHANNEL, auditUser, clientId, rpPairwiseId);
     }
 
     public APIGatewayProxyResponseEvent handleReauthenticationFailureLogout(
@@ -162,7 +167,11 @@ public class LogoutService {
         destroySessions(session);
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId));
         return generateLogoutResponse(
-                errorRedirectUri, auditUser, Optional.of(clientId), Optional.empty());
+                errorRedirectUri,
+                LogoutReason.REAUTHENTICATION_FAILURE,
+                auditUser,
+                Optional.of(clientId),
+                Optional.empty());
     }
 
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
@@ -188,17 +197,27 @@ public class LogoutService {
         }
 
         return generateLogoutResponse(
-                redirectURI, auditUser, Optional.of(clientId), Optional.empty());
+                redirectURI,
+                LogoutReason.INTERVENTION,
+                auditUser,
+                Optional.of(clientId),
+                Optional.empty());
     }
 
     private void sendAuditEvent(
-            TxmaAuditUser auditUser, Optional<String> clientId, Optional<String> rpPairwiseId) {
+            TxmaAuditUser auditUser,
+            LogoutReason logoutReason,
+            Optional<String> clientId,
+            Optional<String> rpPairwiseId) {
         String auditClientId = clientId.orElse(AuditService.UNKNOWN);
-        var metadata =
-                rpPairwiseId
-                        .map(i -> new AuditService.MetadataPair[] {pair("rpPairwiseId", i)})
-                        .orElse(new AuditService.MetadataPair[] {});
-        auditService.submitAuditEvent(LOG_OUT_SUCCESS, auditClientId, auditUser, metadata);
+        var metadata = new LinkedList<AuditService.MetadataPair>();
+        metadata.add(pair(LOGOUT_REASON, logoutReason.getValue()));
+        rpPairwiseId.ifPresent(i -> metadata.add(pair("rpPairwiseId", i)));
+        auditService.submitAuditEvent(
+                LOG_OUT_SUCCESS,
+                auditClientId,
+                auditUser,
+                metadata.toArray(AuditService.MetadataPair[]::new));
     }
 
     private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {

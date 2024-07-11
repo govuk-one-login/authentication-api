@@ -197,6 +197,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
+                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
                         AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -228,6 +229,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
+                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
                         AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -259,6 +261,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
+                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
                         AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -291,6 +294,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
+                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
                         AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
@@ -406,6 +410,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         auditUserWhenNoCookie,
+                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
                         AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
@@ -442,6 +447,7 @@ class LogoutServiceTest {
                         LOG_OUT_SUCCESS,
                         CLIENT_ID,
                         auditUser,
+                        AuditService.MetadataPair.pair("logoutReason", "front-channel"),
                         AuditService.MetadataPair.pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
