@@ -28,26 +28,6 @@ public class CheckUserExistsResponse {
     @Expose
     private List<LockoutInformation> lockoutInformation;
 
-    public CheckUserExistsResponse() {}
-
-    public CheckUserExistsResponse(
-            String email, boolean doesUserExist, MFAMethodType mfaMethodType) {
-        this.email = email;
-        this.doesUserExist = doesUserExist;
-        this.mfaMethodType = mfaMethodType;
-    }
-
-    public CheckUserExistsResponse(
-            String email,
-            boolean doesUserExist,
-            MFAMethodType mfaMethodType,
-            String phoneNumberLastThree) {
-        this.email = email;
-        this.doesUserExist = doesUserExist;
-        this.mfaMethodType = mfaMethodType;
-        this.phoneNumberLastThree = phoneNumberLastThree;
-    }
-
     public CheckUserExistsResponse(
             String email,
             boolean doesUserExist,
