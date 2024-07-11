@@ -35,10 +35,6 @@ public class DynamoIdentityService extends BaseDynamoService<IdentityCredentials
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
-    public void deleteIdentityCredentials(String subjectID) {
-        delete(subjectID);
-    }
-
     public void saveIdentityClaims(
             String subjectID,
             Map<String, String> additionalClaims,
