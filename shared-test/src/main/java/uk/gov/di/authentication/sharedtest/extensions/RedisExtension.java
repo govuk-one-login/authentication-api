@@ -10,7 +10,6 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -33,7 +32,6 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.authentication.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisExtension
@@ -272,29 +270,6 @@ public class RedisExtension
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().flushall();
         }
-    }
-
-    public void addAuthCodeAndCreateClientSession(
-            String authCode,
-            String clientSessionId,
-            String email,
-            Map<String, List<String>> authRequest,
-            VectorOfTrust vtr,
-            String clientName)
-            throws Json.JsonException {
-        var clientSession = new ClientSession(authRequest, LocalDateTime.now(), vtr, clientName);
-        redis.saveWithExpiry(
-                AUTH_CODE_PREFIX.concat(authCode),
-                objectMapper.writeValueAsString(
-                        new AuthCodeExchangeData()
-                                .setClientSessionId(clientSessionId)
-                                .setEmail(email)
-                                .setClientSession(clientSession)),
-                300);
-        redis.saveWithExpiry(
-                CLIENT_SESSION_PREFIX.concat(clientSessionId),
-                objectMapper.writeValueAsString(clientSession),
-                300);
     }
 
     public void createClientSession(
