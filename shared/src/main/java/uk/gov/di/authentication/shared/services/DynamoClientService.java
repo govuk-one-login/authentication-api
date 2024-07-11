@@ -1,14 +1,11 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import java.util.List;
 import java.util.Objects;
