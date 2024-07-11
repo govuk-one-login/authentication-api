@@ -6,7 +6,6 @@ import software.amazon.cloudwatchlogs.emf.model.Unit;
 import uk.gov.di.authentication.shared.entity.Session;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
@@ -19,9 +18,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTIC
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.LOGOUT_SUCCESS;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
-import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -56,35 +52,6 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(String name, Map<String, String> dimensions) {
         putEmbeddedValue(name, 1, dimensions);
-    }
-
-    public void incrementSignInByClient(
-            Session.AccountState accountState,
-            String clientId,
-            String clientName,
-            boolean isTestJourney) {
-        if (NEW.equals(accountState) && !isTestJourney) {
-            incrementCounter(
-                    SIGN_IN_NEW_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
-        if (EXISTING.equals(accountState) && !isTestJourney) {
-            incrementCounter(
-                    SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
     }
 
     public void incrementAuthenticationSuccess(
@@ -133,16 +100,6 @@ public class CloudwatchMetricsService {
                             CLIENT_NAME.getValue(),
                             clientName));
         }
-    }
-
-    public void incrementLogout(Optional<String> clientId) {
-        incrementCounter(
-                LOGOUT_SUCCESS.getValue(),
-                Map.of(
-                        ENVIRONMENT.getValue(),
-                        configurationService.getEnvironment(),
-                        CLIENT.getValue(),
-                        clientId.orElse("unknown")));
     }
 
     public void logEmailCheckDuration(long duration) {
