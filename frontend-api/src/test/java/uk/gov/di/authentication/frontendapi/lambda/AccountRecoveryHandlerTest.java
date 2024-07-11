@@ -5,7 +5,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -38,7 +37,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountRecoveryHandlerTest {
@@ -101,11 +100,10 @@ class AccountRecoveryHandlerTest {
         var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-        var expectedResponse = new AccountRecoveryResponse(false);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        assertThat(result, hasJsonBody(expectedResponse));
+        assertThat(result, hasBody("{\"accountRecoveryPermitted\":false}"));
         verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_NOT_PERMITTED, auditContext);
     }
 
@@ -118,11 +116,10 @@ class AccountRecoveryHandlerTest {
         var body = format("{ \"email\": \"%s\" }", EMAIL.toUpperCase());
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-        var expectedResponse = new AccountRecoveryResponse(true);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        assertThat(result, hasJsonBody(expectedResponse));
+        assertThat(result, hasBody("{\"accountRecoveryPermitted\":true}"));
         verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_PERMITTED, auditContext);
     }
 
