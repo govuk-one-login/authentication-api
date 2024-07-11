@@ -128,15 +128,15 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
 
-        assertThat(loginResponse.isMfaRequired(), equalTo(level != LOW_LEVEL));
+        assertThat(loginResponse.mfaRequired(), equalTo(level != LOW_LEVEL));
         assertThat(
-                loginResponse.getLatestTermsAndConditionsAccepted(),
+                loginResponse.latestTermsAndConditionsAccepted(),
                 equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
 
         var expectedMfaType =
                 (mfaMethodType.equals(SMS) && !mfaMethodVerified) ? NONE : mfaMethodType;
-        assertThat(loginResponse.getMfaMethodType(), equalTo(expectedMfaType));
-        assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
+        assertThat(loginResponse.mfaMethodType(), equalTo(expectedMfaType));
+        assertThat(loginResponse.mfaMethodVerified(), equalTo(mfaMethodVerified));
         assertTrue(
                 Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_IN_SUCCESS));
