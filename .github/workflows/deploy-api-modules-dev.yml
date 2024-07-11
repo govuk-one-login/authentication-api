@@ -10,7 +10,7 @@ env:
   ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:706615647326:table/di-auth-non-production-artifact-lookup
 
   JAVA_VERSION: 17
-  JAVA_DISTRIBUTION: temurin
+  JAVA_DISTRIBUTION: corretto
 
 on: workflow_dispatch
 

@@ -39,7 +39,7 @@ on:
       java_distribution:
         description: "The Java distribution to use"
         type: string
-        default: "temurin"
+        default: "corretto"
 
 jobs:
   build:
