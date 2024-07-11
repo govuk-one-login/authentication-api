@@ -87,36 +87,9 @@ public class DynamoClientService implements ClientService {
     }
 
     @Override
-    public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
-        ClientRegistry clientRegistry =
-                dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
-        Optional.ofNullable(updateRequest.getRedirectUris())
-                .ifPresent(clientRegistry::withRedirectUrls);
-        Optional.ofNullable(updateRequest.getClientName())
-                .ifPresent(clientRegistry::withClientName);
-        Optional.ofNullable(updateRequest.getContacts()).ifPresent(clientRegistry::withContacts);
-        Optional.ofNullable(updateRequest.getScopes()).ifPresent(clientRegistry::withScopes);
-        Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
-                .ifPresent(clientRegistry::withPostLogoutRedirectUrls);
-        Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::withPublicKey);
-        Optional.ofNullable(updateRequest.getServiceType())
-                .ifPresent(clientRegistry::withServiceType);
-        Optional.ofNullable(updateRequest.getSectorIdentifierUri())
-                .ifPresent(clientRegistry::withSectorIdentifierUri);
-        Optional.ofNullable(updateRequest.getClaims()).ifPresent(clientRegistry::withClaims);
-        dynamoClientRegistryTable.putItem(clientRegistry);
-        return clientRegistry;
-    }
-
-    @Override
     public Optional<ClientRegistry> getClient(String clientId) {
         return Optional.ofNullable(
                 dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build()));
-    }
-
-    @Override
-    public ClientID generateClientID() {
-        return new ClientID(IdGenerator.generate());
     }
 
     @Override
