@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
@@ -65,6 +65,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -94,6 +95,7 @@ class LoginHandlerTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    public static final int MAX_ALLOWED_PASSWORD_RETRIES = 6;
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
@@ -171,7 +173,7 @@ class LoginHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -443,6 +445,10 @@ class LoginHandlerTest {
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
 
+        verify(codeStorageService).getIncorrectPasswordCount(EMAIL);
+        verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
+        verify(codeStorageService).saveBlockedForEmail(any(), any(), anyLong());
+
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
@@ -455,8 +461,9 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetriesForReauthJourney(
-            MFAMethodType mfaMethodType) {
+    void
+            shouldReturnErrorAndNotLockUserAccountOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney(
+                    MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -464,16 +471,22 @@ class LoginHandlerTest {
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))
                 .thenReturn(maxRetriesAllowed - 1);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+
+        verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
+        verify(codeStorageService).deleteIncorrectPasswordCountReauthJourney(EMAIL);
+        verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
 
         verify(auditService)
                 .submitAuditEvent(
@@ -481,17 +494,11 @@ class LoginHandlerTest {
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("incorrectPasswordCount", maxRetriesAllowed),
-                        pair("attemptNoFailedAt", maxRetriesAllowed));
+                        pair(
+                                "incorrectPasswordCount",
+                                configurationService.getMaxPasswordRetries()),
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                Optional.of(ENCODED_DEVICE_DETAILS)),
-                        pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("attemptNoFailedAt", maxRetriesAllowed),
-                        pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
     }
@@ -504,13 +511,15 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL))
+                .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -526,6 +535,7 @@ class LoginHandlerTest {
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
+
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never()).save(any());
     }
@@ -577,7 +587,7 @@ class LoginHandlerTest {
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("incorrectPasswordCount", 1),
-                        pair("attemptNoFailedAt", 6));
+                        pair("attemptNoFailedAt", MAX_ALLOWED_PASSWORD_RETRIES));
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
@@ -586,12 +596,14 @@ class LoginHandlerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(Boolean isReauthJourney) {
+    @CsvSource({"true, true", "false, true", "true, false", "false, false"})
+    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(
+            boolean isReauthJourney, boolean isReauthEnabled) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingApplicableUserCredentialsWithLogin(SMS, false);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
 
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -601,7 +613,7 @@ class LoginHandlerTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, body);
         handler.handleRequest(event, context);
 
-        if (isReauthJourney) {
+        if (isReauthJourney && isReauthEnabled) {
             verify(codeStorageService, atLeastOnce())
                     .increaseIncorrectPasswordCountReauthJourney(EMAIL);
         } else {

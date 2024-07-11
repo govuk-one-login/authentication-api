@@ -59,6 +59,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     public static final String CODE_BLOCKED_KEY_PREFIX =
             CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
     private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
+    public static final String NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN =
+            "number_of_attempts_user_allowed_to_login";
+    public static final String ATTEMPT_NO_FAILED_AT = "attemptNoFailedAt";
+    public static final String INTERNAL_SUBJECT_ID = "internalSubjectId";
+    public static final String INCORRECT_PASSWORD_COUNT = "incorrectPasswordCount";
+    public static final String PASSWORD_RESET_TYPE = "passwordResetType";
     private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
     private final AuditService auditService;
@@ -139,27 +145,23 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        attachSessionIdToLogs(userContext.getSession().getSessionId());
-        attachLogFieldToLogs(
-                JOURNEY_TYPE,
-                request.getJourneyType() != null ? request.getJourneyType().getValue() : "");
+        var journeyType =
+                request.getJourneyType() != null ? request.getJourneyType().getValue() : "missing";
 
-        LOG.info("Request received");
+        attachSessionIdToLogs(userContext.getSession().getSessionId());
+        attachLogFieldToLogs(JOURNEY_TYPE, journeyType);
 
         Optional<UserProfile> userProfileMaybe =
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
         if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
             auditService.submitAuditEvent(NO_ACCOUNT_WITH_EMAIL, auditContext);
-
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         }
 
         UserProfile userProfile = userProfileMaybe.get();
         UserCredentials userCredentials = userContext.getUserCredentials().get();
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
-
-        var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
 
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -168,6 +170,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         authenticationService);
         auditContext = auditContext.withUserId(internalCommonSubjectIdentifier.getValue());
 
+        var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
+
         int incorrectPasswordCount =
                 isReauthJourney
                         ? codeStorageService.getIncorrectPasswordCountReauthJourney(
@@ -175,41 +179,45 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         : codeStorageService.getIncorrectPasswordCount(request.getEmail());
         LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
 
-        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
-            LOG.info("User has exceeded max password retries");
+        String codeBlockedKeyPrefix =
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
 
+        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), codeBlockedKeyPrefix)) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
-                    pair("internalSubjectId", userProfile.getSubjectID()),
-                    pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
-                    pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
+                    pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
+                    pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()),
+                    pair(NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN, incorrectPasswordCount));
 
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
         }
 
         if (!credentialsAreValid(request, userProfile)) {
-            LOG.info("credentials are invalid");
             var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.INVALID_CREDENTIALS,
                     auditContext,
-                    pair("internalSubjectId", userProfile.getSubjectID()),
-                    pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
-                    pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
+                    pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
+                    pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
+                    pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
 
             if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                blockUser(
-                        userProfile.getSubjectID(),
-                        request.getEmail(),
-                        updatedIncorrectPasswordCount,
-                        isReauthJourney,
-                        auditContext);
-
+                if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
+                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
+                            request.getEmail());
+                } else {
+                    blockUser(
+                            userProfile.getSubjectID(),
+                            request.getEmail(),
+                            updatedIncorrectPasswordCount,
+                            auditContext);
+                }
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
-            if (isReauthJourney) {
+            if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
                 codeStorageService.increaseIncorrectPasswordCountReauthJourney(request.getEmail());
             } else {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
@@ -229,6 +237,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userProfile.isPhoneNumberVerified()
                         ? redactPhoneNumber(userProfile.getPhoneNumber())
                         : null;
+
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
 
         var userMfaDetail =
@@ -239,10 +248,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userProfile.isPhoneNumberVerified());
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
+
         var pairs = new ArrayList<AuditService.MetadataPair>();
-        pairs.add(pair("internalSubjectId", userProfile.getSubjectID()));
+
+        pairs.add(pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()));
+
         if (isPasswordChangeRequired) {
-            pairs.add(pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
+            pairs.add(pair(PASSWORD_RESET_TYPE, PasswordResetType.FORCED_WEAK_PASSWORD));
         }
 
         LOG.info(
@@ -292,26 +304,21 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             String subjectID,
             String email,
             int updatedIncorrectPasswordCount,
-            boolean isReauthJourney,
             AuditContext auditContext) {
         LOG.info("User has now exceeded max password retries, setting block");
 
         codeStorageService.saveBlockedForEmail(
                 email, CODE_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
 
-        if (isReauthJourney) {
-            codeStorageService.deleteIncorrectPasswordCountReauthJourney(email);
-        } else {
-            codeStorageService.deleteIncorrectPasswordCount(email);
-        }
+        codeStorageService.deleteIncorrectPasswordCount(email);
 
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                 auditContext,
-                pair("internalSubjectId", subjectID),
-                pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
+                pair(INTERNAL_SUBJECT_ID, subjectID),
+                pair(ATTEMPT_NO_FAILED_AT, updatedIncorrectPasswordCount),
                 pair(
-                        "number_of_attempts_user_allowed_to_login",
+                        NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN,
                         configurationService.getMaxPasswordRetries()));
     }
 
