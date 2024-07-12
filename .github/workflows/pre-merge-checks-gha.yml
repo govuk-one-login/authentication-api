@@ -13,7 +13,7 @@ on:
 
 jobs:
   fetch-changed-files:
-    name: Fetch changed files
+    name: Fetch changed GHA Workflows
     runs-on: ubuntu-latest
     outputs:
       all_changed_files: ${{ steps.changed-files.outputs.all_changed_files }}
@@ -32,7 +32,7 @@ jobs:
         run: echo "${{ steps.changed-files.outputs.all_changed_files }}"
 
   checks:
-    name: Run checks
+    name: Check GHA Workflows
     runs-on: ubuntu-latest
     needs: [fetch-changed-files]
     if: needs.fetch-changed-files.outputs.any_changed == 'true'

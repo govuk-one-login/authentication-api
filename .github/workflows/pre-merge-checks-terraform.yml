@@ -10,18 +10,19 @@ on:
 
 jobs:
   terraform-checks:
+    name: Terraform Validate
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Get Terraform version
-        id: getterraformversion
-        run: echo "::set-output name=version::$(cat ci/terraform/.terraform-version)"
+        id: get-terraform-version
+        run: echo "version=$(cat ci/terraform/.terraform-version)" >> "${GITHUB_OUTPUT}"
 
       - uses: hashicorp/setup-terraform@651471c36a6092792c552e8b1bef71e592b462d8 # v3.1.1
         with:
-          terraform_version: ${{ steps.getterraformversion.outputs.version }}
+          terraform_version: ${{ steps.get-terraform-version.outputs.version }}
 
       - name: Terraform Format Check
         working-directory: ci/terraform/
