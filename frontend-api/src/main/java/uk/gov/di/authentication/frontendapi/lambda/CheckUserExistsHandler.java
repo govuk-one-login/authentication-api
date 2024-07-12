@@ -183,19 +183,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var lockoutInformation =
                     Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .map(
-                                    journeyType -> {
-                                        var ttl =
-                                                codeStorageService.getMfaCodeBlockTimeToLive(
-                                                        emailAddress,
-                                                        MFAMethodType.AUTH_APP,
-                                                        journeyType);
-                                        return new LockoutInformation(
-                                                "codeBlock",
-                                                MFAMethodType.AUTH_APP,
-                                                ttl,
-                                                journeyType);
-                                    })
+                            .map(journeyType -> authAppLockoutInfo(emailAddress, journeyType))
                             .filter(info -> info.lockTTL() > 0)
                             .toList();
 
@@ -215,5 +203,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private LockoutInformation authAppLockoutInfo(String email, JourneyType journeyType) {
+        var ttl =
+                codeStorageService.getMfaCodeBlockTimeToLive(
+                        email, MFAMethodType.AUTH_APP, journeyType);
+        return new LockoutInformation("codeBlock", MFAMethodType.AUTH_APP, ttl, journeyType);
     }
 }
