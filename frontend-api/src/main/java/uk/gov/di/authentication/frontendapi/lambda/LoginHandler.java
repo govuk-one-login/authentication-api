@@ -162,7 +162,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
 
-        LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
                         userProfile,
@@ -220,7 +219,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
         }
 
-        LOG.info("Setting internal common subject identifier in user session");
         sessionService.save(
                 userContext
                         .getSession()
