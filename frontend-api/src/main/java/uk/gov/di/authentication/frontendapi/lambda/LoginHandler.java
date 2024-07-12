@@ -332,14 +332,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private boolean isPasswordResetRequired(String password) {
-        boolean isPasswordChangeRequired = false;
         try {
-            isPasswordChangeRequired = commonPasswordsService.isCommonPassword(password);
+            boolean passwordChangeRequest = commonPasswordsService.isCommonPassword(password);
+            LOG.info("Password reset required: {}", passwordChangeRequest);
+            return passwordChangeRequest;
         } catch (Exception e) {
             LOG.error("Unable to check if password was a common password");
+            return false;
         }
-        LOG.info("Password reset required: {}", isPasswordChangeRequired);
-
-        return isPasswordChangeRequired;
     }
 }
