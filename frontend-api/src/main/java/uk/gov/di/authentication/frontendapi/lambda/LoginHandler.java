@@ -282,10 +282,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     200,
                     new LoginResponse(
                             redactedPhoneNumber,
-                            userMfaDetail.isMfaRequired(),
+                            userMfaDetail,
                             termsAndConditionsAccepted,
-                            userMfaDetail.getMfaMethodType(),
-                            userMfaDetail.isMfaMethodVerified(),
                             isPasswordChangeRequired));
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
