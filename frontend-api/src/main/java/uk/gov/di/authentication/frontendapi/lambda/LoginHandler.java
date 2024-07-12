@@ -140,169 +140,168 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         attachSessionIdToLogs(userContext.getSession().getSessionId());
 
         LOG.info("Request received");
-        try {
-            var clientId = userContext.getClientId();
 
-            Optional<UserProfile> userProfileMaybe =
-                    authenticationService.getUserProfileByEmailMaybe(request.getEmail());
+        var clientId = userContext.getClientId();
 
-            if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
-                auditService.submitAuditEvent(NO_ACCOUNT_WITH_EMAIL, auditContext);
+        Optional<UserProfile> userProfileMaybe =
+                authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
-            }
+        if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
+            auditService.submitAuditEvent(NO_ACCOUNT_WITH_EMAIL, auditContext);
 
-            UserProfile userProfile = userProfileMaybe.get();
-            UserCredentials userCredentials = userContext.getUserCredentials().get();
-            auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+        }
 
-            var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
-            attachLogFieldToLogs(
-                    JOURNEY_TYPE,
-                    request.getJourneyType() != null ? request.getJourneyType().getValue() : "");
+        UserProfile userProfile = userProfileMaybe.get();
+        UserCredentials userCredentials = userContext.getUserCredentials().get();
+        auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
-            LOG.info("Calculating internal common subject identifier");
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorUri(),
-                            authenticationService);
-            auditContext = auditContext.withUserId(internalCommonSubjectIdentifier.getValue());
+        var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
+        attachLogFieldToLogs(
+                JOURNEY_TYPE,
+                request.getJourneyType() != null ? request.getJourneyType().getValue() : "");
 
-            int incorrectPasswordCount =
-                    isReauthJourney
-                            ? codeStorageService.getIncorrectPasswordCountReauthJourney(
-                                    request.getEmail())
-                            : codeStorageService.getIncorrectPasswordCount(request.getEmail());
-            LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
+        LOG.info("Calculating internal common subject identifier");
+        var internalCommonSubjectIdentifier =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile,
+                        configurationService.getInternalSectorUri(),
+                        authenticationService);
+        auditContext = auditContext.withUserId(internalCommonSubjectIdentifier.getValue());
 
-            String codeBlockedKeyPrefix =
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
-            if (codeStorageService.isBlockedForEmail(
-                    userProfile.getEmail(), codeBlockedKeyPrefix)) {
-                LOG.info("User has exceeded max password retries");
+        int incorrectPasswordCount =
+                isReauthJourney
+                        ? codeStorageService.getIncorrectPasswordCountReauthJourney(
+                                request.getEmail())
+                        : codeStorageService.getIncorrectPasswordCount(request.getEmail());
+        LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
+
+        String codeBlockedKeyPrefix =
+                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
+        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), codeBlockedKeyPrefix)) {
+            LOG.info("User has exceeded max password retries");
+
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                    auditContext,
+                    pair("internalSubjectId", userProfile.getSubjectID()),
+                    pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
+                    pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
+
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
+        }
+
+        if (!credentialsAreValid(request, userProfile)) {
+            LOG.info("credentials are invalid");
+            var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.INVALID_CREDENTIALS,
+                    auditContext,
+                    pair("internalSubjectId", userProfile.getSubjectID()),
+                    pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
+                    pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
+
+            if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+                LOG.info("User has now exceeded max password retries, setting block");
+
+                codeStorageService.saveBlockedForEmail(
+                        request.getEmail(),
+                        codeBlockedKeyPrefix,
+                        configurationService.getLockoutDuration());
+
+                if (isReauthJourney) {
+                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
+                            request.getEmail());
+                } else {
+                    codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
+                }
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         auditContext,
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
-                        pair("number_of_attempts_user_allowed_to_login", incorrectPasswordCount));
+                        pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
+                        pair(
+                                "number_of_attempts_user_allowed_to_login",
+                                configurationService.getMaxPasswordRetries()));
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
-            if (!credentialsAreValid(request, userProfile)) {
-                LOG.info("credentials are invalid");
-                var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        auditContext,
-                        pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("incorrectPasswordCount", updatedIncorrectPasswordCount),
-                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
-
-                if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                    LOG.info("User has now exceeded max password retries, setting block");
-
-                    codeStorageService.saveBlockedForEmail(
-                            request.getEmail(),
-                            codeBlockedKeyPrefix,
-                            configurationService.getLockoutDuration());
-
-                    if (isReauthJourney) {
-                        codeStorageService.deleteIncorrectPasswordCountReauthJourney(
-                                request.getEmail());
-                    } else {
-                        codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
-                    }
-
-                    auditService.submitAuditEvent(
-                            FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                            auditContext,
-                            pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
-                            pair(
-                                    "number_of_attempts_user_allowed_to_login",
-                                    configurationService.getMaxPasswordRetries()));
-
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
-                }
-
-                if (isReauthJourney) {
-                    codeStorageService.increaseIncorrectPasswordCountReauthJourney(
-                            request.getEmail());
-                } else {
-                    codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-                }
-
-                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
-            }
-
-            LOG.info("Setting internal common subject identifier in user session");
-            sessionService.save(
-                    userContext
-                            .getSession()
-                            .setInternalCommonSubjectIdentifier(
-                                    internalCommonSubjectIdentifier.getValue()));
-
-            var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
-            String redactedPhoneNumber = null;
-            if (isPhoneNumberVerified) {
-                redactedPhoneNumber =
-                        FrontendApiPhoneNumberHelper.redactPhoneNumber(
-                                userProfile.getPhoneNumber());
-            }
-            boolean termsAndConditionsAccepted = false;
-            if (Objects.nonNull(userProfile.getTermsAndConditions())) {
-                var isSmokeTestClient =
-                        userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
-                termsAndConditionsAccepted =
-                        TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
-                                userProfile.getTermsAndConditions(),
-                                configurationService.getTermsAndConditionsVersion(),
-                                isSmokeTestClient);
-            }
-            sessionService.save(userContext.getSession().setNewAccount(EXISTING));
-
-            var userMfaDetail =
-                    getUserMFADetail(
-                            userContext,
-                            userCredentials,
-                            userProfile.getPhoneNumber(),
-                            isPhoneNumberVerified);
-
-            boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
-            var pairs = new AuditService.MetadataPair[] {};
-            if (isPasswordChangeRequired) {
-                pairs =
-                        new AuditService.MetadataPair[] {
-                            pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD)
-                        };
+            if (isReauthJourney) {
+                codeStorageService.increaseIncorrectPasswordCountReauthJourney(request.getEmail());
             } else {
-                pairs =
-                        new AuditService.MetadataPair[] {
-                            pair("internalSubjectId", userProfile.getSubjectID())
-                        };
+                codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
             }
 
-            LOG.info(
-                    "User has successfully logged in with MFAType: {}. MFAVerified: {}",
-                    userMfaDetail.getMfaMethodType().getValue(),
-                    userMfaDetail.isMfaMethodVerified());
+            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+        }
 
-            auditService.submitAuditEvent(LOG_IN_SUCCESS, auditContext, pairs);
+        LOG.info("Setting internal common subject identifier in user session");
+        sessionService.save(
+                userContext
+                        .getSession()
+                        .setInternalCommonSubjectIdentifier(
+                                internalCommonSubjectIdentifier.getValue()));
 
-            if (!userMfaDetail.isMfaRequired()) {
-                cloudwatchMetricsService.incrementAuthenticationSuccess(
-                        EXISTING,
-                        clientId,
-                        userContext.getClientName(),
-                        "P0",
-                        clientService.isTestJourney(clientId, userProfile.getEmail()),
-                        false);
-            }
+        var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
+        String redactedPhoneNumber = null;
+        if (isPhoneNumberVerified) {
+            redactedPhoneNumber =
+                    FrontendApiPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
+        }
+        boolean termsAndConditionsAccepted = false;
+        if (Objects.nonNull(userProfile.getTermsAndConditions())) {
+            var isSmokeTestClient =
+                    userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
+            termsAndConditionsAccepted =
+                    TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
+                            userProfile.getTermsAndConditions(),
+                            configurationService.getTermsAndConditionsVersion(),
+                            isSmokeTestClient);
+        }
+        sessionService.save(userContext.getSession().setNewAccount(EXISTING));
+
+        var userMfaDetail =
+                getUserMFADetail(
+                        userContext,
+                        userCredentials,
+                        userProfile.getPhoneNumber(),
+                        isPhoneNumberVerified);
+
+        boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
+        var pairs = new AuditService.MetadataPair[] {};
+        if (isPasswordChangeRequired) {
+            pairs =
+                    new AuditService.MetadataPair[] {
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD)
+                    };
+        } else {
+            pairs =
+                    new AuditService.MetadataPair[] {
+                        pair("internalSubjectId", userProfile.getSubjectID())
+                    };
+        }
+
+        LOG.info(
+                "User has successfully logged in with MFAType: {}. MFAVerified: {}",
+                userMfaDetail.getMfaMethodType().getValue(),
+                userMfaDetail.isMfaMethodVerified());
+
+        auditService.submitAuditEvent(LOG_IN_SUCCESS, auditContext, pairs);
+
+        if (!userMfaDetail.isMfaRequired()) {
+            cloudwatchMetricsService.incrementAuthenticationSuccess(
+                    EXISTING,
+                    clientId,
+                    userContext.getClientName(),
+                    "P0",
+                    clientService.isTestJourney(clientId, userProfile.getEmail()),
+                    false);
+        }
+
+        try {
             return generateApiGatewayProxyResponse(
                     200,
                     new LoginResponse(
