@@ -3,10 +3,10 @@ name: checkov
 on:
   push:
     branches:
-    - main
+      - main
   pull_request:
     branches:
-    - main
+      - main
 
   workflow_dispatch:
 
@@ -15,22 +15,22 @@ jobs:
     strategy:
       matrix:
         module:
-        - account-management
-        - delivery-receipts
-        - oidc
-        - shared
-        - test-services
-        - utils
+          - account-management
+          - delivery-receipts
+          - oidc
+          - shared
+          - test-services
+          - utils
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@v12
+        uses: bridgecrewio/checkov-action@e28bcecbf174dfbefd2829b5e2ded9d5aead6e9e # v12.2821.0
         with:
           directory: ci/terraform/${{ matrix.module }}
           soft_fail: true
@@ -38,7 +38,7 @@ jobs:
           output_file_path: console,results.sarif
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12v3
         with:
           sarif_file: results.sarif
           category: ${{ matrix.module }}
@@ -50,9 +50,9 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@v12
+        uses: bridgecrewio/checkov-action@e28bcecbf174dfbefd2829b5e2ded9d5aead6e9e # v12.2821.0
         with:
           file: template.yaml
           framework: cloudformation
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload SARIF file
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12v3
         with:
           sarif_file: results.sarif
           category: orch-sam

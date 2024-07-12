@@ -1,7 +1,7 @@
 name: Pre-merge checks for SAM
 on:
   pull_request:
-    paths: ['template.yaml']
+    paths: ["template.yaml"]
     types:
       - opened
       - reopened
@@ -18,15 +18,15 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up SAM cli
-        uses: aws-actions/setup-sam@v2
+        uses: aws-actions/setup-sam@2360ef6d90015369947b45b496193ab9976a9b04 # v2
         with:
           use-installer: true
 
       - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4.0.2
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           role-to-assume: ${{ secrets.ORCH_SAM_APP_VALIDATE_ROLE_ARN }}
           aws-region: eu-west-2
