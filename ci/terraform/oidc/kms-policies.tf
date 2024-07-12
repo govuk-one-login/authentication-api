@@ -217,6 +217,7 @@ data "aws_iam_policy_document" "mfa_reset_token_kms_signing_policy_document" {
 
     actions = [
       "kms:Sign",
+      "kms:GetPublicKey" #Token Service calls GetPublicKey to derive KeyId
     ]
     resources = [
       aws_kms_key.mfa_reset_token_signing_key_ecc.arn
@@ -241,6 +242,7 @@ data "aws_iam_policy_document" "mfa_reset_jar_signing_policy_document" {
 
     actions = [
       "kms:Sign",
+      "kms:GetPublicKey" #JWT Service calls GetPublicKey to derive KeyId
     ]
     resources = [
       aws_kms_key.mfa_reset_jar_signing_key_ecc.arn
