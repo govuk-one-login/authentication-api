@@ -56,30 +56,17 @@ public class StartHandler
     private final AuditService auditService;
     private final StartService startService;
     private final ConfigurationService configurationService;
+    private static RedisConnectionService redis;
 
-    public StartHandler(
-            ClientSessionService clientSessionService,
-            SessionService sessionService,
-            AuditService auditService,
-            StartService startService,
-            ConfigurationService configurationService) {
-        this.clientSessionService = clientSessionService;
-        this.sessionService = sessionService;
-        this.auditService = auditService;
-        this.startService = startService;
-        this.configurationService = configurationService;
+    static {
+        if (System.getProperty("TEST") == null) {
+            redis = new RedisConnectionService(ConfigurationService.getInstance());
+        }
     }
 
-    public StartHandler(ConfigurationService configurationService) {
-        this.clientSessionService = new ClientSessionService(configurationService);
-        this.sessionService = new SessionService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.startService =
-                new StartService(
-                        new DynamoClientService(configurationService),
-                        new DynamoService(configurationService),
-                        sessionService);
-        this.configurationService = configurationService;
+    // Function Init
+    public StartHandler() {
+        this(ConfigurationService.getInstance(), redis);
     }
 
     public StartHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -94,8 +81,18 @@ public class StartHandler
         this.configurationService = configurationService;
     }
 
-    public StartHandler() {
-        this(ConfigurationService.getInstance());
+    // Test only constructor
+    public StartHandler(
+            ClientSessionService clientSessionService,
+            SessionService sessionService,
+            AuditService auditService,
+            StartService startService,
+            ConfigurationService configurationService) {
+        this.clientSessionService = clientSessionService;
+        this.sessionService = sessionService;
+        this.auditService = auditService;
+        this.startService = startService;
+        this.configurationService = configurationService;
     }
 
     @Override
