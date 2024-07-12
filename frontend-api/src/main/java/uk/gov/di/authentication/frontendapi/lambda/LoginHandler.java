@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
-import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -43,6 +42,7 @@ import java.util.Optional;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
@@ -221,24 +221,22 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         sessionService.save(
                 userContext
                         .getSession()
+                        .setNewAccount(EXISTING)
                         .setInternalCommonSubjectIdentifier(
                                 internalCommonSubjectIdentifier.getValue()));
 
-        var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
-        String redactedPhoneNumber = null;
-        if (isPhoneNumberVerified) {
-            redactedPhoneNumber =
-                    FrontendApiPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
-        }
+        String redactedPhoneNumber =
+                userProfile.isPhoneNumberVerified()
+                        ? redactPhoneNumber(userProfile.getPhoneNumber())
+                        : null;
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
-        sessionService.save(userContext.getSession().setNewAccount(EXISTING));
 
         var userMfaDetail =
                 getUserMFADetail(
                         userContext,
                         userCredentials,
                         userProfile.getPhoneNumber(),
-                        isPhoneNumberVerified);
+                        userProfile.isPhoneNumberVerified());
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
         var pairs = new ArrayList<AuditService.MetadataPair>();
