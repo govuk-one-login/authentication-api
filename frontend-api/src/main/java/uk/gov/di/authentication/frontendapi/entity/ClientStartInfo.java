@@ -15,4 +15,3 @@ public record ClientStartInfo(
         @SerializedName("redirectUri") @Expose URI redirectUri,
         @SerializedName("state") @Expose State state,
         @SerializedName("isOneLoginService") @Expose boolean isOneLoginService) {}
-;

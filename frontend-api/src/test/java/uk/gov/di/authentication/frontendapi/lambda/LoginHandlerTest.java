@@ -221,11 +221,11 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(
-                response.getRedactedPhoneNumber(),
+                response.redactedPhoneNumber(),
                 equalTo(
                         FrontendApiPhoneNumberHelper.redactPhoneNumber(
                                 CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -317,7 +317,7 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(false));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(false));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
@@ -351,8 +351,8 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getMfaMethodType(), equalTo(SMS));
-        assertThat(response.isMfaMethodVerified(), equalTo(true));
+        assertThat(response.mfaMethodType(), equalTo(SMS));
+        assertThat(response.mfaMethodVerified(), equalTo(true));
 
         verifyNoInteractions(cloudwatchMetricsService);
 
@@ -377,7 +377,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.isPasswordChangeRequired(), equalTo(true));
+        assertThat(response.passwordChangeRequired(), equalTo(true));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
@@ -413,7 +413,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
@@ -705,7 +705,7 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
-        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();

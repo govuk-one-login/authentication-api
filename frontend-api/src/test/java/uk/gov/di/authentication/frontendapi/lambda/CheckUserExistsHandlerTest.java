@@ -261,8 +261,8 @@ class CheckUserExistsHandlerTest {
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
                     objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-            assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
-            assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
+            assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.email());
+            assertNull(checkUserExistsResponse.phoneNumberLastThree());
         }
 
         @Test
@@ -294,7 +294,7 @@ class CheckUserExistsHandlerTest {
         assertThat(result, hasStatus(200));
         var checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.getEmail(), equalTo(EMAIL_ADDRESS));
+        assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
         verify(session).setInternalCommonSubjectIdentifier(null);
         verify(auditService)
