@@ -3,6 +3,7 @@ package uk.gov.di.accountmanagement.services;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,6 +40,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AccountDeletionServiceTest {
@@ -66,7 +68,6 @@ class AccountDeletionServiceTest {
     private static final Object testClientIdObject = mock(Object.class);
     private static final Map<String, Object> TEST_AUTHORIZER =
             Map.of("clientId", testClientIdObject);
-    private static final String SUBJECT_ID = new Subject().getValue();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -173,53 +174,91 @@ class AccountDeletionServiceTest {
                 hasItem(withMessageContaining("Failed to send account deletion email")));
     }
 
-    @Test
-    void removeAccountAudits() throws Json.JsonException {
-        // given
-        var expectedEmail = "test@example.com";
-        var expectedPhoneNumber = "+44123456789";
-        when(userProfile.getEmail()).thenReturn(expectedEmail);
-        when(userProfile.getPhoneNumber()).thenReturn(expectedPhoneNumber);
-        when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
-        when(input.getHeaders()).thenReturn(TEST_HEADERS);
-        clientSessionIdHelperMockedStatic
-                .when(() -> ClientSessionIdHelper.extractSessionIdFromHeaders(TEST_HEADERS))
-                .thenReturn(TEST_CLIENT_SESSION_ID);
-        when(input.getRequestContext()).thenReturn(proxyRequestContext);
-        when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
-        when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+    @Nested
+    class AuditTests {
 
-        // when
-        underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
+        private static final String EXPECTED_EMAIL = "test@example.com";
+        private static final String EXPECTED_PHONE_NUMBER = "+44123456789";
 
-        // then
-        verify(auditService)
-                .submitAuditEvent(
-                        eq(DELETE_ACCOUNT),
-                        argThat(
-                                auditContext ->
-                                        Objects.equals(auditContext.clientId(), TEST_CLIENT_ID)
-                                                && Objects.equals(
-                                                        auditContext.clientSessionId(),
-                                                        TEST_CLIENT_SESSION_ID)
-                                                && Objects.equals(
-                                                        auditContext.email(), expectedEmail)
-                                                && Objects.equals(
-                                                        auditContext.phoneNumber(),
-                                                        expectedPhoneNumber)));
-    }
+        @BeforeEach
+        void setup() {
+            when(userProfile.getEmail()).thenReturn(EXPECTED_EMAIL);
+            when(userProfile.getPhoneNumber()).thenReturn(EXPECTED_PHONE_NUMBER);
+            when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+        }
 
-    @Test
-    void removeAccountSucceedsIfAuditingFails() {
-        // given
-        when(userProfile.getEmail()).thenReturn("test@example.com");
-        when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-        doThrow(new RuntimeException()).when(auditService).submitAuditEvent(any(), any());
-        // then
-        assertDoesNotThrow(
-                () -> underTest.removeAccount(Optional.of(input), userProfile, Optional.empty()));
-        assertThat(
-                logging.events(),
-                hasItem(withMessageContaining("Failed to audit account deletion")));
+        @Test
+        void removeAccountAuditsForNonManualDeletion() throws Json.JsonException {
+            // given
+            when(input.getHeaders()).thenReturn(TEST_HEADERS);
+            clientSessionIdHelperMockedStatic
+                    .when(() -> ClientSessionIdHelper.extractSessionIdFromHeaders(TEST_HEADERS))
+                    .thenReturn(TEST_CLIENT_SESSION_ID);
+            when(input.getRequestContext()).thenReturn(proxyRequestContext);
+            when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
+            when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+
+            // when
+            underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
+
+            // then
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(DELETE_ACCOUNT),
+                            argThat(
+                                    auditContext ->
+                                            Objects.equals(auditContext.clientId(), TEST_CLIENT_ID)
+                                                    && Objects.equals(
+                                                            auditContext.clientSessionId(),
+                                                            TEST_CLIENT_SESSION_ID)
+                                                    && Objects.equals(
+                                                            auditContext.email(), EXPECTED_EMAIL)
+                                                    && Objects.equals(
+                                                            auditContext.phoneNumber(),
+                                                            EXPECTED_PHONE_NUMBER)),
+                            eq(buildMetadataPairs(false)));
+        }
+
+        @Test
+        void removeAccountAuditsForManualDeletion() throws Json.JsonException {
+            // given
+            when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
+            when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+
+            // when
+            underTest.removeAccount(Optional.empty(), userProfile, Optional.empty());
+
+            // then
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(DELETE_ACCOUNT),
+                            argThat(
+                                    auditContext ->
+                                            Objects.equals(auditContext.email(), EXPECTED_EMAIL)
+                                                    && Objects.equals(
+                                                            auditContext.phoneNumber(),
+                                                            EXPECTED_PHONE_NUMBER)),
+                            eq(buildMetadataPairs(true)));
+        }
+
+        @Test
+        void removeAccountSucceedsIfAuditingFails() {
+            // given
+            doThrow(new RuntimeException()).when(auditService).submitAuditEvent(any(), any());
+            // then
+            assertDoesNotThrow(
+                    () ->
+                            underTest.removeAccount(
+                                    Optional.of(input), userProfile, Optional.empty()));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining("Failed to audit account deletion")));
+        }
+
+        private AuditService.MetadataPair[] buildMetadataPairs(boolean isManualDeletion) {
+            return new AuditService.MetadataPair[] {
+                pair("manualDeletion", isManualDeletion ? "true" : "false")
+            };
+        }
     }
 }

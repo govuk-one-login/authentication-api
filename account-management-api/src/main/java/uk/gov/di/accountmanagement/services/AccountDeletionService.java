@@ -25,6 +25,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AccountDeletionService {
     private static final Logger LOG = LogManager.getLogger(AccountDeletionService.class);
@@ -86,10 +87,12 @@ public class AccountDeletionService {
 
         String persistentSessionID = AuditService.UNKNOWN;
         String ipAddress = AuditService.UNKNOWN;
+        Boolean manualDeletion = Boolean.TRUE;
         if (input.isPresent()) {
             ipAddress = PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
             ipAddress = IpAddressHelper.extractIpAddress(input.get());
+            manualDeletion = Boolean.FALSE;
         }
 
         try {
@@ -113,6 +116,10 @@ public class AccountDeletionService {
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
                             .orElse(AuditService.UNKNOWN);
+            var pairs =
+                    new AuditService.MetadataPair[] {
+                        pair("manualDeletion", manualDeletion.toString())
+                    };
             var auditContext =
                     new AuditContext(
                             clientId,
@@ -124,7 +131,7 @@ public class AccountDeletionService {
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
                             txmaAuditEncoded);
-            auditService.submitAuditEvent(DELETE_ACCOUNT, auditContext);
+            auditService.submitAuditEvent(DELETE_ACCOUNT, auditContext, pairs);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }
