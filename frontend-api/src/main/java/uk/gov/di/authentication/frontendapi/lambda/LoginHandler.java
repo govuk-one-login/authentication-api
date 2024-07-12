@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -252,18 +253,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         isPhoneNumberVerified);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
-        var pairs = new AuditService.MetadataPair[] {};
+        var pairs = new ArrayList<AuditService.MetadataPair>();
+        pairs.add(pair("internalSubjectId", userProfile.getSubjectID()));
         if (isPasswordChangeRequired) {
-            pairs =
-                    new AuditService.MetadataPair[] {
-                        pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD)
-                    };
-        } else {
-            pairs =
-                    new AuditService.MetadataPair[] {
-                        pair("internalSubjectId", userProfile.getSubjectID())
-                    };
+            pairs.add(pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
         }
 
         LOG.info(
@@ -271,7 +264,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userMfaDetail.getMfaMethodType().getValue(),
                 userMfaDetail.isMfaMethodVerified());
 
-        auditService.submitAuditEvent(LOG_IN_SUCCESS, auditContext, pairs);
+        auditService.submitAuditEvent(
+                LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
 
         if (!userMfaDetail.isMfaRequired()) {
             cloudwatchMetricsService.incrementAuthenticationSuccess(
