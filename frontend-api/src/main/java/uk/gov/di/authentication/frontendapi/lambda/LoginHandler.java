@@ -56,6 +56,8 @@ import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
+    public static final String CODE_BLOCKED_KEY_PREFIX =
+            CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
     private static final Logger LOG = LogManager.getLogger(LoginHandler.class);
     private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
@@ -174,9 +176,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         : codeStorageService.getIncorrectPasswordCount(request.getEmail());
         LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
 
-        String codeBlockedKeyPrefix =
-                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
-        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), codeBlockedKeyPrefix)) {
+        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
             LOG.info("User has exceeded max password retries");
 
             auditService.submitAuditEvent(
@@ -200,28 +200,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
             if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                LOG.info("User has now exceeded max password retries, setting block");
-
-                codeStorageService.saveBlockedForEmail(
+                blockUser(
+                        userProfile.getSubjectID(),
                         request.getEmail(),
-                        codeBlockedKeyPrefix,
-                        configurationService.getLockoutDuration());
-
-                if (isReauthJourney) {
-                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
-                            request.getEmail());
-                } else {
-                    codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
-                }
-
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContext,
-                        pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
-                        pair(
-                                "number_of_attempts_user_allowed_to_login",
-                                configurationService.getMaxPasswordRetries()));
+                        updatedIncorrectPasswordCount,
+                        isReauthJourney,
+                        auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
@@ -312,6 +296,33 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private void blockUser(
+            String subjectID,
+            String email,
+            int updatedIncorrectPasswordCount,
+            boolean isReauthJourney,
+            AuditContext auditContext) {
+        LOG.info("User has now exceeded max password retries, setting block");
+
+        codeStorageService.saveBlockedForEmail(
+                email, CODE_BLOCKED_KEY_PREFIX, configurationService.getLockoutDuration());
+
+        if (isReauthJourney) {
+            codeStorageService.deleteIncorrectPasswordCountReauthJourney(email);
+        } else {
+            codeStorageService.deleteIncorrectPasswordCount(email);
+        }
+
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                auditContext,
+                pair("internalSubjectId", subjectID),
+                pair("attemptNoFailedAt", updatedIncorrectPasswordCount),
+                pair(
+                        "number_of_attempts_user_allowed_to_login",
+                        configurationService.getMaxPasswordRetries()));
     }
 
     private boolean credentialsAreValid(LoginRequest request, UserProfile userProfile) {
