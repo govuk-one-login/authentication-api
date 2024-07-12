@@ -225,13 +225,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                 .getUserProfileByEmailMaybe(resetPasswordRequest.getEmail())
                 .map(
                         userProfile -> {
+                            var userCredentials =
+                                    authenticationService.getUserCredentialsFromEmail(
+                                            resetPasswordRequest.getEmail());
                             var userMfaDetail =
-                                    getUserMFADetail(
-                                            userContext,
-                                            authenticationService.getUserCredentialsFromEmail(
-                                                    resetPasswordRequest.getEmail()),
-                                            userProfile.getPhoneNumber(),
-                                            userProfile.isPhoneNumberVerified());
+                                    getUserMFADetail(userContext, userCredentials, userProfile);
 
                             return new ResetPasswordRequestHandlerResponse(
                                     userMfaDetail.getMfaMethodType(),

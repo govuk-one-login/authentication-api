@@ -231,12 +231,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         : null;
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
 
-        var userMfaDetail =
-                getUserMFADetail(
-                        userContext,
-                        userCredentials,
-                        userProfile.getPhoneNumber(),
-                        userProfile.isPhoneNumberVerified());
+        var userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile);
 
         boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
         var pairs = new ArrayList<AuditService.MetadataPair>();

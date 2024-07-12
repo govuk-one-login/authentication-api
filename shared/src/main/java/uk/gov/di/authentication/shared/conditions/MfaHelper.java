@@ -6,6 +6,7 @@ import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -39,21 +40,20 @@ public class MfaHelper {
     }
 
     public static UserMfaDetail getUserMFADetail(
-            UserContext userContext,
-            UserCredentials userCredentials,
-            String phoneNumber,
-            boolean isPhoneNumberVerified) {
+            UserContext userContext, UserCredentials userCredentials, UserProfile userProfile) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
-        var mfaMethodVerified = isPhoneNumberVerified;
-        var mfaMethodType = isPhoneNumberVerified ? MFAMethodType.SMS : MFAMethodType.NONE;
+        var mfaMethodVerified = userProfile.isPhoneNumberVerified();
+        var mfaMethodType =
+                userProfile.isPhoneNumberVerified() ? MFAMethodType.SMS : MFAMethodType.NONE;
 
         var mfaMethod = getPrimaryMFAMethod(userCredentials);
         if (mfaMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
             mfaMethodVerified = true;
             mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
-        } else if (!isPhoneNumberVerified && mfaMethod.isPresent()) {
+        } else if (!mfaMethodVerified && mfaMethod.isPresent()) {
             mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
         }
-        return new UserMfaDetail(isMfaRequired, mfaMethodVerified, mfaMethodType, phoneNumber);
+        return new UserMfaDetail(
+                isMfaRequired, mfaMethodVerified, mfaMethodType, userProfile.getPhoneNumber());
     }
 }
