@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.ArrayList;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -231,16 +230,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             redactedPhoneNumber =
                     FrontendApiPhoneNumberHelper.redactPhoneNumber(userProfile.getPhoneNumber());
         }
-        boolean termsAndConditionsAccepted = false;
-        if (Objects.nonNull(userProfile.getTermsAndConditions())) {
-            var isSmokeTestClient =
-                    userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
-            termsAndConditionsAccepted =
-                    TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
-                            userProfile.getTermsAndConditions(),
-                            configurationService.getTermsAndConditionsVersion(),
-                            isSmokeTestClient);
-        }
+        boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
         sessionService.save(userContext.getSession().setNewAccount(EXISTING));
 
         var userMfaDetail =
@@ -286,6 +276,18 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private boolean isTermsAndConditionsAccepted(UserContext userContext, UserProfile userProfile) {
+        if (userProfile.getTermsAndConditions() == null) {
+            return false;
+        }
+        var isSmokeTestClient =
+                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
+        return TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
+                userProfile.getTermsAndConditions(),
+                configurationService.getTermsAndConditionsVersion(),
+                isSmokeTestClient);
     }
 
     private void blockUser(
