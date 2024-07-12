@@ -108,23 +108,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.auditService = auditService;
     }
 
-    public SendNotificationHandler(ConfigurationService configurationService) {
-        super(SendNotificationRequest.class, configurationService);
-        this.emailSqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEmailQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.pendingEmailCheckSqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getPendingEmailCheckQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.codeGeneratorService = new CodeGeneratorService();
-        this.codeStorageService = new CodeStorageService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
     public SendNotificationHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         super(SendNotificationRequest.class, configurationService, redis);
