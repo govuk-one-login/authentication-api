@@ -17,8 +17,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -40,6 +38,8 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADet
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.ValidationHelper.validateEmailAddress;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsRequest>
@@ -105,17 +105,15 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         try {
             LOG.info("Processing request");
 
-            String emailAddress = request.getEmail().toLowerCase();
-            Optional<ErrorResponse> errorResponse =
-                    ValidationHelper.validateEmailAddress(emailAddress);
-            String persistentSessionId =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            String email = request.getEmail().toLowerCase();
+            Optional<ErrorResponse> errorResponse = validateEmailAddress(email);
+            String persistentSessionId = extractPersistentIdFromHeaders(input.getHeaders());
 
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
                             AuditService.UNKNOWN,
-                            emailAddress,
+                            email,
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             persistentSessionId);
@@ -127,13 +125,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+            var userProfile = authenticationService.getUserProfileByEmailMaybe(email);
             var userExists = userProfile.isPresent();
-            userContext.getSession().setEmailAddress(emailAddress);
+            userContext.getSession().setEmailAddress(email);
 
-            if (codeStorageService.isBlockedForEmail(
-                    emailAddress,
-                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
+            var codeBlockedPrefix =
+                    CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
+            if (codeStorageService.isBlockedForEmail(email, codeBlockedPrefix)) {
                 LOG.info("User account is locked");
                 sessionService.save(userContext.getSession());
 
@@ -169,8 +167,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 LOG.info("Setting internal common subject identifier in user session");
                 userContext.getSession().setInternalCommonSubjectIdentifier(internalPairwiseId);
 
-                var userCredentials =
-                        authenticationService.getUserCredentialsFromEmail(emailAddress);
+                var userCredentials = authenticationService.getUserCredentialsFromEmail(email);
                 userMfaDetail = getUserMFADetail(userContext, userCredentials, userProfile.get());
                 auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
@@ -183,13 +180,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             var lockoutInformation =
                     Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                            .map(journeyType -> authAppLockoutInfo(emailAddress, journeyType))
+                            .map(journeyType -> authAppLockoutInfo(email, journeyType))
                             .filter(info -> info.lockTTL() > 0)
                             .toList();
 
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
-                            emailAddress,
+                            email,
                             userExists,
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
