@@ -138,10 +138,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         attachSessionIdToLogs(userContext.getSession().getSessionId());
+        attachLogFieldToLogs(
+                JOURNEY_TYPE,
+                request.getJourneyType() != null ? request.getJourneyType().getValue() : "");
 
         LOG.info("Request received");
-
-        var clientId = userContext.getClientId();
 
         Optional<UserProfile> userProfileMaybe =
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
@@ -157,9 +158,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
         var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
-        attachLogFieldToLogs(
-                JOURNEY_TYPE,
-                request.getJourneyType() != null ? request.getJourneyType().getValue() : "");
 
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
@@ -294,10 +292,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (!userMfaDetail.isMfaRequired()) {
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     EXISTING,
-                    clientId,
+                    userContext.getClientId(),
                     userContext.getClientName(),
                     "P0",
-                    clientService.isTestJourney(clientId, userProfile.getEmail()),
+                    clientService.isTestJourney(userContext.getClientId(), userProfile.getEmail()),
                     false);
         }
 
