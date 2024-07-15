@@ -276,7 +276,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix)) {
             return;
         }
-
         boolean reducedLockout =
                 List.of(CodeRequestType.SMS_REGISTRATION, CodeRequestType.SMS_ACCOUNT_RECOVERY)
                         .contains(CodeRequestType.getCodeRequestType(mfaMethodType, journeyType));
@@ -285,7 +284,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         ? configurationService.getReducedLockoutDuration()
                         : configurationService.getLockoutDuration();
 
-        codeStorageService.saveBlockedForEmail(emailAddress, codeBlockedKeyPrefix, blockDuration);
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            codeStorageService.saveBlockedForEmail(
+                    emailAddress, codeBlockedKeyPrefix, blockDuration);
+        }
 
         if (mfaMethodType == MFAMethodType.SMS) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);

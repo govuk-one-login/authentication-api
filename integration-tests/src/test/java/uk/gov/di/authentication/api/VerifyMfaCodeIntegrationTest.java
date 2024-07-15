@@ -595,7 +595,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
         assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
-        assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
+        } else {
+            assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
+        }
         assertTrue(userStore.isAccountVerified(EMAIL_ADDRESS));
         assertTrue(userStore.isAuthAppVerified(EMAIL_ADDRESS));
     }
@@ -811,7 +815,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var isAccountVerified = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var expectedPhoneNumber =
                 journeyType.equals(JourneyType.ACCOUNT_RECOVERY) ? PHONE_NUMBER : null;
-        ;
+
         assertThat(
                 userStore.getPhoneNumberForUser(EMAIL_ADDRESS).orElse(null),
                 equalTo(expectedPhoneNumber));

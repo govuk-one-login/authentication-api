@@ -288,7 +288,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             case ERROR_1027:
             case ERROR_1039:
             case ERROR_1048:
-                blockCodeForSession(session, codeBlockedKeyPrefix);
+                if (journeyType != JourneyType.REAUTHENTICATION) {
+                    blockCodeForSession(session, codeBlockedKeyPrefix);
+                }
                 resetIncorrectMfaCodeAttemptsCount(session);
                 auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
                 break;
