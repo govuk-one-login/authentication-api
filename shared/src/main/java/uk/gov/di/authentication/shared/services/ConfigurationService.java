@@ -87,6 +87,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean supportReauthSignoutEnabled() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", String.valueOf(false))
+                .equals("true");
+    }
+
     public long getLockoutDuration() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
     }
@@ -292,16 +298,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
 
+    public Optional<String> getNotifyApiUrl() {
+        return Optional.ofNullable(System.getenv("NOTIFY_URL"));
+    }
+
     public String getInternalSectorUri() {
         return System.getenv("INTERNAl_SECTOR_URI");
     }
 
     public String getNotifyApiKey() {
         return System.getenv("NOTIFY_API_KEY");
-    }
-
-    public Optional<String> getNotifyApiUrl() {
-        return Optional.ofNullable(System.getenv("NOTIFY_URL"));
     }
 
     public String getNotifyCallbackBearerToken() {
