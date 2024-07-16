@@ -555,6 +555,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ALIAS");
     }
 
+    public String getMfaResetJarSigningKeyId() {
+        return System.getenv("MFA_RESET_JAR_SIGNING_KEY_ID");
+    }
+
     public URI getCredentialStoreURI() {
         return getURIOrDefault("CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk");
     }
@@ -571,6 +575,37 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().containsKey(envVar)
                 ? Optional.of(URI.create(System.getenv(envVar)))
                 : Optional.empty();
+    }
+
+    public String getStorageTokenClaimName() {
+        return System.getenv()
+                .getOrDefault(
+                        "STORAGE_TOKEN_CLAIM_NAME",
+                        "https://vocab.account.gov.uk/v1/storageAccessToken");
+    }
+
+    public String getAuthIssuerClaim() {
+        return System.getenv().getOrDefault("AUTH_ISSUER_CLAIM", "");
+    }
+
+    public URI getMfaResetCallbackURI() {
+        return getURIOrDefault("MFA_RESET_CALLBACK_URI", "");
+    }
+
+    public String getIPVAuthEncryptionPublicKey() { //
+        var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
+        try {
+            var request =
+                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
+            return getSsmClient().getParameter(request).parameter().value();
+        } catch (ParameterNotFoundException e) {
+            LOG.error("No parameter exists with name: {}", paramName);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public URI getIPVAuthorisationURI() {
+        return getURIOrDefault("IPV_AUTHORIZATION_URI", "");
     }
 
     public URI getIPVBackendURI() {
