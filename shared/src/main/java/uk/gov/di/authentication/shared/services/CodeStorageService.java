@@ -237,16 +237,6 @@ public class CodeStorageService {
         }
     }
 
-    public void saveAuthorizationCode(
-            String authorizationCode, String clientSessionId, long codeExpiryTime) {
-        try {
-            redisConnectionService.saveWithExpiry(
-                    authorizationCode, clientSessionId, codeExpiryTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private String getPrefixForNotificationType(NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:
