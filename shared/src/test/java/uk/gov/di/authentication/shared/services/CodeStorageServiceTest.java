@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,7 +9,6 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -29,11 +27,9 @@ class CodeStorageServiceTest {
     private static final String TEST_EMAIL_HASH =
             "f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String CODE = "123456";
-    private static final String SUBJECT = "some-subject";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long PW_CODE_EXPIRY_TIME = 900;
     private static final long ACCOUNT_CREATION_CODE_EXPIRY_TIME = 3600;
-    private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
@@ -67,10 +63,6 @@ class CodeStorageServiceTest {
         public String getKeyWithMfaTypeModifier(MFAMethodType mfaMethodType) {
             return prefix + mfaMethodType.getValue() + TEST_EMAIL_HASH;
         }
-
-        public String getKeyWithTestCode() {
-            return prefix + CODE;
-        }
     }
 
     @BeforeAll
@@ -88,24 +80,6 @@ class CodeStorageServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.EMAIL_OTP_CODE.getKeyWithTestEmailHash(), CODE, CODE_EXPIRY_TIME);
-    }
-
-    @Test
-    void shouldRetrievePasswordResetSubject() {
-        when(redisConnectionService.getValue(RedisKeys.RESET_PASSWORD_KEY.getKeyWithTestCode()))
-                .thenReturn(SUBJECT);
-
-        String subject = codeStorageService.getSubjectWithPasswordResetCode(CODE).get();
-
-        assertThat(subject, is(SUBJECT));
-    }
-
-    @Test
-    void shouldCallRedisToDeletePasswordResetSubject() {
-        codeStorageService.deleteSubjectWithPasswordResetCode(CODE);
-
-        verify(redisConnectionService)
-                .deleteValue(RedisKeys.RESET_PASSWORD_KEY.getKeyWithTestCode());
     }
 
     @Test
@@ -277,17 +251,6 @@ class CodeStorageServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.MFA_CODE.getKeyWithTestEmailHash(), CODE, CODE_EXPIRY_TIME);
-    }
-
-    @Test
-    void shouldCallRedisWithAuthorizationCode() {
-        String authorizationCode = new AuthorizationCode().getValue();
-        String clientSessionId = IdGenerator.generate();
-        codeStorageService.saveAuthorizationCode(
-                authorizationCode, clientSessionId, AUTH_CODE_EXPIRY_TIME);
-
-        verify(redisConnectionService)
-                .saveWithExpiry(authorizationCode, clientSessionId, AUTH_CODE_EXPIRY_TIME);
     }
 
     @Test
