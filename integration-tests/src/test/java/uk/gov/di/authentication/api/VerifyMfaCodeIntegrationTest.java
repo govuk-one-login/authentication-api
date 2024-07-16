@@ -90,7 +90,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void beforeEachSetup() throws Json.JsonException {
         handler =
                 new VerifyMfaCodeHandler(
-                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
+                        redisConnectionService);
 
         txmaAuditQueue.clear();
 

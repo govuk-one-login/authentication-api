@@ -284,7 +284,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         ? configurationService.getReducedLockoutDuration()
                         : configurationService.getLockoutDuration();
 
-        if (journeyType != JourneyType.REAUTHENTICATION) {
+        if (!configurationService.isReauthSignoutEnabled()
+                || journeyType != JourneyType.REAUTHENTICATION) {
             codeStorageService.saveBlockedForEmail(
                     emailAddress, codeBlockedKeyPrefix, blockDuration);
         }

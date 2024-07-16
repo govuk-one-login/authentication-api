@@ -602,6 +602,11 @@ class ConfigurationServiceTest {
         assertFalse(configurationService.supportReauthSignoutEnabled());
     }
 
+    @Test
+    void isReauthSignoutEnabledShouldEqualDefaultWhenEnvVarUnset() {
+        assertEquals(false, configurationService.isReauthSignoutEnabled());
+    }
+
     private static Stream<Arguments> commaSeparatedStringContains() {
         return Stream.of(
                 Arguments.of("1234", null, false),

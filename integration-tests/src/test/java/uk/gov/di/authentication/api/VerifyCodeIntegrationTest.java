@@ -62,7 +62,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new VerifyCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler =
+                new VerifyCodeHandler(
+                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
+                        redisConnectionService);
         txmaAuditQueue.clear();
     }
 

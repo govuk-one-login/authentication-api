@@ -183,6 +183,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
+    public boolean isReauthSignoutEnabled() {
+        return System.getenv()
+                .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", FEATURE_SWITCH_OFF)
+                .equals("true");
+    }
+
     public boolean isBulkUserEmailEmailSendingEnabled() {
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)

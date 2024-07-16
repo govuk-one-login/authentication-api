@@ -648,16 +648,16 @@ variable "support_email_check_enabled" {
   description = "Feature flag which toggles the Experian email check on and off"
 }
 
-variable "support_reauth_signout_enabled" {
-  default     = false
-  type        = bool
-  description = "Feature flag which toggles sign-out instead of lockout for reauth journeys"
-}
-
 variable "send_storage_token_to_ipv_enabled" {
   default     = false
   type        = bool
   description = "Feature flag which toggles whether signed VC storage token is included as claim in JAR sent to IPV"
+}
+
+variable "support_reauth_signout_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles sign-out instead of lockout for reauth journeys"
 }
 
 variable "orch_account_id" {
