@@ -52,3 +52,15 @@ variable "access_logging_template" {
   description = "The access logging template"
   type        = string
 }
+
+variable "domain_name" {
+  description = "The domain name for the API Gateway"
+  type        = string
+  default    = ""
+}
+
+variable "waf_arns" {
+  description = "The ARNs of any WAFs to attach to the API Gateway"
+  type        = list(string)
+  default     = []
+}

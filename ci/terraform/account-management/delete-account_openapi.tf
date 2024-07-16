@@ -1,4 +1,20 @@
-module "delete-account_openapi" {
+module "account_management_api_remove_account_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-api-remove-account-role"
+  vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_user_delete_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    module.account_management_txma_audit.access_policy_arn,
+    aws_iam_policy.dynamo_am_account_modifiers_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_account_modifiers_delete_access_policy.arn,
+    local.account_modifiers_encryption_policy_arn
+  ]
+}
+module "delete-account" {
   source = "../modules/openapi-endpoint-module"
 
   endpoint_name = "delete-account"

@@ -1,4 +1,18 @@
-module "authenticate_openapi" {
+module "account_management_api_authenticate_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-api-authenticate-role"
+  vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.parameter_policy.arn,
+    module.account_management_txma_audit.access_policy_arn
+  ]
+}
+
+module "authenticate" {
   source = "../modules/openapi-endpoint-module"
 
   endpoint_name = "authenticate"

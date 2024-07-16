@@ -1,4 +1,22 @@
-module "send-otp-notification_openapi" {
+module "account_management_api_send_notification_role" {
+  source      = "../modules/lambda-role"
+  environment = var.environment
+  role_name   = "account-management-api-send-notification-role"
+  vpc_arn     = local.vpc_arn
+
+  policies_to_attach = [
+    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_client_registry_read_access_policy.arn,
+    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.parameter_policy.arn,
+    module.account_management_txma_audit.access_policy_arn,
+    local.client_registry_encryption_policy_arn,
+    local.user_profile_encryption_policy_arn,
+    local.pending_email_check_queue_access_policy_arn
+  ]
+}
+
+module "send-otp-notification" {
   source = "../modules/openapi-endpoint-module"
 
   endpoint_name = "send-otp-notification"
