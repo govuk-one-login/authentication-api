@@ -219,19 +219,6 @@ public class CodeStorageService {
         }
     }
 
-    public Optional<String> getSubjectWithPasswordResetCode(String code) {
-        return Optional.ofNullable(
-                redisConnectionService.getValue(RESET_PASSWORD_KEY_PREFIX + code));
-    }
-
-    public void deleteSubjectWithPasswordResetCode(String code) {
-        long numberOfKeysRemoved =
-                redisConnectionService.deleteValue(RESET_PASSWORD_KEY_PREFIX + code);
-        if (numberOfKeysRemoved == 0) {
-            LOG.info(format("No key was deleted for code: %s", code));
-        }
-    }
-
     public Optional<String> getOtpCode(String emailAddress, NotificationType notificationType) {
         String prefix = getPrefixForNotificationType(notificationType);
         return Optional.ofNullable(

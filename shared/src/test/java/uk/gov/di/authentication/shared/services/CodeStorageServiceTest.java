@@ -29,7 +29,6 @@ class CodeStorageServiceTest {
     private static final String TEST_EMAIL_HASH =
             "f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String CODE = "123456";
-    private static final String SUBJECT = "some-subject";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long PW_CODE_EXPIRY_TIME = 900;
     private static final long ACCOUNT_CREATION_CODE_EXPIRY_TIME = 3600;
@@ -67,10 +66,6 @@ class CodeStorageServiceTest {
         public String getKeyWithMfaTypeModifier(MFAMethodType mfaMethodType) {
             return prefix + mfaMethodType.getValue() + TEST_EMAIL_HASH;
         }
-
-        public String getKeyWithTestCode() {
-            return prefix + CODE;
-        }
     }
 
     @BeforeAll
@@ -88,24 +83,6 @@ class CodeStorageServiceTest {
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.EMAIL_OTP_CODE.getKeyWithTestEmailHash(), CODE, CODE_EXPIRY_TIME);
-    }
-
-    @Test
-    void shouldRetrievePasswordResetSubject() {
-        when(redisConnectionService.getValue(RedisKeys.RESET_PASSWORD_KEY.getKeyWithTestCode()))
-                .thenReturn(SUBJECT);
-
-        String subject = codeStorageService.getSubjectWithPasswordResetCode(CODE).get();
-
-        assertThat(subject, is(SUBJECT));
-    }
-
-    @Test
-    void shouldCallRedisToDeletePasswordResetSubject() {
-        codeStorageService.deleteSubjectWithPasswordResetCode(CODE);
-
-        verify(redisConnectionService)
-                .deleteValue(RedisKeys.RESET_PASSWORD_KEY.getKeyWithTestCode());
     }
 
     @Test
