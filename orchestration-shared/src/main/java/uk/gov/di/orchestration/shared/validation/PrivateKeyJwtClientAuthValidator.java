@@ -40,6 +40,8 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
     public ClientRegistry validateTokenAuthAndReturnClientRegistryIfValid(
             String requestBody, Map<String, String> requestHeaders)
             throws TokenAuthInvalidException {
+        LOG.info("requestBody: " + requestBody);
+        LOG.info("requestHeaders: " + requestHeaders.toString());
         try {
             LOG.info("Validating private_key_jwt");
             var privateKeyJWT = PrivateKeyJWT.parse(requestBody);
