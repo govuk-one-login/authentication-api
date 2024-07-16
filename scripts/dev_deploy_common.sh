@@ -144,7 +144,7 @@ fi
 
 source "${DIR}/scripts/export_aws_creds.sh"
 
-echo -n "Getting Terraform variables from Secrets Manager ... "
+echo -n "Retrieving Terraform variables from Secrets Manager ... "
 
 source "${DIR}/scripts/read_secrets__main.sh" "${DEPLOY_ENV}"
 echo "done!"
