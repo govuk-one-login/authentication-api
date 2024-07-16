@@ -68,19 +68,10 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
-variable "use_localstack" {
-  type = bool
-}
-
 variable "default_tags" {
   default     = {}
   type        = map(string)
   description = "Default tags to apply to all resources"
-}
-
-variable "authorizer_id" {
-  type    = string
-  default = null
 }
 
 variable "cloudwatch_key_arn" {
@@ -132,4 +123,10 @@ variable "max_provisioned_concurrency" {
 
 variable "scaling_trigger" {
   default = 0.7
+}
+
+variable "api_gateway_timeout" {
+  type        = number
+  description = "The timeout for the API Gateway in millis"
+  default     = 29000
 }
