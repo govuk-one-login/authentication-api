@@ -1,5 +1,5 @@
 output "di_auth_ext_api_id" {
-  value = aws_api_gateway_rest_api.di_auth_ext_api.id
+  value = module.auth-external-api_gateway.api_gateway_id
 }
 
 output "vpce_id" {

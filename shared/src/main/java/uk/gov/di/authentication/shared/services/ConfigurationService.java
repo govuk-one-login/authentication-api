@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -15,6 +17,7 @@ import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
@@ -196,12 +199,50 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
     }
 
+    public String getAuthenticationVPCEndpointID() throws NullPointerException {
+        return System.getenv().get("AUTHENTICATION_VPC_ENDPOINT_ID");
+    }
+
+    public String getOrchestrationVPCEndpointID() throws NullPointerException {
+        return System.getenv().get("ORCHESTRATION_VPC_ENDPOINT_ID");
+    }
+
     public URI getAuthenticationBackendURI() {
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+    }
+    public URI getAuthenticationBackendURI(String apiID, String stage) throws URISyntaxException {
+        String endpointID;
+        try {
+            endpointID = getAuthenticationVPCEndpointID();
+        }
+        catch (Exception e) {
+            return getAuthenticationBackendURI();
+        }
+        String host =  apiID + endpointID + ".execute-api." + getAwsRegion() + ".amazonaws.com";
+        return new URIBuilder()
+                .setScheme("https")
+                .setHost(host)
+                .setPath(stage + "/")
+                .build();
     }
 
     public URI getOrchestrationBackendURI() {
         return URI.create(System.getenv().getOrDefault("ORCHESTRATION_BACKEND_URI", ""));
+    }
+    public URI getOrchestrationBackendURI(String apiID, String stage) throws URISyntaxException {
+        String endpointID;
+        try {
+            endpointID = getOrchestrationVPCEndpointID();
+        }
+        catch (Exception e) {
+            return getOrchestrationBackendURI();
+        }
+        String host =  apiID + endpointID + ".execute-api." + getAwsRegion() + ".amazonaws.com";
+        return new URIBuilder()
+                .setScheme("https")
+                .setHost(host)
+                .setPath(stage + "/")
+                .build();
     }
 
     public String getContactUsLinkRoute() {

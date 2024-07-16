@@ -68,7 +68,7 @@ locals {
   pepper_ssm_parameter_policy                         = data.terraform_remote_state.shared.outputs.pepper_ssm_parameter_policy
   lambda_code_signing_configuration_arn               = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
   auth_code_store_signing_configuration_arn           = data.terraform_remote_state.shared.outputs.auth_code_store_signing_configuration_arn
-  di_auth_ext_api_id                                  = data.terraform_remote_state.auth-ext-api.outputs.di_auth_ext_api_id
+  di_auth_ext_api_id                                  = data.terraform_remote_state.auth-ext-api.outputs.di_auth_ext_api_openapi_id
   vpce_id                                             = data.terraform_remote_state.auth-ext-api.outputs.vpce_id
   authentication_callback_userinfo_encryption_key_arn = data.terraform_remote_state.shared.outputs.authentication_callback_userinfo_encryption_key_arn
   client_registry_encryption_key_arn                  = data.terraform_remote_state.shared.outputs.client_registry_encryption_key_arn

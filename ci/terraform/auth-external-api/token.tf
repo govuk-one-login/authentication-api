@@ -19,12 +19,10 @@ module "auth_token_role" {
 }
 
 module "auth_token" {
-  source = "../modules/endpoint-module"
+  source = "../modules/openapi-endpoint-module"
 
-  endpoint_name   = "auth-token"
-  path_part       = "token"
-  endpoint_method = ["POST"]
-  environment     = var.environment
+  endpoint_name = "auth-token"
+  environment   = var.environment
 
   handler_environment_variables = {
     ENVIRONMENT                               = var.environment
@@ -33,17 +31,14 @@ module "auth_token" {
     DYNAMO_ENDPOINT                           = null
     AUTHENTICATION_AUTHORIZATION_CALLBACK_URI = var.authentication_auth_callback_uri
     ORCH_CLIENT_ID                            = var.orch_client_id
-    AUTHENTICATION_BACKEND_URI                = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
-    ORCHESTRATION_BACKEND_URI                 = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${var.orch_api_vpc_endpoint_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
+    ORCHESTRATION_VPC_ENDPOINT_ID             = var.orch_api_vpc_endpoint_id
+    AUTHENTICATION_VPC_ENDPOINT_ID            = data.aws_vpc_endpoint.auth_api_vpc_endpoint.id
     ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY     = var.orch_to_auth_public_signing_key
     INTERNAl_SECTOR_URI                       = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest"
   handler_runtime       = "java17"
 
-  rest_api_id      = aws_api_gateway_rest_api.di_auth_ext_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_auth_ext_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_auth_ext_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "auth-token", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "auth-token", local.default_performance_parameters).concurrency
@@ -66,10 +61,4 @@ module "auth_token" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = false
-
-  depends_on = [
-    aws_api_gateway_rest_api.di_auth_ext_api,
-  ]
 }

@@ -17,7 +17,7 @@ resource "aws_api_gateway_rest_api" "rest_api" {
   }
 }
 
-resource "aws_api_gateway_rest_api_policy" "di_auth_ext_api_policy" {
+resource "aws_api_gateway_rest_api_policy" "rest_api_policy" {
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
   policy      = data.aws_iam_policy_document.rest_api_policy_document.json
 }
@@ -63,7 +63,7 @@ resource "aws_api_gateway_deployment" "deployment" {
   }
 
   depends_on = [
-    aws_api_gateway_rest_api_policy.di_auth_ext_api_policy, # needed for first-time deployment
+    aws_api_gateway_rest_api_policy.rest_api_policy, # needed for first-time deployment
   ]
   # todo: Check this works properly when the lambda changes
 }

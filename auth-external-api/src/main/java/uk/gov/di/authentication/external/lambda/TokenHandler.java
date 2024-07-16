@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -116,11 +117,12 @@ public class TokenHandler
         }
 
         try {
-            var authenticationBackendURI = configurationService.getAuthenticationBackendURI();
+            APIGatewayProxyRequestEvent.ProxyRequestContext context = input.getRequestContext();
+            var authenticationBackendURI = configurationService.getAuthenticationBackendURI(context.getApiId(), context.getStage());
             var authExternalApiTokenEndpoint =
                     buildURI(authenticationBackendURI.toString(), "token");
 
-            var orchestrationBackendURI = configurationService.getOrchestrationBackendURI();
+            var orchestrationBackendURI = configurationService.getOrchestrationBackendURI(context.getApiId(), context.getStage());
             var orchAuthExternalApiTokenEndpoint =
                     buildURI(orchestrationBackendURI.toString(), "token");
 
@@ -208,6 +210,8 @@ public class TokenHandler
                     tokenUtilityService.generateTokenErrorResponse(e.getOAuth2Error());
             return generateApiGatewayProxyResponse(
                     tokenErrorResponse.getStatusCode(), tokenErrorResponse.getContent());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
         }
     }
 
