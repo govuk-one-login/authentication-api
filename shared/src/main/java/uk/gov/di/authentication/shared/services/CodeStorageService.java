@@ -52,15 +52,6 @@ public class CodeStorageService {
         this.redisConnectionService = redisConnectionService;
     }
 
-    public int getIncorrectMfaCodeAttemptsCount(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
-    }
-
-    public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        var prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        return getCount(email, prefix);
-    }
-
     public void increaseIncorrectMfaCodeAttemptsCount(String email) {
         increaseCount(
                 email,
@@ -75,13 +66,22 @@ public class CodeStorageService {
                 configurationService.getAccountCreationLockoutCountTTL());
     }
 
+    public int getIncorrectMfaCodeAttemptsCount(String email) {
+        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+    }
+
+    public void deleteIncorrectMfaCodeAttemptsCount(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+    }
+
     public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
         String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
         increaseCount(email, prefix, configurationService.getLockoutCountTTL());
     }
 
-    public void deleteIncorrectMfaCodeAttemptsCount(String email) {
-        deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+    public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        var prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
+        return getCount(email, prefix);
     }
 
     public void deleteIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
@@ -96,11 +96,27 @@ public class CodeStorageService {
                 configurationService.getIncorrectPasswordLockoutCountTTL());
     }
 
+    public int getIncorrectPasswordCount(String email) {
+        return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+    }
+
+    public void deleteIncorrectPasswordCount(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+    }
+
     public void increaseIncorrectEmailCount(String email) {
         increaseCount(
                 email,
                 MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX,
                 configurationService.getLockoutCountTTL());
+    }
+
+    public int getIncorrectEmailCount(String email) {
+        return getCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
+    }
+
+    public void deleteIncorrectEmailCount(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
     }
 
     public void increaseIncorrectPasswordCountReauthJourney(String email) {
@@ -110,29 +126,12 @@ public class CodeStorageService {
                 configurationService.getLockoutCountTTL());
     }
 
-    private void increaseCount(String email, String prefix, long ttl) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = prefix + encodedHash;
-        Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
-        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
-        try {
-            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), ttl);
-            LOG.info("count increased from: {} to: {}", count, newCount);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public int getIncorrectPasswordCount(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
-    }
-
-    public int getIncorrectEmailCount(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
-    }
-
     public int getIncorrectPasswordCountReauthJourney(String email) {
         return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+    }
+
+    public void deleteIncorrectPasswordCountReauthJourney(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
     }
 
     public long getMfaCodeBlockTimeToLive(
@@ -140,41 +139,6 @@ public class CodeStorageService {
         var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         return getTTL(email, codeBlockedKeyPrefix);
-    }
-
-    private long getTTL(String email, String prefix) {
-        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
-    }
-
-    private int getCount(String email, String prefix) {
-        Optional<String> count =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(
-                                prefix + HashHelper.hashSha256String(email)));
-        return count.map(Integer::parseInt).orElse(0);
-    }
-
-    public void deleteIncorrectPasswordCount(String email) {
-        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
-    }
-
-    public void deleteIncorrectEmailCount(String email) {
-        deleteCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
-    }
-
-    public void deleteIncorrectPasswordCountReauthJourney(String email) {
-        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
-    }
-
-    private void deleteCount(String email, String prefix) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = prefix + encodedHash;
-
-        try {
-            redisConnectionService.deleteValue(key);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public void saveBlockedForEmail(String email, String prefix, long codeBlockedTime) {
@@ -252,5 +216,41 @@ public class CodeStorageService {
         }
         throw new RuntimeException(
                 String.format("No redis prefix key configured for %s", notificationType));
+    }
+
+    private void increaseCount(String email, String prefix, long ttl) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = prefix + encodedHash;
+        Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
+        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
+        try {
+            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), ttl);
+            LOG.info("count increased from: {} to: {}", count, newCount);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private int getCount(String email, String prefix) {
+        Optional<String> count =
+                Optional.ofNullable(
+                        redisConnectionService.getValue(
+                                prefix + HashHelper.hashSha256String(email)));
+        return count.map(Integer::parseInt).orElse(0);
+    }
+
+    private void deleteCount(String email, String prefix) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = prefix + encodedHash;
+
+        try {
+            redisConnectionService.deleteValue(key);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private long getTTL(String email, String prefix) {
+        return redisConnectionService.getTimeToLive(prefix + HashHelper.hashSha256String(email));
     }
 }
