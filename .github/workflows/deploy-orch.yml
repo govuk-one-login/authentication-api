@@ -38,18 +38,14 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'corretto'
+          java-version: "17"
+          distribution: "corretto"
           cache: gradle
 
-      - name: Cache SAM
-        uses: actions/cache@v4
-        with:
-          path: .aws-sam/cache
-          key: orch-sam
-
       - name: SAM build
-        run: sam build --cached --parallel
+        run: |
+          ./gradlew --no-daemon --parallel :oidc:buildZip :ipv-api:buildZip :doc-checking-app-api:buildZip :client-registry-api:buildZip
+          sam build --parallel
 
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@v3.8

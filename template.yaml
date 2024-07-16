@@ -392,7 +392,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-FetchJwksFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
@@ -430,7 +430,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-OpenIdConfigurationFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref OpenIdConfigurationFunctionLogGroup
@@ -587,7 +587,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-TrustmarkFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TrustmarkFunctionLogGroup
@@ -737,7 +737,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-BackChannelLogoutRequestFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref BackChannelLogoutRequestFunctionLogGroup
@@ -876,7 +876,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-DocAppCallbackFunction
       AutoPublishAlias: latest
-      CodeUri: ./doc-checking-app-api
+      CodeUri: ./doc-checking-app-api/build/distributions/doc-checking-app-api.zip
       Handler: uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref DocAppCallbackFunctionLogGroup
@@ -1042,7 +1042,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-TokenFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref TokenFunctionLogGroup
@@ -1237,7 +1237,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-LogoutFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref LogoutFunctionLogGroup
@@ -1441,7 +1441,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-AuthenticationCallbackFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthenticationCallbackFunctionLogGroup
@@ -1722,7 +1722,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-JwksFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref JwksFunctionLogGroup
@@ -1885,7 +1885,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-AuthorisationFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthorisationFunctionLogGroup
@@ -2174,7 +2174,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-UserInfoFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UserInfoFunctionLogGroup
@@ -2372,7 +2372,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-AuthCodeFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.AuthCodeHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref AuthCodeFunctionLogGroup
@@ -2554,7 +2554,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-UpdateClientConfigFunction
       AutoPublishAlias: latest
-      CodeUri: ./client-registry-api
+      CodeUri: ./client-registry-api/build/distributions/client-registry-api.zip
       Handler: uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref UpdateClientConfigFunctionLogGroup
@@ -2707,7 +2707,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-ClientRegistrationFunction
       AutoPublishAlias: latest
-      CodeUri: ./client-registry-api
+      CodeUri: ./client-registry-api/build/distributions/client-registry-api.zip
       Handler: uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref ClientRegistrationFunctionLogGroup
@@ -2861,7 +2861,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-IpvCallbackFunction
       AutoPublishAlias: latest
-      CodeUri: ./ipv-api
+      CodeUri: ./ipv-api/build/distributions/ipv-api.zip
       Handler: uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref IpvCallbackFunctionLogGroup
@@ -3142,7 +3142,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-SpotResponseFunction
       AutoPublishAlias: latest
-      CodeUri: ./ipv-api
+      CodeUri: ./ipv-api/build/distributions/ipv-api.zip
       Handler: uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref SpotResponseFunctionLogGroup
@@ -3347,7 +3347,7 @@ Resources:
     Properties:
       FunctionName: !Sub ${Environment}-StorageTokenJwkFunction
       AutoPublishAlias: latest
-      CodeUri: ./oidc-api
+      CodeUri: ./oidc-api/build/distributions/oidc-api.zip
       Handler: uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref StorageTokenJwkFunctionLogGroup
