@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -34,7 +35,6 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
@@ -42,23 +42,27 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
     private static final Json objectMapper = SerializationService.getInstance();
 
+    private final OidcAPI oidcApi;
     private final ClientSignatureValidationService clientSignatureValidationService;
 
     public RequestObjectAuthorizeValidator(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
+            OidcAPI oidcApi,
             ClientSignatureValidationService clientSignatureValidationService) {
         super(configurationService, dynamoClientService, ipvCapacityService);
         this.clientSignatureValidationService = clientSignatureValidationService;
+        this.oidcApi = oidcApi;
     }
 
     public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
-        this(
+        super(
                 configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService),
-                new ClientSignatureValidationService(configurationService));
+                new IPVCapacityService(configurationService));
+        this.oidcApi = new OidcAPI(configurationService);
+        this.clientSignatureValidationService = new ClientSignatureValidationService(oidcApi);
     }
 
     @Override
@@ -131,15 +135,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST, state);
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
-                    || !jwtClaimsSet
-                            .getAudience()
-                            .contains(
-                                    buildURI(
-                                                    configurationService
-                                                            .getOidcApiBaseURL()
-                                                            .orElseThrow(),
-                                                    "/authorize")
-                                            .toString())) {
+                    || !jwtClaimsSet.getAudience().contains(oidcApi.authorizeURI().toString())) {
                 LOG.error("Invalid or missing audience");
                 return errorResponse(redirectURI, OAuth2Error.ACCESS_DENIED, state);
             }

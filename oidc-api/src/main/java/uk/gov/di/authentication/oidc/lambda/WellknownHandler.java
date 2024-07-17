@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -28,7 +29,6 @@ import java.util.NoSuchElementException;
 
 import static com.nimbusds.langtag.LangTagUtils.parseLangTagList;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class WellknownHandler
@@ -37,17 +37,21 @@ public class WellknownHandler
     private static final Logger LOG = LogManager.getLogger(WellknownHandler.class);
 
     private final String providerMetadata;
+    private final OidcAPI oidcApi;
 
     private final AuthFrontend authFrontend;
 
-    public WellknownHandler(AuthFrontend authFrontend, ConfigurationService configService) {
+    public WellknownHandler(
+            AuthFrontend authFrontend, OidcAPI oidcApi, ConfigurationService configService) {
         this.authFrontend = authFrontend;
+        this.oidcApi = oidcApi;
         providerMetadata = constructProviderMetadata(configService);
     }
 
     public WellknownHandler() {
         this(
                 new AuthFrontend(ConfigurationService.getInstance()),
+                new OidcAPI(ConfigurationService.getInstance()),
                 ConfigurationService.getInstance());
     }
 
@@ -67,16 +71,15 @@ public class WellknownHandler
 
     private String constructProviderMetadata(ConfigurationService configService) {
         try {
-            var baseUrl = configService.getOidcApiBaseURL().orElseThrow();
             var oidcMetadata =
                     new OIDCProviderMetadata(
-                            new Issuer(baseUrl),
+                            new Issuer(oidcApi.baseURI()),
                             List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                            buildURI(baseUrl, "/.well-known/jwks.json"));
-            oidcMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
-            oidcMetadata.setUserInfoEndpointURI(buildURI(baseUrl, "/userinfo"));
-            oidcMetadata.setAuthorizationEndpointURI(buildURI(baseUrl, "/authorize"));
-            oidcMetadata.setRegistrationEndpointURI(buildURI(baseUrl, "/connect/register"));
+                            oidcApi.wellKnownURI());
+            oidcMetadata.setTokenEndpointURI(oidcApi.tokenURI());
+            oidcMetadata.setUserInfoEndpointURI(oidcApi.userInfoURI());
+            oidcMetadata.setAuthorizationEndpointURI(oidcApi.authorizeURI());
+            oidcMetadata.setRegistrationEndpointURI(oidcApi.registerationURI());
             oidcMetadata.setTokenEndpointAuthMethods(
                     List.of(
                             ClientAuthenticationMethod.PRIVATE_KEY_JWT,
@@ -101,10 +104,9 @@ public class WellknownHandler
                             JWSAlgorithm.PS384,
                             JWSAlgorithm.PS512));
             oidcMetadata.setServiceDocsURI(new URI("https://docs.sign-in.service.gov.uk/"));
-            oidcMetadata.setEndSessionEndpointURI(buildURI(baseUrl, "/logout"));
+            oidcMetadata.setEndSessionEndpointURI(oidcApi.logoutURI());
             oidcMetadata.setSupportsBackChannelLogout(true);
-            oidcMetadata.setCustomParameter(
-                    "trustmarks", buildURI(baseUrl, "/trustmark").toString());
+            oidcMetadata.setCustomParameter("trustmarks", oidcApi.trustmarkURI().toString());
 
             oidcMetadata.setPolicyURI(authFrontend.privacyNoticeURI());
             oidcMetadata.setTermsOfServiceURI(authFrontend.termsOfServiceURI());

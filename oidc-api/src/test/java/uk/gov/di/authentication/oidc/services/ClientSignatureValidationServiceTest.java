@@ -14,10 +14,10 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -27,7 +27,6 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 
 import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -43,15 +42,13 @@ class ClientSignatureValidationServiceTest {
     private static final URI TOKEN_URI = URI.create("https://localhost/token");
     private static final URI AUTHORIZE_URI = URI.create("https://localhost/authorize");
 
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
     private ClientSignatureValidationService clientSignatureValidationService;
 
     @BeforeEach
     void setup() {
-        when(configurationService.getOidcApiBaseURL())
-                .thenReturn(Optional.of(OIDC_BASE_URI.toString()));
-        clientSignatureValidationService =
-                new ClientSignatureValidationService(configurationService);
+        when(oidcApi.baseURI()).thenReturn(OIDC_BASE_URI);
+        clientSignatureValidationService = new ClientSignatureValidationService(oidcApi);
     }
 
     @Test

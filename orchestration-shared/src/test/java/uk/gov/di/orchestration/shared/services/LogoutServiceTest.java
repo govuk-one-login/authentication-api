@@ -102,7 +102,6 @@ public class LogoutServiceTest {
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
 
-    private static final String OIDC_API_BASE_URL = "https://oidc.test.account.gov.uk/";
     private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
 
     private static final String ENVIRONMENT = "test";
@@ -135,7 +134,6 @@ public class LogoutServiceTest {
                 .thenReturn(PERSISTENT_SESSION_ID);
 
         when(configurationService.getInternalSectorURI()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
 
         when(authFrontend.defaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
