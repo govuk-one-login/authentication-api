@@ -58,7 +58,7 @@ public class AuthenticationTokenService {
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
-        LOG.info("Constructing token request");
+        LOG.info("Constructing token request to {}", configurationService.getAuthenticationAuthCallbackURI());
         var codeGrant =
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
