@@ -25,6 +25,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AccountDeletionService {
     private static final Logger LOG = LogManager.getLogger(AccountDeletionService.class);
@@ -80,10 +81,12 @@ public class AccountDeletionService {
 
         String persistentSessionID = AuditService.UNKNOWN;
         String ipAddress = AuditService.UNKNOWN;
+        boolean manualDeletion = true;
         if (input.isPresent()) {
             ipAddress = PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
             ipAddress = IpAddressHelper.extractIpAddress(input.get());
+            manualDeletion = false;
         }
 
         try {
@@ -118,7 +121,8 @@ public class AccountDeletionService {
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
                             txmaAuditEncoded);
-            auditService.submitAuditEvent(DELETE_ACCOUNT, auditContext);
+            auditService.submitAuditEvent(
+                    DELETE_ACCOUNT, auditContext, pair("manualDeletion", manualDeletion));
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }
