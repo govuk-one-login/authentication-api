@@ -47,6 +47,8 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
@@ -81,6 +83,8 @@ import java.util.stream.Collectors;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -324,6 +328,12 @@ public class AuthorisationHandler
         } catch (ClientRedirectUriValidationException e) {
             return generateApiGatewayProxyResponse(
                     INVALID_REQUEST.getHTTPStatusCode(), INVALID_REQUEST.getDescription());
+        } catch (ClientSignatureValidationException e) {
+            return generateApiGatewayProxyResponse(
+                    VALIDATION_FAILED.getHTTPStatusCode(), VALIDATION_FAILED.getDescription());
+        } catch (JwksException e) {
+            return generateApiGatewayProxyResponse(
+                    SERVER_ERROR.getHTTPStatusCode(), SERVER_ERROR.getDescription());
         }
 
         if (authRequestError.isPresent()) {
