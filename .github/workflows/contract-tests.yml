@@ -17,9 +17,17 @@ on:
       - reopened
       - ready_for_review
       - synchronize
+    paths:
+      - "oidc-api/**"
+      - "doc-checking-app-api/**"
+      - "ipv-api/**"
   push:
     branches:
       - main
+    paths:
+      - "oidc-api/**"
+      - "doc-checking-app-api/**"
+      - "ipv-api/**"
 
 jobs:
   contract-testing:
@@ -31,9 +39,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'gradle'
+          java-version: "17"
+          distribution: "temurin"
+          cache: "gradle"
 
       - name: Run consumer contract tests
         run: ./gradlew pactConsumerTests
@@ -47,6 +55,5 @@ jobs:
         env:
           CONSUMER_APP_VERSION: ${{ github.sha }}
         run: ./gradlew pactPublish
-
 #      - name: Verify pacts
 #        run: ./gradlew pactProviderTests
