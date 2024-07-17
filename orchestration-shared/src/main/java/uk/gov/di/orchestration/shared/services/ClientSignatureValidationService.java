@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.RpPublicKeyCache;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
@@ -73,7 +74,7 @@ public class ClientSignatureValidationService {
     }
 
     public void validate(SignedJWT signedJWT, ClientRegistry client)
-            throws ClientSignatureValidationException {
+            throws ClientSignatureValidationException, JwksException {
         try {
             PublicKey publicKey;
             if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
@@ -98,7 +99,7 @@ public class ClientSignatureValidationService {
     }
 
     public void validateTokenClientAssertion(PrivateKeyJWT privateKeyJWT, ClientRegistry client)
-            throws ClientSignatureValidationException {
+            throws ClientSignatureValidationException, JwksException {
         try {
             PublicKey publicKey;
             if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
@@ -127,7 +128,8 @@ public class ClientSignatureValidationService {
     private PublicKey retrievePublicKey(ClientRegistry client, String kid)
             throws NoSuchAlgorithmException,
                     InvalidKeySpecException,
-                    ClientSignatureValidationException {
+                    ClientSignatureValidationException,
+                    JwksException {
         try {
             if (client.getPublicKeySource().equals(PublicKeySource.STATIC.getValue())) {
                 return convertPemToPublicKey(client.getPublicKey());
@@ -135,13 +137,13 @@ public class ClientSignatureValidationService {
             if (kid == null) {
                 String error = "Key ID is null but is required to fetch JWKS";
                 LOG.error(error);
-                throw new ClientSignatureValidationException(error);
+                throw new JwksException(error);
             }
             String jwksUrl = client.getJwksUrl();
             if (client.getJwksUrl() == null) {
                 String error = "Client JWKS URL is null but is required to fetch JWKS";
                 LOG.error(error);
-                throw new ClientSignatureValidationException(error);
+                throw new JwksException(error);
             }
             Optional<RpPublicKeyCache> cache =
                     rpPublicKeyCacheService.getRpPublicKeyCacheData(client.getClientID(), kid);
@@ -155,17 +157,17 @@ public class ClientSignatureValidationService {
             if (unescapedPayload.equals("error")) {
                 String error = "Returned error from FetchJwksHandler";
                 LOG.error(error);
-                throw new ClientSignatureValidationException(error);
+                throw new JwksException(error);
             }
 
             JWK jwk = JWK.parse(unescapedPayload);
             rpPublicKeyCacheService.addRpPublicKeyCacheData(
                     client.getClientID(), jwk.getKeyID(), jwk.toJSONString());
             return jwk.toRSAKey().toPublicKey();
-        } catch (ParseException | Json.JsonException e) {
-            throw new RuntimeException();
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
+        } catch (ParseException | Json.JsonException | JOSEException e) {
+            String error = "Error parsing JWKS to PublicKey: " + e.getMessage();
+            LOG.error(error);
+            throw new JwksException(error);
         }
     }
 
@@ -178,7 +180,7 @@ public class ClientSignatureValidationService {
     }
 
     private InvokeResponse invokeFetchJwksFunction(
-            LambdaClient awsLambda, String jwksUrl, String kid) {
+            LambdaClient awsLambda, String jwksUrl, String kid) throws JwksException {
         try {
             JSONObject jsonObj = new JSONObject();
             jsonObj.put("url", jwksUrl);
@@ -194,7 +196,8 @@ public class ClientSignatureValidationService {
                             .build();
             return awsLambda.invoke(request);
         } catch (LambdaException e) {
-            throw new RuntimeException();
+            LOG.error("LambdaException thrown while invoking FetchJwksFunction");
+            throw new JwksException(e.getMessage());
         }
     }
 

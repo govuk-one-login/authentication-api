@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
@@ -174,7 +175,7 @@ class PrivateKeyJwtClientAuthValidatorTest {
 
     @Test
     void shouldThrowIfUnableToValidatePrivateKeyJWTSignature()
-            throws JOSEException, ClientSignatureValidationException {
+            throws JOSEException, ClientSignatureValidationException, JwksException {
         var invalidKeyPair = generateRsaKeyPair();
         var publicKey =
                 Base64.getMimeEncoder().encodeToString(invalidKeyPair.getPublic().getEncoded());

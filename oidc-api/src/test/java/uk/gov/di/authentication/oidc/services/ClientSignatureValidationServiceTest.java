@@ -26,6 +26,7 @@ import software.amazon.awssdk.services.lambda.model.InvokeResponse;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RpPublicKeyCacheService;
@@ -148,7 +149,7 @@ class ClientSignatureValidationServiceTest {
             var signedJWT = generateSignedJWT(keyPair.getPrivate());
 
             assertThrows(
-                    ClientSignatureValidationException.class,
+                    JwksException.class,
                     () -> clientSignatureValidationService.validate(signedJWT, client));
         }
 
@@ -218,7 +219,12 @@ class ClientSignatureValidationServiceTest {
     private static PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) {
         try {
             return new PrivateKeyJWT(
-                    new ClientID(CLIENT_ID), TOKEN_URI, JWSAlgorithm.RS256, privateKey, null, null);
+                    new ClientID(CLIENT_ID),
+                    TOKEN_URI,
+                    JWSAlgorithm.RS256,
+                    privateKey,
+                    "12345",
+                    null);
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
