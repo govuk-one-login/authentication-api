@@ -191,7 +191,8 @@ public class ClientSignatureValidationService {
             InvokeRequest request =
                     InvokeRequest.builder()
                             .functionName(
-                                    configurationService.getEnvironment() + "-FetchJwksFunction")
+                                    configurationService.getEnvironment()
+                                            + "-FetchJwksFunction:latest")
                             .payload(payload)
                             .build();
             return awsLambda.invoke(request);
