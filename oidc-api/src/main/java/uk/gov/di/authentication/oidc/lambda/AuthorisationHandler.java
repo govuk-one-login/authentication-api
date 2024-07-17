@@ -493,7 +493,7 @@ public class AuthorisationHandler
 
         URI authorisationRequestUri = authorisationRequest.toURI();
         LOG.info(
-                "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
+                "AuthorisationHandler successfully processed doc app request, redirect URI {}",
                 authorisationRequestUri);
 
         cloudwatchMetricsService.incrementCounter(
