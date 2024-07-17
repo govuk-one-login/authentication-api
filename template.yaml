@@ -1182,6 +1182,7 @@ Resources:
         - !Ref IdTokenKmsRsaAccessPolicy
         - !Ref InvokeFetchJwksHandlerPolicy
         - !Ref RpPublicKeyCacheTableReadAccessPolicy
+        - !Ref RpPublicKeyCacheTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
