@@ -2097,7 +2097,6 @@ Resources:
             - false
             - true
 
-
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
@@ -4481,7 +4480,6 @@ Resources:
           - Effect: Allow
             Action: lambda:InvokeFunction
             Resource: !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction
-
 
   #endregion
 
