@@ -14,6 +14,7 @@ import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHead
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
 
 public class IpAddressHelper {
+    private static final String cloudFrontViewerAddressHeaderName = "Cloudfront-Viewer-Address";
 
     private static final Logger LOG = LogManager.getLogger(IpAddressHelper.class);
 
@@ -23,8 +24,8 @@ public class IpAddressHelper {
                         .map(APIGatewayProxyRequestEvent::getHeaders)
                         .orElse(emptyMap());
 
-        if (headersContainValidHeader(headers, "CloudFront-Viewer-Address", true)) {
-            return getHeaderValueFromHeaders(headers, "CloudFront-Viewer-Address", true)
+        if (headersContainValidHeader(headers, cloudFrontViewerAddressHeaderName, true)) {
+            return getHeaderValueFromHeaders(headers, cloudFrontViewerAddressHeaderName, true)
                     .split(":")[0]
                     .trim();
         } else if (headersContainValidHeader(headers, "X-Forwarded-For", true)) {
