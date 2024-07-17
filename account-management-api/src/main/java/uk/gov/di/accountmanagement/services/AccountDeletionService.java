@@ -87,12 +87,12 @@ public class AccountDeletionService {
 
         String persistentSessionID = AuditService.UNKNOWN;
         String ipAddress = AuditService.UNKNOWN;
-        Boolean manualDeletion = Boolean.TRUE;
+        boolean manualDeletion = true;
         if (input.isPresent()) {
             ipAddress = PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
             ipAddress = IpAddressHelper.extractIpAddress(input.get());
-            manualDeletion = Boolean.FALSE;
+            manualDeletion = false;
         }
 
         try {
@@ -116,10 +116,6 @@ public class AccountDeletionService {
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
                             .orElse(AuditService.UNKNOWN);
-            var pairs =
-                    new AuditService.MetadataPair[] {
-                        pair("manualDeletion", manualDeletion.toString())
-                    };
             var auditContext =
                     new AuditContext(
                             clientId,
@@ -131,7 +127,8 @@ public class AccountDeletionService {
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
                             txmaAuditEncoded);
-            auditService.submitAuditEvent(DELETE_ACCOUNT, auditContext, pairs);
+            auditService.submitAuditEvent(
+                    DELETE_ACCOUNT, auditContext, pair("manualDeletion", manualDeletion));
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

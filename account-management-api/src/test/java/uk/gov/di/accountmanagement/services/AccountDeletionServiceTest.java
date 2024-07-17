@@ -216,7 +216,7 @@ class AccountDeletionServiceTest {
                                                     && Objects.equals(
                                                             auditContext.phoneNumber(),
                                                             EXPECTED_PHONE_NUMBER)),
-                            eq(buildMetadataPairs(false)));
+                            eq(pair("manualDeletion", false)));
         }
 
         @Test
@@ -238,7 +238,7 @@ class AccountDeletionServiceTest {
                                                     && Objects.equals(
                                                             auditContext.phoneNumber(),
                                                             EXPECTED_PHONE_NUMBER)),
-                            eq(buildMetadataPairs(true)));
+                            eq(pair("manualDeletion", true)));
         }
 
         @Test
@@ -253,12 +253,6 @@ class AccountDeletionServiceTest {
             assertThat(
                     logging.events(),
                     hasItem(withMessageContaining("Failed to audit account deletion")));
-        }
-
-        private AuditService.MetadataPair[] buildMetadataPairs(boolean isManualDeletion) {
-            return new AuditService.MetadataPair[] {
-                pair("manualDeletion", isManualDeletion ? "true" : "false")
-            };
         }
     }
 }
