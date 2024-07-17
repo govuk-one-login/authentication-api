@@ -66,6 +66,8 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -803,7 +805,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenJARValidationIsRequired() throws JOSEException {
+        void shouldValidateRequestObjectWhenJARValidationIsRequired()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
@@ -826,7 +829,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenJARValidationIsNotRequired() throws JOSEException {
+        void shouldValidateRequestObjectWhenJARValidationIsNotRequired()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any()))
                     .thenReturn(false);
             var event = new APIGatewayProxyRequestEvent();
@@ -919,7 +923,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
+        void shouldRedirectToLoginWhenRequestObjectIsValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
@@ -967,7 +972,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
+        void shouldRedirectToLoginWhenPostRequestObjectIsValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
@@ -1011,7 +1017,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenRequestObjectIsNotValid() throws JOSEException {
+        void shouldRedirectToRPWhenRequestObjectIsNotValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -1044,7 +1051,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenPostRequestObjectIsNotValid() throws JOSEException {
+        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -1578,7 +1586,8 @@ class AuthorisationHandlerTest {
 
     @ParameterizedTest
     @MethodSource("expectedErrorObjects")
-    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
+    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
+            throws JwksException, ClientSignatureValidationException {
         when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
         when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(
