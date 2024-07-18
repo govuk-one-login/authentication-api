@@ -2585,6 +2585,14 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref ClientRegistryTableWriteAccessPolicy
@@ -2737,6 +2745,14 @@ Resources:
                   EnvironmentConfiguration,
                   !Ref Environment,
                   authEnvironment,
+                ]
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
                 ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy

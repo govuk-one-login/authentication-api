@@ -27,6 +27,7 @@ module "register" {
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
     LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    OIDC_API_BASE_URL    = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
 
