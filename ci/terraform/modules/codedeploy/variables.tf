@@ -22,13 +22,6 @@ variable "environment" {
 variable "endpoint_name" {
   type = string
 }
-
-variable "wait_deployment_completion" {
-  description = "Wait until deployment completes. It can take a lot of time and your terraform process may lock execution for long time."
-  type        = bool
-  default     = true
-}
-
 variable "aws_cli_command" {
   description = "Command to run as AWS CLI. May include extra arguments like region and profile."
   type        = string

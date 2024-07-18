@@ -53,7 +53,6 @@ ID=$(${var.aws_cli_command} deploy create-deployment \
     --output text \
     --query '[deploymentId]')
 
-%{if var.wait_deployment_completion}
 STATUS=$(${var.aws_cli_command} deploy get-deployment \
     --deployment-id $ID \
     --output text \
@@ -81,12 +80,6 @@ else
     exit 1
 fi
 
-%{else}
-
-${var.aws_cli_command} deploy get-deployment --deployment-id $ID
-echo "Deployment started, but wait deployment completion is disabled!"
-
-%{endif}
 EOT
   }
 
