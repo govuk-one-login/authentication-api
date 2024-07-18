@@ -22,7 +22,7 @@ class IpAddressHelperTest {
                 Map.of(
                         "X-Forwarded-For",
                         "234.234.234.234, 123.123.123.123, 111.111.111.111",
-                        "CloudFront-Viewer-Address",
+                        "Cloudfront-Viewer-Address",
                         "222.222.222.222:222"));
         request.setRequestContext(stubContextWithSourceIp());
 
@@ -43,7 +43,7 @@ class IpAddressHelperTest {
     void shouldAcceptCloudfrontViewerWithoutSourcePort() {
         var request = new APIGatewayProxyRequestEvent();
 
-        request.setHeaders(Map.of("CloudFront-Viewer-Address", "222.222.222.222"));
+        request.setHeaders(Map.of("Cloudfront-Viewer-Address", "222.222.222.222"));
         request.setRequestContext(stubContextWithSourceIp());
 
         assertThat(extractIpAddress(request), is("222.222.222.222"));
