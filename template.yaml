@@ -2090,6 +2090,12 @@ Resources:
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          TXMA_AUDIT_ENCODED_ENABLED: true
+          FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
+            - IsNotDevEnvironment
+            - false
+            - true
+
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
