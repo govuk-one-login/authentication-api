@@ -46,7 +46,8 @@ public class HttpRequestService {
                     Map.of("StatusCode", Integer.toString(response.statusCode())));
 
         } catch (IOException e) {
-            LOG.error("Unable to execute POST request successfully");
+            LOG.error("Unable to execute POST request successfully: {}", e.getMessage());
+            throw new RuntimeException(e);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

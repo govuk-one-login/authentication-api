@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.lambda;
 
+import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -44,6 +45,7 @@ class BackChannelLogoutRequestHandlerTest {
     private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final HttpRequestService request = mock(HttpRequestService.class);
     private final TokenService tokenService = mock(TokenService.class);
+    private final Context context = mock(Context.class);
     private final Instant fixedDate = Instant.now();
 
     private final BackChannelLogoutRequestHandler handler =
@@ -56,11 +58,12 @@ class BackChannelLogoutRequestHandlerTest {
     @BeforeEach
     void setup() {
         when(oidcApi.baseURI()).thenReturn(URI.create("https://base-url.account.gov.uk"));
+        when(context.getAwsRequestId()).thenReturn("request-id");
     }
 
     @Test
     void shouldDoNothingIfPayloadIsInvalid() {
-        handler.handleRequest(inputEvent(null), null);
+        handler.handleRequest(inputEvent(null), context);
 
         verify(tokenService, never())
                 .generateSignedJwtUsingExternalKey(any(), eq(Optional.of("logout+jwt")), eq(ES256));
@@ -81,7 +84,7 @@ class BackChannelLogoutRequestHandlerTest {
                         any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
 
-        handler.handleRequest(inputEvent(input), null);
+        handler.handleRequest(inputEvent(input), context);
 
         verify(request)
                 .post(URI.create("https://test.account.gov.uk"), "logout_token=serialized-payload");
