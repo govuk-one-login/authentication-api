@@ -1180,6 +1180,7 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
+        - !Ref RpPublicKeyCacheTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2107,6 +2108,8 @@ Resources:
         - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref IpvCapacityAccessPolicy
         - !Ref InvokeFetchJwksHandlerPolicy
+        - !Ref RpPublicKeyCacheTableWriteAccessPolicy
+        - !Ref RpPublicKeyCacheTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4116,6 +4119,36 @@ Resources:
                 !Ref Environment,
                 authenticationCallbackUserinfoKeyArn,
               ]
+
+  RpPublicKeyCacheTableReadAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowRpPublicKeyCacheTableReadAccess
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+              - dynamodb:Get*
+            Resource: !GetAtt RpPublicKeyCacheTable.Arn
+          - Sid: AllowRpPublicKeyCacheTableKeyAccess
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
+
+  RpPublicKeyCacheTableWriteAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowRpPublicKeyCacheTableWriteAccess
+            Effect: Allow
+            Action:
+              - dynamodb:PutItem
+            Resource: !GetAtt RpPublicKeyCacheTable.Arn
 
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
