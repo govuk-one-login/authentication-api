@@ -10,6 +10,8 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -49,6 +51,10 @@ class AccountDeletionServiceTest {
             mock(APIGatewayProxyRequestEvent.ProxyRequestContext.class);
     private static final MockedStatic<ClientSessionIdHelper> clientSessionIdHelperMockedStatic =
             Mockito.mockStatic(ClientSessionIdHelper.class);
+    private static final MockedStatic<PersistentIdHelper> persistentSessionIdHelperMockedStatic =
+            Mockito.mockStatic(PersistentIdHelper.class);
+    private static final MockedStatic<IpAddressHelper> ipAddressHelperMockedStatic =
+            Mockito.mockStatic(IpAddressHelper.class);
     private final AccountDeletionService underTest =
             new AccountDeletionService(
                     authenticationService,
@@ -63,6 +69,8 @@ class AccountDeletionServiceTest {
     private static final Map<String, Object> TEST_AUTHORIZER =
             Map.of("clientId", testClientIdObject);
     private static final String SUBJECT_ID = new Subject().getValue();
+    private static final String TEST_PERSISTENT_SESSION_ID = "test-persistent-session-id";
+    private static final String TEST_IP_ADDRESS = "test-ip-address";
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -150,6 +158,12 @@ class AccountDeletionServiceTest {
         when(input.getRequestContext()).thenReturn(proxyRequestContext);
         when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
         when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+        persistentSessionIdHelperMockedStatic
+                .when(() -> PersistentIdHelper.extractPersistentIdFromHeaders(TEST_HEADERS))
+                .thenReturn(TEST_PERSISTENT_SESSION_ID);
+        ipAddressHelperMockedStatic
+                .when(() -> IpAddressHelper.extractIpAddress(input))
+                .thenReturn(TEST_IP_ADDRESS);
 
         // when
         underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
@@ -168,7 +182,12 @@ class AccountDeletionServiceTest {
                                                         auditContext.email(), expectedEmail)
                                                 && Objects.equals(
                                                         auditContext.phoneNumber(),
-                                                        expectedPhoneNumber)));
+                                                        expectedPhoneNumber)
+                                                && Objects.equals(
+                                                        auditContext.ipAddress(), TEST_IP_ADDRESS)
+                                                && Objects.equals(
+                                                        auditContext.persistentSessionId(),
+                                                        TEST_PERSISTENT_SESSION_ID)));
     }
 
     @Test

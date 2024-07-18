@@ -81,7 +81,8 @@ public class AccountDeletionService {
         String persistentSessionID = AuditService.UNKNOWN;
         String ipAddress = AuditService.UNKNOWN;
         if (input.isPresent()) {
-            ipAddress = PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
+            persistentSessionID =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
             ipAddress = IpAddressHelper.extractIpAddress(input.get());
         }
