@@ -1,15 +1,26 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.OIDCError;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -37,9 +48,7 @@ class AuthenticationAuthorizationServiceTest {
         queryParams.put("state", REDIS_STORED_STATE.getValue());
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        boolean result = authService.validateRequest(queryParams, SESSION_ID);
-
-        assertThat(result, is(true));
+        assertDoesNotThrow(() -> authService.validateRequest(queryParams, SESSION_ID));
         verify(redisConnectionService)
                 .getValue(
                         AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX
@@ -47,46 +56,79 @@ class AuthenticationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnFalseWhenNoQueryParametersPresent() {
+    void shouldThrowWhenNoQueryParametersPresent() {
         Map<String, String> queryParams = new HashMap<>();
 
-        boolean result = authService.validateRequest(queryParams, SESSION_ID);
-
-        assertThat(result, is(false));
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 
     @Test
-    void shouldReturnFalseWhenErrorParamPresent() {
+    void shouldThrowWhenErrorParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("error", "some-error");
 
-        boolean result = authService.validateRequest(queryParams, SESSION_ID);
-
-        assertThat(result, is(false));
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 
+    @ParameterizedTest
+    @MethodSource("reauthErrorCases")
+    void shouldThrowWhenErrorParamPresent(String reauthErrorCode, ErrorObject expectedErrorObject) {
+        Map<String, String> queryParams = new HashMap<>();
+        queryParams.put("error", reauthErrorCode);
+
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(expectedErrorObject))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(true))));
+        verify(redisConnectionService, never()).getValue(anyString());
+    }
+
+    static Stream<Arguments> reauthErrorCases() {
+        return Stream.of(
+                Arguments.of(OAuth2Error.ACCESS_DENIED_CODE, OAuth2Error.ACCESS_DENIED),
+                Arguments.of(OIDCError.LOGIN_REQUIRED_CODE, OIDCError.LOGIN_REQUIRED));
+    }
+
     @Test
-    void shouldReturnFalseWhenNoStateParamPresent() {
+    void shouldThrowWhenNoStateParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        boolean result = authService.validateRequest(queryParams, SESSION_ID);
-
-        assertThat(result, is(false));
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 
     @Test
-    void shouldReturnFalseWhenInvalidStateParamPresent() {
+    void shouldThrowWhenInvalidStateParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("state", new State().getValue());
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        boolean result = authService.validateRequest(queryParams, SESSION_ID);
-
-        assertThat(result, is(false));
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
         verify(redisConnectionService)
                 .getValue(
                         AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX
@@ -94,13 +136,15 @@ class AuthenticationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnFalseWhenNoCodeParamPresent() {
+    void shouldThrowWhenNoCodeParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
-        queryParams.put("code", EXAMPLE_AUTH_CODE);
+        queryParams.put("state", new State().getValue());
 
-        boolean result = authService.validateRequest(queryParams, SESSION_ID);
-
-        assertThat(result, is(false));
-        verify(redisConnectionService, never()).getValue(anyString());
+        var exception =
+                assertThrows(
+                        AuthenticationCallbackValidationException.class,
+                        () -> authService.validateRequest(queryParams, SESSION_ID));
+        assertThat(exception.getError(), is((equalTo(OAuth2Error.SERVER_ERROR))));
+        assertThat(exception.getLogoutRequired(), is((equalTo(false))));
     }
 }
