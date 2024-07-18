@@ -69,3 +69,28 @@ module "send-otp-notification" {
     aws_elasticache_replication_group.account_management_sessions_store,
   ]
 }
+
+moved {
+  from = module.send_otp_notification
+  to   = module.send-otp-notification
+}
+
+moved {
+  from = module.send-otp-notification.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm[0]
+  to   = module.send-otp-notification.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm
+}
+
+moved {
+  from = module.send-otp-notification.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0]
+  to   = module.send-otp-notification.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
+}
+
+moved {
+  from = module.send-otp-notification.aws_cloudwatch_log_group.lambda_log_group[0]
+  to   = module.send-otp-notification.aws_cloudwatch_log_group.lambda_log_group
+}
+
+moved {
+  from = module.send-otp-notification.aws_lambda_permission.endpoint_execution_permission
+  to   = aws_lambda_permission.account-management_openapi_endpoint_execution_permission["send-otp-notification"]
+}

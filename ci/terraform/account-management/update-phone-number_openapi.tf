@@ -53,3 +53,28 @@ module "update-phone-number" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 }
+
+moved {
+  from = module.update_phone_number
+  to   = module.update-phone-number
+}
+
+moved {
+  from = module.update-phone-number.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm[0]
+  to   = module.update-phone-number.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm
+}
+
+moved {
+  from = module.update-phone-number.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0]
+  to   = module.update-phone-number.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
+}
+
+moved {
+  from = module.update-phone-number.aws_cloudwatch_log_group.lambda_log_group[0]
+  to   = module.update-phone-number.aws_cloudwatch_log_group.lambda_log_group
+}
+
+moved {
+  from = module.update-phone-number.aws_lambda_permission.endpoint_execution_permission
+  to   = aws_lambda_permission.account-management_openapi_endpoint_execution_permission["update-phone-number"]
+}

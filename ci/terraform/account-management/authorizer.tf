@@ -106,7 +106,7 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
 resource "aws_cloudwatch_log_metric_filter" "lambda_authorizer_error_metric_filter" {
   name           = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name = aws_cloudwatch_log_group.authorizer_lambda_log_group.name
 
   metric_transformation {
     name      = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-error-count", ".", "")

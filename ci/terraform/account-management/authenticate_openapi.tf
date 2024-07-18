@@ -50,3 +50,24 @@ module "authenticate" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 }
+
+
+moved {
+  from = module.authenticate.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm[0]
+  to   = module.authenticate.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm
+}
+
+moved {
+  from = module.authenticate.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0]
+  to   = module.authenticate.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
+}
+
+moved {
+  from = module.authenticate.aws_cloudwatch_log_group.lambda_log_group[0]
+  to = module.authenticate.aws_cloudwatch_log_group.lambda_log_group
+}
+
+moved {
+  from = module.authenticate.aws_lambda_permission.endpoint_execution_permission
+  to   = aws_lambda_permission.account-management_openapi_endpoint_execution_permission["authenticate"]
+}

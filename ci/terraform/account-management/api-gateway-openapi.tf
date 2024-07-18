@@ -14,7 +14,7 @@ locals {
     {
       endpoint_modules       = local.endpoint_modules,
       authorizer_uri         = aws_lambda_alias.authorizer_alias.invoke_arn
-      authorizer_credentials = aws_iam_role.invocation_role.arn
+      authorizer_credentials = aws_iam_role.authorizer_invocation_role.arn
     }
   )
 }
@@ -33,6 +33,7 @@ module "account-management_gateway" {
   environment      = var.environment
   tags             = local.default_tags
 
+  domain_name                                  = local.account_management_api_fqdn
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
   enable_api_gateway_execution_request_tracing = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
   cloudwatch_log_retention                     = var.cloudwatch_log_retention
@@ -47,43 +48,55 @@ module "account-management_gateway" {
 
 moved {
   from = aws_api_gateway_rest_api.di_account_management_api
-  to   = module.auth-external-api_gateway.aws_api_gateway_rest_api.rest_api
+  to   = module.account-management_gateway.aws_api_gateway_rest_api.rest_api
 }
 # moved {
 #   from = aws_api_gateway_usage_plan.di_auth_ext_api_usage_plan
-#   to   = module.auth-external-api_gateway.aws_api_gateway_usage_plan.api_usage_plan
+#   to   = module.account-management_gateway.aws_api_gateway_usage_plan.api_usage_plan
 # }
 moved {
   from = aws_api_gateway_stage.stage
-  to   = module.auth-external-api_gateway.aws_api_gateway_stage.stage
+  to   = module.account-management_gateway.aws_api_gateway_stage.stage
 }
 moved {
   from = aws_api_gateway_method_settings.api_gateway_logging_settings
-  to   = module.auth-external-api_gateway.aws_api_gateway_method_settings.logging_settings
+  to   = module.account-management_gateway.aws_api_gateway_method_settings.logging_settings
 }
 moved {
   from = aws_api_gateway_deployment.deployment
-  to   = module.auth-external-api_gateway.aws_api_gateway_deployment.deployment
+  to   = module.account-management_gateway.aws_api_gateway_deployment.deployment
 }
 moved {
-  from = aws_cloudwatch_log_group.account_management_access_logs
-  to   = module.auth-external-api_gateway.aws_cloudwatch_log_group.access_logs
+  from = aws_cloudwatch_log_group.account_management_access_logs[0]
+  to   = module.account-management_gateway.aws_cloudwatch_log_group.access_logs
 }
 moved {
   from = aws_cloudwatch_log_subscription_filter.account_management_access_log_subscription
-  to   = module.auth-external-api_gateway.aws_cloudwatch_log_subscription_filter.stage_access_log_subscription
+  to   = module.account-management_gateway.aws_cloudwatch_log_subscription_filter.stage_access_log_subscription
 }
 moved {
-  from = aws_cloudwatch_log_group.account_management_stage_execution_logs
-  to   = module.auth-external-api_gateway.aws_cloudwatch_log_group.execution_logs
+  from = aws_cloudwatch_log_group.account_management_stage_execution_logs[0]
+  to   = module.account-management_gateway.aws_cloudwatch_log_group.execution_logs
 }
 moved {
   from = aws_cloudwatch_log_subscription_filter.account_management_execution_log_subscription
-  to   = module.auth-external-api_gateway.aws_cloudwatch_log_subscription_filter.execution_log_subscription
+  to   = module.account-management_gateway.aws_cloudwatch_log_subscription_filter.execution_log_subscription
 }
 moved {
-  from = aws_api_gateway_base_path_mapping.api
-  to   = module.account-management_gateway.aws_api_gateway_base_path_mapping.api
+  from = aws_api_gateway_base_path_mapping.api[0]
+  to   = module.account-management_gateway.aws_api_gateway_base_path_mapping.api[0]
+}
+moved {
+  from = aws_wafv2_web_acl_logging_configuration.waf_logging_config_am_api[0]
+  to   = module.account-management_gateway.aws_wafv2_web_acl_logging_configuration.waf_logging_configuration[0]
+}
+moved {
+  from = aws_wafv2_web_acl_association.waf_association_am_api[0]
+  to   = module.account-management_gateway.aws_wafv2_web_acl_association.waf_association[0]
+}
+moved {
+  from = aws_cloudwatch_log_group.account_management_waf_logs[0]
+  to   = module.account-management_gateway.aws_cloudwatch_log_group.waf_logs[0]
 }
 
 resource "aws_lambda_permission" "account-management_openapi_endpoint_execution_permission" {
@@ -100,6 +113,11 @@ module "dashboard_account-management_openapi" {
   source           = "../modules/dashboards"
   api_gateway_name = module.account-management_gateway.api_gateway_name
   use_localstack   = false
+}
+
+moved {
+  from = module.dashboard
+  to   = module.dashboard_account-management_openapi
 }
 
 ## extras
@@ -178,4 +196,81 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
     metric_name                = "${replace(var.environment, "-", "")}AMWafRules"
     sampled_requests_enabled   = true
   }
+}
+
+data "aws_iam_policy_document" "api_gateway_can_assume_policy" {
+  version = "2012-10-17"
+
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "apigateway.amazonaws.com"
+      ]
+      type = "Service"
+    }
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "authorizer_invocation_policy" {
+  name = "default"
+  role = aws_iam_role.authorizer_invocation_role.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "lambda:InvokeFunction",
+      "Effect": "Allow",
+      "Resource": [
+          "${aws_lambda_alias.authorizer_alias.arn}"
+        ]
+    }
+  ]
+}
+EOF
+}
+moved {
+  from = aws_iam_role_policy.invocation_policy
+  to   = aws_iam_role_policy.authorizer_invocation_policy
+}
+
+resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "authorizer-log-subscription"
+  log_group_name  = aws_cloudwatch_log_group.authorizer_lambda_log_group.name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
+
+resource "aws_iam_role" "authorizer_invocation_role" {
+  name = "${var.environment}-api_gateway_auth_invocation"
+  path = "/"
+
+  assume_role_policy = data.aws_iam_policy_document.api_gateway_can_assume_policy.json
+}
+
+moved {
+  from = aws_iam_role.invocation_role
+  to   = aws_iam_role.authorizer_invocation_role
+}
+
+resource "aws_cloudwatch_log_group" "authorizer_lambda_log_group" {
+  name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
+  tags              = local.default_tags
+  kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+  retention_in_days = var.cloudwatch_log_retention
+}
+moved {
+  from = aws_cloudwatch_log_group.lambda_log_group
+  to   = aws_cloudwatch_log_group.authorizer_lambda_log_group
 }
