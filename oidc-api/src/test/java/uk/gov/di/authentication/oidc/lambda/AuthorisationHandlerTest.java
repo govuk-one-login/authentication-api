@@ -1083,6 +1083,59 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldReturnValidationFailedWhenSignatureIsInvalid()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any()))
+                    .thenThrow(ClientSignatureValidationException.class);
+
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
+            var response = makeHandlerRequest(event);
+            assertEquals(400, response.getStatusCode());
+            assertEquals("Trust chain validation failed", response.getBody());
+        }
+
+        @Test
+        void shouldReturnServerErrorOnJwksException()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any())).thenThrow(JwksException.class);
+
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
+            var response = makeHandlerRequest(event);
+            assertEquals(500, response.getStatusCode());
+            assertEquals("Unexpected server error", response.getBody());
+        }
+
+        @Test
         void shouldAuditRequestParsedWhenRpSidPresent() {
             var rpSid = "test-rp-sid";
             Map<String, String> requestParams = buildRequestParams(Map.of("rp_sid", rpSid));
