@@ -62,7 +62,8 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService));
         this.oidcApi = new OidcAPI(configurationService);
-        this.clientSignatureValidationService = new ClientSignatureValidationService(oidcApi);
+        this.clientSignatureValidationService =
+                new ClientSignatureValidationService(configurationService);
     }
 
     @Override
