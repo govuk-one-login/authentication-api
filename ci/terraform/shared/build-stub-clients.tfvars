@@ -89,4 +89,28 @@ stub_rp_clients = [
     one_login_service = false
     service_type      = "MANDATORY"
   },
+  {
+    # New client for Secure pipeline Migration
+    client_name           = "relying-party-stub-build-sp"
+    sector_identifier_uri = "https://rp-build-sp.build.stubs.account.gov.uk"
+    callback_urls = [
+      "https://rp-build-sp.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://rp-build-sp.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
+    ]
+    test_client                     = "0"
+    identity_verification_supported = "1"
+    client_type                     = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+      "wallet-subject-id",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
 ]
