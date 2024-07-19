@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -311,18 +312,61 @@ class NotifyCallbackHandlerTest {
         assertThat(exception.getMessage(), equalTo("No bearer token in request"));
     }
 
+    @Test
+    void shouldParsePayloadWithExpectedNullValues() {
+        assertDoesNotThrow(
+                () -> {
+                    var templateID = IdGenerator.generate();
+                    when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                            .thenReturn(
+                                    Optional.of(
+                                            DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+                    var deliveryReceipt =
+                            createDeliveryReceipt(
+                                    null,
+                                    "+447316763843",
+                                    "delivered",
+                                    "sms",
+                                    templateID,
+                                    null,
+                                    null);
+                    var event = new APIGatewayProxyRequestEvent();
+                    event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+                    event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+                    handler.handleRequest(event, context);
+                });
+    }
+
     private NotifyDeliveryReceipt createDeliveryReceipt(
-            String destination, String status, String notificationType, String templateID) {
+            String reference,
+            String destination,
+            String status,
+            String notificationType,
+            String templateID,
+            String completedAt,
+            String sentAt) {
         return new NotifyDeliveryReceipt(
                 IdGenerator.generate(),
-                null,
+                reference,
                 destination,
                 status,
                 new Date().toString(),
-                new Date().toString(),
-                new Date().toString(),
+                completedAt,
+                sentAt,
                 notificationType,
                 templateID,
                 1);
+    }
+
+    private NotifyDeliveryReceipt createDeliveryReceipt(
+            String destination, String status, String notificationType, String templateID) {
+        return createDeliveryReceipt(
+                null,
+                destination,
+                status,
+                notificationType,
+                templateID,
+                new Date().toString(),
+                new Date().toString());
     }
 }
