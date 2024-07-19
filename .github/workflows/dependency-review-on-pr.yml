@@ -1,0 +1,23 @@
+name: Dependency review for pull requests
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 #v4.2.1
+        with:
+          distribution: corretto
+          java-version: 17
+
+      - name: Generate and submit dependency graph
+        uses: gradle/actions/dependency-submission@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
+
+      - name: Perform dependency review
+        uses: actions/dependency-review-action@5a2ce3f5b92ee19cbb1541a4984c76d921601d7c # v4.3.4

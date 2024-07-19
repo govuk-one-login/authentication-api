@@ -17,17 +17,13 @@ jobs:
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 #v4.2.1
         with:
           java-version: "17"
-          distribution: "temurin"
+          distribution: "corretto"
 
-      - name: Cache Gradle packages
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          gradle-version: wrapper
+          cache-read-only: false
 
       - name: Run Tests
         env:
