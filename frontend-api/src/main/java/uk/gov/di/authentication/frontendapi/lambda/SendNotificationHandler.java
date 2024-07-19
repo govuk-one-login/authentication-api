@@ -369,8 +369,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     newCodeRequestBlockPrefix);
-            codeStorageService.saveBlockedForEmail(
+            if (!configurationService.supportReauthSignoutEnabled()) {
+                codeStorageService.saveBlockedForEmail(
                     email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
+            }
 
             LOG.info("Resetting code request count");
             sessionService.save(session.resetCodeRequestCount(notificationType, journeyType));
