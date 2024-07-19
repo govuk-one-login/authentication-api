@@ -1172,6 +1172,11 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
+          FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
+            - IsNotDevEnvironment
+            - false
+            - true
+
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
