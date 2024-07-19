@@ -73,6 +73,8 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
     public Object backChannelLogoutRequestHandler(SQSEvent event, Context context) {
 
+        attachLogFieldToLogs(LogLineHelper.LogFieldName.AWS_REQUEST_ID, context.getAwsRequestId());
+
         event.getRecords().forEach(this::sendLogoutMessage);
 
         return null;
