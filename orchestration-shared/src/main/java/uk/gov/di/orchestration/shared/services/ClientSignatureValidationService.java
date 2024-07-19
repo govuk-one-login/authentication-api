@@ -128,10 +128,7 @@ public class ClientSignatureValidationService {
     }
 
     private PublicKey retrievePublicKey(ClientRegistry client, String kid)
-            throws NoSuchAlgorithmException,
-                    InvalidKeySpecException,
-                    ClientSignatureValidationException,
-                    JwksException {
+            throws NoSuchAlgorithmException, InvalidKeySpecException, JwksException {
         try {
             if (client.getPublicKeySource().equals(PublicKeySource.STATIC.getValue())) {
                 return convertPemToPublicKey(client.getPublicKey());
