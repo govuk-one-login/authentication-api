@@ -15,9 +15,9 @@ public class NotifyDeliveryReceipt {
 
     @Expose @Required private String createdAt;
 
-    @Expose @Required private String completedAt;
+    @Expose private String completedAt;
 
-    @Expose @Required private String sentAt;
+    @Expose private String sentAt;
 
     @Expose @Required private String notificationType;
 
