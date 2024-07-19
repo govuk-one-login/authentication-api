@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.orchestration.shared.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -27,9 +27,6 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
-import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.RpPublicKeyCacheService;
 
 import java.net.URI;
 import java.security.KeyPair;
