@@ -55,6 +55,9 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
+  EnableFetchJwks:
+    !Or [
+      !Equals [ dev, !Ref Environment ], !Equals [ build, !Ref Environment ]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -1105,9 +1108,9 @@ Resources:
                   authEnvironment,
                 ]
           FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
-            - IsNotDevEnvironment
-            - false
+            - EnableFetchJwks
             - true
+            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -2032,9 +2035,9 @@ Resources:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
           TXMA_AUDIT_ENCODED_ENABLED: true
           FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
-            - IsNotDevEnvironment
-            - false
+            - EnableFetchJwks
             - true
+            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
