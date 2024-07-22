@@ -114,7 +114,7 @@ subprojects {
                 "org.apache.commons:commons-collections4:4.1",
                 "commons-net:commons-net:3.11.1"
 
-        bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
+        bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.78.1"
 
         cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:2.0.0"
 
