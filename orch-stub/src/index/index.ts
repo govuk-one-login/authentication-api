@@ -58,8 +58,10 @@ const post = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   const form = querystring.parse(event.body || "");
-  const { publicKey: signingPubKey, privateKey: signingPrivKey } =
-    await jose.generateKeyPair("ES256");
+  const signingPrivKey = await jose.importPKCS8(
+    process.env.PRIVATE_KEY!,
+    "RSA",
+  );
   const payload = jarPayload(form);
   const jws = await signRequestObject(payload, signingPrivKey);
   const jwe = await encryptRequestObject(jws, await sandpitFrontendPublicKey());
@@ -107,18 +109,7 @@ const jarPayload = (form: ParsedUrlQuery): JWTPayload => {
 };
 
 const sandpitFrontendPublicKey = async () =>
-  await jose.importSPKI(
-    `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
-g5p2NHAekvIAJaNb6ZkLuLXYdLBax+2c9f4ALTrltmLMBpgtS6VQg2zO8UmSE4bX
-+Nhaw2nf3/VRBIlAi2NiD4cUIwNtxIx5qpBeDxb+YR7NuTJ0nFq6u6jv34RB1RWE
-J1sEOiv9aSPEt6eK8TGL6uZbPGU8CKJuWwPfW1ko/lyuM1HG0G/KAZ8DaLJzOMWX
-+2aZatj9RHtOCtGxwMrZlU4n/O1gbVPBfXx9RugTi0W4upmeNFR5CsC+WgENkr0v
-pXEyIW7edR6lDsSYzJI+yurVFyt82Bn7Vo2x5CIoLiH/1ZcKaApNU02/eK/gMBf+
-EwIDAQAB
------END PUBLIC KEY-----`,
-    "RS256",
-  );
+  await jose.importSPKI(process.env.AUTH_PUB_KEY!, "RS256");
 
 const signRequestObject = async (
   payload: JWTPayload,
