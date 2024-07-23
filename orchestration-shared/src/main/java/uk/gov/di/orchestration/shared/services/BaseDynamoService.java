@@ -41,7 +41,9 @@ public class BaseDynamoService<T> {
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
         dynamoTable = enhancedClient.table(tableName, TableSchema.fromBean(objectClass));
 
-        warmUp();
+        if (!isTableInOrchAccount) {
+            warmUp();
+        }
     }
 
     public void update(T item) {
