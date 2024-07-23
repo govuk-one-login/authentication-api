@@ -37,6 +37,7 @@ public class ClientRegistry {
     private String tokenAuthMethod;
     private String clientSecret;
     private String landingPageUrl;
+    private String authenticationUrl;
 
     private boolean oneLoginService = false;
     private String idTokenSigningAlgorithm = "ES256";
@@ -434,6 +435,20 @@ public class ClientRegistry {
 
     public ClientRegistry withClientLoCs(List<String> clientLoCs) {
         this.clientLoCs = clientLoCs;
+        return this;
+    }
+
+    @DynamoDbAttribute("AuthenticationUrl")
+    public String getAuthenticationUrl() {
+        return authenticationUrl;
+    }
+
+    public void setAuthenticationUrl(String authenticationUrl) {
+        this.authenticationUrl = authenticationUrl;
+    }
+
+    public ClientRegistry withAuthenticationUrl(String authenticationUrl) {
+        this.authenticationUrl = authenticationUrl;
         return this;
     }
 }

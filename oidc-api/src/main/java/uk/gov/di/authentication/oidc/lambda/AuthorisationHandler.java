@@ -122,7 +122,7 @@ public class AuthorisationHandler
     private final DocAppAuthorisationService docAppAuthorisationService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final TokenValidationService tokenValidationService;
-    private final AuthFrontend authFrontend;
+    private AuthFrontend authFrontend;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -273,6 +273,14 @@ public class AuthorisationHandler
                             .getClient(clientId)
                             .orElseThrow(() -> new ClientNotFoundException(clientId));
             updateAttachedLogFieldToLogs(CLIENT_ID, clientId);
+            if (!isNull(client.getAuthenticationUrl())) {
+                try {
+                    authFrontend = new AuthFrontend(URI.create(client.getAuthenticationUrl()));
+                    LOG.info("Authentication URL ClientRegistry override");
+                } catch (IllegalArgumentException e) {
+                    LOG.error("Authentication URL ClientRegistry override error - invalid URL");
+                }
+            }
         } catch (ParseException e) {
             if (e.getRedirectionURI() == null) {
                 LOG.warn(

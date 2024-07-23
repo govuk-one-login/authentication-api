@@ -19,6 +19,10 @@ public class AuthFrontend {
         frontendBaseUri = configurationService.getFrontendBaseURL();
     }
 
+    public AuthFrontend(URI frontendBaseUri) {
+        this.frontendBaseUri = frontendBaseUri;
+    }
+
     public URI baseURI() {
         return frontendBaseUri;
     }
