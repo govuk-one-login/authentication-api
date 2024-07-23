@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -63,22 +62,20 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService));
         this.oidcApi = new OidcAPI(configurationService);
-        this.clientSignatureValidationService =
-                new ClientSignatureValidationService(configurationService);
+        this.clientSignatureValidationService = new ClientSignatureValidationService(oidcApi);
     }
 
     @Override
-    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest)
-            throws ClientSignatureValidationException, JwksException {
+    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
 
         var clientId = authRequest.getClientID().toString();
         attachLogFieldToLogs(CLIENT_ID, clientId);
         ClientRegistry client = getClientFromDynamo(clientId);
 
         var signedJWT = (SignedJWT) authRequest.getRequestObject();
-        clientSignatureValidationService.validate(signedJWT, client);
 
         try {
+            clientSignatureValidationService.validate(signedJWT, client);
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
 
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
@@ -188,7 +185,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             }
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
-        } catch (ParseException e) {
+        } catch (ParseException | ClientSignatureValidationException e) {
             throw new RuntimeException(e);
         }
     }

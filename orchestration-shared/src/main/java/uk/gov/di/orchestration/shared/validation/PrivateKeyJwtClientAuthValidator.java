@@ -11,7 +11,6 @@ import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
@@ -89,17 +88,9 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT,
                     UNKNOWN_CLIENT_ID);
         } catch (ParseException e) {
-            LOG.warn("Unable to parse private_key_jwt", e);
+            LOG.warn("Unable to parse private_kew_jwt", e);
             throw new TokenAuthInvalidException(
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid private_key_jwt"),
-                    ClientAuthenticationMethod.PRIVATE_KEY_JWT,
-                    UNKNOWN_CLIENT_ID);
-        } catch (JwksException e) {
-            LOG.warn("Failed to fetch or parse JWKS to verify signature of private_key_jwt", e);
-            throw new TokenAuthInvalidException(
-                    new ErrorObject(
-                            OAuth2Error.SERVER_ERROR_CODE,
-                            "Failed to fetch or parse JWKS to verify signature of private_key_jwt"),
                     ClientAuthenticationMethod.PRIVATE_KEY_JWT,
                     UNKNOWN_CLIENT_ID);
         }

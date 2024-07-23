@@ -21,17 +21,8 @@ public class BaseDynamoService<T> {
 
     public BaseDynamoService(
             Class<T> objectClass, String table, ConfigurationService configurationService) {
-        this(objectClass, table, configurationService, false);
-    }
-
-    public BaseDynamoService(
-            Class<T> objectClass,
-            String table,
-            ConfigurationService configurationService,
-            boolean isTableInOrchAccount) {
-
         var tableName = table;
-        if (configurationService.getDynamoArnPrefix().isPresent() && !isTableInOrchAccount) {
+        if (configurationService.getDynamoArnPrefix().isPresent()) {
             tableName = configurationService.getDynamoArnPrefix().get() + tableName;
         } else {
             tableName = configurationService.getEnvironment() + "-" + tableName;
@@ -55,12 +46,6 @@ public class BaseDynamoService<T> {
     public Optional<T> get(String partition) {
         return Optional.ofNullable(
                 dynamoTable.getItem(Key.builder().partitionValue(partition).build()));
-    }
-
-    public Optional<T> get(String partition, String sort) {
-        return Optional.ofNullable(
-                dynamoTable.getItem(
-                        Key.builder().partitionValue(partition).sortValue(sort).build()));
     }
 
     public void delete(String partition) {
