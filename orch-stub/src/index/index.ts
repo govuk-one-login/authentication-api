@@ -13,6 +13,7 @@ import { downcaseHeaders } from "../utils/headers";
 import { Session } from "../types/session";
 import { getRedisClient, getSession } from "../services/redis";
 import { ClientSession } from "../types/client-session";
+import * as process from "node:process";
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -65,13 +66,15 @@ const post = async (
 
   const gsCookie = await setUpSession(event.headers);
   const persistentSessionId = getOrCreatePersistentSessionId(event.headers);
+  const cookieDomain =
+    process.env.DOMAIN === "none" ? "" : `; Domain=${process.env.DOMAIN}`;
   return {
     statusCode: 302,
     multiValueHeaders: {
       Location: [`https://www.example.com/authorize?request=${jwe}`],
       "Set-Cookie": [
-        `gs=${gsCookie}`,
-        `di-persistent-session-id=${persistentSessionId}`,
+        `gs=${gsCookie}; max-age=3600${cookieDomain}`,
+        `di-persistent-session-id=${persistentSessionId}; max-age=34190000${cookieDomain}`,
       ],
     },
     body: "",

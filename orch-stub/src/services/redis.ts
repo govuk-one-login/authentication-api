@@ -8,7 +8,7 @@ export const getRedisClient = async (): Promise<RedisClientType> => {
   const client =
     singletonClient ??
     (await createClient({
-      url: "redis://redis-local:6379",
+      url: process.env.REDIS_URL,
     }).connect());
   singletonClient = client;
   return client;

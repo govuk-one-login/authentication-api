@@ -2,6 +2,21 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform:
   - AWS::Serverless-2016-10-31
 
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues:
+      - local
+      - dev
+      - build
+
+Mappings:
+  EnvironmentConfiguration:
+    local:
+      domain: none
+    dev:
+      domain: .dev.account.gov.uk
+
 Resources:
   ApiGateway:
     Type: AWS::Serverless::Api
@@ -15,6 +30,11 @@ Resources:
       CodeUri: src/
       Handler: index/index.handler
       Runtime: nodejs20.x
+      Environment:
+        Variables:
+          REDIS_URL: "ssm-placeholder"
+          DOMAIN:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
       Architectures:
         - arm64
       Events:
