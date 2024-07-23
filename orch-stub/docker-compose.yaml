@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  redis-local:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    container_name: redis-local
+    networks:
+      - lambda-local
+
+networks:
+  lambda-local:
+    name: lambda-local
+    attachable: true

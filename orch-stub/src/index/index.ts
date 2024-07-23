@@ -1,12 +1,23 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import {
+  APIGatewayProxyEvent,
+  APIGatewayProxyEventHeaders,
+  APIGatewayProxyResult,
+} from "aws-lambda";
 import * as jose from "jose";
 import { JWTPayload } from "jose";
 import * as querystring from "querystring";
 import { ParsedUrlQuery } from "querystring";
+import { getCookie, getOrCreatePersistentSessionId } from "../utils/cookie";
+import crypto from "node:crypto";
+import { downcaseHeaders } from "../utils/headers";
+import { Session } from "../types/session";
+import { getRedisClient, getSession } from "../services/redis";
+import { ClientSession } from "../types/client-session";
 
 export const handler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
+  downcaseHeaders(event);
   const method = event.httpMethod.toUpperCase();
   switch (method) {
     case "GET":
@@ -52,10 +63,16 @@ const post = async (
   const jws = await signRequestObject(payload, signingPrivKey);
   const jwe = await encryptRequestObject(jws, await sandpitFrontendPublicKey());
 
+  const gsCookie = await setUpSession(event.headers);
+  const persistentSessionId = getOrCreatePersistentSessionId(event.headers);
   return {
     statusCode: 302,
-    headers: {
-      Location: `https://www.example.com/authorize?request=${jwe}`,
+    multiValueHeaders: {
+      Location: [`https://www.example.com/authorize?request=${jwe}`],
+      "Set-Cookie": [
+        `gs=${gsCookie}`,
+        `di-persistent-session-id=${persistentSessionId}`,
+      ],
     },
     body: "",
   };
@@ -120,3 +137,60 @@ const encryptRequestObject = async (jws: string, encPubKey: jose.KeyLike) =>
   await new jose.CompactEncrypt(new TextEncoder().encode(jws))
     .setProtectedHeader({ cty: "JWT", alg: "RSA-OAEP-256", enc: "A256GCM" })
     .encrypt(encPubKey);
+
+const setUpSession = async (headers: APIGatewayProxyEventHeaders) => {
+  const newSessionId = crypto.randomBytes(20).toString("base64url");
+  const newClientSessionId = crypto.randomBytes(20).toString("base64url");
+  await createNewClientSession(newClientSessionId);
+
+  const existingGsCookie = getCookie(headers["cookie"], "gs");
+  if (existingGsCookie) {
+    const idParts = existingGsCookie.split(".");
+    const sessionId = idParts[0];
+    await renameExistingSession(sessionId, newSessionId);
+  } else {
+    await createNewSession(newSessionId);
+  }
+  await attachClientSessionToSession(newClientSessionId, newSessionId);
+
+  return `${newSessionId}.${newClientSessionId}`;
+};
+
+const createNewClientSession = async (id: string) => {
+  const client = await getRedisClient();
+  const clientSession: ClientSession = {
+    creationTime: new Date(),
+    clientName: "John",
+  };
+  await client.set(id, JSON.stringify(clientSession));
+};
+
+const createNewSession = async (id: string) => {
+  const session: Session = { sessionId: id };
+  const client = await getRedisClient();
+  await client.set(id, JSON.stringify(session));
+};
+
+const renameExistingSession = async (
+  existingSessionId: string,
+  newSessionId: string,
+) => {
+  const client = await getRedisClient();
+  const existingSession = await getSession(existingSessionId);
+  await client.del(existingSessionId);
+  existingSession.sessionId = newSessionId;
+  await client.set(newSessionId, JSON.stringify(existingSession));
+};
+
+const attachClientSessionToSession = async (
+  clientSessionId: string,
+  sessionId: string,
+) => {
+  const client = await getRedisClient();
+  const session = await getSession(sessionId);
+
+  session.clientSessions ||= [];
+  session.clientSessions.push(clientSessionId);
+
+  await client.set(sessionId, JSON.stringify(session));
+};
