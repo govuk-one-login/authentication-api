@@ -20,6 +20,7 @@ logs/
 .vscode/
 .venv/
 .aws-sam
+**/.DS_Store
 
 # Approval Tests
 *.received.txt
