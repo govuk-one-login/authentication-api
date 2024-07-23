@@ -410,6 +410,74 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
+  FetchJwksFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-fetchjwks-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref FetchJwksFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-fetchjwks-error-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  FetchJwksFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} FetchJwksFunction lambda. ACCOUNT: di-orchestration-${Environment}"
+      AlarmName: !Sub ${Environment}-fetchjwks-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-fetchjwks-error-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 10
+
+  FetchJwksFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-fetchjwks-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} FetchJwksFunction lambda. ACCOUNT: di-orchestration-${Environment}"
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref SlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: m2/m1*100
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-FetchJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-FetchJwksFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+
   #endregion
 
   #region Open ID Configuration Lambda
