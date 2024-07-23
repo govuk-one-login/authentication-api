@@ -6,6 +6,8 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
@@ -29,7 +31,8 @@ public abstract class BaseAuthorizeValidator {
         this.ipvCapacityService = ipvCapacityService;
     }
 
-    public abstract Optional<AuthRequestError> validate(AuthenticationRequest authRequest);
+    public abstract Optional<AuthRequestError> validate(AuthenticationRequest authRequest)
+            throws ClientSignatureValidationException, JwksException;
 
     ClientRegistry getClientFromDynamo(String clientId) {
         var client = dynamoClientService.getClient(clientId).orElse(null);

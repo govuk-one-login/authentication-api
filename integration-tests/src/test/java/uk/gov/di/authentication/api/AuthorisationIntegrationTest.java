@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -98,6 +99,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     public static final KmsKeyExtension tokenSigningKey = new KmsKeyExtension("token-signing-key");
+
+    @RegisterExtension
+    public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
+            new RpPublicKeyCacheExtension(180);
 
     public static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
