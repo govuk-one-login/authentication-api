@@ -58,3 +58,32 @@ Resources:
         Minify: true
         Sourcemap: true
         Target: "es2020"
+
+  CallbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: callback/index.handler
+      Runtime: nodejs20.x
+      Environment:
+        Variables:
+          REDIS_URL: "ssm-placeholder"
+          DOMAIN:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      Architectures:
+        - arm64
+      Events:
+        Get:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /orchestration-callback
+            Method: get
+    Metadata: # Manage esbuild properties
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - callback/index.ts
+        Minify: true
+        Sourcemap: true
+        Target: "es2020"
