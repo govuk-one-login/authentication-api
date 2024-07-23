@@ -66,8 +66,6 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
-import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -805,8 +803,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenJARValidationIsRequired()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldValidateRequestObjectWhenJARValidationIsRequired() throws JOSEException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
@@ -829,8 +826,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenJARValidationIsNotRequired()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldValidateRequestObjectWhenJARValidationIsNotRequired() throws JOSEException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any()))
                     .thenReturn(false);
             var event = new APIGatewayProxyRequestEvent();
@@ -923,8 +919,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenRequestObjectIsValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
@@ -972,8 +967,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenPostRequestObjectIsValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
@@ -1017,8 +1011,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToRPWhenRequestObjectIsNotValid() throws JOSEException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -1051,8 +1044,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToRPWhenPostRequestObjectIsNotValid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
+        void shouldRedirectToRPWhenPostRequestObjectIsNotValid() throws JOSEException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
@@ -1080,59 +1072,6 @@ class AuthorisationHandlerTest {
             assertEquals(
                     "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope&state=test-state",
                     response.getHeaders().get(ResponseHeaders.LOCATION));
-        }
-
-        @Test
-        void shouldReturnValidationFailedWhenSignatureIsInvalid()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any()))
-                    .thenThrow(ClientSignatureValidationException.class);
-
-            var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
-            var response = makeHandlerRequest(event);
-            assertEquals(400, response.getStatusCode());
-            assertEquals("Trust chain validation failed", response.getBody());
-        }
-
-        @Test
-        void shouldReturnServerErrorOnJwksException()
-                throws JOSEException, JwksException, ClientSignatureValidationException {
-            when(requestObjectAuthorizeValidator.validate(any())).thenThrow(JwksException.class);
-
-            var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            event.setHttpMethod("GET");
-            var response = makeHandlerRequest(event);
-            assertEquals(500, response.getStatusCode());
-            assertEquals("Unexpected server error", response.getBody());
         }
 
         @Test
@@ -1639,8 +1578,7 @@ class AuthorisationHandlerTest {
 
     @ParameterizedTest
     @MethodSource("expectedErrorObjects")
-    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
-            throws JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
         when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
         when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(

@@ -55,8 +55,6 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
-  EnableFetchJwks:
-    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
 
 Mappings:
   EnvironmentConfiguration:
@@ -359,7 +357,7 @@ Resources:
     Type: AWS::DynamoDB::Table
     # checkov:skip=CKV_AWS_28: It would be harmful to restore old keys from a backup of this data, and keys will be fetched if not present anyway.
     Properties:
-      TableName: !Sub ${Environment}-RpPublicKeyCache
+      TableName: RpPublicKeyCache
       AttributeDefinitions:
         - AttributeName: clientId
           AttributeType: S
@@ -398,8 +396,19 @@ Resources:
       Handler: uk.gov.di.authentication.oidc.lambda.FetchJwksHandler::handleRequest
       LoggingConfig:
         LogGroup: !Ref FetchJwksFunctionLogGroup
-      SnapStart:
-        ApplyOn: PublishedVersions
+      ProvisionedConcurrencyConfig: !If
+        - EnableProvisionedConcurrency
+        - ProvisionedConcurrentExecutions: !FindInMap
+            - ProvisionedConcurrency
+            - !Ref Environment
+            - FetchJwksFunction
+            - DefaultValue:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  defaultProvisionedConcurrency,
+                ]
+        - !Ref AWS::NoValue
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_117
 
@@ -1174,11 +1183,6 @@ Resources:
                   !Ref Environment,
                   authEnvironment,
                 ]
-          FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
-            - EnableFetchJwks
-            - true
-            - false
-
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref UserProfileTableReadAccessPolicy
@@ -1187,9 +1191,6 @@ Resources:
         - !Ref RedisParametersAccessPolicy
         - !Ref IdTokenKmsAccessPolicy
         - !Ref IdTokenKmsRsaAccessPolicy
-        - !Ref InvokeFetchJwksHandlerPolicy
-        - !Ref RpPublicKeyCacheTableReadAccessPolicy
-        - !Ref RpPublicKeyCacheTableWriteAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -2100,11 +2101,6 @@ Resources:
           REDIS_KEY: session
           TXMA_AUDIT_QUEUE_URL:
             Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
-          TXMA_AUDIT_ENCODED_ENABLED: true
-          FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
-            - EnableFetchJwks
-            - true
-            - false
 
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
@@ -2115,9 +2111,6 @@ Resources:
         - !Ref OrchToAuthSigningKmsAccessPolicy
         - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref IpvCapacityAccessPolicy
-        - !Ref InvokeFetchJwksHandlerPolicy
-        - !Ref RpPublicKeyCacheTableWriteAccessPolicy
-        - !Ref RpPublicKeyCacheTableReadAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -4128,36 +4121,6 @@ Resources:
                 authenticationCallbackUserinfoKeyArn,
               ]
 
-  RpPublicKeyCacheTableReadAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowRpPublicKeyCacheTableReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-            Resource: !GetAtt RpPublicKeyCacheTable.Arn
-          - Sid: AllowRpPublicKeyCacheTableKeyAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource: !GetAtt RpPublicKeyTableEncryptionKey.Arn
-
-  RpPublicKeyCacheTableWriteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowRpPublicKeyCacheTableWriteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:PutItem
-            Resource: !GetAtt RpPublicKeyCacheTable.Arn
-
   TxmaQueueSendPermissionPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -4479,16 +4442,6 @@ Resources:
           - Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
-
-  InvokeFetchJwksHandlerPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action: lambda:InvokeFunction
-            Resource: !Sub arn:aws:lambda:eu-west-2:${AWS::AccountId}:function:${Environment}-FetchJwksFunction:latest
 
   #endregion
 

@@ -119,7 +119,7 @@ public class TokenHandler
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
+                        new ClientSignatureValidationService(oidcApi));
     }
 
     public TokenHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -142,7 +142,7 @@ public class TokenHandler
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
                         new DynamoClientService(configurationService),
-                        new ClientSignatureValidationService(configurationService));
+                        new ClientSignatureValidationService(oidcApi));
     }
 
     public TokenHandler() {

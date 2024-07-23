@@ -23,7 +23,6 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
-import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -91,8 +90,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestUriPayload()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldSuccessfullyProcessRequestUriPayload() throws JOSEException {
         List<String> scopes = new ArrayList<>();
         scopes.add("openid");
         scopes.add("doc-checking-app");
@@ -116,8 +114,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent() throws JOSEException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         List<String> scopes = new ArrayList<>();
         scopes.add("openid");
@@ -204,8 +201,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb() throws JOSEException {
         var clientRegistry =
                 generateClientRegistry(
                         "not-app-or-web",
@@ -237,8 +233,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidResponseType()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForInvalidResponseType() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -262,8 +257,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidResponseTypeInQueryParams()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForInvalidResponseTypeInQueryParams() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -297,8 +291,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientIDIsInvalid()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenClientIDIsInvalid() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -321,8 +314,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForUnsupportedScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForUnsupportedScope() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -344,8 +336,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfVtrIsNotPermittedForGivenClient()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorIfVtrIsNotPermittedForGivenClient() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -373,8 +364,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws JOSEException {
         var clientRegistry =
                 generateClientRegistry(
                         ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
@@ -403,8 +393,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenAuthRequestContainsInvalidScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorWhenAuthRequestContainsInvalidScope() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -430,8 +419,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForUnregisteredScope()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForUnregisteredScope() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -453,8 +441,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidAudience()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForInvalidAudience() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience("invalid-audience")
@@ -477,8 +464,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidIssuer()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForInvalidIssuer() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -501,8 +487,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfRequestClaimIsPresentJwt()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorIfRequestClaimIsPresentJwt() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -526,8 +511,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfRequestUriClaimIsPresentJwt()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorIfRequestUriClaimIsPresentJwt() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -551,10 +535,7 @@ class RequestObjectAuthorizeValidatorTest {
 
     @Test
     void shouldThrowWhenUnableToValidateRequestJwtSignature()
-            throws JOSEException,
-                    NoSuchAlgorithmException,
-                    ClientSignatureValidationException,
-                    JwksException {
+            throws JOSEException, NoSuchAlgorithmException, ClientSignatureValidationException {
         var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -578,8 +559,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfStateIsMissingFromRequestObject()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorIfStateIsMissingFromRequestObject() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -604,8 +584,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfNonceIsMissingFromRequestObject()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorIfNonceIsMissingFromRequestObject() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
@@ -630,8 +609,7 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidUILocales()
-            throws JOSEException, JwksException, ClientSignatureValidationException {
+    void shouldReturnErrorForInvalidUILocales() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience(OIDC_BASE_AUTHORIZE_URI.toString())
