@@ -58,4 +58,6 @@ module "authenticate" {
   default_tags                           = local.default_tags
 
   use_localstack = var.use_localstack
+
+  depends_on = [module.account_management_api_authenticate_role]
 }

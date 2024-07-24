@@ -61,4 +61,5 @@ module "update_password" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
+  depends_on = [module.account_management_api_update_password_role]
 }

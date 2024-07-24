@@ -74,6 +74,7 @@ module "send_otp_notification" {
   use_localstack                         = var.use_localstack
 
   depends_on = [
+    module.account_management_api_send_notification_role,
     aws_api_gateway_rest_api.di_account_management_api,
     aws_sqs_queue.email_queue,
     aws_elasticache_replication_group.account_management_sessions_store,

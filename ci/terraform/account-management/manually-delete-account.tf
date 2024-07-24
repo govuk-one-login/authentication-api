@@ -53,6 +53,8 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
   runtime     = "java17"
 
   tags = local.default_tags
+
+  depends_on = [module.account_management_manually_delete_account_role]
 }
 
 resource "aws_cloudwatch_log_group" "manually_delete_account_lambda_log_group" {
