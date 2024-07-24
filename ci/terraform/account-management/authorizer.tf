@@ -54,6 +54,14 @@ resource "aws_lambda_function" "authorizer" {
   tags = local.default_tags
 }
 
+resource "aws_api_gateway_authorizer" "di_account_management_api" {
+  name                             = "${var.environment}-authorise-access-token"
+  rest_api_id                      = aws_api_gateway_rest_api.di_account_management_api.id
+  authorizer_uri                   = aws_lambda_alias.authorizer_alias.invoke_arn
+  authorizer_credentials           = aws_iam_role.invocation_role.arn
+  authorizer_result_ttl_in_seconds = 0
+}
+
 resource "aws_lambda_alias" "authorizer_alias" {
   name             = "${var.environment}-authorizer-alias-lambda-active"
   description      = "Alias pointing at active version of Lambda"
@@ -106,7 +114,7 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
 resource "aws_cloudwatch_log_metric_filter" "lambda_authorizer_error_metric_filter" {
   name           = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = aws_cloudwatch_log_group.authorizer_lambda_log_group.name
+  log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
 
   metric_transformation {
     name      = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-error-count", ".", "")

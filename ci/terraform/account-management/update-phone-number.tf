@@ -14,10 +14,12 @@ module "account_management_api_update_phone_number_role" {
   ]
 }
 
-module "update-phone-number" {
-  source = "../modules/openapi-endpoint-module"
+module "update_phone_number" {
+  source = "../modules/endpoint-module"
 
-  endpoint_name = "update-phone-number"
+  endpoint_name   = "update-phone-number"
+  path_part       = "update-phone-number"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -28,6 +30,11 @@ module "update-phone-number" {
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler::handleRequest"
+
+  authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
+  rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
+  root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
+  execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).concurrency
@@ -47,34 +54,10 @@ module "update-phone-number" {
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_update_phone_number_role.arn
+  use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-}
-
-moved {
-  from = module.update_phone_number
-  to   = module.update-phone-number
-}
-
-moved {
-  from = module.update-phone-number.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm[0]
-  to   = module.update-phone-number.aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm
-}
-
-moved {
-  from = module.update-phone-number.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0]
-  to   = module.update-phone-number.aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
-}
-
-moved {
-  from = module.update-phone-number.aws_cloudwatch_log_group.lambda_log_group[0]
-  to   = module.update-phone-number.aws_cloudwatch_log_group.lambda_log_group
-}
-
-moved {
-  from = module.update-phone-number.aws_lambda_permission.endpoint_execution_permission
-  to   = aws_lambda_permission.account-management_openapi_endpoint_execution_permission["update-phone-number"]
 }

@@ -3,7 +3,11 @@ output "base_url" {
 }
 
 output "api_gateway_root_id" {
-  value = module.account-management_gateway.api_gateway_id
+  value = aws_api_gateway_rest_api.di_account_management_api.id
+}
+
+output "method_management_api_root_id" {
+  value = module.account-management-method_management_gateway.api_gateway_id
 }
 
 output "email_queue" {
