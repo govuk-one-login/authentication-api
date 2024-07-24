@@ -80,9 +80,7 @@ public class ClientSignatureValidationService {
         try {
             PublicKey publicKey;
             if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
-                LOG.info("flag enabled in signedJWT");
                 publicKey = retrievePublicKey(client, signedJWT.getHeader().getKeyID());
-                LOG.info("returning key in signedJWT: " + publicKey.toString());
             } else {
                 publicKey = convertPemToPublicKey(client.getPublicKey());
             }
@@ -107,11 +105,9 @@ public class ClientSignatureValidationService {
         try {
             PublicKey publicKey;
             if (configurationService.fetchRpPublicKeyFromJwksEnabled()) {
-                LOG.info("flag enabled in token client assertion");
                 publicKey =
                         retrievePublicKey(
                                 client, privateKeyJWT.getClientAssertion().getHeader().getKeyID());
-                LOG.info("returning key in client assertion: " + publicKey.toString());
             } else {
                 publicKey = convertPemToPublicKey(client.getPublicKey());
             }
@@ -136,15 +132,18 @@ public class ClientSignatureValidationService {
                     InvalidKeySpecException,
                     JwksException,
                     ClientSignatureValidationException {
-        LOG.info("kid: " + kid);
         try {
+            String clientId = client.getClientID();
             if (client.getPublicKeySource().equals(PublicKeySource.STATIC.getValue())) {
-                LOG.info("returning static");
                 String publicKey = client.getPublicKey();
                 if (publicKey == null) {
                     throw new ClientSignatureValidationException(
                             "PublicKeySource is static but PublicKey is null");
                 }
+                LOG.info(
+                        "Returning static RP public signing key with key ID {} for client ID {}.",
+                        kid,
+                        clientId);
                 return convertPemToPublicKey(publicKey);
             }
             if (kid == null) {
@@ -153,27 +152,28 @@ public class ClientSignatureValidationService {
                 throw new JwksException(error);
             }
             String jwksUrl = client.getJwksUrl();
-            LOG.info("jwksUrl: " + jwksUrl);
-            if (client.getJwksUrl() == null) {
+            if (jwksUrl == null) {
                 String error = "Client JWKS URL is null but is required to fetch JWKS";
                 LOG.error(error);
                 throw new JwksException(error);
             }
             Optional<RpPublicKeyCache> cache =
-                    rpPublicKeyCacheService.getRpPublicKeyCacheData(client.getClientID(), kid);
+                    rpPublicKeyCacheService.getRpPublicKeyCacheData(clientId, kid);
             if (cache.isPresent()) {
                 LOG.info(
-                        "cache found: "
-                                + JWK.parse(cache.get().getPublicKey()).toRSAKey().toPublicKey());
+                        "Returning cached RP public signing key with key ID {} for client ID {}",
+                        kid,
+                        clientId);
                 return JWK.parse(cache.get().getPublicKey()).toRSAKey().toPublicKey();
             }
-            LOG.info("no cache found");
-
+            LOG.info(
+                    "Fetching JWKS with key ID {} from {} for client ID {}.",
+                    kid,
+                    jwksUrl,
+                    clientId);
             InvokeResponse response = invokeFetchJwksFunction(lambdaClient, jwksUrl, kid);
-            LOG.info("response: " + response.toString());
             String unescapedPayload =
                     objectMapper.readValue(response.payload().asUtf8String(), String.class);
-            LOG.info("unescaped payload: " + unescapedPayload);
 
             if (unescapedPayload.equals("error")) {
                 String error = "Returned error from FetchJwksHandler";
@@ -182,6 +182,10 @@ public class ClientSignatureValidationService {
             }
 
             JWK jwk = JWK.parse(unescapedPayload);
+            LOG.info(
+                    "Caching RP public signing key with key ID {} for client ID {}.",
+                    kid,
+                    clientId);
             rpPublicKeyCacheService.addRpPublicKeyCacheData(
                     client.getClientID(), jwk.getKeyID(), jwk.toJSONString());
             return jwk.toRSAKey().toPublicKey();
