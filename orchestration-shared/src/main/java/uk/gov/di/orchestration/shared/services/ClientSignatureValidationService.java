@@ -132,12 +132,20 @@ public class ClientSignatureValidationService {
     }
 
     private PublicKey retrievePublicKey(ClientRegistry client, String kid)
-            throws NoSuchAlgorithmException, InvalidKeySpecException, JwksException {
+            throws NoSuchAlgorithmException,
+                    InvalidKeySpecException,
+                    JwksException,
+                    ClientSignatureValidationException {
         LOG.info("kid: " + kid);
         try {
             if (client.getPublicKeySource().equals(PublicKeySource.STATIC.getValue())) {
                 LOG.info("returning static");
-                return convertPemToPublicKey(client.getPublicKey());
+                String publicKey = client.getPublicKey();
+                if (publicKey == null) {
+                    throw new ClientSignatureValidationException(
+                            "PublicKeySource is static but PublicKey is null");
+                }
+                return convertPemToPublicKey(publicKey);
             }
             if (kid == null) {
                 String error = "Key ID is null but is required to fetch JWKS";

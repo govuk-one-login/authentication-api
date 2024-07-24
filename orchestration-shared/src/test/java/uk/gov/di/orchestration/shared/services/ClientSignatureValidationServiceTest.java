@@ -112,6 +112,16 @@ class ClientSignatureValidationServiceTest {
                             clientSignatureValidationService.validateTokenClientAssertion(
                                     privateKeyJWT, client));
         }
+
+        @Test
+        void shouldThrowExceptionWhenPublicKeySourceIsStaticButPublicKeyIsNull() {
+            var client = generateClientWithStaticPublicKeySourceAndNullPublicKey();
+            var signedJWT = generateSignedJWT(keyPair.getPrivate());
+
+            assertThrows(
+                    ClientSignatureValidationException.class,
+                    () -> clientSignatureValidationService.validate(signedJWT, client));
+        }
     }
 
     @Nested
@@ -268,5 +278,12 @@ class ClientSignatureValidationServiceTest {
                 .withClientID(CLIENT_ID.getValue())
                 .withPublicKeySource(PublicKeySource.JWKS.getValue())
                 .withJwksUrl("https://some-url");
+    }
+
+    private static ClientRegistry generateClientWithStaticPublicKeySourceAndNullPublicKey() {
+        return new ClientRegistry()
+                .withClientID(CLIENT_ID.getValue())
+                .withPublicKeySource(PublicKeySource.STATIC.getValue())
+                .withPublicKey(null);
     }
 }
