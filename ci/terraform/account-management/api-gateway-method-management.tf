@@ -35,7 +35,7 @@ module "account-management-method_management_gateway" {
   environment      = var.environment
   tags             = local.default_tags
 
-  domain_name                                  = local.account_management_api_fqdn
+  domain_name                                  = "method.manage.${local.service_domain}"
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
   enable_api_gateway_execution_request_tracing = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
   cloudwatch_log_retention                     = var.cloudwatch_log_retention
