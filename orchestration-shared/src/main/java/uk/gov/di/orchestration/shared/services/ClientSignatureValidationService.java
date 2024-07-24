@@ -138,39 +138,31 @@ public class ClientSignatureValidationService {
                 String publicKey = client.getPublicKey();
                 if (publicKey == null) {
                     throw new ClientSignatureValidationException(
-                            "PublicKeySource is static but PublicKey is null");
+                            "PublicKey is null but is required when PublicKeySource is static");
                 }
-                LOG.info(
-                        "Returning static RP public signing key with key ID {} for client ID {}.",
-                        kid,
-                        clientId);
+                LOG.info("Returning static RP public signing key");
                 return convertPemToPublicKey(publicKey);
             }
             if (kid == null) {
-                String error = "Key ID is null but is required to fetch JWKS";
+                String error =
+                        "Key ID is null but is required to fetch key when PublicKeySource is JWKS";
                 LOG.error(error);
                 throw new JwksException(error);
             }
             String jwksUrl = client.getJwksUrl();
             if (jwksUrl == null) {
-                String error = "Client JWKS URL is null but is required to fetch JWKS";
+                String error =
+                        "Client JWKS URL is null but is required to fetch key when PublicKeySource is JWKS";
                 LOG.error(error);
                 throw new JwksException(error);
             }
             Optional<RpPublicKeyCache> cache =
                     rpPublicKeyCacheService.getRpPublicKeyCacheData(clientId, kid);
             if (cache.isPresent()) {
-                LOG.info(
-                        "Returning cached RP public signing key with key ID {} for client ID {}",
-                        kid,
-                        clientId);
+                LOG.info("Returning cached RP public signing key with key ID {}", kid);
                 return JWK.parse(cache.get().getPublicKey()).toRSAKey().toPublicKey();
             }
-            LOG.info(
-                    "Fetching JWKS with key ID {} from {} for client ID {}.",
-                    kid,
-                    jwksUrl,
-                    clientId);
+            LOG.info("Fetching JWKS with key ID {} from {}", kid, jwksUrl);
             InvokeResponse response = invokeFetchJwksFunction(lambdaClient, jwksUrl, kid);
             String unescapedPayload =
                     objectMapper.readValue(response.payload().asUtf8String(), String.class);
@@ -182,12 +174,9 @@ public class ClientSignatureValidationService {
             }
 
             JWK jwk = JWK.parse(unescapedPayload);
-            LOG.info(
-                    "Caching RP public signing key with key ID {} for client ID {}.",
-                    kid,
-                    clientId);
+            LOG.info("Caching RP public signing key with key ID {}", kid);
             rpPublicKeyCacheService.addRpPublicKeyCacheData(
-                    client.getClientID(), jwk.getKeyID(), jwk.toJSONString());
+                    clientId, jwk.getKeyID(), jwk.toJSONString());
             return jwk.toRSAKey().toPublicKey();
         } catch (ParseException | Json.JsonException | JOSEException e) {
             String error = "Error parsing JWKS to PublicKey: " + e.getMessage();
