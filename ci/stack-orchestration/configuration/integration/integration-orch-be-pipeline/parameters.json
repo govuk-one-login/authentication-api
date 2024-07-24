@@ -24,6 +24,10 @@
     "ParameterValue": "EC2"
   },
   {
+    "ParameterKey": "AllowedServiceFive",
+    "ParameterValue": "Lambda"
+  },
+  {
     "ParameterKey": "AdditionalCodeSigningVersionArns",
     "ParameterValue": "arn:aws:signer:eu-west-2:216552277552:/signing-profiles/DynatraceSigner/5uwzCCGTPq"
   },
