@@ -298,22 +298,21 @@ public class AuthorisationHandler
         if (isJarValidationRequired && authRequest.getRequestObject() == null) {
             String errorMsg = "JAR required for client but request does not contain Request Object";
             LOG.warn(errorMsg);
-            var errorResponse =
-                    new AuthenticationErrorResponse(
-                            authRequest.getRedirectionURI(),
-                            new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
-                            authRequest.getState(),
-                            authRequest.getResponseMode());
             if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
                 LOG.warn("Redirecting");
-                return generateApiGatewayProxyResponse(
-                        302,
-                        "",
-                        Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                        null);
+                return generateErrorResponse(
+                        authRequest.getRedirectionURI(),
+                        authRequest.getState(),
+                        authRequest.getResponseMode(),
+                        new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
+                        client.getClientID(),
+                        user);
             } else {
-                LOG.warn("Redirect URI not found in client registry");
-                return RedirectService.redirectToFrontendErrorPage(authFrontend.errorURI());
+                LOG.warn(
+                        "Redirect URI {} is invalid for client {}",
+                        authRequest.getRedirectionURI().toString(),
+                        client.getClientID());
+                return generateBadRequestResponse(user, errorMsg, client.getClientID());
             }
         }
 
@@ -326,8 +325,7 @@ public class AuthorisationHandler
                 authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
             }
         } catch (ClientRedirectUriValidationException e) {
-            return generateApiGatewayProxyResponse(
-                    INVALID_REQUEST.getHTTPStatusCode(), INVALID_REQUEST.getDescription());
+            return generateBadRequestResponse(user, e.getMessage(), client.getClientID());
         } catch (ClientSignatureValidationException e) {
             return generateApiGatewayProxyResponse(
                     VALIDATION_FAILED.getHTTPStatusCode(), VALIDATION_FAILED.getDescription());
@@ -679,6 +677,30 @@ public class AuthorisationHandler
                 "",
                 Map.of(ResponseHeaders.LOCATION, redirectURI),
                 Map.of(ResponseHeaders.SET_COOKIE, cookies));
+    }
+
+    private APIGatewayProxyResponseEvent generateBadRequestResponse(
+            TxmaAuditUser user, String errorDescription, @Nullable String clientId) {
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                clientId == null ? AuditService.UNKNOWN : clientId,
+                user,
+                pair("description", errorDescription));
+
+        LOG.warn("Bad request: {}", errorDescription);
+
+        return generateApiGatewayProxyResponse(
+                INVALID_REQUEST.getHTTPStatusCode(), INVALID_REQUEST.getDescription());
+    }
+
+    private APIGatewayProxyResponseEvent generateMissingParametersResponse(
+            TxmaAuditUser user, String errorDescription, @Nullable String clientId) {
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                clientId == null ? AuditService.UNKNOWN : clientId,
+                user,
+                pair("description", errorDescription));
+        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
