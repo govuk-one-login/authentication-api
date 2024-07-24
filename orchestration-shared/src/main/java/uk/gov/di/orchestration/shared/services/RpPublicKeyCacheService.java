@@ -12,7 +12,7 @@ public class RpPublicKeyCacheService extends BaseDynamoService<RpPublicKeyCache>
 
     public RpPublicKeyCacheService(ConfigurationService configurationService) {
         super(RpPublicKeyCache.class, "RpPublicKeyCache", configurationService, true);
-        this.timeToLive = 86400L; // 24 hours
+        this.timeToLive = 30L;
     }
 
     public void addRpPublicKeyCacheData(String clientId, String keyId, String publicKey) {
