@@ -14,7 +14,7 @@ locals {
     {
       endpoint_modules       = local.endpoint_modules,
       authorizer_uri         = aws_lambda_alias.authorizer_alias.invoke_arn
-      authorizer_credentials = aws_iam_role.invocation_role.id
+      authorizer_credentials = aws_iam_role.invocation_role.arn
     }
   )
 }
@@ -35,7 +35,7 @@ module "account-management-method_management_gateway" {
   environment      = var.environment
   tags             = local.default_tags
 
-  domain_name                                  = "method.manage.${local.service_domain}"
+  # domain_name                                  = "method.manage.${local.service_domain}"
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
   enable_api_gateway_execution_request_tracing = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
   cloudwatch_log_retention                     = var.cloudwatch_log_retention
@@ -50,7 +50,7 @@ module "account-management-method_management_gateway" {
 
 resource "aws_lambda_permission" "account-management-method_management_openapi_endpoint_execution_permission" {
   for_each      = local.endpoint_modules
-  statement_id  = "AllowAPIGatewayInvoke"
+  statement_id  = "AllowAPIGatewayInvokeMethodManagement"
   action        = "lambda:InvokeFunction"
   function_name = each.value.endpoint_lambda_function.function_name
   principal     = "apigateway.amazonaws.com"
