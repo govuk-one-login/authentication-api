@@ -35,7 +35,7 @@ module "account-management-method_management_gateway" {
   environment      = var.environment
   tags             = local.default_tags
 
-  # domain_name                                  = "method.manage.${local.service_domain}"
+  domain_name                                  = var.use_openapi_gateway ? local.account_management_api_fqdn : ""
   enable_api_gateway_execution_logging         = var.enable_api_gateway_execution_logging
   enable_api_gateway_execution_request_tracing = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
   cloudwatch_log_retention                     = var.cloudwatch_log_retention
@@ -59,6 +59,7 @@ resource "aws_lambda_permission" "account-management-method_management_openapi_e
 }
 
 module "dashboard_account-management-method_management_openapi" {
+  count            = var.use_openapi_gateway ? 1 : 0
   source           = "../modules/dashboards"
   api_gateway_name = module.account-management-method_management_gateway.api_gateway_name
   use_localstack   = false
