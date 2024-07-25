@@ -44,7 +44,7 @@ module "account-management-method_management_gateway" {
   access_logging_template                      = local.access_logging_template
 
   waf_arns = [
-    aws_wafv2_web_acl.wafregional_web_acl_am_api[0].arn
+    aws_wafv2_web_acl.wafregional_web_acl_am_api[local.method-management_web_acl_name].arn
   ]
 }
 
