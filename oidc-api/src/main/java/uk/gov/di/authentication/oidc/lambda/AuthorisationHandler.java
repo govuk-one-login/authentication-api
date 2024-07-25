@@ -26,12 +26,18 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.jetbrains.annotations.Nullable;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims;
+import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
+import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
+import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
+import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
@@ -42,6 +48,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -65,7 +72,6 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
-import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -88,6 +94,7 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -123,6 +130,7 @@ public class AuthorisationHandler
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final TokenValidationService tokenValidationService;
     private final AuthFrontend authFrontend;
+    private final AuthorisationService authorisationService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -137,7 +145,8 @@ public class AuthorisationHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
             TokenValidationService tokenValidationService,
-            AuthFrontend authFrontend) {
+            AuthFrontend authFrontend,
+            AuthorisationService authorisationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -151,6 +160,7 @@ public class AuthorisationHandler
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.tokenValidationService = tokenValidationService;
         this.authFrontend = authFrontend;
+        this.authorisationService = authorisationService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -178,6 +188,7 @@ public class AuthorisationHandler
                 new NoSessionOrchestrationService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
+        this.authorisationService = new AuthorisationService(configurationService);
     }
 
     public AuthorisationHandler(
@@ -203,6 +214,7 @@ public class AuthorisationHandler
                 new NoSessionOrchestrationService(configurationService, redis);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
+        this.authorisationService = new AuthorisationService(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -266,15 +278,8 @@ public class AuthorisationHandler
             authRequest = AuthenticationRequest.parse(requestParameters);
             authRequest = stripOutReauthenticateQueryParams(authRequest);
         } catch (ParseException e) {
-            if (e.getRedirectionURI() == null) {
-                LOG.warn(
-                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
-                throw new RuntimeException(
-                        "Redirect URI or ClientID is missing from auth request", e);
-            }
             LOG.warn("Authentication request could not be parsed", e);
-            throwError(e.getErrorObject(), user);
-            throw new AssertionError("Not reached");
+            return generateParseExceptionResponse(e, user);
         } catch (NullPointerException e) {
             LOG.warn(
                     "No parameters are present in the Authentication request query string or body",
@@ -707,6 +712,31 @@ public class AuthorisationHandler
         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
     }
 
+    private APIGatewayProxyResponseEvent generateParseExceptionResponse(
+            ParseException error, TxmaAuditUser user) {
+        try {
+            authorisationService.classifyParseException(error);
+        } catch (MissingClientIDException e) {
+            return generateMissingParametersResponse(user, e.getError().getDescription(), null);
+        } catch (MissingRedirectUriException e) {
+            return generateMissingParametersResponse(
+                    user,
+                    e.getError().getDescription(),
+                    error.getClientID() != null ? error.getClientID().getValue() : null);
+        } catch (IncorrectRedirectUriException | ClientNotFoundException e) {
+            return generateBadRequestResponse(user, e.getMessage(), error.getClientID().getValue());
+        } catch (InvalidAuthenticationRequestException e) {
+            return generateErrorResponse(
+                    error.getRedirectionURI(),
+                    error.getState(),
+                    error.getResponseMode(),
+                    INVALID_REQUEST,
+                    error.getClientID().getValue(),
+                    user);
+        }
+        throw new AssertionError("Not reached");
+    }
+
     private APIGatewayProxyResponseEvent generateErrorResponse(
             URI redirectUri,
             State state,
@@ -729,19 +759,6 @@ public class AuthorisationHandler
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
-    }
-
-    private void throwError(ErrorObject errorObject, TxmaAuditUser user) {
-
-        auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
-                AuditService.UNKNOWN,
-                user,
-                pair("description", errorObject.getDescription()));
-
-        LOG.warn("Throwing auth error: {} {}", errorObject.getCode(), errorObject.getDescription());
-
-        throw new RuntimeException(errorObject.getDescription());
     }
 
     private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
