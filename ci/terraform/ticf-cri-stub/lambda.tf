@@ -7,7 +7,7 @@ module "ticf_cri_stub_role" {
 }
 
 module "ticf_cri_stub_lambda" {
-  source = "../modules/openapi-endpoint-module"
+  source = "../modules/endpoint-lambda"
 
   endpoint_name = "ticf-cri-stub"
 

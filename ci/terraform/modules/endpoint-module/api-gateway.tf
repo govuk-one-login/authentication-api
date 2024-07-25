@@ -30,27 +30,27 @@ resource "aws_api_gateway_integration" "endpoint_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_alias.endpoint_lambda.invoke_arn
+  uri                     = module.endpoint_lambda.invoke_arn
 
   depends_on = [
     aws_api_gateway_resource.endpoint_resource,
     aws_api_gateway_method.endpoint_method,
-    aws_lambda_function.endpoint_lambda,
+    module.endpoint_lambda,
   ]
 }
 
 resource "aws_lambda_permission" "endpoint_execution_permission" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.endpoint_lambda.function_name
+  function_name = module.endpoint_lambda.endpoint_lambda_function.function_name
   principal     = "apigateway.amazonaws.com"
-  qualifier     = aws_lambda_alias.endpoint_lambda.name
+  qualifier     = module.endpoint_lambda.endpoint_lambda_alias.name
 
   # The "/*/*" portion grants access from any method on any resource
   # within the API Gateway REST API.
   source_arn = "${var.execution_arn}/*/*"
 
   depends_on = [
-    aws_lambda_function.endpoint_lambda
+    module.endpoint_lambda
   ]
 }

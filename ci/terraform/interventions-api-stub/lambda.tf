@@ -7,7 +7,7 @@ module "account_interventions_stub_role" {
 }
 
 module "account_interventions_stub_lambda" {
-  source = "../modules/openapi-endpoint-module"
+  source = "../modules/endpoint-lambda"
 
   endpoint_name = "account-interventions-stub"
 

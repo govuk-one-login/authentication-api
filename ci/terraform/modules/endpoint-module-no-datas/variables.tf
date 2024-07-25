@@ -187,8 +187,18 @@ variable "account_alias" {
   default     = null
 }
 
-variable "dynatrace_secret_string" {
-  description = "aws_secretsmanager_secret_version.xxx.secret_string value for dynatrace"
-  type        = string
-  default     = null
+variable "dynatrace_secret" {
+  description = "JSON decoded dynatrace secret"
+
+  type = object({
+    JAVA_LAYER = string
+
+    DT_CONNECTION_AUTH_TOKEN     = string
+    DT_CONNECTION_BASE_URL       = string
+    DT_CLUSTER_ID                = string
+    DT_TENANT                    = string
+    DT_LOG_COLLECTION_AUTH_TOKEN = string
+  })
+  sensitive = true
+  default   = null
 }

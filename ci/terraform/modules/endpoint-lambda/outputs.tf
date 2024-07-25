@@ -8,3 +8,7 @@ output "endpoint_lambda_alias" {
 output "integration_uri" {
   value = aws_lambda_alias.endpoint_lambda.invoke_arn
 }
+
+output "invoke_arn" {
+  value = aws_lambda_alias.endpoint_lambda.invoke_arn
+}

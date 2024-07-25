@@ -125,12 +125,6 @@ variable "scaling_trigger" {
   default = 0.7
 }
 
-variable "api_gateway_timeout" {
-  type        = number
-  description = "The timeout for the API Gateway in millis"
-  default     = 29000
-}
-
 variable "slack_event_topic_arn" {
   description = "The ARN of the slack event topic"
   type        = string
@@ -143,8 +137,18 @@ variable "account_alias" {
   default     = null
 }
 
-variable "dynatrace_secret_string" {
-  description = "aws_secretsmanager_secret_version.xxx.secret_string value for dynatrace"
-  type        = string
-  default     = null
+variable "dynatrace_secret" {
+  description = "JSON decoded dynatrace secret"
+
+  type = object({
+    JAVA_LAYER = string
+
+    DT_CONNECTION_AUTH_TOKEN     = string
+    DT_CONNECTION_BASE_URL       = string
+    DT_CLUSTER_ID                = string
+    DT_TENANT                    = string
+    DT_LOG_COLLECTION_AUTH_TOKEN = string
+  })
+  sensitive = true
+  default   = null
 }

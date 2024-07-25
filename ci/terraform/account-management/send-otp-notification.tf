@@ -72,9 +72,9 @@ module "send_otp_notification" {
   default_tags                           = local.default_tags
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
 
-  account_alias           = data.aws_iam_account_alias.current.account_alias
-  slack_event_topic_arn   = data.aws_sns_topic.slack_events.arn
-  dynatrace_secret_string = data.aws_secretsmanager_secret_version.dynatrace_secret.secret_string
+  account_alias         = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
     module.account_management_api_send_notification_role,

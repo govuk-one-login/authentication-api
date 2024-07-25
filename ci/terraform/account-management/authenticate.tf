@@ -57,9 +57,9 @@ module "authenticate" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
-  account_alias           = data.aws_iam_account_alias.current.account_alias
-  slack_event_topic_arn   = data.aws_sns_topic.slack_events.arn
-  dynatrace_secret_string = data.aws_secretsmanager_secret_version.dynatrace_secret.secret_string
+  account_alias         = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [module.account_management_api_authenticate_role]
 }
