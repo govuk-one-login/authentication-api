@@ -52,7 +52,12 @@ import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
+import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
+import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
+import uk.gov.di.authentication.oidc.services.AuthorisationService;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
@@ -63,13 +68,16 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
@@ -77,6 +85,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.state.UserContext;
@@ -99,10 +108,12 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -115,6 +126,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -148,6 +160,8 @@ class AuthorisationHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private final AuthorisationService authorisationService = mock(AuthorisationService.class);
+    protected final Json objectMapper = SerializationService.getInstance();
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
@@ -264,7 +278,8 @@ class AuthorisationHandlerTest {
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
                         tokenValidationService,
-                        authFrontend);
+                        authFrontend,
+                        authorisationService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -600,19 +615,51 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldThrowErrorWhenClientIsNotPresent() {
+        void shouldReturnBadRequestWhenClientIsNotPresent() throws JOSEException {
             when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
 
-            assertThrows(
-                    RuntimeException.class,
-                    AuthorisationHandlerTest.this::makeDocAppHandlerRequest,
-                    format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
+            var response = makeDocAppHandlerRequest();
+
+            assertThat(response.getStatusCode(), equalTo(400));
+            assertThat(response.getBody(), equalTo(INVALID_REQUEST.getDescription()));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER,
+                            pair(
+                                    "description",
+                                    format(
+                                            "No Client found for ClientID: %s",
+                                            CLIENT_ID.getValue())));
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessage(
+                                    format(
+                                            "Bad request: No Client found for ClientID: %s",
+                                            CLIENT_ID.getValue()))));
             verifyNoInteractions(configService);
             verifyNoInteractions(requestObjectAuthorizeValidator);
         }
 
         @Test
-        void shouldThrowErrorWhenAuthorisationRequestCannotBeParsed() {
+        void shouldCallClassifyParseExceptionWhenAuthorisationRequestCannotBeParsed()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(
+                            new InvalidAuthenticationRequestException(
+                                    new com.nimbusds.oauth2.sdk.ParseException(
+                                                    "Missing response_type parameter")
+                                            .getErrorObject()))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("GET");
             event.setQueryStringParameters(
@@ -630,19 +677,16 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            assertThrows(
-                    RuntimeException.class,
-                    () -> makeHandlerRequest(event),
-                    "Invalid request: Missing response_type parameter");
 
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            "",
-                            BASE_AUDIT_USER,
-                            pair(
-                                    "description",
-                                    "Invalid request: Missing response_type parameter"));
+            makeHandlerRequest(event);
+
+            ArgumentCaptor<com.nimbusds.oauth2.sdk.ParseException> parseExceptionArgument =
+                    ArgumentCaptor.forClass(com.nimbusds.oauth2.sdk.ParseException.class);
+
+            verify(authorisationService).classifyParseException(parseExceptionArgument.capture());
+            assertEquals(
+                    parseExceptionArgument.getValue().getMessage(),
+                    "Missing response_type parameter");
         }
 
         @Test
@@ -738,22 +782,27 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldThrowExceptionWhenNoQueryStringParametersArePresent() {
+        void shouldReturnBadRequestWhenNoQueryStringParametersArePresent()
+                throws Json.JsonException {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("GET");
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            RuntimeException expectedException =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> makeHandlerRequest(event),
-                            "Expected to throw AccessTokenException");
+            var response = makeHandlerRequest(event);
 
+            verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                            "",
+                            BASE_AUDIT_USER,
+                            pair(
+                                    "description",
+                                    "No parameters are present in the Authentication request query string or body"));
+
+            assertThat(response, hasStatus(400));
             assertThat(
-                    expectedException.getMessage(),
-                    equalTo(
-                            "No parameters are present in the Authentication request query string or body"));
+                    response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
         }
 
         @ParameterizedTest
@@ -785,23 +834,32 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldThrowErrorWhenUnrecognisedPromptValue() {
+        void shouldCallClassifyParseExceptionWhenUnrecognisedPromptValue()
+                throws InvalidAuthenticationRequestException,
+                        ClientNotFoundException,
+                        MissingClientIDException,
+                        IncorrectRedirectUriException,
+                        MissingRedirectUriException {
+            doThrow(
+                            new InvalidAuthenticationRequestException(
+                                    new com.nimbusds.oauth2.sdk.ParseException(
+                                                    "Invalid prompt parameter: Unknown prompt type: unrecognised")
+                                            .getErrorObject()))
+                    .when(authorisationService)
+                    .classifyParseException(any());
+
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("prompt", "unrecognised"));
 
-            assertThrows(
-                    RuntimeException.class,
-                    () -> makeHandlerRequest(withRequestEvent(requestParams)),
-                    "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised");
+            ArgumentCaptor<com.nimbusds.oauth2.sdk.ParseException> parseExceptionArgument =
+                    ArgumentCaptor.forClass(com.nimbusds.oauth2.sdk.ParseException.class);
 
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTHORISATION_REQUEST_ERROR,
-                            "",
-                            BASE_AUDIT_USER,
-                            pair(
-                                    "description",
-                                    "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised"));
+            makeHandlerRequest(withRequestEvent(requestParams));
+
+            verify(authorisationService).classifyParseException(parseExceptionArgument.capture());
+            assertEquals(
+                    parseExceptionArgument.getValue().getMessage(),
+                    "Invalid prompt parameter: Unknown prompt type: unrecognised");
         }
 
         @Test
@@ -890,7 +948,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void
-                shouldRedirectToFrontendErrorPageWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+                shouldThrowBadRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event = new APIGatewayProxyRequestEvent();
             event.setQueryStringParameters(
@@ -909,17 +967,18 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
             var response = makeHandlerRequest(event);
 
-            assertThat(response.getStatusCode(), equalTo(302));
-            assertThat(
-                    response.getHeaders().get(ResponseHeaders.LOCATION),
-                    equalTo(FRONT_END_BASE_URI + "/" + ERROR_PAGE_REDIRECT_PATH));
+            assertThat(response.getStatusCode(), equalTo(400));
+            assertThat(response.getBody(), equalTo(INVALID_REQUEST.getDescription()));
 
             assertThat(
                     logging.events(),
                     hasItems(
                             withMessage(
                                     "JAR required for client but request does not contain Request Object"),
-                            withMessage("Redirect URI not found in client registry")));
+                            withMessage(
+                                    String.format(
+                                            "Redirect URI invalid-redirect-uri is invalid for client %s",
+                                            CLIENT_ID.getValue()))));
         }
 
         @Test
@@ -1615,18 +1674,34 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldNotActAsAnOpenRedirector() {
-        assertThrows(
-                RuntimeException.class,
-                () ->
-                        handler.handleRequest(
-                                withRequestEvent(
-                                        Map.of(
-                                                "redirect_uri",
-                                                "https://www.example.com",
-                                                "client_id",
-                                                "invalid-client")),
-                                context));
+    void returns400ForOpenRedirect()
+            throws InvalidAuthenticationRequestException,
+                    ClientNotFoundException,
+                    MissingClientIDException,
+                    IncorrectRedirectUriException,
+                    MissingRedirectUriException {
+        doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
+                .when(authorisationService)
+                .classifyParseException(any());
+
+        var response =
+                makeHandlerRequest(
+                        withRequestEvent(
+                                Map.of(
+                                        "redirect_uri",
+                                        "https://www.example.com",
+                                        "client_id",
+                                        "invalid-client")));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(OAuth2Error.INVALID_REQUEST.getDescription()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        "invalid-client",
+                        BASE_AUDIT_USER,
+                        pair("description", OAuth2Error.INVALID_REQUEST.getDescription()));
     }
 
     private static Stream<ErrorObject> expectedErrorObjects() {
@@ -1694,6 +1769,159 @@ class AuthorisationHandlerTest {
                         pair(
                                 "description",
                                 OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS.getDescription()));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenMissingClientId()
+            throws InvalidAuthenticationRequestException,
+                    ClientNotFoundException,
+                    MissingClientIDException,
+                    IncorrectRedirectUriException,
+                    Json.JsonException,
+                    MissingRedirectUriException {
+        doThrow(new MissingClientIDException(OAuth2Error.INVALID_REQUEST))
+                .when(authorisationService)
+                .classifyParseException(any());
+
+        var response = makeHandlerRequest(withRequestEvent(Map.of()));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        "",
+                        BASE_AUDIT_USER,
+                        pair("description", INVALID_REQUEST.getDescription()));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenMissingRedirectUri()
+            throws InvalidAuthenticationRequestException,
+                    ClientNotFoundException,
+                    MissingClientIDException,
+                    IncorrectRedirectUriException,
+                    Json.JsonException,
+                    MissingRedirectUriException {
+        doThrow(new MissingRedirectUriException(OAuth2Error.INVALID_REQUEST))
+                .when(authorisationService)
+                .classifyParseException(any());
+
+        var response =
+                makeHandlerRequest(withRequestEvent(Map.of("client_id", CLIENT_ID.getValue())));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        CLIENT_ID.getValue(),
+                        BASE_AUDIT_USER,
+                        pair("description", INVALID_REQUEST.getDescription()));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenIncorrectRedirectUri()
+            throws InvalidAuthenticationRequestException,
+                    ClientNotFoundException,
+                    MissingClientIDException,
+                    IncorrectRedirectUriException,
+                    Json.JsonException,
+                    MissingRedirectUriException {
+        doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
+                .when(authorisationService)
+                .classifyParseException(any());
+
+        var response =
+                makeHandlerRequest(
+                        withRequestEvent(
+                                Map.of(
+                                        "client_id",
+                                        CLIENT_ID.getValue(),
+                                        "redirect_uri",
+                                        "bad_redirect_uri")));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        CLIENT_ID.getValue(),
+                        BASE_AUDIT_USER,
+                        pair("description", INVALID_REQUEST.getDescription()));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenClientNotFound()
+            throws InvalidAuthenticationRequestException,
+                    ClientNotFoundException,
+                    MissingClientIDException,
+                    IncorrectRedirectUriException,
+                    Json.JsonException,
+                    MissingRedirectUriException {
+        doThrow(new ClientNotFoundException(CLIENT_ID.getValue()))
+                .when(authorisationService)
+                .classifyParseException(any());
+
+        var response =
+                makeHandlerRequest(
+                        withRequestEvent(
+                                Map.of(
+                                        "client_id",
+                                        CLIENT_ID.getValue(),
+                                        "redirect_uri",
+                                        REDIRECT_URI)));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasBody(INVALID_REQUEST.getDescription()));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        CLIENT_ID.getValue(),
+                        BASE_AUDIT_USER,
+                        pair(
+                                "description",
+                                format("No Client found for ClientID: %s", CLIENT_ID.getValue())));
+    }
+
+    @Test
+    void shouldReturnRedirectWithErrorWhenInvalidAuthParameters()
+            throws InvalidAuthenticationRequestException,
+                    ClientNotFoundException,
+                    MissingClientIDException,
+                    IncorrectRedirectUriException,
+                    Json.JsonException,
+                    MissingRedirectUriException {
+        doThrow(new InvalidAuthenticationRequestException(INVALID_REQUEST))
+                .when(authorisationService)
+                .classifyParseException(any());
+
+        var response =
+                makeHandlerRequest(
+                        withRequestEvent(
+                                Map.of(
+                                        "client_id",
+                                        CLIENT_ID.getValue(),
+                                        "redirect_uri",
+                                        REDIRECT_URI,
+                                        "prompt",
+                                        "invalid-prompt")));
+
+        assertThat(response, hasStatus(302));
+        assertEquals(
+                "https://localhost:8080?error=invalid_request&error_description=Invalid+request",
+                response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTHORISATION_REQUEST_ERROR,
+                        CLIENT_ID.getValue(),
+                        BASE_AUDIT_USER,
+                        pair("description", INVALID_REQUEST.getDescription()));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
