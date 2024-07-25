@@ -15,7 +15,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 public class AuthorisationService {
     private final ClientService clientService;
-    private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
+    private static final Logger LOG = LogManager.getLogger(AuthorisationService.class);
 
     public AuthorisationService(ClientService clientService) {
         this.clientService = clientService;

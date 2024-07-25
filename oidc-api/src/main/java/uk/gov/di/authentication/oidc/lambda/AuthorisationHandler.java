@@ -320,7 +320,7 @@ public class AuthorisationHandler
             } else {
                 LOG.warn(
                         "Redirect URI {} is invalid for client {}",
-                        authRequest.getRedirectionURI().toString(),
+                        authRequest.getRedirectionURI(),
                         client.getClientID());
                 return generateBadRequestResponse(user, errorMsg, client.getClientID());
             }

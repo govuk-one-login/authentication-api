@@ -75,7 +75,6 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -842,7 +841,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void
-            shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() throws Json.JsonException {
+            shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();

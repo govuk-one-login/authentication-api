@@ -188,7 +188,6 @@ class AuthorisationHandlerTest {
             URI.create("https://example.com/authorize?prompt=login");
     private static final URI FRONT_END_AUTHORIZE_SIGN_IN_URI =
             URI.create("https://example.com/authorize?result=sign-in");
-    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String SESSION_ID = "a-session-id";
@@ -685,8 +684,8 @@ class AuthorisationHandlerTest {
 
             verify(authorisationService).classifyParseException(parseExceptionArgument.capture());
             assertEquals(
-                    parseExceptionArgument.getValue().getMessage(),
-                    "Missing response_type parameter");
+                    "Missing response_type parameter",
+                    parseExceptionArgument.getValue().getMessage());
         }
 
         @Test
@@ -858,8 +857,8 @@ class AuthorisationHandlerTest {
 
             verify(authorisationService).classifyParseException(parseExceptionArgument.capture());
             assertEquals(
-                    parseExceptionArgument.getValue().getMessage(),
-                    "Invalid prompt parameter: Unknown prompt type: unrecognised");
+                    "Invalid prompt parameter: Unknown prompt type: unrecognised",
+                    parseExceptionArgument.getValue().getMessage());
         }
 
         @Test
@@ -1828,7 +1827,6 @@ class AuthorisationHandlerTest {
                     ClientNotFoundException,
                     MissingClientIDException,
                     IncorrectRedirectUriException,
-                    Json.JsonException,
                     MissingRedirectUriException {
         doThrow(new IncorrectRedirectUriException(OAuth2Error.INVALID_REQUEST))
                 .when(authorisationService)
@@ -1860,7 +1858,6 @@ class AuthorisationHandlerTest {
                     ClientNotFoundException,
                     MissingClientIDException,
                     IncorrectRedirectUriException,
-                    Json.JsonException,
                     MissingRedirectUriException {
         doThrow(new ClientNotFoundException(CLIENT_ID.getValue()))
                 .when(authorisationService)
@@ -1894,7 +1891,6 @@ class AuthorisationHandlerTest {
                     ClientNotFoundException,
                     MissingClientIDException,
                     IncorrectRedirectUriException,
-                    Json.JsonException,
                     MissingRedirectUriException {
         doThrow(new InvalidAuthenticationRequestException(INVALID_REQUEST))
                 .when(authorisationService)
