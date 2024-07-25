@@ -16,15 +16,15 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
         this.clock = new NowHelper.NowClock(Clock.systemUTC());
     }
 
-    public void addCode(String attemptIdentifier) {
+    public void addCode(String attemptIdentifier, long ttlSeconds) {
+        long ttlEpochSeconds =
+                NowHelper.nowPlus(ttlSeconds, ChronoUnit.SECONDS).toInstant().getEpochSecond();
+
         var authenticationAttempt =
                 get(attemptIdentifier)
                         .orElse(new AuthenticationAttempts())
                         .withAttemptIdentifier(attemptIdentifier)
-                        .withTimeToLive(
-                                NowHelper.nowPlus(60, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
+                        .withTimeToLive(ttlEpochSeconds);
 
         update(authenticationAttempt);
     }
@@ -47,7 +47,7 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
     }
 
     public Optional<AuthenticationAttempts> getAuthenticationAttempts(String attemptIdentifier) {
-        return get(attemptIdentifier)
-                .filter(t -> t.getTimeToLive() > clock.now().toInstant().getEpochSecond());
+        long currentTimestamp = NowHelper.now().toInstant().getEpochSecond();
+        return get(attemptIdentifier).filter(t -> t.getTimeToLive() > currentTimestamp);
     }
 }

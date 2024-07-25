@@ -49,10 +49,6 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
         }
     }
 
-    public void addCode(String attemptIdentifier) {
-        dynamoService.addCode(attemptIdentifier);
-    }
-
     public void createOrIncrementCount(String attemptIdentifier, long ttl) {
         dynamoService.createOrIncrementCount(attemptIdentifier, ttl);
     }
