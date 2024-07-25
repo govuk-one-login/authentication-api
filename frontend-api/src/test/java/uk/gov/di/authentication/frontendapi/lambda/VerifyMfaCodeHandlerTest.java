@@ -586,6 +586,8 @@ class VerifyMfaCodeHandlerTest {
                         ? null
                         : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
+                .thenReturn(3);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
@@ -607,7 +609,7 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("loginFailureCount", 0),
+                pair("loginFailureCount", 3),
                 pair("MFACodeEntered", CODE));
     }
 
@@ -692,6 +694,8 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
+                .thenReturn(3);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
@@ -713,7 +717,7 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("loginFailureCount", 0),
+                pair("loginFailureCount", 3),
                 pair("MFACodeEntered", CODE));
     }
 

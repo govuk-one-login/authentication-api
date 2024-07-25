@@ -249,7 +249,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var metadataPairs = metadataPairsForEvent(auditableEvent, session, codeRequest);
+        var metadataPairs = metadataPairsForEvent(auditableEvent, emailAddress, codeRequest);
 
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
@@ -295,9 +295,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
-            FrontendAuditableEvent auditableEvent,
-            Session session,
-            VerifyMfaCodeRequest codeRequest) {
+            FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
         var basicMetadataPairs =
                 List.of(
                         pair("mfa-type", codeRequest.getMfaMethodType().getValue()),
@@ -310,7 +308,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     case CODE_MAX_RETRIES_REACHED -> List.of(
                             pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
                     case INVALID_CODE_SENT -> List.of(
-                            pair("loginFailureCount", session.getRetryCount()),
+                            pair(
+                                    "loginFailureCount",
+                                    codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                                            email, MFAMethodType.AUTH_APP)),
                             pair("MFACodeEntered", codeRequest.getCode()));
                     case CODE_VERIFIED -> List.of(pair("MFACodeEntered", codeRequest.getCode()));
                     default -> List.<AuditService.MetadataPair>of();
