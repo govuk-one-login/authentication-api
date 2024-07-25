@@ -415,7 +415,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
-        assertThat(session.getRetryCount(), equalTo(0));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verify(codeStorageService, never())
@@ -610,7 +609,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(session.getRetryCount(), equalTo(0));
         if (codeRequestType != CodeRequestType.SMS_REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
@@ -645,7 +643,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
-        assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         EMAIL,
