@@ -35,6 +35,7 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
@@ -817,7 +818,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void
-            shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
@@ -836,12 +837,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
         assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
     void
-            shouldRedirectToFrontendErrorPageGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() throws Json.JsonException {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
@@ -858,14 +859,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 URI.create("invalid-redirect-uri")),
                         Optional.of("GET"));
 
-        assertThat(response, hasStatus(302));
+        assertThat(response, hasStatus(400));
         assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(
-                        buildURI(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(), "error")
-                                .toString()));
+                response.getBody(),
+                equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     private Map<String, String> constructQueryStringParameters(
