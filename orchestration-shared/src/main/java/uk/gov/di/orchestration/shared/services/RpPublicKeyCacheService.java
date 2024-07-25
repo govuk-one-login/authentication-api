@@ -37,7 +37,7 @@ public class RpPublicKeyCacheService extends BaseDynamoService<RpPublicKeyCache>
         Optional<RpPublicKeyCache> cacheData = get(clientId, keyId);
 
         if (cacheData.isEmpty()) {
-            LOG.info("No cache found with: key ID {}, client ID {}.", keyId, clientId);
+            LOG.info("No cached RP public key found with key ID {}", keyId);
             return cacheData;
         }
 
@@ -48,8 +48,7 @@ public class RpPublicKeyCacheService extends BaseDynamoService<RpPublicKeyCache>
                                         > NowHelper.now().toInstant().getEpochSecond());
 
         if (validCacheData.isEmpty()) {
-            LOG.info(
-                    "Cached key with expired TTL found: key ID {}, client ID {}.", keyId, clientId);
+            LOG.info("Cached RP public key with expired TTL found. Key ID: {}", keyId);
         }
         return validCacheData;
     }
