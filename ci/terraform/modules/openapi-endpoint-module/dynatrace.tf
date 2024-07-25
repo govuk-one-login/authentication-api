@@ -1,8 +1,10 @@
 data "aws_secretsmanager_secret" "dynatrace_secret" {
-  arn = var.environment == "production" ? local.dynatrace_production_secret : local.dynatrace_nonproduction_secret
+  count = var.dynatrace_secret_string == null ? 0 : 1
+  arn   = var.environment == "production" ? local.dynatrace_production_secret : local.dynatrace_nonproduction_secret
 }
 data "aws_secretsmanager_secret_version" "dynatrace_secret" {
-  secret_id = data.aws_secretsmanager_secret.dynatrace_secret.id
+  count     = var.dynatrace_secret_string == null ? 0 : 1
+  secret_id = data.aws_secretsmanager_secret.dynatrace_secret[count.index].id
 }
 
 locals {
@@ -22,5 +24,6 @@ locals {
   dynatrace_production_secret    = "arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables"
   dynatrace_nonproduction_secret = "arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables"
 
-  dynatrace_secret = jsondecode(data.aws_secretsmanager_secret_version.dynatrace_secret.secret_string)
+  dynatrace_secret_string = var.dynatrace_secret_string == null ? data.aws_secretsmanager_secret_version.dynatrace_secret[count.index].secret_string : var.dynatrace_secret_string
+  dynatrace_secret        = jsondecode(local.dynatrace_secret_string)
 }

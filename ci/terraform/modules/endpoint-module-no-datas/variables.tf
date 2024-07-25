@@ -2,6 +2,34 @@ variable "endpoint_name" {
   type = string
 }
 
+variable "path_part" {
+  type = string
+}
+
+variable "method_request_parameters" {
+  type    = map(bool)
+  default = {}
+}
+
+variable "create_endpoint" {
+  type    = bool
+  default = true
+}
+
+variable "api_key_required" {
+  type    = bool
+  default = false
+}
+
+variable "integration_request_parameters" {
+  type    = map(string)
+  default = {}
+}
+
+variable "endpoint_method" {
+  type = list(string)
+}
+
 variable "source_bucket" {
   type = string
 }
@@ -27,6 +55,17 @@ variable "handler_runtime" {
   default = "java17"
 }
 
+variable "rest_api_id" {
+  type = string
+}
+
+variable "root_resource_id" {
+  type = string
+}
+
+variable "execution_arn" {
+  type = string
+}
 
 variable "environment" {
   type = string
@@ -68,10 +107,20 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
+variable "use_localstack" {
+  type    = bool
+  default = false
+}
+
 variable "default_tags" {
   default     = {}
   type        = map(string)
   description = "Default tags to apply to all resources"
+}
+
+variable "authorizer_id" {
+  type    = string
+  default = null
 }
 
 variable "cloudwatch_key_arn" {
@@ -80,6 +129,7 @@ variable "cloudwatch_key_arn" {
 }
 
 variable "cloudwatch_log_retention" {
+  default     = 30
   type        = number
   description = "The number of day to retain Cloudwatch logs for"
 }
@@ -123,12 +173,6 @@ variable "max_provisioned_concurrency" {
 
 variable "scaling_trigger" {
   default = 0.7
-}
-
-variable "api_gateway_timeout" {
-  type        = number
-  description = "The timeout for the API Gateway in millis"
-  default     = 29000
 }
 
 variable "slack_event_topic_arn" {
