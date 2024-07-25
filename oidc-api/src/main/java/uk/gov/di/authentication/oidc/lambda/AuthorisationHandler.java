@@ -284,7 +284,8 @@ public class AuthorisationHandler
             LOG.warn(
                     "No parameters are present in the Authentication request query string or body",
                     e);
-            throw new RuntimeException(
+            return generateMissingParametersResponse(
+                    user,
                     "No parameters are present in the Authentication request query string or body",
                     null);
         }
