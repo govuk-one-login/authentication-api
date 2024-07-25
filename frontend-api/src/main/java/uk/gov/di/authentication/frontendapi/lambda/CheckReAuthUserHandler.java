@@ -93,11 +93,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
         LOG.info("Processing CheckReAuthUser request");
 
+        var emailUserIsSignedInWith = userContext.getSession().getEmailAddress();
+
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
                         AuditService.UNKNOWN,
-                        request.email(),
+                        emailUserIsSignedInWith,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -108,6 +110,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .flatMap(
                             userProfile -> {
                                 if (hasEnteredIncorrectEmailTooManyTimes(userProfile.getEmail())) {
+                                    if (configurationService.supportReauthSignoutEnabled()) {
+                                        removeEmailCountLock(userProfile.getEmail());
+                                    }
                                     throw new AccountLockedException(
                                             "Account is locked due to too many failed attempts.",
                                             ErrorResponse.ERROR_1057);
@@ -127,7 +132,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         auditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(() -> generateErrorResponse(request.email(), auditContext));
+                    .orElseGet(() -> generateErrorResponse(emailUserIsSignedInWith, auditContext));
         } catch (AccountLockedException e) {
 
             auditService.submitAuditEvent(
@@ -181,6 +186,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     private APIGatewayProxyResponseEvent generateErrorResponse(
             String email, AuditContext auditContext) {
         if (hasEnteredIncorrectEmailTooManyTimes(email)) {
+            if (configurationService.supportReauthSignoutEnabled()) {
+                removeEmailCountLock(email);
+            }
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
