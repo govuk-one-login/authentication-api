@@ -7,7 +7,6 @@ import uk.gov.di.authentication.oidc.exceptions.IncorrectRedirectUriException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthenticationRequestException;
 import uk.gov.di.authentication.oidc.exceptions.MissingClientIDException;
 import uk.gov.di.authentication.oidc.exceptions.MissingRedirectUriException;
-import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -49,10 +48,7 @@ public class AuthorisationService {
             throw new InvalidAuthenticationRequestException(error.getErrorObject());
         }
 
-        LOG.warn(
-                "Redirect URI {} is invalid for client {}",
-                error.getRedirectionURI(),
-                client.getClientID());
+        LOG.warn("Redirect URI {} is invalid for client", error.getRedirectionURI());
         throw new IncorrectRedirectUriException(error.getErrorObject());
     }
 }

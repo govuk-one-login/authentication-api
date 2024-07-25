@@ -975,9 +975,7 @@ class AuthorisationHandlerTest {
                             withMessage(
                                     "JAR required for client but request does not contain Request Object"),
                             withMessage(
-                                    String.format(
-                                            "Redirect URI invalid-redirect-uri is invalid for client %s",
-                                            CLIENT_ID.getValue()))));
+                                    "Redirect URI invalid-redirect-uri is invalid for client")));
         }
 
         @Test

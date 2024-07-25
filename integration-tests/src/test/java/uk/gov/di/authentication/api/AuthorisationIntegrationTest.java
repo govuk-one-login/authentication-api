@@ -35,7 +35,6 @@ import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
@@ -836,7 +835,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
         assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
@@ -859,11 +860,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("GET"));
 
         assertThat(response, hasStatus(400));
-        assertThat(
-                response.getBody(),
-                equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
+        assertThat(response.getBody(), equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     private Map<String, String> constructQueryStringParameters(
