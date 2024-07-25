@@ -221,7 +221,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
-        int loginFailureCount = session.getRetryCount();
+        int loginFailureCount =
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
         var clientSession = userContext.getClientSession();
         var clientId = userContext.getClient().get().getClientID();
         var levelOfConfidence =
@@ -282,7 +283,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var notificationType = codeRequest.notificationType();
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        int loginFailureCount = session.getRetryCount();
         AuditableEvent auditableEvent;
         switch (errorResponse) {
             case ERROR_1027:
@@ -304,6 +304,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
                 break;
         }
+        var loginFailureCount =
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, true);
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairArray);
