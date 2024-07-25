@@ -61,7 +61,29 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
+    private static RedisConnectionService redis;
 
+    static {
+        if (System.getProperty("TEST") == null) {
+            redis = new RedisConnectionService(ConfigurationService.getInstance());
+        }
+    }
+
+    // Function Init
+    public VerifyCodeHandler() {
+        this(ConfigurationService.getInstance(), redis);
+    }
+
+    public VerifyCodeHandler(
+            ConfigurationService configurationService, RedisConnectionService redis) {
+        super(VerifyCodeRequest.class, configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
+    }
+
+    // Test only constructors
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
@@ -85,22 +107,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = accountModifiersService;
     }
 
-    public VerifyCodeHandler() {
-        this(ConfigurationService.getInstance());
-    }
-
     public VerifyCodeHandler(ConfigurationService configurationService) {
         super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
-        this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
-        this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
-    }
-
-    public VerifyCodeHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
-        super(VerifyCodeRequest.class, configurationService, redis);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);

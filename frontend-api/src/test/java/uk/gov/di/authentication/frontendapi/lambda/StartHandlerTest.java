@@ -76,6 +76,10 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class StartHandlerTest {
 
+    static {
+        System.setProperty("TEST", "TRUE");
+    }
+
     public static final String TEST_CLIENT_ID = "test_client_id";
     public static final String TEST_CLIENT_NAME = "test_client_name";
     private static final String SESSION_ID = "some-session-id";
