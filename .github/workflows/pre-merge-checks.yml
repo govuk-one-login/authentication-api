@@ -300,23 +300,29 @@ jobs:
       - run-unit-tests
       - run-integration-tests
       - run-account-management-and-delivery-receipts-tests
+    env:
+      RUN: ${{ !contains(github.event.pull_request.labels.*.name , 'bypass-sonarcloud') && github.actor != 'dependabot[bot]' }}
     if: github.event_name != 'merge_group'
     steps:
       - name: Check out repository code
+        if: ${{ env.RUN == 'true' }}
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
       - name: Set up JDK 17
+        if: ${{ env.RUN == 'true' }}
         uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 #v4.2.1
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
+        if: ${{ env.RUN == 'true' }}
         uses: gradle/actions/setup-gradle@d9c87d481d55275bb5441eef3fe0e46805f9ef70 # v3.5.0
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
+        if: ${{ env.RUN == 'true' }}
         uses: actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: |
@@ -325,8 +331,8 @@ jobs:
             !*/build/reports
             !*/build/jacoco
           key: ${{ runner.os }}-build-${{ github.sha }}
-
       - name: Restore Cached Unit Test Reports
+        if: ${{ env.RUN == 'true' }}
         uses: actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
@@ -340,6 +346,7 @@ jobs:
             !delivery-receipts-integration-tests/build/jacoco/
             !delivery-receipts-integration-tests/build/reports/
       - name: Restore Cached Integration Test Reports
+        if: ${{ env.RUN == 'true' }}
         uses: actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
@@ -347,6 +354,7 @@ jobs:
             integration-tests/build/jacoco/
             integration-tests/build/reports/
       - name: Restore Cached AM DR Integration Test Reports
+        if: ${{ env.RUN == 'true' }}
         uses: actions/cache/restore@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
@@ -356,7 +364,7 @@ jobs:
             delivery-receipts-integration-tests/build/jacoco/
             delivery-receipts-integration-tests/build/reports/
       - name: Run SonarCloud Analysis
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: ${{ env.RUN == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
