@@ -9,6 +9,8 @@ on:
       - reopened
       - ready_for_review
       - synchronize
+      - labeled
+      - unlabeled
   merge_group:
 
 jobs:
