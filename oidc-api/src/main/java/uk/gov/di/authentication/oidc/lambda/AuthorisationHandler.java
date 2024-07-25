@@ -219,9 +219,7 @@ public class AuthorisationHandler
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context)
-            throws ClientNotFoundException, java.text.ParseException {
-        ClientRegistry client;
+            APIGatewayProxyRequestEvent input, Context context) throws java.text.ParseException {
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
@@ -267,12 +265,6 @@ public class AuthorisationHandler
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
             authRequest = stripOutReauthenticateQueryParams(authRequest);
-            String clientId = authRequest.getClientID().getValue();
-            client =
-                    clientService
-                            .getClient(clientId)
-                            .orElseThrow(() -> new ClientNotFoundException(clientId));
-            updateAttachedLogFieldToLogs(CLIENT_ID, clientId);
         } catch (ParseException e) {
             if (e.getRedirectionURI() == null) {
                 LOG.warn(
@@ -289,7 +281,19 @@ public class AuthorisationHandler
                     e);
             throw new RuntimeException(
                     "No parameters are present in the Authentication request query string or body",
-                    e);
+                    null);
+        }
+
+        ClientRegistry client;
+        String clientId = authRequest.getClientID().getValue();
+        try {
+            client =
+                    clientService
+                            .getClient(clientId)
+                            .orElseThrow(() -> new ClientNotFoundException(clientId));
+            updateAttachedLogFieldToLogs(CLIENT_ID, clientId);
+        } catch (ClientNotFoundException e) {
+            return generateBadRequestResponse(user, e.getMessage(), clientId);
         }
 
         Optional<AuthRequestError> authRequestError;
