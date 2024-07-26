@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.EMAIL_UPDATED;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class NotifyCallbackHandlerTest {
@@ -102,8 +103,7 @@ class NotifyCallbackHandlerTest {
     @MethodSource("phoneNumbers")
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
             String number, String expectedCountryCode, String status) throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
@@ -112,8 +112,7 @@ class NotifyCallbackHandlerTest {
                         "SmsSent",
                         Map.of(
                                 "SmsType",
-                                DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER
-                                        .getTemplateAlias(),
+                                VERIFY_PHONE_NUMBER.getTemplateAlias(),
                                 "CountryCode",
                                 expectedCountryCode,
                                 "Environment",
@@ -128,8 +127,7 @@ class NotifyCallbackHandlerTest {
     void
             shouldSendCloudwatchDurationInMillisecondsBetweenCreatedAndAndUpdatedAtForDeliveredRequest()
                     throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var createdAtDate = Instant.now();
         var completedAt = createdAtDate.plusMillis(1000);
         var deliveryReceipt =
@@ -150,8 +148,7 @@ class NotifyCallbackHandlerTest {
     void
             shouldNotSendCloudwatchDurationInMillisecondsBetweenCreatedAndAndUpdatedAtForAnUnsuccessfulReceipt()
                     throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var deliveryStatus = "permanentFailure";
         var deliveryReceipt =
                 deliveryReceiptWithCreatedAtAndCompletedAt(
@@ -165,8 +162,7 @@ class NotifyCallbackHandlerTest {
 
     @Test
     void shouldNotThrowAnErrorWhenMetricsParsingFails() throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var invalidCreatedAtDate = "not-a-date";
         var deliveryReceipt =
                 createDeliveryReceipt(
@@ -195,8 +191,7 @@ class NotifyCallbackHandlerTest {
     @MethodSource("emailTemplates")
     void shouldCallCloudwatchMetricWithEmailNotificationType(DeliveryReceiptsNotificationType type)
             throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(type));
+        setupNotifyTemplate(Optional.of(type));
         var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
@@ -215,8 +210,7 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailType()
             throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
+        setupNotifyTemplate(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
         when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
         NotifyCallbackHandler handlerBulkEmailOn =
                 new NotifyCallbackHandler(
@@ -239,8 +233,7 @@ class NotifyCallbackHandlerTest {
     void
             shouldNotUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailTypeWhenBulkEmailSwitchedOn()
                     throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(EMAIL_UPDATED));
+        setupNotifyTemplate(Optional.of(EMAIL_UPDATED));
         NotifyCallbackHandler handlerBulkEmailOn =
                 new NotifyCallbackHandler(
                         cloudwatchMetricsService,
@@ -258,8 +251,7 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldNotUpdateBulkEmailDeliveryReceiptsStatusWhenBulkEmailSwitchedOff()
             throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
+        setupNotifyTemplate(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
         var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
@@ -271,8 +263,7 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldNotUpdateBulkEmailDeliveryReceiptsStatusForEmailUpdatedEmailType()
             throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.of(EMAIL_UPDATED));
+        setupNotifyTemplate(Optional.of(EMAIL_UPDATED));
         when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
         NotifyCallbackHandler handlerBulkEmailOn =
                 new NotifyCallbackHandler(
@@ -290,8 +281,7 @@ class NotifyCallbackHandlerTest {
 
     @Test
     void shouldThrowIfInvalidTemplateId() throws Json.JsonException {
-        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                .thenReturn(Optional.empty());
+        setupNotifyTemplate(Optional.empty());
         var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
 
         var event = eventWithBody(deliveryReceipt);
@@ -353,9 +343,7 @@ class NotifyCallbackHandlerTest {
         assertDoesNotThrow(
                 () -> {
                     when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
-                            .thenReturn(
-                                    Optional.of(
-                                            DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+                            .thenReturn(Optional.of(VERIFY_PHONE_NUMBER));
                     var deliveryReceipt =
                             createDeliveryReceipt(
                                     null,
@@ -428,5 +416,10 @@ class NotifyCallbackHandlerTest {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN))
                 .withBody(objectMapper.writeValueAsString(body));
+    }
+
+    private void setupNotifyTemplate(Optional<DeliveryReceiptsNotificationType> maybeTemplate) {
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
+                .thenReturn(maybeTemplate);
     }
 }
