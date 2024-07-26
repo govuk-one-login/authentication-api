@@ -24,7 +24,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -105,10 +104,7 @@ class NotifyCallbackHandlerTest {
         when(configurationService.getNotificationTypeFromTemplateId(templateID))
                 .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
         var deliveryReceipt = createDeliveryReceipt(number, status, "sms", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        var response = handler.handleRequest(event, context);
+        var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -203,10 +199,7 @@ class NotifyCallbackHandlerTest {
                 .thenReturn(Optional.of(type));
         var deliveryReceipt =
                 createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        handler.handleRequest(event, context);
+        handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -235,13 +228,10 @@ class NotifyCallbackHandlerTest {
                         dynamoService,
                         bulkEmailUsersService);
         var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
         String subjectId = "subject-id-1";
         UserProfile userProfile = new UserProfile().withEmail(email).withSubjectID(subjectId);
         when(dynamoService.getUserProfileByEmailMaybe(email)).thenReturn(Optional.of(userProfile));
-        handlerBulkEmailOn.handleRequest(event, context);
+        handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService).getUserProfileByEmailMaybe(email);
 
@@ -263,10 +253,7 @@ class NotifyCallbackHandlerTest {
                         dynamoService,
                         bulkEmailUsersService);
         var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        handlerBulkEmailOn.handleRequest(event, context);
+        handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
@@ -281,10 +268,7 @@ class NotifyCallbackHandlerTest {
         when(configurationService.getNotificationTypeFromTemplateId(templateID))
                 .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
         var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        handler.handleRequest(event, context);
+        handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
@@ -306,10 +290,7 @@ class NotifyCallbackHandlerTest {
                         dynamoService,
                         bulkEmailUsersService);
         var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-        handlerBulkEmailOn.handleRequest(event, context);
+        handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
@@ -323,9 +304,8 @@ class NotifyCallbackHandlerTest {
                 .thenReturn(Optional.empty());
         var deliveryReceipt =
                 createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+
+        var event = eventWithBody(deliveryReceipt);
 
         assertThrows(
                 RuntimeException.class,
@@ -337,8 +317,7 @@ class NotifyCallbackHandlerTest {
 
     @Test
     void shouldThrowIfBearerTokenIsMissing() {
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Collections.emptyMap());
+        var event = new APIGatewayProxyRequestEvent().withHeaders(Map.of());
 
         var exception =
                 assertThrows(
@@ -399,10 +378,7 @@ class NotifyCallbackHandlerTest {
                                     new Date().toString(),
                                     null,
                                     null);
-                    var event = new APIGatewayProxyRequestEvent();
-                    event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
-                    event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
-                    handler.handleRequest(event, context);
+                    handler.handleRequest(eventWithBody(deliveryReceipt), context);
                 });
     }
 
