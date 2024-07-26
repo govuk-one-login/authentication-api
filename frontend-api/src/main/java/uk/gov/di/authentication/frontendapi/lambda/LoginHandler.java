@@ -163,26 +163,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         UserCredentials userCredentials = userContext.getUserCredentials().get();
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
-        var internalCommonSubjectIdentifier =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                        userProfile,
-                        configurationService.getInternalSectorUri(),
-                        authenticationService);
-        auditContext = auditContext.withUserId(internalCommonSubjectIdentifier.getValue());
+        var internalCommonSubjectIdentifier = getInternalCommonSubjectIdentifier(userProfile);
+        auditContext = auditContext.withUserId(internalCommonSubjectIdentifier);
 
         var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
         int incorrectPasswordCount =
-                isReauthJourney
-                        ? codeStorageService.getIncorrectPasswordCountReauthJourney(
-                                request.getEmail())
-                        : codeStorageService.getIncorrectPasswordCount(request.getEmail());
-        LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
+                retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
 
-        String codeBlockedKeyPrefix =
-                CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET;
-
-        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), codeBlockedKeyPrefix)) {
+        if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
@@ -194,51 +183,31 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         if (!credentialsAreValid(request, userProfile)) {
-            var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
-
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.INVALID_CREDENTIALS,
-                    auditContext,
-                    pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
-                    pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
-                    pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
-
-            if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-                if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
-                            request.getEmail());
-                } else {
-                    blockUser(
-                            userProfile.getSubjectID(),
-                            request.getEmail(),
-                            updatedIncorrectPasswordCount,
-                            auditContext);
-                }
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
-            }
-
-            if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-                codeStorageService.increaseIncorrectPasswordCountReauthJourney(request.getEmail());
-            } else {
-                codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-            }
-
-            return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+            return handleInvalidCredentials(
+                    request, incorrectPasswordCount, auditContext, userProfile, isReauthJourney);
         }
 
+        return handleValidCredentials(
+                request,
+                userContext,
+                internalCommonSubjectIdentifier,
+                userCredentials,
+                userProfile,
+                auditContext);
+    }
+
+    private APIGatewayProxyResponseEvent handleValidCredentials(
+            LoginRequest request,
+            UserContext userContext,
+            String internalCommonSubjectIdentifier,
+            UserCredentials userCredentials,
+            UserProfile userProfile,
+            AuditContext auditContext) {
         sessionService.save(
                 userContext
                         .getSession()
                         .setNewAccount(EXISTING)
-                        .setInternalCommonSubjectIdentifier(
-                                internalCommonSubjectIdentifier.getValue()));
-
-        String redactedPhoneNumber =
-                userProfile.isPhoneNumberVerified()
-                        ? redactPhoneNumber(userProfile.getPhoneNumber())
-                        : null;
-
-        boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
+                        .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
 
         var userMfaDetail =
                 getUserMFADetail(
@@ -275,6 +244,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     false);
         }
 
+        String redactedPhoneNumber =
+                userProfile.isPhoneNumberVerified()
+                        ? redactPhoneNumber(userProfile.getPhoneNumber())
+                        : null;
+
+        boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
+
         try {
             return generateApiGatewayProxyResponse(
                     200,
@@ -286,6 +262,63 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private APIGatewayProxyResponseEvent handleInvalidCredentials(
+            LoginRequest request,
+            int incorrectPasswordCount,
+            AuditContext auditContext,
+            UserProfile userProfile,
+            boolean isReauthJourney) {
+        var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
+
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.INVALID_CREDENTIALS,
+                auditContext,
+                pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
+                pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
+                pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
+
+        if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+            if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
+                codeStorageService.deleteIncorrectPasswordCountReauthJourney(request.getEmail());
+            } else {
+                blockUser(
+                        userProfile.getSubjectID(),
+                        request.getEmail(),
+                        updatedIncorrectPasswordCount,
+                        auditContext);
+            }
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
+        }
+
+        incrementCountOfFailedAttemptsToProvidePassword(request, isReauthJourney);
+
+        return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+    }
+
+    private void incrementCountOfFailedAttemptsToProvidePassword(
+            LoginRequest request, boolean isReauthJourney) {
+        if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
+            codeStorageService.increaseIncorrectPasswordCountReauthJourney(request.getEmail());
+        } else {
+            codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
+        }
+    }
+
+    private int retrieveIncorrectPasswordCount(String email, boolean isReauthJourney) {
+        return isReauthJourney
+                ? codeStorageService.getIncorrectPasswordCountReauthJourney(email)
+                : codeStorageService.getIncorrectPasswordCount(email);
+    }
+
+    private String getInternalCommonSubjectIdentifier(UserProfile userProfile) {
+        var internalCommonSubjectIdentifier =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile,
+                        configurationService.getInternalSectorUri(),
+                        authenticationService);
+        return internalCommonSubjectIdentifier.getValue();
     }
 
     private boolean isTermsAndConditionsAccepted(UserContext userContext, UserProfile userProfile) {
