@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 

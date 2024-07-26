@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.TemplateAware;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
