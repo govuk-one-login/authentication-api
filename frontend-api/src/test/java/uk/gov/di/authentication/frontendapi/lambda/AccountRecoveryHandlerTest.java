@@ -31,7 +31,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.EMAIL;
+import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
@@ -50,19 +50,21 @@ class AccountRecoveryHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final DynamoAccountModifiersService dynamoAccountModifiersService =
-            mock(DynamoAccountModifiersService.class);
+    private final DynamoAccountModifiersService dynamoAccountModifiersService
+            = mock(DynamoAccountModifiersService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private AccountRecoveryHandler handler;
 
-    private final String internalCommonSubjectId =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
+    private static final String EMAIL = CommonTestVariables.buildTestEmail();
+
+    private final String internalCommonSubjectId
+            = ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
 
-    private final AuditContext auditContext =
-            new AuditContext(
+    private final AuditContext auditContext
+            = new AuditContext(
                     AuditService.UNKNOWN,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
@@ -80,8 +82,8 @@ class AccountRecoveryHandlerTest {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        handler =
-                new AccountRecoveryHandler(
+        handler
+                = new AccountRecoveryHandler(
                         configurationService,
                         sessionService,
                         clientSessionService,
