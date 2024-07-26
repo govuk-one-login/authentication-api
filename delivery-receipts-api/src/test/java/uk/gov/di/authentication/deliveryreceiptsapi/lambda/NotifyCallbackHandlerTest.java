@@ -20,6 +20,10 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
@@ -30,6 +34,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -54,6 +60,7 @@ class NotifyCallbackHandlerTest {
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final Json objectMapper = SerializationService.getInstance();
+    private static final String TEMPLATE_ID = IdGenerator.generate();
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -116,6 +123,67 @@ class NotifyCallbackHandlerTest {
                                 ENVIRONMENT,
                                 "NotifyStatus",
                                 status));
+
+        assertThat(response, hasStatus(204));
+    }
+
+    @Test
+    void
+            shouldSendCloudwatchDurationInMillisecondsBetweenCreatedAndAndUpdatedAtForDeliveredRequest()
+                    throws Json.JsonException {
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
+                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        var createdAtDate = Instant.now();
+        var completedAt = createdAtDate.plusMillis(1000);
+        var deliveryReceipt =
+                deliveryReceiptWithCreatedAtAndCompletedAt(
+                        "sms", "delivered", createdAtDate, completedAt);
+        var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
+
+        verify(cloudwatchMetricsService)
+                .putEmbeddedValue(
+                        "NotifyDeliveryDuration",
+                        1000,
+                        Map.of("Environment", ENVIRONMENT, "NotificationType", "sms"));
+
+        assertThat(response, hasStatus(204));
+    }
+
+    @Test
+    void
+            shouldNotSendCloudwatchDurationInMillisecondsBetweenCreatedAndAndUpdatedAtForAnUnsuccessfulReceipt()
+                    throws Json.JsonException {
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
+                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        var deliveryStatus = "permanentFailure";
+        var deliveryReceipt =
+                deliveryReceiptWithCreatedAtAndCompletedAt(
+                        "sms", deliveryStatus, Instant.now(), Instant.now().plusMillis(1));
+        var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
+
+        verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
+
+        assertThat(response, hasStatus(204));
+    }
+
+    @Test
+    void shouldNotThrowAnErrorWhenMetricsParsingFails() throws Json.JsonException {
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
+                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        var invalidCreatedAtDate = "not-a-date";
+        var deliveryReceipt =
+                createDeliveryReceipt(
+                        "some-reference",
+                        "+447316763843",
+                        "delivered",
+                        "sms",
+                        TEMPLATE_ID,
+                        invalidCreatedAtDate,
+                        formattedDate(Instant.now()),
+                        formattedDate(Instant.now()));
+        var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
+
+        verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
 
         assertThat(response, hasStatus(204));
     }
@@ -328,6 +396,7 @@ class NotifyCallbackHandlerTest {
                                     "delivered",
                                     "sms",
                                     templateID,
+                                    new Date().toString(),
                                     null,
                                     null);
                     var event = new APIGatewayProxyRequestEvent();
@@ -343,6 +412,7 @@ class NotifyCallbackHandlerTest {
             String status,
             String notificationType,
             String templateID,
+            String createdAt,
             String completedAt,
             String sentAt) {
         return new NotifyDeliveryReceipt(
@@ -350,7 +420,7 @@ class NotifyCallbackHandlerTest {
                 reference,
                 destination,
                 status,
-                new Date().toString(),
+                createdAt,
                 completedAt,
                 sentAt,
                 notificationType,
@@ -366,7 +436,33 @@ class NotifyCallbackHandlerTest {
                 status,
                 notificationType,
                 templateID,
-                new Date().toString(),
-                new Date().toString());
+                formattedDate(Instant.now()),
+                formattedDate(Instant.now()),
+                formattedDate(Instant.now()));
+    }
+
+    String formattedDate(Instant date) {
+        var zonedDateTime = ZonedDateTime.ofInstant(date, ZoneOffset.UTC);
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'").format(zonedDateTime);
+    }
+
+    private NotifyDeliveryReceipt deliveryReceiptWithCreatedAtAndCompletedAt(
+            String notificationType, String status, Instant createdAt, Instant completedAt) {
+        return createDeliveryReceipt(
+                "some-reference",
+                "+447316763843",
+                status,
+                notificationType,
+                TEMPLATE_ID,
+                formattedDate(createdAt),
+                formattedDate(completedAt),
+                formattedDate(Instant.now()));
+    }
+
+    private APIGatewayProxyRequestEvent eventWithBody(NotifyDeliveryReceipt body)
+            throws Json.JsonException {
+        return new APIGatewayProxyRequestEvent()
+                .withHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN))
+                .withBody(objectMapper.writeValueAsString(body));
     }
 }

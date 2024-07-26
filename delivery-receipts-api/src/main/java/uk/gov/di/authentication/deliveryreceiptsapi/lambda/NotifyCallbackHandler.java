@@ -19,9 +19,14 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -91,32 +96,16 @@ public class NotifyCallbackHandler
                 var templateId = deliveryReceipt.templateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
                 var templateName = getTemplateName(templateId);
-                cloudwatchMetricsService.incrementCounter(
-                        "SmsSent",
-                        Map.of(
-                                "SmsType",
-                                templateName,
-                                "CountryCode",
-                                String.valueOf(countryCode),
-                                "Environment",
-                                configurationService.getEnvironment(),
-                                "NotifyStatus",
-                                deliveryReceipt.status()));
+                var additionalMetricsContext =
+                        Map.of("SmsType", templateName, "CountryCode", String.valueOf(countryCode));
+                incrementCounters("SmsSent", additionalMetricsContext, deliveryReceipt);
                 LOG.info("SMS callback request processed");
             } else if (deliveryReceipt.notificationType().equals("email")) {
                 LOG.info("Email delivery receipt received");
                 var templateId = deliveryReceipt.templateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
                 var templateName = getTemplateName(templateId);
-                cloudwatchMetricsService.incrementCounter(
-                        "EmailSent",
-                        Map.of(
-                                "EmailName",
-                                templateName,
-                                "Environment",
-                                configurationService.getEnvironment(),
-                                "NotifyStatus",
-                                deliveryReceipt.status()));
+                incrementCounters("EmailSent", Map.of("EmailName", templateName), deliveryReceipt);
                 if (configurationService.isBulkUserEmailEnabled()
                         && templateName.equals(
                                 TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
@@ -138,6 +127,47 @@ public class NotifyCallbackHandler
             throw new RuntimeException("Unable to parse Notify Delivery Receipt");
         }
         return generateEmptySuccessApiGatewayResponse();
+    }
+
+    private void incrementCounters(
+            String sentMetricName,
+            Map<String, String> additionalContext,
+            NotifyDeliveryReceipt deliveryReceipt) {
+        var sentMetricsMap = new HashMap<String, String>();
+        sentMetricsMap.put("Environment", configurationService.getEnvironment());
+        sentMetricsMap.put("NotifyStatus", deliveryReceipt.status());
+        sentMetricsMap.putAll(additionalContext);
+
+        cloudwatchMetricsService.incrementCounter(sentMetricName, sentMetricsMap);
+
+        if (deliveryReceipt.status().equals("delivered")) {
+            sendDurationMetrics(deliveryReceipt);
+        }
+    }
+
+    private void sendDurationMetrics(NotifyDeliveryReceipt deliveryReceipt) {
+        if (Objects.isNull(deliveryReceipt.completedAt())
+                || Objects.isNull(deliveryReceipt.createdAt())) {
+            return;
+        }
+        try {
+            var completedAt = Instant.parse(deliveryReceipt.completedAt());
+            var createdAt = Instant.parse(deliveryReceipt.createdAt());
+            double duration = Duration.between(createdAt, completedAt).toMillis();
+            cloudwatchMetricsService.putEmbeddedValue(
+                    "NotifyDeliveryDuration",
+                    duration,
+                    Map.of(
+                            "Environment",
+                            configurationService.getEnvironment(),
+                            "NotificationType",
+                            deliveryReceipt.notificationType()));
+        } catch (DateTimeParseException e) {
+            LOG.warn(
+                    format(
+                            "Invalid date time when parsing duration metrics for delivery receipts %s",
+                            e.getMessage()));
+        }
     }
 
     private void validateBearerToken(Map<String, String> headers) {
