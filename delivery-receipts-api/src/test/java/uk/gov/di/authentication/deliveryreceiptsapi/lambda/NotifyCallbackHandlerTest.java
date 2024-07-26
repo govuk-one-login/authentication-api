@@ -60,6 +60,8 @@ class NotifyCallbackHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final Json objectMapper = SerializationService.getInstance();
     private static final String TEMPLATE_ID = IdGenerator.generate();
+    private static final String EMAIL = "jim@test.com";
+    private static final String UK_PHONE_NUMBER = "+44123456788";
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -100,10 +102,9 @@ class NotifyCallbackHandlerTest {
     @MethodSource("phoneNumbers")
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
             String number, String expectedCountryCode, String status) throws Json.JsonException {
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
-        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", templateID);
+        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(cloudwatchMetricsService)
@@ -170,7 +171,7 @@ class NotifyCallbackHandlerTest {
         var deliveryReceipt =
                 createDeliveryReceipt(
                         "some-reference",
-                        "+447316763843",
+                        UK_PHONE_NUMBER,
                         "delivered",
                         "sms",
                         TEMPLATE_ID,
@@ -194,11 +195,9 @@ class NotifyCallbackHandlerTest {
     @MethodSource("emailTemplates")
     void shouldCallCloudwatchMetricWithEmailNotificationType(DeliveryReceiptsNotificationType type)
             throws Json.JsonException {
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.of(type));
-        var deliveryReceipt =
-                createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(cloudwatchMetricsService)
@@ -216,9 +215,7 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailType()
             throws Json.JsonException {
-        String email = "jim@test.com";
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
         when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
         NotifyCallbackHandler handlerBulkEmailOn =
@@ -227,13 +224,13 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         String subjectId = "subject-id-1";
-        UserProfile userProfile = new UserProfile().withEmail(email).withSubjectID(subjectId);
-        when(dynamoService.getUserProfileByEmailMaybe(email)).thenReturn(Optional.of(userProfile));
+        UserProfile userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(subjectId);
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(dynamoService).getUserProfileByEmailMaybe(email);
+        verify(dynamoService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
     }
@@ -242,9 +239,7 @@ class NotifyCallbackHandlerTest {
     void
             shouldNotUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailTypeWhenBulkEmailSwitchedOn()
                     throws Json.JsonException {
-        String email = "jim@test.com";
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.of(EMAIL_UPDATED));
         NotifyCallbackHandler handlerBulkEmailOn =
                 new NotifyCallbackHandler(
@@ -252,7 +247,7 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
@@ -263,11 +258,9 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldNotUpdateBulkEmailDeliveryReceiptsStatusWhenBulkEmailSwitchedOff()
             throws Json.JsonException {
-        String email = "jim@test.com";
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
-        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
@@ -278,9 +271,7 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldNotUpdateBulkEmailDeliveryReceiptsStatusForEmailUpdatedEmailType()
             throws Json.JsonException {
-        String email = "jim@test.com";
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.of(EMAIL_UPDATED));
         when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
         NotifyCallbackHandler handlerBulkEmailOn =
@@ -289,7 +280,7 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
@@ -299,11 +290,9 @@ class NotifyCallbackHandlerTest {
 
     @Test
     void shouldThrowIfInvalidTemplateId() throws Json.JsonException {
-        var templateID = IdGenerator.generate();
-        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(Optional.empty());
-        var deliveryReceipt =
-                createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
 
         var event = eventWithBody(deliveryReceipt);
 
@@ -363,8 +352,7 @@ class NotifyCallbackHandlerTest {
     void shouldParsePayloadWithExpectedNullValues() {
         assertDoesNotThrow(
                 () -> {
-                    var templateID = IdGenerator.generate();
-                    when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                    when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                             .thenReturn(
                                     Optional.of(
                                             DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
@@ -374,7 +362,7 @@ class NotifyCallbackHandlerTest {
                                     "+447316763843",
                                     "delivered",
                                     "sms",
-                                    templateID,
+                                    TEMPLATE_ID,
                                     new Date().toString(),
                                     null,
                                     null);
@@ -392,7 +380,7 @@ class NotifyCallbackHandlerTest {
             String completedAt,
             String sentAt) {
         return new NotifyDeliveryReceipt(
-                IdGenerator.generate(),
+                TEMPLATE_ID,
                 reference,
                 destination,
                 status,
