@@ -18,6 +18,7 @@ stub_rp_clients = [
       "email",
       "phone",
       "wallet-subject-id",
+      "am"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
@@ -62,6 +63,7 @@ stub_rp_clients = [
       "email",
       "phone",
       "wallet-subject-id",
+      "am"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
@@ -85,6 +87,7 @@ stub_rp_clients = [
       "email",
       "phone",
       "wallet-subject-id",
+      "am"
     ]
     one_login_service = false
     service_type      = "MANDATORY"
