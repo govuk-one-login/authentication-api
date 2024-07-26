@@ -14,6 +14,7 @@ import { Session } from "../types/session";
 import { getRedisClient, getSession } from "../services/redis";
 import { ClientSession } from "../types/client-session";
 import * as process from "node:process";
+import { getPrivateKey } from "../utils/key";
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -58,10 +59,7 @@ const post = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   const form = querystring.parse(event.body || "");
-  const signingPrivKey = await jose.importPKCS8(
-    process.env.PRIVATE_KEY!,
-    "RSA",
-  );
+  const signingPrivKey = await getPrivateKey();
   const payload = jarPayload(form);
   const jws = await signRequestObject(payload, signingPrivKey);
   const jwe = await encryptRequestObject(jws, await sandpitFrontendPublicKey());
@@ -117,9 +115,8 @@ const signRequestObject = async (
 ) => {
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "ES256" })
-    .setIssuedAt()
-    .setIssuer("urn:example:issuer")
-    .setAudience("urn:example:audience")
+    .setIssuer("orchstub")
+    .setAudience("orchstub")
     .setNotBefore("-1s")
     .setIssuedAt("-1s")
     .setExpirationTime("2h")
