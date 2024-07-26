@@ -37,4 +37,11 @@ public class CommonTestVariables {
                             PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, DI_PERSISTENT_SESSION_ID),
                     Map.entry(SESSION_ID_HEADER, SESSION_ID),
                     Map.entry(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID));
+
+	public static final String buildTestPassword(Integer suffix) {
+		return String.format("test-password%s", suffix);
+	}
+	public static final String buildTestEmail(Integer suffix) {
+		return String.format("test-email+%s@test.com", suffix);
+	}
 }
