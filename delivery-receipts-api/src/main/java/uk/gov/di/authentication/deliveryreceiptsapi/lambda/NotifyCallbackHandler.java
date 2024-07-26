@@ -81,14 +81,14 @@ public class NotifyCallbackHandler
         NotifyDeliveryReceipt deliveryReceipt;
         try {
             deliveryReceipt = objectMapper.readValue(input.getBody(), NotifyDeliveryReceipt.class);
-            if (deliveryReceipt.getNotificationType().equals("sms")) {
+            if (deliveryReceipt.notificationType().equals("sms")) {
                 LOG.info("Sms delivery receipt received");
-                var countryCode = getCountryCodeFromNumber(deliveryReceipt.getTo());
+                var countryCode = getCountryCodeFromNumber(deliveryReceipt.to());
                 LOG.info(
                         "SmsSent, NotifyStatus: {}, CountryCode: {}",
-                        deliveryReceipt.getStatus(),
+                        deliveryReceipt.status(),
                         countryCode);
-                var templateId = deliveryReceipt.getTemplateId();
+                var templateId = deliveryReceipt.templateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
                 var templateName = getTemplateName(templateId);
                 cloudwatchMetricsService.incrementCounter(
@@ -101,11 +101,11 @@ public class NotifyCallbackHandler
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "NotifyStatus",
-                                deliveryReceipt.getStatus()));
+                                deliveryReceipt.status()));
                 LOG.info("SMS callback request processed");
-            } else if (deliveryReceipt.getNotificationType().equals("email")) {
+            } else if (deliveryReceipt.notificationType().equals("email")) {
                 LOG.info("Email delivery receipt received");
-                var templateId = deliveryReceipt.getTemplateId();
+                var templateId = deliveryReceipt.templateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
                 var templateName = getTemplateName(templateId);
                 cloudwatchMetricsService.incrementCounter(
@@ -116,16 +116,16 @@ public class NotifyCallbackHandler
                                 "Environment",
                                 configurationService.getEnvironment(),
                                 "NotifyStatus",
-                                deliveryReceipt.getStatus()));
+                                deliveryReceipt.status()));
                 if (configurationService.isBulkUserEmailEnabled()
                         && templateName.equals(
                                 TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
                     LOG.info("Updating bulk email table for delivery receipt");
                     var maybeProfile =
-                            dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.getTo());
+                            dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.to());
                     if (maybeProfile.isPresent()) {
                         bulkEmailUsersService.updateDeliveryReceiptStatus(
-                                maybeProfile.get().getSubjectID(), deliveryReceipt.getStatus());
+                                maybeProfile.get().getSubjectID(), deliveryReceipt.status());
                     } else {
                         LOG.info(
                                 "No profile found for email in delivery receipt: not updating bulk email users table");
