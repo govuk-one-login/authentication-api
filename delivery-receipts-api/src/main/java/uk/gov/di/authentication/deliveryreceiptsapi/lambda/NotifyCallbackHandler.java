@@ -154,14 +154,12 @@ public class NotifyCallbackHandler
             var completedAt = Instant.parse(deliveryReceipt.completedAt());
             var createdAt = Instant.parse(deliveryReceipt.createdAt());
             double duration = Duration.between(createdAt, completedAt).toMillis();
+            var metricsContext =
+                    Map.ofEntries(
+                            Map.entry("Environment", configurationService.getEnvironment()),
+                            Map.entry("NotificationType", deliveryReceipt.notificationType()));
             cloudwatchMetricsService.putEmbeddedValue(
-                    "NotifyDeliveryDuration",
-                    duration,
-                    Map.of(
-                            "Environment",
-                            configurationService.getEnvironment(),
-                            "NotificationType",
-                            deliveryReceipt.notificationType()));
+                    "NotifyDeliveryDuration", duration, metricsContext);
         } catch (DateTimeParseException e) {
             LOG.warn(
                     format(

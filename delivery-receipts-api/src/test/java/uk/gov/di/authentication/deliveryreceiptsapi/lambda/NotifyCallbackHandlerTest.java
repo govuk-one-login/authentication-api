@@ -107,18 +107,14 @@ class NotifyCallbackHandlerTest {
         var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "SmsSent",
-                        Map.of(
-                                "SmsType",
-                                VERIFY_PHONE_NUMBER.getTemplateAlias(),
-                                "CountryCode",
-                                expectedCountryCode,
-                                "Environment",
-                                ENVIRONMENT,
-                                "NotifyStatus",
-                                status));
+        var expectedContext =
+                Map.ofEntries(
+                        Map.entry("SmsType", VERIFY_PHONE_NUMBER.getTemplateAlias()),
+                        Map.entry("CountryCode", expectedCountryCode),
+                        Map.entry("Environment", ENVIRONMENT),
+                        Map.entry("NotifyStatus", status));
+
+        verify(cloudwatchMetricsService).incrementCounter("SmsSent", expectedContext);
 
         assertThat(response, hasStatus(204));
     }
@@ -135,11 +131,10 @@ class NotifyCallbackHandlerTest {
                         "sms", "delivered", createdAtDate, completedAt);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
+        var expectedContext = Map.of("Environment", ENVIRONMENT, "NotificationType", "sms");
+
         verify(cloudwatchMetricsService)
-                .putEmbeddedValue(
-                        "NotifyDeliveryDuration",
-                        1000,
-                        Map.of("Environment", ENVIRONMENT, "NotificationType", "sms"));
+                .putEmbeddedValue("NotifyDeliveryDuration", 1000, expectedContext);
 
         assertThat(response, hasStatus(204));
     }
@@ -195,16 +190,13 @@ class NotifyCallbackHandlerTest {
         var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "EmailSent",
-                        Map.of(
-                                "EmailName",
-                                type.getTemplateAlias(),
-                                "Environment",
-                                ENVIRONMENT,
-                                "NotifyStatus",
-                                "delivered"));
+        var expectedMetricsContext =
+                Map.ofEntries(
+                        Map.entry("EmailName", type.getTemplateAlias()),
+                        Map.entry("Environment", ENVIRONMENT),
+                        Map.entry("NotifyStatus", "delivered"));
+
+        verify(cloudwatchMetricsService).incrementCounter("EmailSent", expectedMetricsContext);
     }
 
     @Test
