@@ -57,6 +57,7 @@ Conditions:
     ]
   EnableFetchJwks:
     !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+  IsIntegration: !Equals [!Ref Environment, integration]
 
 Mappings:
   EnvironmentConfiguration:
@@ -871,7 +872,10 @@ Resources:
   BackChannelLogoutRequestFunctionErrorCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      ActionsEnabled: true
+      ActionsEnabled: !If
+        - IsIntegration
+        - false
+        - true
       AlarmActions:
         - !Ref SlackEvents
       AlarmDescription: !Sub "10 or more errors have occurred in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}"
@@ -889,7 +893,10 @@ Resources:
     Properties:
       AlarmName: !Sub ${Environment}-backchannel-logout-request-error-rate-alarm
       AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} backchannel logout request lambda.ACCOUNT: di-orchestration-${Environment}"
-      ActionsEnabled: true
+      ActionsEnabled: !If
+        - IsIntegration
+        - false
+        - true
       AlarmActions:
         - !Ref SlackEvents
       ComparisonOperator: GreaterThanOrEqualToThreshold
