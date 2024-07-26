@@ -781,8 +781,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnBadRequestWhenNoQueryStringParametersArePresent()
-                throws Json.JsonException {
+        void shouldReturnBadRequestWhenNoQueryStringParametersArePresent() {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("GET");
             event.setRequestContext(
@@ -800,8 +799,7 @@ class AuthorisationHandlerTest {
                                     "No parameters are present in the Authentication request query string or body"));
 
             assertThat(response, hasStatus(400));
-            assertThat(
-                    response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+            assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
         }
 
         @ParameterizedTest
@@ -1774,7 +1772,6 @@ class AuthorisationHandlerTest {
                     ClientNotFoundException,
                     MissingClientIDException,
                     IncorrectRedirectUriException,
-                    Json.JsonException,
                     MissingRedirectUriException {
         doThrow(new MissingClientIDException(OAuth2Error.INVALID_REQUEST))
                 .when(authorisationService)
@@ -1783,7 +1780,7 @@ class AuthorisationHandlerTest {
         var response = makeHandlerRequest(withRequestEvent(Map.of()));
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -1799,7 +1796,6 @@ class AuthorisationHandlerTest {
                     ClientNotFoundException,
                     MissingClientIDException,
                     IncorrectRedirectUriException,
-                    Json.JsonException,
                     MissingRedirectUriException {
         doThrow(new MissingRedirectUriException(OAuth2Error.INVALID_REQUEST))
                 .when(authorisationService)
@@ -1809,7 +1805,7 @@ class AuthorisationHandlerTest {
                 makeHandlerRequest(withRequestEvent(Map.of("client_id", CLIENT_ID.getValue())));
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+        assertThat(response, hasBody(ErrorResponse.ERROR_1001.getMessage()));
 
         verify(auditService)
                 .submitAuditEvent(
