@@ -26,13 +26,13 @@ const get = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
   const authCode = getAuthCode(event);
-  const clientAssertion = await buildClientAssertion(authCode);
-  // const tokenResponse = getToken(clientAssertion);
-  // const userInfo = getUserInfo(tokenResponse);
+  const clientAssertion = await buildClientAssertion();
+  const tokenResponse = await getToken(authCode, clientAssertion);
+  const userInfo = await getUserInfo(tokenResponse);
 
   return {
     statusCode: 200,
-    body: JSON.stringify(clientAssertion),
+    body: JSON.stringify(userInfo),
   };
 };
 
@@ -48,7 +48,7 @@ function getAuthCode(event: APIGatewayProxyEvent) {
   return authCode;
 }
 
-const buildClientAssertion = async (authCode: string) => {
+const buildClientAssertion = async () => {
   let payload: JWTPayload = {};
 
   const privateKey = await getPrivateKey();
@@ -62,4 +62,43 @@ const buildClientAssertion = async (authCode: string) => {
     .setExpirationTime("5m")
     .setJti("4")
     .sign(privateKey);
+};
+
+const getToken = async (authCode: string, clientAssertion: string) => {
+  const tokenUrl = new URL("https://www.example.com/token");
+  tokenUrl.searchParams.set("grant_type", "authorization_code");
+  tokenUrl.searchParams.set("code", authCode);
+  tokenUrl.searchParams.set(
+    "client_assertion_type",
+    "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+  );
+  tokenUrl.searchParams.set("client_assertion", clientAssertion);
+
+  const response = await fetch(tokenUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Error while fetching token. Status code: ${response.status} Message: ${await response.text()}`,
+    );
+  }
+
+  const tokenResponse: TokenResponse = await response.json();
+  return tokenResponse.access_token;
+};
+
+const getUserInfo = async (accessToken: string) => {
+  const userInfoUrl = new URL("https://www.example.com/userinfo");
+  const response = await fetch(userInfoUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Error while fetching user info. Status code: ${response.status} Message: ${await response.text()}`,
+    );
+  }
+
+  return response.json();
+};
+
+type TokenResponse = {
+  access_token: string;
 };
