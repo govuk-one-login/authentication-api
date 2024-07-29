@@ -37,7 +37,7 @@ module "authorize" {
     HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
     IDENTITY_ENABLED                     = var.ipv_api_enabled
     LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
-    FRONTEND_BASE_URL                    = "https://${local.frontend_fqdn}/"
+    AUTH_FRONTEND_BASE_URL               = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                    = local.api_base_url
     ORCH_CLIENT_ID                       = var.orch_client_id
     REDIS_KEY                            = local.redis_key

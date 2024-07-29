@@ -141,7 +141,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -320,7 +320,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
     }
 
     @ParameterizedTest
@@ -378,7 +378,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         if (validLoC) {
             assertThat(
                     response.getHeaders().get(ResponseHeaders.LOCATION),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
+                    startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,

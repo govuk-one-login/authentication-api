@@ -33,7 +33,7 @@ class AuthFrontendTest {
 
     @BeforeEach
     void setup() {
-        when(configurationService.getFrontendBaseURL()).thenReturn(AUTH_FRONTEND_BASE_URI);
+        when(configurationService.getAuthFrontendBaseURL()).thenReturn(AUTH_FRONTEND_BASE_URI);
         authFrontend = new AuthFrontend(configurationService);
     }
 
