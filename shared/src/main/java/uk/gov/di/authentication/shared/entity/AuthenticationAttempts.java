@@ -3,19 +3,19 @@ package uk.gov.di.authentication.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import uk.gov.di.authentication.shared.validation.Required;
 
 @DynamoDbBean
 public class AuthenticationAttempts {
 
-    private String attemptIdentifier;
-    private String email;
-    private String journeyType;
-    private String authenticationType;
-    private String code;
-    private Integer count;
-    private long timeToExist;
+    @Required private String attemptIdentifier;
+    @Required private String authenticationMethod;
+    @Required private String code;
+    @Required private Integer count;
     private String created;
     private String updated;
+    private long timeToLive;
+    private String journeyType;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("AttemptIdentifier")
@@ -32,15 +32,6 @@ public class AuthenticationAttempts {
         return this;
     }
 
-    @DynamoDbAttribute("Email")
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     @DynamoDbAttribute("JourneyType")
     public String getJourneyType() {
         return journeyType;
@@ -50,13 +41,23 @@ public class AuthenticationAttempts {
         this.journeyType = journeyType;
     }
 
-    @DynamoDbAttribute("AuthenticationType")
-    public String getAuthenticationType() {
-        return authenticationType;
+    public AuthenticationAttempts withJourneyType(String journeyType) {
+        this.journeyType = journeyType;
+        return this;
     }
 
-    public void setAuthenticationType(String authenticationType) {
-        this.authenticationType = authenticationType;
+    @DynamoDbAttribute("AuthenticationMethod")
+    public String getAuthenticationMethod() {
+        return authenticationMethod;
+    }
+
+    public void setAuthenticationMethod(String authenticationMethod) {
+        this.authenticationMethod = authenticationMethod;
+    }
+
+    public AuthenticationAttempts withAuthenticationMethod(String authenticationMethod) {
+        this.authenticationMethod = authenticationMethod;
+        return this;
     }
 
     @DynamoDbAttribute("Code")
@@ -68,6 +69,11 @@ public class AuthenticationAttempts {
         this.code = code;
     }
 
+    public AuthenticationAttempts withCode(String code) {
+        this.code = code;
+        return this;
+    }
+
     @DynamoDbAttribute("Count")
     public Integer getCount() {
         return count;
@@ -77,17 +83,22 @@ public class AuthenticationAttempts {
         this.count = count;
     }
 
-    @DynamoDbAttribute("TimeToExist")
-    public long getTimeToExist() {
-        return timeToExist;
+    public AuthenticationAttempts withCount(int count) {
+        this.count = count;
+        return this;
     }
 
-    public void setTimeToExist(long timeToExist) {
-        this.timeToExist = timeToExist;
+    @DynamoDbAttribute("TimeToLive")
+    public long getTimeToLive() {
+        return timeToLive;
     }
 
-    public AuthenticationAttempts withTimeToExist(long timeToExist) {
-        this.timeToExist = timeToExist;
+    public void setTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
+    }
+
+    public AuthenticationAttempts withTimeToLive(long timeToLive) {
+        this.timeToLive = timeToLive;
         return this;
     }
 

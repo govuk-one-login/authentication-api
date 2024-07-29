@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
-public enum AuthenticationType {
+public enum AuthenticationMethod {
     EMAIL("EMAIL"),
     PASSWORD("PASSWORD"),
     AUTH_APP("AUTH_APP"),
@@ -8,7 +8,7 @@ public enum AuthenticationType {
 
     private String value;
 
-    AuthenticationType(String value) {
+    AuthenticationMethod(String value) {
         this.value = value;
     }
 
