@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Optional;
 
@@ -29,14 +30,13 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import uk.gov.di.authentication.shared.helpers.CommonTestVariables;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.shared.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -50,21 +50,21 @@ class AccountRecoveryHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final DynamoAccountModifiersService dynamoAccountModifiersService
-            = mock(DynamoAccountModifiersService.class);
+    private final DynamoAccountModifiersService dynamoAccountModifiersService =
+            mock(DynamoAccountModifiersService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
     private AccountRecoveryHandler handler;
 
     private static final String EMAIL = CommonTestVariables.buildTestEmail();
 
-    private final String internalCommonSubjectId
-            = ClientSubjectHelper.calculatePairwiseIdentifier(
+    private final String internalCommonSubjectId =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL);
 
-    private final AuditContext auditContext
-            = new AuditContext(
+    private final AuditContext auditContext =
+            new AuditContext(
                     AuditService.UNKNOWN,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
@@ -82,8 +82,8 @@ class AccountRecoveryHandlerTest {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        handler
-                = new AccountRecoveryHandler(
+        handler =
+                new AccountRecoveryHandler(
                         configurationService,
                         sessionService,
                         clientSessionService,
