@@ -1,8 +1,8 @@
 <Configuration status="WARN">
     <Appenders>
         <Lambda name="Lambda">
-            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
-            </JsonLayout>
+            <JsonTemplateLayout eventTemplateUri="classpath:LambdaJsonLayout.json" >
+            </JsonTemplateLayout>
         </Lambda>
     </Appenders>
     <Loggers>
