@@ -4,6 +4,9 @@ import { JWTPayload } from "jose";
 import * as jose from "jose";
 import { getPrivateKey } from "../utils/key";
 
+const TOKEN_URL = `${process.env.AUTHENTICATION_BACKEND_URL}/token`;
+const USER_INFO_URL = `${process.env.AUTHENTICATION_BACKEND_URL}/userinfo`;
+
 export const handler = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
@@ -28,6 +31,7 @@ const get = async (
   const authCode = getAuthCode(event);
   const clientAssertion = await buildClientAssertion();
   const tokenResponse = await getToken(authCode, clientAssertion);
+  // update session
   const userInfo = await getUserInfo(tokenResponse);
 
   return {
@@ -56,7 +60,7 @@ const buildClientAssertion = async () => {
     .setProtectedHeader({ alg: "ES256" })
     .setIssuer("orchstub")
     .setSubject("orchstub")
-    .setAudience("tokenurl")
+    .setAudience(TOKEN_URL)
     .setNotBefore("-1s")
     .setIssuedAt("-1s")
     .setExpirationTime("5m")
@@ -65,7 +69,7 @@ const buildClientAssertion = async () => {
 };
 
 const getToken = async (authCode: string, clientAssertion: string) => {
-  const tokenUrl = new URL("https://www.example.com/token");
+  const tokenUrl = new URL(TOKEN_URL);
   tokenUrl.searchParams.set("grant_type", "authorization_code");
   tokenUrl.searchParams.set("code", authCode);
   tokenUrl.searchParams.set(
@@ -86,7 +90,7 @@ const getToken = async (authCode: string, clientAssertion: string) => {
 };
 
 const getUserInfo = async (accessToken: string) => {
-  const userInfoUrl = new URL("https://www.example.com/userinfo");
+  const userInfoUrl = new URL(USER_INFO_URL);
   const response = await fetch(userInfoUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });

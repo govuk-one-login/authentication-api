@@ -7,8 +7,7 @@ Parameters:
     Type: String
     AllowedValues:
       - local
-      - dev
-      - build
+      - sandpit
 
 Mappings:
   EnvironmentConfiguration:
@@ -24,10 +23,44 @@ Mappings:
         pXEyIW7edR6lDsSYzJI+yurVFyt82Bn7Vo2x5CIoLiH/1ZcKaApNU02/eK/gMBf+
         EwIDAQAB
         -----END PUBLIC KEY-----
+      subnetAId: placeholder
+      subnetBId: placeholder
+      subnetCId: placeholder
+      endpointSgId: placeholder
+      redisSgId: placeholder
+      vpcId: placeholder
+      privateKey: |
+        -----BEGIN PRIVATE KEY-----
+        MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgSpFQByZAQH3n5lCu
+        0L+foxHzwi/I1RtJ4o8jyTtwj4WhRANCAASyFo4Vo28pL3dLQ7YAqsSBlcxUPZFk
+        q4YeTPS3lxx53aay6jy6I+V3ZYmr3ZGDnR2JRydsa4kXumn2jvfKOvuW
+        -----END PRIVATE KEY-----
+      authenticationBackendUrl: "https://www.example.com/"
+      authenticationFrontendUrl: "https://www.example.com/"
+      redisUrl: "redis://redis-local:6379"
 
-    dev:
-      domain: .dev.account.gov.uk
-      authPubKey: "placeholder"
+    sandpit:
+      domain: .sandpit.account.gov.uk
+      authPubKey: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
+        g5p2NHAekvIAJaNb6ZkLuLXYdLBax+2c9f4ALTrltmLMBpgtS6VQg2zO8UmSE4bX
+        +Nhaw2nf3/VRBIlAi2NiD4cUIwNtxIx5qpBeDxb+YR7NuTJ0nFq6u6jv34RB1RWE
+        J1sEOiv9aSPEt6eK8TGL6uZbPGU8CKJuWwPfW1ko/lyuM1HG0G/KAZ8DaLJzOMWX
+        +2aZatj9RHtOCtGxwMrZlU4n/O1gbVPBfXx9RugTi0W4upmeNFR5CsC+WgENkr0v
+        pXEyIW7edR6lDsSYzJI+yurVFyt82Bn7Vo2x5CIoLiH/1ZcKaApNU02/eK/gMBf+
+        EwIDAQAB
+        -----END PUBLIC KEY-----
+      subnetAId: "subnet-0027e271c35f828c1"
+      subnetBId: "subnet-0b648700a8ac43736"
+      subnetCId: "subnet-01b7b1c835828eb3d"
+      endpointSgId: "sg-036acdb59028a0c78"
+      redisSgId: "sg-0e4baa990eaebfb74"
+      vpcId: "vpc-0b6f4a5d72f84ed0c"
+      privateKey: "{{resolve:secretsmanager:sandpit-orchestration-stub-private-key::::4f623556-c691-4352-90f8-33d79b833a79}}"
+      authenticationBackendUrl: "https://48oqh70cm7-vpce-040f33c3489ff777b.execute-api.eu-west-2.amazonaws.com/sandpit/"
+      authenticationFrontendUrl: "https://signin.sandpit.account.gov.uk/"
+      redisUrl: "{{resolve:secretsmanager:sandpit-orchestration-stub-redis-url::::1e143e9d-8b87-4638-a460-66aaf5f60b2d}}"
 
 Resources:
   ApiGateway:
@@ -42,14 +75,30 @@ Resources:
       CodeUri: src/
       Handler: index/index.handler
       Runtime: nodejs20.x
+      Timeout: 30
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+        SubnetIds:
+          - !FindInMap [EnvironmentConfiguration, !Ref Environment, subnetAId]
+          - !FindInMap [EnvironmentConfiguration, !Ref Environment, subnetBId]
+          - !FindInMap [EnvironmentConfiguration, !Ref Environment, subnetCId]
       Environment:
         Variables:
-          REDIS_URL: "ssm-placeholder"
-          PRIVATE_KEY: "ssm-placeholder"
+          REDIS_URL:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, redisUrl]
+          PRIVATE_KEY:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, privateKey]
           DOMAIN:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
           AUTH_PUB_KEY:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authPubKey]
+          AUTHENTICATION_FRONTEND_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authenticationFrontendUrl,
+            ]
       Architectures:
         - arm64
       Events:
@@ -80,14 +129,30 @@ Resources:
       CodeUri: src/
       Handler: callback/index.handler
       Runtime: nodejs20.x
+      Timeout: 30
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref SecurityGroup
+        SubnetIds:
+          - !FindInMap [EnvironmentConfiguration, !Ref Environment, subnetAId]
+          - !FindInMap [EnvironmentConfiguration, !Ref Environment, subnetBId]
+          - !FindInMap [EnvironmentConfiguration, !Ref Environment, subnetCId]
       Environment:
         Variables:
-          REDIS_URL: "ssm-placeholder"
-          PRIVATE_KEY: "ssm-placeholder"
+          REDIS_URL:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, redisUrl]
+          PRIVATE_KEY:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, privateKey]
           DOMAIN:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
           AUTH_PUB_KEY:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authPubKey]
+          AUTHENTICATION_BACKEND_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authenticationBackendUrl,
+            ]
       Architectures:
         - arm64
       Events:
@@ -95,7 +160,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref ApiGateway
-            Path: /orchestration-callback
+            Path: /orchestration-redirect
             Method: get
     Metadata: # Manage esbuild properties
       BuildMethod: esbuild
@@ -105,3 +170,26 @@ Resources:
         Minify: true
         Sourcemap: true
         Target: "es2020"
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Orchestration Stub"
+      VpcId: !FindInMap [EnvironmentConfiguration, !Ref Environment, vpcId]
+      SecurityGroupEgress:
+        - DestinationSecurityGroupId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              endpointSgId,
+            ]
+          Description: Allow traffic to VPC endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - DestinationSecurityGroupId:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, redisSgId]
+          Description: Allow traffic to Redis
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379

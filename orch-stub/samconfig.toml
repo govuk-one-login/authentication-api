@@ -1,0 +1,10 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "sandpit-orch-stub"
+resolve_s3 = true
+s3_prefix = "sandpit-orch-stub"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"sandpit\""
+image_repositories = []

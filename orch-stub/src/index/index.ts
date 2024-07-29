@@ -39,7 +39,7 @@ export const handler = async (
 const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
   const form = `<html>
 <body><h1>Hello world</h1>
-<form action='/' method='post'>
+<form method='post'>
     <label for="reauthenticate">Reauthenticate (RP pairwise ID)</label>
     <input name="reauthenticate" id="reauthenticate">
     <button>submit</button>
@@ -58,20 +58,23 @@ const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
 const post = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
+  const gsCookie = await setUpSession(event.headers);
+  const journeyId = gsCookie.split(".")[0];
   const form = querystring.parse(event.body || "");
   const signingPrivKey = await getPrivateKey();
-  const payload = jarPayload(form);
+  const payload = jarPayload(form, journeyId);
   const jws = await signRequestObject(payload, signingPrivKey);
   const jwe = await encryptRequestObject(jws, await sandpitFrontendPublicKey());
 
-  const gsCookie = await setUpSession(event.headers);
   const persistentSessionId = getOrCreatePersistentSessionId(event.headers);
   const cookieDomain =
     process.env.DOMAIN === "none" ? "" : `; Domain=${process.env.DOMAIN}`;
   return {
     statusCode: 302,
     multiValueHeaders: {
-      Location: [`https://www.example.com/authorize?request=${jwe}`],
+      Location: [
+        `${process.env.AUTHENTICATION_FRONTEND_URL}authorize?request=${jwe}&response_type=code&client_id=orchstub`,
+      ],
       "Set-Cookie": [
         `gs=${gsCookie}; max-age=3600${cookieDomain}`,
         `di-persistent-session-id=${persistentSessionId}; max-age=34190000${cookieDomain}`,
@@ -81,7 +84,7 @@ const post = async (
   };
 };
 
-const jarPayload = (form: ParsedUrlQuery): JWTPayload => {
+const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
   let payload: JWTPayload = {
     rp_client_id: "a",
     rp_sector_host: "a.example.com",
@@ -91,7 +94,7 @@ const jarPayload = (form: ParsedUrlQuery): JWTPayload => {
     cookie_consent_shared: true,
     is_one_login_service: false,
     service_type: "essential",
-    govuk_signin_journey_id: "7",
+    govuk_signin_journey_id: journeyId,
     confidence: "Cl",
     state: "3",
     client_id: "orchstub",
@@ -151,7 +154,7 @@ const createNewClientSession = async (id: string) => {
   const client = await getRedisClient();
   const clientSession: ClientSession = {
     creationTime: new Date(),
-    clientName: "John",
+    clientName: "Example RP",
   };
   await client.set(id, JSON.stringify(clientSession));
 };
