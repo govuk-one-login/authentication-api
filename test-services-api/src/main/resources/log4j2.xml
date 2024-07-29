@@ -1,9 +1,9 @@
 <Configuration status="WARN">
     <Appenders>
         <Lambda name="Lambda">
-            <JsonTemplateLayout eventTemplateUri="classpath:LambdaJsonLayout.json" >
-                <EventTemplateAdditionalField key="session-id" value="$${ctx:sessionId:-unknown}"/>
-            </JsonTemplateLayout>
+            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
+                <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
+            </JsonLayout>
         </Lambda>
     </Appenders>
     <Loggers>
