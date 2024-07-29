@@ -32,11 +32,6 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
-        super.beforeAll(context);
-    }
-
-    @Override
     public void afterEach(ExtensionContext context) throws Exception {
         clearDynamoTable(
                 dynamoDB, AUTHENTICATION_ATTEMPTS_STORE_TABLE, AUTHENTICATION_ATTEMPTS_FIELD);
@@ -49,8 +44,9 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
         }
     }
 
-    public void createOrIncrementCount(String attemptIdentifier, long ttl) {
-        dynamoService.createOrIncrementCount(attemptIdentifier, ttl);
+    public void createOrIncrementCount(
+            String attemptIdentifier, long ttl, String authenticationMethod) {
+        dynamoService.createOrIncrementCount(attemptIdentifier, ttl, authenticationMethod);
     }
 
     public Optional<AuthenticationAttempts> getAuthenticationAttempts(String attemptIdentifier) {

@@ -21,6 +21,11 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
     private static final String ATTEMPT_IDENTIFIER = "attempt-identifier-1234";
     private static final String NON_EXISTENT_ATTEMPT_IDENTIFIER =
             "non-existent-attempt-identifier-1234";
+    private static final String CODE = "123456";
+    private static final long MOCKEDTIMESTAMP = 1721979370L;
+    private static final long TTLINSECONDS = 60L;
+    private static final String AUTH_METHOD = "SMS";
+    private static final long EXPECTEDTTL = MOCKEDTIMESTAMP + TTLINSECONDS;
 
     @RegisterExtension
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
@@ -31,26 +36,24 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
 
     @Test
     void shouldAddCode() {
-        long mockedTimestamp = 1721979370L;
-        long ttlInSeconds = 60L;
-        long expectedTTL = mockedTimestamp + ttlInSeconds;
 
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
             mockedNowHelperClass
                     .when(NowHelper::now)
-                    .thenReturn(Date.from(Instant.ofEpochSecond(mockedTimestamp)));
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
             mockedNowHelperClass
-                    .when(() -> NowHelper.nowPlus(ttlInSeconds, ChronoUnit.SECONDS))
-                    .thenReturn(Date.from(Instant.ofEpochSecond(expectedTTL)));
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
 
-            dynamoAuthenticationAttemptsService.addCode(ATTEMPT_IDENTIFIER, ttlInSeconds);
+            dynamoAuthenticationAttemptsService.addCode(
+                    ATTEMPT_IDENTIFIER, TTLINSECONDS, CODE, AUTH_METHOD);
 
             var authenticationAttempts =
                     dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
                             ATTEMPT_IDENTIFIER);
 
             assertTrue(authenticationAttempts.isPresent());
-            assertEquals(expectedTTL, authenticationAttempts.get().getTimeToLive());
+            assertEquals(EXPECTEDTTL, authenticationAttempts.get().getTimeToLive());
         }
     }
 
@@ -59,7 +62,8 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
         var ttl = Instant.now().getEpochSecond() + 60L;
 
         // Setup the count
-        dynamoAuthenticationAttemptsService.createOrIncrementCount(ATTEMPT_IDENTIFIER, ttl);
+        dynamoAuthenticationAttemptsService.createOrIncrementCount(
+                ATTEMPT_IDENTIFIER, ttl, AUTH_METHOD);
 
         // Retrieve the count
         var incorrectEmailCount =
@@ -85,7 +89,8 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
         long expiredTTL = Instant.now().getEpochSecond() - 1L;
 
         // Setup the count with an expired TTL
-        dynamoAuthenticationAttemptsService.createOrIncrementCount(ATTEMPT_IDENTIFIER, expiredTTL);
+        dynamoAuthenticationAttemptsService.createOrIncrementCount(
+                ATTEMPT_IDENTIFIER, expiredTTL, AUTH_METHOD);
 
         // Attempt to retrieve the count
         var count =
@@ -99,12 +104,76 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
         var nonExpiredTTL = Instant.now().getEpochSecond() + 1000000L;
 
         dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                ATTEMPT_IDENTIFIER, nonExpiredTTL);
+                ATTEMPT_IDENTIFIER, nonExpiredTTL, AUTH_METHOD);
         dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                ATTEMPT_IDENTIFIER, nonExpiredTTL);
+                ATTEMPT_IDENTIFIER, nonExpiredTTL, AUTH_METHOD);
 
         var count =
                 dynamoAuthenticationAttemptsService.getAuthenticationAttempts(ATTEMPT_IDENTIFIER);
         assertEquals(2, count.get().getCount());
+    }
+
+    @Test
+    void shouldReadAndDeleteCodes() {
+
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            dynamoAuthenticationAttemptsService.addCode(
+                    ATTEMPT_IDENTIFIER, TTLINSECONDS, CODE, AUTH_METHOD);
+
+            // Read the code
+            var authenticationAttempts =
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
+                            ATTEMPT_IDENTIFIER);
+            assertTrue(authenticationAttempts.isPresent());
+            assertEquals(CODE, authenticationAttempts.get().getCode());
+
+            // Delete the code
+            dynamoAuthenticationAttemptsService.deleteCode(ATTEMPT_IDENTIFIER);
+            var deletedAttempts =
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
+                            ATTEMPT_IDENTIFIER);
+            assertTrue(deletedAttempts.isEmpty() || deletedAttempts.get().getCode() == null);
+        }
+    }
+
+    @Test
+    void shouldReadAndDeleteCounts() {
+
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            // Setup the count
+            dynamoAuthenticationAttemptsService.createOrIncrementCount(
+                    ATTEMPT_IDENTIFIER, EXPECTEDTTL, AUTH_METHOD);
+
+            // Read the count
+            var authenticationAttempts =
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
+                            ATTEMPT_IDENTIFIER);
+            assertTrue(authenticationAttempts.isPresent());
+            assertEquals(1, authenticationAttempts.get().getCount());
+
+            // Delete the count
+            dynamoAuthenticationAttemptsService.deleteCount(ATTEMPT_IDENTIFIER);
+
+            // Verify the count is deleted
+            authenticationAttempts =
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
+                            ATTEMPT_IDENTIFIER);
+            assertTrue(authenticationAttempts.isPresent());
+            assertEquals(0, authenticationAttempts.get().getCount());
+        }
     }
 }
