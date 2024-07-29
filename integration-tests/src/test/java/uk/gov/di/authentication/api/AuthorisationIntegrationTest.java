@@ -74,7 +74,6 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -817,7 +816,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void
-            shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
@@ -836,12 +835,14 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
         assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
     void
-            shouldRedirectToFrontendErrorPageGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            shouldReturnBadRequestGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
@@ -858,14 +859,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 URI.create("invalid-redirect-uri")),
                         Optional.of("GET"));
 
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(
-                        buildURI(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL(), "error")
-                                .toString()));
+        assertThat(response, hasStatus(400));
+        assertThat(response.getBody(), equalTo(OAuth2Error.INVALID_REQUEST.getDescription()));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     private Map<String, String> constructQueryStringParameters(
