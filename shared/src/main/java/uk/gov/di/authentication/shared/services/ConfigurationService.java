@@ -28,6 +28,8 @@ import static java.util.Objects.isNull;
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
     private static final Logger LOG = LogManager.getLogger(ConfigurationService.class);
+    public static final String FEATURE_SWITCH_OFF = "false";
+    public static final String FEATURE_SWITCH_ON = "true";
     private static ConfigurationService configurationService;
 
     public static ConfigurationService getInstance() {
@@ -84,7 +86,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean supportAccountCreationTTL() {
         return System.getenv()
                 .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
-                .equals("true");
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean supportReauthSignoutEnabled() {
@@ -176,13 +178,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isEmailCheckEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_EMAIL_CHECK_ENABLED", "false").equals("true");
+        return System.getenv()
+                .getOrDefault("SUPPORT_EMAIL_CHECK_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isBulkUserEmailEmailSendingEnabled() {
         return System.getenv()
-                .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", "false")
-                .equals("true");
+                .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public String getBulkEmailLoaderLambdaName() {
@@ -194,7 +198,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isInvokeTicfCRILambdaEnabled() {
-        return System.getenv().getOrDefault("INVOKE_TICF_CRI_LAMBDA", "false").equals("true");
+        return System.getenv()
+                .getOrDefault("INVOKE_TICF_CRI_LAMBDA", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public URI getAuthenticationAuthCallbackURI() {
@@ -223,7 +229,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isCustomDocAppClaimEnabled() {
-        return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
+        return System.getenv()
+                .getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public URI getDocAppAuthorisationURI() {
@@ -291,7 +299,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isIdentityEnabled() {
-        return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
+        return System.getenv()
+                .getOrDefault("IDENTITY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public long getIDTokenExpiry() {
@@ -429,11 +439,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isTestClientsEnabled() {
-        return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
+        return System.getenv()
+                .getOrDefault("TEST_CLIENTS_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isPhoneCheckerWithReplyEnabled() {
-        return System.getenv().getOrDefault("PHONE_CHECKER_WITH_RETRY", "false").equals("true");
+        return System.getenv()
+                .getOrDefault("PHONE_CHECKER_WITH_RETRY", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public String getSyntheticsUsers() {
@@ -519,20 +533,20 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean abortOnAccountInterventionsErrorResponse() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", "false")
-                .equals("true");
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean accountInterventionsServiceActionEnabled() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", "false")
-                .equals("true");
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public boolean isAccountInterventionServiceCallEnabled() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", "false")
-                .equals("true");
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
     }
 
     public long getAccountInterventionServiceCallTimeout() {
