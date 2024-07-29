@@ -23,13 +23,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String USER_EMAIL = "test@email.com";
-    private static final String USER_PASSWORD = "Password123!";
-    private static final String USER_PHONE_NUMBER = "+447712345432";
     private String SESSION_ID;
 
     @BeforeEach
@@ -37,20 +35,19 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         handler = new MfaHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
         String subjectId = "new-subject";
-        SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
-        userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
-        userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
+        SESSION_ID = redis.createUnauthenticatedSessionWithEmail(EMAIL);
+        userStore.signUp(EMAIL, PASSWORD, new Subject(subjectId));
+        userStore.addVerifiedPhoneNumber(EMAIL, UK_MOBILE_NUMBER);
     }
 
     @Test
     void
             shouldReturn204WithExistingRedisCachedCodeAndTriggerVerifyPhoneNotificationTypeWhenResendingVerifyPhoneCode() {
-        String mockPreviouslyIssuedPhoneCode =
-                redis.generateAndSavePhoneNumberCode(USER_EMAIL, 900L);
+        String mockPreviouslyIssuedPhoneCode = redis.generateAndSavePhoneNumberCode(EMAIL, 900L);
 
         var response =
                 makeRequest(
-                        Optional.of(new MfaRequest(USER_EMAIL, true)),
+                        Optional.of(new MfaRequest(EMAIL, true)),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 
@@ -59,7 +56,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(USER_PHONE_NUMBER));
+        assertThat(requests.get(0).getDestination(), equalTo(UK_MOBILE_NUMBER));
         assertThat(requests.get(0).getNotificationType(), equalTo(VERIFY_PHONE_NUMBER));
         assertThat(requests.get(0).getCode(), equalTo(mockPreviouslyIssuedPhoneCode));
     }
@@ -68,7 +65,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenNotResendingVerifyPhoneCode() {
         var response =
                 makeRequest(
-                        Optional.of(new MfaRequest(USER_EMAIL, false)),
+                        Optional.of(new MfaRequest(EMAIL, false)),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 
@@ -77,7 +74,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(USER_PHONE_NUMBER));
+        assertThat(requests.get(0).getDestination(), equalTo(UK_MOBILE_NUMBER));
         assertThat(requests.get(0).getNotificationType(), equalTo(MFA_SMS));
     }
 
@@ -85,8 +82,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenResettingPassword() {
         var response =
                 makeRequest(
-                        Optional.of(
-                                new MfaRequest(USER_EMAIL, false, JourneyType.PASSWORD_RESET_MFA)),
+                        Optional.of(new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET_MFA)),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 
@@ -95,19 +91,18 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(USER_PHONE_NUMBER));
+        assertThat(requests.get(0).getDestination(), equalTo(UK_MOBILE_NUMBER));
         assertThat(requests.get(0).getNotificationType(), equalTo(MFA_SMS));
     }
 
     @Test
     void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenReauthenticating()
             throws Json.JsonException {
-        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(
-                                new MfaRequest(USER_EMAIL, false, JourneyType.REAUTHENTICATION)),
+                        Optional.of(new MfaRequest(EMAIL, false, JourneyType.REAUTHENTICATION)),
                         constructFrontendHeaders(authenticatedSessionId),
                         Map.of());
 
@@ -116,14 +111,14 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(USER_PHONE_NUMBER));
+        assertThat(requests.get(0).getDestination(), equalTo(UK_MOBILE_NUMBER));
         assertThat(requests.get(0).getNotificationType(), equalTo(MFA_SMS));
     }
 
     @Test
     void shouldReturn4O0WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
             throws Json.JsonException {
-        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(EMAIL);
         redis.incrementSessionCodeRequestCount(
                 authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
         redis.incrementSessionCodeRequestCount(
@@ -137,8 +132,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(
-                                new MfaRequest(USER_EMAIL, false, JourneyType.REAUTHENTICATION)),
+                        Optional.of(new MfaRequest(EMAIL, false, JourneyType.REAUTHENTICATION)),
                         constructFrontendHeaders(authenticatedSessionId),
                         Map.of());
 
@@ -151,11 +145,11 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
-        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(new MfaRequest(USER_EMAIL, false, JourneyType.PASSWORD_RESET)),
+                        Optional.of(new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET)),
                         constructFrontendHeaders(authenticatedSessionId),
                         Map.of());
 

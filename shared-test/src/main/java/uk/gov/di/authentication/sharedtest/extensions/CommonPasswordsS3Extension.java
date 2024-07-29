@@ -9,7 +9,8 @@ import java.net.URL;
 import java.nio.file.Paths;
 
 public class CommonPasswordsS3Extension extends S3Extension {
-    public static final String COMMON_PASSWORDS_BUCKET = "local-common-passwords";
+    public static final String COMMON_PASSWORDS_BUCKET =
+            "local-common-passwords"; // pragma: allowlist secret
     public static final String TEST_FILE_NAME = "local-common-passwords-test-file";
 
     @Override

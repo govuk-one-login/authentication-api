@@ -18,8 +18,9 @@ locals {
 
     DT_OPEN_TELEMETRY_ENABLE_INTEGRATION = "true"
   }
-
-  dynatrace_production_secret    = "arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables"
+  # pragma: allowlist nextline secret
+  dynatrace_production_secret = "arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables"
+  # pragma: allowlist nextline secret
   dynatrace_nonproduction_secret = "arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables"
 
   dynatrace_secret = jsondecode(data.aws_secretsmanager_secret_version.dynatrace_secret.secret_string)

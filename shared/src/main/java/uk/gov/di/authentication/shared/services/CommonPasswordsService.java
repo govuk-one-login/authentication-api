@@ -19,7 +19,8 @@ import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.create
 
 public class CommonPasswordsService {
     private static final Logger LOG = LogManager.getLogger(CommonPasswordsService.class);
-    private static final String COMMON_PASSWORDS_TABLE = "common-passwords";
+    private static final String COMMON_PASSWORDS_TABLE =
+            "common-passwords"; // pragma: allowlist secret
     private final DynamoDbTable<CommonPassword> dynamoCommonPasswordTable;
     private final DynamoDbEnhancedClient dynamoDbEnhancedClient;
 

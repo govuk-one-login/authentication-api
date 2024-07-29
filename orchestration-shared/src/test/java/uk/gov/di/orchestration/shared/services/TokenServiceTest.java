@@ -117,6 +117,7 @@ class TokenServiceTest {
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final String STORAGE_TOKEN_PREFIX =
+            // pragma: allowlist secret
             "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
     private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
     private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
@@ -552,7 +553,8 @@ class TokenServiceTest {
 
         assertThat(
                 header.getKeyID(),
-                is("1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8"));
+                is(
+                        "1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8")); // pragma: allowlist secret
 
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"),

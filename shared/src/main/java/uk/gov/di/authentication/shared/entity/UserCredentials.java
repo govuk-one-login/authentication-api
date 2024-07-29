@@ -12,10 +12,11 @@ public class UserCredentials {
 
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
-    public static final String ATTRIBUTE_PASSWORD = "Password";
+    public static final String ATTRIBUTE_PASSWORD = "Password"; // pragma: allowlist secret
     public static final String ATTRIBUTE_CREATED = "Created";
     public static final String ATTRIBUTE_UPDATED = "Updated";
-    public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
+    public static final String ATTRIBUTE_MIGRATED_PASSWORD =
+            "MigratedPassword"; // pragma: allowlist secret
     public static final String ATTRIBUTE_MFA_METHODS = "MfaMethods";
     public static final String ATTRIBUTE_TEST_USER = "testUser";
 

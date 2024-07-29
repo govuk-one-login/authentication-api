@@ -30,18 +30,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String CLIENT_NAME = "test-client-name";
     private static final Scope OIDC_SCOPE = new Scope(OIDCScopeValue.OPENID);
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() throws Json.JsonException {
@@ -58,21 +54,15 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
-                makeRequest(
-                        Optional.of(
-                                new SignupRequest(
-                                        "joe.bloggs+5@digital.cabinet-office.gov.uk",
-                                        "password-1")),
-                        headers,
-                        Map.of());
+                makeRequest(Optional.of(new SignupRequest(EMAIL, PASSWORD)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
         assertTrue(
                 Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
-        assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
+        assertTrue(userStore.userExists(EMAIL));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CREATE_ACCOUNT));
     }
 
@@ -85,14 +75,13 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 new SignupRequest(
-                                        "joe.bloggs+common-password@digital.cabinet-office.gov.uk",
-                                        CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                                        EMAIL, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
                         headers,
                         Map.of());
 
@@ -105,7 +94,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 CLIENT_ID,
                 "The test client",
                 singletonList(REDIRECT_URI),
-                singletonList("test-client@test.com"),
+                singletonList(CLIENT_EMAIL),
                 singletonList(OIDC_SCOPE.toString()),
                 Base64.getMimeEncoder()
                         .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),

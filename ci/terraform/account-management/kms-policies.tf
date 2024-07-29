@@ -61,7 +61,7 @@ data "aws_iam_policy_document" "account_management_audit_payload_kms_signing_pol
 
   statement {
     effect = "Allow"
-    sid    = "AllowLambdasToEncryptWithCustomKey"
+    sid    = "AllowLambdasToEncryptWithCustomKey" // pragma: allowlist secret
     actions = [
       "kms:GenerateDataKey",
       "kms:Decrypt"

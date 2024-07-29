@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.helpers.HashHelper;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -20,12 +21,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 
 class CodeStorageServiceTest {
 
-    private static final String TEST_EMAIL = "test@test.com";
-    private static final String TEST_EMAIL_HASH =
-            "f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
+    private static final String TEST_EMAIL_HASH = HashHelper.hashSha256String(EMAIL);
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long PW_CODE_EXPIRY_TIME = 900;
@@ -76,7 +76,7 @@ class CodeStorageServiceTest {
 
     @Test
     void shouldCallRedisWithValidEmailCodeAndHashedEmail() {
-        codeStorageService.saveOtpCode(TEST_EMAIL, CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+        codeStorageService.saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verify(redisConnectionService)
                 .saveWithExpiry(
                         RedisKeys.EMAIL_OTP_CODE.getKeyWithTestEmailHash(), CODE, CODE_EXPIRY_TIME);
@@ -87,7 +87,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(RedisKeys.EMAIL_OTP_CODE.getKeyWithTestEmailHash()))
                 .thenReturn(CODE);
 
-        String codeForEmail = codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_EMAIL).get();
+        String codeForEmail = codeStorageService.getOtpCode(EMAIL, VERIFY_EMAIL).get();
 
         assertThat(codeForEmail, is(CODE));
     }
@@ -97,12 +97,12 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(RedisKeys.EMAIL_OTP_CODE.getKeyWithTestEmailHash()))
                 .thenReturn(null);
 
-        assertTrue(codeStorageService.getOtpCode(TEST_EMAIL, VERIFY_EMAIL).isEmpty());
+        assertTrue(codeStorageService.getOtpCode(EMAIL, VERIFY_EMAIL).isEmpty());
     }
 
     @Test
     void shouldCallRedisToDeleteEmailCodeWithHashedEmail() {
-        codeStorageService.deleteOtpCode(TEST_EMAIL, VERIFY_EMAIL);
+        codeStorageService.deleteOtpCode(EMAIL, VERIFY_EMAIL);
 
         verify(redisConnectionService)
                 .deleteValue(RedisKeys.EMAIL_OTP_CODE.getKeyWithTestEmailHash());
@@ -111,7 +111,7 @@ class CodeStorageServiceTest {
     @Test
     void shouldCallRedisWithValidPhoneNumberCodeAndHashedEmailAddress() {
         codeStorageService.saveOtpCode(
-                TEST_EMAIL, CODE, CODE_EXPIRY_TIME, NotificationType.VERIFY_PHONE_NUMBER);
+                EMAIL, CODE, CODE_EXPIRY_TIME, NotificationType.VERIFY_PHONE_NUMBER);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -124,9 +124,7 @@ class CodeStorageServiceTest {
                 .thenReturn(CODE);
 
         String codeForEmail =
-                codeStorageService
-                        .getOtpCode(TEST_EMAIL, NotificationType.VERIFY_PHONE_NUMBER)
-                        .get();
+                codeStorageService.getOtpCode(EMAIL, NotificationType.VERIFY_PHONE_NUMBER).get();
 
         assertThat(codeForEmail, is(CODE));
     }
@@ -138,13 +136,13 @@ class CodeStorageServiceTest {
 
         assertTrue(
                 codeStorageService
-                        .getOtpCode(TEST_EMAIL, NotificationType.VERIFY_PHONE_NUMBER)
+                        .getOtpCode(EMAIL, NotificationType.VERIFY_PHONE_NUMBER)
                         .isEmpty());
     }
 
     @Test
     void shouldCallRedisToDeletePhoneNumberCodeWithHashedEmail() {
-        codeStorageService.deleteOtpCode(TEST_EMAIL, NotificationType.VERIFY_PHONE_NUMBER);
+        codeStorageService.deleteOtpCode(EMAIL, NotificationType.VERIFY_PHONE_NUMBER);
 
         verify(redisConnectionService)
                 .deleteValue(RedisKeys.PHONE_OTP_CODE.getKeyWithTestEmailHash());
@@ -153,7 +151,7 @@ class CodeStorageServiceTest {
     @Test
     void shouldSaveToRedisWhenCodeIsBlockedForEmail() {
         codeStorageService.saveBlockedForEmail(
-                TEST_EMAIL, RedisKeys.CODE_BLOCK.prefix, CODE_EXPIRY_TIME);
+                EMAIL, RedisKeys.CODE_BLOCK.prefix, CODE_EXPIRY_TIME);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -165,7 +163,7 @@ class CodeStorageServiceTest {
     @Test
     void shouldSaveToRedisWhenCodeRequestIsBlockedForEmail() {
         codeStorageService.saveBlockedForEmail(
-                TEST_EMAIL, RedisKeys.CODE_REQUEST_BLOCK.prefix, CODE_EXPIRY_TIME);
+                EMAIL, RedisKeys.CODE_REQUEST_BLOCK.prefix, CODE_EXPIRY_TIME);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -177,7 +175,7 @@ class CodeStorageServiceTest {
     @Test
     void shouldSaveToRedisWhenPasswordResetIsBlockedForEmail() {
         codeStorageService.saveBlockedForEmail(
-                TEST_EMAIL, RedisKeys.PASSWORD_RESET_BLOCK.prefix, CODE_EXPIRY_TIME);
+                EMAIL, RedisKeys.PASSWORD_RESET_BLOCK.prefix, CODE_EXPIRY_TIME);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -191,7 +189,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(RedisKeys.CODE_BLOCK.getKeyWithTestEmailHash()))
                 .thenReturn(CODE_BLOCKED_VALUE);
 
-        assertTrue(codeStorageService.isBlockedForEmail(TEST_EMAIL, RedisKeys.CODE_BLOCK.prefix));
+        assertTrue(codeStorageService.isBlockedForEmail(EMAIL, RedisKeys.CODE_BLOCK.prefix));
     }
 
     @Test
@@ -199,7 +197,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(RedisKeys.CODE_BLOCK.getKeyWithTestEmailHash()))
                 .thenReturn(CODE_BLOCKED_VALUE);
 
-        assertTrue(codeStorageService.isBlockedForEmail(TEST_EMAIL, RedisKeys.CODE_BLOCK.prefix));
+        assertTrue(codeStorageService.isBlockedForEmail(EMAIL, RedisKeys.CODE_BLOCK.prefix));
     }
 
     @Test
@@ -209,8 +207,7 @@ class CodeStorageServiceTest {
                 .thenReturn(CODE_BLOCKED_VALUE);
 
         assertTrue(
-                codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL, RedisKeys.PASSWORD_RESET_BLOCK.prefix));
+                codeStorageService.isBlockedForEmail(EMAIL, RedisKeys.PASSWORD_RESET_BLOCK.prefix));
     }
 
     @Test
@@ -218,7 +215,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(RedisKeys.CODE_BLOCK.getKeyWithTestEmailHash()))
                 .thenReturn(null);
 
-        assertFalse(codeStorageService.isBlockedForEmail(TEST_EMAIL, RedisKeys.CODE_BLOCK.prefix));
+        assertFalse(codeStorageService.isBlockedForEmail(EMAIL, RedisKeys.CODE_BLOCK.prefix));
     }
 
     @Test
@@ -228,8 +225,7 @@ class CodeStorageServiceTest {
                 .thenReturn(null);
 
         assertFalse(
-                codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL, RedisKeys.CODE_REQUEST_BLOCK.prefix));
+                codeStorageService.isBlockedForEmail(EMAIL, RedisKeys.CODE_REQUEST_BLOCK.prefix));
     }
 
     @Test
@@ -239,14 +235,12 @@ class CodeStorageServiceTest {
                 .thenReturn(null);
 
         assertFalse(
-                codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL, RedisKeys.PASSWORD_RESET_BLOCK.prefix));
+                codeStorageService.isBlockedForEmail(EMAIL, RedisKeys.PASSWORD_RESET_BLOCK.prefix));
     }
 
     @Test
     void shouldCallRedisWithValidMfaCodeAndHashedEmail() {
-        codeStorageService.saveOtpCode(
-                TEST_EMAIL, CODE, CODE_EXPIRY_TIME, NotificationType.MFA_SMS);
+        codeStorageService.saveOtpCode(EMAIL, CODE, CODE_EXPIRY_TIME, NotificationType.MFA_SMS);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -258,7 +252,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(null);
-        assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(0));
+        assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL), equalTo(0));
     }
 
     @Test
@@ -266,7 +260,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(4));
-        assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(4));
+        assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL), equalTo(4));
     }
 
     @ParameterizedTest
@@ -276,7 +270,7 @@ class CodeStorageServiceTest {
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType)))
                 .thenReturn(String.valueOf(4));
         assertThat(
-                codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType),
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, mfaMethodType),
                 equalTo(4));
     }
 
@@ -290,7 +284,7 @@ class CodeStorageServiceTest {
                 .thenReturn(4L);
         assertThat(
                 codeStorageService.getMfaCodeBlockTimeToLive(
-                        TEST_EMAIL, mfaMethodType, JourneyType.SIGN_IN),
+                        EMAIL, mfaMethodType, JourneyType.SIGN_IN),
                 equalTo(4L));
     }
 
@@ -299,7 +293,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(null);
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -315,7 +309,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType)))
                 .thenReturn(null);
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL, mfaMethodType);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -329,7 +323,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -344,7 +338,7 @@ class CodeStorageServiceTest {
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(0));
 
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(TEST_EMAIL);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -360,7 +354,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithMfaTypeModifier(mfaMethodType)))
                 .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(EMAIL, mfaMethodType);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -371,7 +365,7 @@ class CodeStorageServiceTest {
 
     @Test
     void shouldCallRedisToDeleteIncorrectMfaCodeAttemptCountGenericKey() {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         verify(redisConnectionService)
                 .deleteValue(RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash());
@@ -381,7 +375,7 @@ class CodeStorageServiceTest {
     @EnumSource(MFAMethodType.class)
     void shouldCallRedisToDeleteIncorrectMfaCodeAttemptCountMfaSpecificKeys(
             MFAMethodType mfaMethodType) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL, mfaMethodType);
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(EMAIL, mfaMethodType);
 
         verify(redisConnectionService)
                 .deleteValue(
@@ -393,7 +387,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_PASSWORD_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(null);
-        assertThat(codeStorageService.getIncorrectPasswordCount(TEST_EMAIL), equalTo(0));
+        assertThat(codeStorageService.getIncorrectPasswordCount(EMAIL), equalTo(0));
     }
 
     @Test
@@ -401,7 +395,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_PASSWORD_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(4));
-        assertThat(codeStorageService.getIncorrectPasswordCount(TEST_EMAIL), equalTo(4));
+        assertThat(codeStorageService.getIncorrectPasswordCount(EMAIL), equalTo(4));
     }
 
     @Test
@@ -409,7 +403,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_PASSWORD_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(null);
-        codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
+        codeStorageService.increaseIncorrectPasswordCount(EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -423,7 +417,7 @@ class CodeStorageServiceTest {
         when(redisConnectionService.getValue(
                         RedisKeys.INCORRECT_PASSWORD_COUNTER.getKeyWithTestEmailHash()))
                 .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
+        codeStorageService.increaseIncorrectPasswordCount(EMAIL);
 
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -434,7 +428,7 @@ class CodeStorageServiceTest {
 
     @Test
     void shouldCallRedisToDeleteIncorrectPasswordCount() {
-        codeStorageService.deleteIncorrectPasswordCount(TEST_EMAIL);
+        codeStorageService.deleteIncorrectPasswordCount(EMAIL);
 
         verify(redisConnectionService)
                 .deleteValue(RedisKeys.INCORRECT_PASSWORD_COUNTER.getKeyWithTestEmailHash());

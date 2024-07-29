@@ -38,10 +38,10 @@ import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableE
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    public static final String CLIENT_SESSION_ID = "some-client-session-id";
     public static final String VALID_AUTH_CODE = "valid-auth-code";
     public static final String INVALID_AUTH_CODE = "invalid-auth-code";
     private static final String ORCH_CLIENT_ID = "orch-client-id";
@@ -50,10 +50,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     private static final Subject TEST_SUBJECT = new Subject();
     private static final List<String> TEST_CLAIMS = List.of("test-claim-1");
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PASSWORD = "password-1";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeStoreExtension = new AuthCodeExtension(180);
@@ -70,7 +66,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
         handler = new TokenHandler(configurationService);
 
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
+        userStore.signUp(EMAIL, PASSWORD, TEST_SUBJECT);
 
         authCodeStoreExtension.saveAuthCode(
                 TEST_SUBJECT.getValue(),

@@ -66,9 +66,9 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
@@ -98,7 +98,6 @@ class ResetPasswordHandlerTest {
     private static final String NEW_PASSWORD = CommonTestVariables.PASSWORD;
     private static final String SUBJECT = "some-subject";
     private static final String EMAIL = CommonTestVariables.EMAIL;
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Json objectMapper = SerializationService.getInstance();
     private static final NotifyRequest EXPECTED_SMS_NOTIFY_REQUEST =
             new NotifyRequest(
@@ -110,7 +109,7 @@ class ResetPasswordHandlerTest {
                     EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
+                    INTERNAL_SUBJECT_ID.getValue(), CommonTestVariables.INTERNAL_SECTOR_HOST, SALT);
 
     private final AuditContext auditContext =
             new AuditContext(
@@ -121,7 +120,7 @@ class ResetPasswordHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     private ResetPasswordHandler handler;
@@ -133,18 +132,19 @@ class ResetPasswordHandlerTest {
                     .withClientID(TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(
                             List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
+                                    CommonTestVariables.buildTestEmail(5),
                                     EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
+                                    CommonTestVariables.buildTestEmail(6)));
 
     @BeforeEach
     public void setUp() {
         doReturn(Optional.of(ErrorResponse.ERROR_1007))
                 .when(passwordValidator)
-                .validate("password");
+                .validate(CommonTestVariables.PASSWORD_BAD);
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorUri())
+                .thenReturn(CommonTestVariables.INTERNAL_SECTOR_URI);
         usingValidSession();
         usingValidClientSession();
         handler =
@@ -303,7 +303,7 @@ class ResetPasswordHandlerTest {
 
     @Test
     void shouldReturn400IfPasswordFailsValidation() {
-        var event = generateRequest("password", VALID_HEADERS);
+        var event = generateRequest(CommonTestVariables.PASSWORD_BAD, VALID_HEADERS);
 
         var result = handler.handleRequest(event, context);
 
@@ -411,7 +411,7 @@ class ResetPasswordHandlerTest {
     }
 
     private UserCredentials generateUserCredentials() {
-        return generateUserCredentials("old-password1");
+        return generateUserCredentials(CommonTestVariables.PASSWORD_OLD);
     }
 
     private UserCredentials generateUserCredentials(String password) {
@@ -441,7 +441,7 @@ class ResetPasswordHandlerTest {
         return new UserCredentials()
                 .withEmail(EMAIL)
                 .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
-                .withMigratedPassword("old-password1")
+                .withMigratedPassword(CommonTestVariables.PASSWORD_OLD)
                 .withSubjectID(SUBJECT);
     }
 

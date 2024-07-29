@@ -16,7 +16,8 @@ public class AuthCodeStore {
     private static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
     private static final String ATTRIBUTE_SECTOR_IDENTIFIER = "SectorIdentifier";
     private static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
-    private static final String ATTRIBUTE_PASSWORD_RESET_TIME = "PasswordResetTime";
+    private static final String ATTRIBUTE_PASSWORD_RESET_TIME =
+            "PasswordResetTime"; // pragma: allowlist secret
 
     private String subjectID;
     private String authCode;

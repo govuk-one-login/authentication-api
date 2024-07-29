@@ -28,15 +28,13 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDAT
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
-    private static final String CLIENT_ID = "some-client-id";
 
     @BeforeEach
     void setup() {
@@ -46,36 +44,36 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldSendNotificationAndReturn204WhenUpdatingPasswordIsSuccessful() {
-        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId("password-1");
-        var hashedOriginalPassword = userStore.getPasswordForUser(TEST_EMAIL);
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId(PASSWORD);
+        var hashedOriginalPassword = userStore.getPasswordForUser(EMAIL);
 
         Map<String, Object> requestParams =
                 Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
         var response =
                 makeRequest(
-                        Optional.of(new UpdatePasswordRequest(TEST_EMAIL, "password-2")),
+                        Optional.of(new UpdatePasswordRequest(EMAIL, PASSWORD_NEW)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         requestParams);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
-        assertThat(userStore.getPasswordForUser(TEST_EMAIL), not(is(hashedOriginalPassword)));
+        assertThat(userStore.getPasswordForUser(EMAIL), not(is(hashedOriginalPassword)));
 
         assertNotificationsReceived(
                 notificationsQueue,
-                List.of(new NotifyRequest(TEST_EMAIL, PASSWORD_UPDATED, SupportedLanguage.EN)));
+                List.of(new NotifyRequest(EMAIL, PASSWORD_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(UPDATE_PASSWORD));
     }
 
     @Test
     void shouldReturn400WhenNewPasswordIsSameAsOldPassword() throws Exception {
-        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId("password-1");
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId(PASSWORD);
 
         var response =
                 makeRequest(
-                        Optional.of(new UpdatePasswordRequest(TEST_EMAIL, "password-1")),
+                        Optional.of(new UpdatePasswordRequest(EMAIL, PASSWORD)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -91,7 +89,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldReturn400WhenNewPasswordIsInvalid() throws Exception {
-        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId("password-1");
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId(PASSWORD);
 
         Map<String, Object> requestParams =
                 Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
@@ -100,7 +98,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                 makeRequest(
                         Optional.of(
                                 new UpdatePasswordRequest(
-                                        TEST_EMAIL, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                                        EMAIL, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -116,8 +114,9 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
-        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId("password-1");
-        userStore.signUp("other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId(PASSWORD);
+        var OTHER_EMAIL = buildTestEmail("other");
+        userStore.signUp(OTHER_EMAIL, PASSWORD_NEW, new Subject());
 
         Exception ex =
                 assertThrows(
@@ -126,8 +125,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 makeRequest(
                                         Optional.of(
                                                 new UpdatePasswordRequest(
-                                                        "other.user@digital.cabinet-office.gov.uk",
-                                                        "password-2")),
+                                                        OTHER_EMAIL, PASSWORD_NEW)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
@@ -138,28 +136,27 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldThrowExceptionWhenSubjectIdMissing() {
-        setupUserAndRetrieveInternalCommonSubId("password-1");
+        setupUserAndRetrieveInternalCommonSubId(PASSWORD);
 
         Exception ex =
                 assertThrows(
                         RuntimeException.class,
                         () ->
                                 makeRequest(
-                                        Optional.of(
-                                                new UpdatePasswordRequest(
-                                                        TEST_EMAIL, "password-1")),
+                                        Optional.of(new UpdatePasswordRequest(EMAIL, PASSWORD)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap()));
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }
 
+    @SuppressWarnings("SameParameterValue")
     private String setupUserAndRetrieveInternalCommonSubId(String password) {
-        userStore.signUp(TEST_EMAIL, password, SUBJECT);
-        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        userStore.signUp(EMAIL, password, SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         return internalCommonSubjectId;
     }

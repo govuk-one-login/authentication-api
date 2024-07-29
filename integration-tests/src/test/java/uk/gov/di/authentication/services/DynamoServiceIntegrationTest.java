@@ -23,14 +23,11 @@ import java.util.Set;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 class DynamoServiceIntegrationTest {
 
-    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String UPDATED_TEST_EMAIL = "user.one@test.com";
-    private static final String PHONE_NUMBER = "+447700900000";
     private static final String ALTERNATIVE_PHONE_NUMBER = "+447316763843";
-    private static final String CLIENT_ID = "client-id";
     private static final LocalDateTime CREATED_DATE_TIME = LocalDateTime.now();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -49,45 +46,40 @@ class DynamoServiceIntegrationTest {
     @Test
     void getOrGenerateSaltShouldReturnNewSaltWhenUserDoesNotHaveOne() {
         setUpDynamo();
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
         byte[] salt = dynamoService.getOrGenerateSalt(userProfile);
 
         assertThat(salt.length, equalTo(32));
         assertThat(SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray(), equalTo(salt));
-        UserProfile savedProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserProfile savedProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
         assertThat(SdkBytes.fromByteBuffer(savedProfile.getSalt()).asByteArray(), equalTo(salt));
     }
 
     @Test
     void getOrGenerateSaltShouldReturnExistingSaltWhenOneExists() {
         setUpDynamo();
-        byte[] existingSalt = userStore.addSalt(TEST_EMAIL);
+        byte[] existingSalt = userStore.addSalt(EMAIL);
 
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
         byte[] salt = dynamoService.getOrGenerateSalt(userProfile);
 
         assertThat(salt, equalTo(existingSalt));
-        UserProfile savedProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserProfile savedProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
         assertThat(
                 existingSalt,
                 equalTo(SdkBytes.fromByteBuffer(savedProfile.getSalt()).asByteArray()));
     }
 
     private void setUpDynamo() {
-        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        userStore.signUp(EMAIL, PASSWORD, new Subject());
     }
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItems() {
         setUpDynamo();
 
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
-        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
 
         testUpdateEmail(userProfile, userCredentials);
     }
@@ -95,11 +87,10 @@ class DynamoServiceIntegrationTest {
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithAccountVerified() {
         setUpDynamo();
-        dynamoService.setAccountVerified(TEST_EMAIL);
+        dynamoService.setAccountVerified(EMAIL);
 
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
-        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
 
         testUpdateEmail(userProfile, userCredentials);
     }
@@ -107,12 +98,11 @@ class DynamoServiceIntegrationTest {
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithSalt() {
         setUpDynamo();
-        userStore.addSalt(TEST_EMAIL);
+        userStore.addSalt(EMAIL);
 
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
 
-        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
 
         testUpdateEmail(userProfile, userCredentials);
     }
@@ -122,11 +112,10 @@ class DynamoServiceIntegrationTest {
         setUpDynamo();
 
         dynamoService.updateMFAMethod(
-                TEST_EMAIL, MFAMethodType.AUTH_APP, false, true, TEST_MFA_APP_CREDENTIAL);
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+                EMAIL, MFAMethodType.AUTH_APP, false, true, TEST_MFA_APP_CREDENTIAL);
+        UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(EMAIL).orElseThrow();
 
-        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
 
         testUpdateEmail(userProfile, userCredentials);
     }
@@ -135,9 +124,8 @@ class DynamoServiceIntegrationTest {
     void shouldAddAuthAppMFAMethod() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
-                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
-        UserCredentials updatedUserCredentials =
-                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+                EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+        UserCredentials updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
         MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
@@ -152,11 +140,11 @@ class DynamoServiceIntegrationTest {
             shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
-                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+                EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                TEST_EMAIL, "+4407316763843", true, true);
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+                EMAIL, "+4407316763843", true, true);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
         MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
@@ -173,9 +161,9 @@ class DynamoServiceIntegrationTest {
     void shouldSetSetPhoneNumberAndAccountVerifiedWhenMfaMethodDoesNotExists() {
         setUpDynamo();
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                TEST_EMAIL, "+4407316763843", true, true);
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+                EMAIL, UK_MOBILE_NUMBER, true, true);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods(), equalTo(null));
         assertThat(updatedUserUserProfile.getAccountVerified(), equalTo(1));
@@ -187,10 +175,10 @@ class DynamoServiceIntegrationTest {
     void shouldSetAccountAndAuthVerifiedToTrue() {
         setUpDynamo();
 
-        dynamoService.setAuthAppAndAccountVerified(TEST_EMAIL, TEST_MFA_APP_CREDENTIAL);
+        dynamoService.setAuthAppAndAccountVerified(EMAIL, TEST_MFA_APP_CREDENTIAL);
 
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
         var mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
@@ -204,14 +192,14 @@ class DynamoServiceIntegrationTest {
     @Test
     void shouldSetVerifiedPhoneNumberAndRemoveAuthAppWhenPresent() {
         setUpDynamo();
-        dynamoService.setAccountVerified(TEST_EMAIL);
+        dynamoService.setAccountVerified(EMAIL);
         dynamoService.updateMFAMethod(
-                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+                EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
 
-        dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(TEST_EMAIL, "+447316763843");
+        dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(EMAIL, "+447316763843");
 
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
         assertThat(updatedUserCredentials.getMfaMethods(), equalTo(emptyList()));
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserProfile.getPhoneNumber(), equalTo("+447316763843"));
@@ -222,15 +210,15 @@ class DynamoServiceIntegrationTest {
     void shouldSetVerifiedPhoneNumberAndReplaceExistingPhoneNumber() {
         setUpDynamo();
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
+                EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
-        dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(TEST_EMAIL, PHONE_NUMBER);
+        dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(EMAIL, UK_MOBILE_NUMBER);
 
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
         assertThat(updatedUserCredentials.getMfaMethods(), equalTo(null));
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
-        assertThat(updatedUserProfile.getPhoneNumber(), equalTo(PHONE_NUMBER));
+        assertThat(updatedUserProfile.getPhoneNumber(), equalTo(UK_MOBILE_NUMBER));
         assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(true));
     }
 
@@ -238,13 +226,12 @@ class DynamoServiceIntegrationTest {
     void shouldSetVerifiedAuthAppAndRemovePhoneNumberWhenPresent() {
         setUpDynamo();
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
+                EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
-        dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
-                TEST_EMAIL, TEST_MFA_APP_CREDENTIAL);
+        dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(EMAIL, TEST_MFA_APP_CREDENTIAL);
 
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
         List<MFAMethod> mfaMethods = updatedUserCredentials.getMfaMethods();
         assertThat(mfaMethods.size(), equalTo(1));
         assertThat(mfaMethods.get(0).isMethodVerified(), equalTo(true));
@@ -259,14 +246,14 @@ class DynamoServiceIntegrationTest {
     void shouldSetVerifiedAuthAppAndRemoveExistingAuthAppWhenPresent() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
-                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
-        dynamoService.setAccountVerified(TEST_EMAIL);
+                EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+        dynamoService.setAccountVerified(EMAIL);
 
         dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
-                TEST_EMAIL, ALTERNATIVE_TEST_MFA_APP_CREDENTIAL);
+                EMAIL, ALTERNATIVE_TEST_MFA_APP_CREDENTIAL);
 
-        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(EMAIL);
         List<MFAMethod> mfaMethods = updatedUserCredentials.getMfaMethods();
         assertThat(mfaMethods.size(), equalTo(1));
         assertThat(mfaMethods.get(0).isMethodVerified(), equalTo(true));
@@ -281,23 +268,14 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldRetrieveUserProfileBySubjectId() {
-        setupDynamoWithMultipleUsers();
+        String[] suffixes = {"1111", "2222", "3333", "4444", "5555"};
+        setupDynamoWithMultipleUsers(suffixes);
 
-        assertThat(
-                dynamoService.getOptionalUserProfileFromSubject("1111").get().getEmail(),
-                equalTo("email1"));
-        assertThat(
-                dynamoService.getOptionalUserProfileFromSubject("2222").get().getEmail(),
-                equalTo("email2"));
-        assertThat(
-                dynamoService.getOptionalUserProfileFromSubject("3333").get().getEmail(),
-                equalTo("email3"));
-        assertThat(
-                dynamoService.getOptionalUserProfileFromSubject("4444").get().getEmail(),
-                equalTo("email4"));
-        assertThat(
-                dynamoService.getOptionalUserProfileFromSubject("5555").get().getEmail(),
-                equalTo("email5"));
+        for (String suffix : suffixes) {
+            assertThat(
+                    dynamoService.getOptionalUserProfileFromSubject(suffix).get().getEmail(),
+                    equalTo("email" + suffix));
+        }
     }
 
     @Test
@@ -358,42 +336,44 @@ class DynamoServiceIntegrationTest {
     }
 
     private void setupDynamoWithMultipleUsers() {
-        userStore.signUp("email1", "password-1", new Subject("1111"));
-        userStore.signUp("email2", "password-1", new Subject("2222"));
-        userStore.signUp("email3", "password-1", new Subject("3333"));
-        userStore.signUp("email4", "password-1", new Subject("4444"));
-        userStore.signUp("email5", "password-1", new Subject("5555"));
+        setupDynamoWithMultipleUsers(new String[] {"1111", "2222", "3333", "4444", "5555"});
+    }
+
+    private void setupDynamoWithMultipleUsers(String[] suffixes) {
+        for (String suffix : suffixes) {
+            userStore.signUp("email" + suffix, PASSWORD, new Subject(suffix));
+        }
     }
 
     private void setupDynamoWithMultipleUsersWithDifferentTermsAndConditions() {
-        userStore.signUp("email0", "password-1", new Subject("0000"), "1.0");
-        userStore.signUp("email1", "password-1", new Subject("1111"), "1.0");
-        userStore.signUp("email2", "password-1", new Subject("2222"), "1.0");
-        userStore.signUp("email3", "password-1", new Subject("3333"), "1.1");
-        userStore.signUp("email4", "password-1", new Subject("4444"), "1.1");
-        userStore.signUp("email5", "password-1", new Subject("5555"), "1.2");
-        userStore.signUp("email6", "password-1", new Subject("6666"), "1.2");
-        userStore.signUp("email7", "password-1", new Subject("7777"), "1.2");
-        userStore.signUp("email8", "password-1", new Subject("8888"), "1.3");
-        userStore.signUp("email9", "password-1", new Subject("9999"), "1.3");
-        userStore.signUp("email10", "password-1", new Subject("A0000"), null);
-        userStore.signUp("email11", "password-1", new Subject("A1111"), null);
-        userStore.addUnverifiedUser("email12", "password-1", new Subject("A2222"), "1.3");
-        userStore.addUnverifiedUser("email13", "password-1", new Subject("A3333"), "1.3");
-        userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
+        userStore.signUp("email0", PASSWORD, new Subject("0000"), "1.0");
+        userStore.signUp("email1", PASSWORD, new Subject("1111"), "1.0");
+        userStore.signUp("email2", PASSWORD, new Subject("2222"), "1.0");
+        userStore.signUp("email3", PASSWORD, new Subject("3333"), "1.1");
+        userStore.signUp("email4", PASSWORD, new Subject("4444"), "1.1");
+        userStore.signUp("email5", PASSWORD, new Subject("5555"), "1.2");
+        userStore.signUp("email6", PASSWORD, new Subject("6666"), "1.2");
+        userStore.signUp("email7", PASSWORD, new Subject("7777"), "1.2");
+        userStore.signUp("email8", PASSWORD, new Subject("8888"), "1.3");
+        userStore.signUp("email9", PASSWORD, new Subject("9999"), "1.3");
+        userStore.signUp("email10", PASSWORD, new Subject("A0000"), null);
+        userStore.signUp("email11", PASSWORD, new Subject("A1111"), null);
+        userStore.addUnverifiedUser("email12", PASSWORD, new Subject("A2222"), "1.3");
+        userStore.addUnverifiedUser("email13", PASSWORD, new Subject("A3333"), "1.3");
+        userStore.addUnverifiedUser("email14", PASSWORD, new Subject("A4444"), "1.3");
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {
-        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+        dynamoService.updateEmail(EMAIL, EMAIL_NEW, CREATED_DATE_TIME);
 
         UserProfile updatedUserProfile =
-                dynamoService.getUserProfileByEmailMaybe(UPDATED_TEST_EMAIL).orElseThrow();
+                dynamoService.getUserProfileByEmailMaybe(EMAIL_NEW).orElseThrow();
 
         UserCredentials updatedUserCredentials =
-                dynamoService.getUserCredentialsFromEmail(UPDATED_TEST_EMAIL);
+                dynamoService.getUserCredentialsFromEmail(EMAIL_NEW);
 
-        assertThat(updatedUserProfile.getEmail(), equalTo(UPDATED_TEST_EMAIL));
-        assertThat(updatedUserCredentials.getEmail(), equalTo(UPDATED_TEST_EMAIL));
+        assertThat(updatedUserProfile.getEmail(), equalTo(EMAIL_NEW));
+        assertThat(updatedUserCredentials.getEmail(), equalTo(EMAIL_NEW));
 
         assertThat(updatedUserProfile.getUpdated(), equalTo(CREATED_DATE_TIME.toString()));
         assertThat(updatedUserCredentials.getUpdated(), equalTo(CREATED_DATE_TIME.toString()));
@@ -401,8 +381,8 @@ class DynamoServiceIntegrationTest {
         compareUserProfiles(userProfile, updatedUserProfile);
         compareUserCredentials(userCredentials, updatedUserCredentials);
 
-        assertThat(dynamoService.getUserProfileByEmail(TEST_EMAIL), equalTo(null));
-        assertThat(dynamoService.getUserCredentialsFromEmail(TEST_EMAIL), equalTo(null));
+        assertThat(dynamoService.getUserProfileByEmail(EMAIL), equalTo(null));
+        assertThat(dynamoService.getUserCredentialsFromEmail(EMAIL), equalTo(null));
     }
 
     private void compareUserProfiles(UserProfile before, UserProfile after) {

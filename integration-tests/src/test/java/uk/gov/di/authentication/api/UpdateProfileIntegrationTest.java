@@ -26,13 +26,10 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-
-    private static final String EMAIL_ADDRESS = "test@test.com";
-    private static final String CLIENT_ID = "test-id";
-    private static final String CLIENT_NAME = "test-client-name";
 
     @BeforeEach
     void setup() {
@@ -50,7 +47,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         setUpTest(sessionId, clientSessionId);
 
         UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS, String.valueOf(true));
+                new UpdateProfileRequest(EMAIL, UPDATE_TERMS_CONDS, String.valueOf(true));
 
         var response =
                 makeRequest(
@@ -69,7 +66,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -83,7 +80,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 CLIENT_ID,
                 "test-client",
                 singletonList("redirect-url"),
-                singletonList(EMAIL_ADDRESS),
+                singletonList(EMAIL),
                 List.of("openid", "email"),
                 "public-key",
                 singletonList("http://localhost/post-redirect-logout"),
@@ -91,7 +88,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public");
-        userStore.signUp(EMAIL_ADDRESS, "password");
+        userStore.signUp(EMAIL, PASSWORD);
         return authRequest;
     }
 }

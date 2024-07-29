@@ -201,6 +201,7 @@ class TokenRequestValidatorTest {
             VALID_REQUEST_BODY_VALID_SIGNATURE =
                     getValidRequestBodyWithClientAssertion(clientAssertionValidKeySignature);
             INCOMPLETE_REQUEST_BODY_VALID_SIGNATURE =
+                    // pragma: allowlist nextline secret
                     "code=vC-WxcXDLoOHaJN0YvPB0IwG2LiT1ekSVRSccwubwlI"
                             + "&grant_type=authorization_code"
                             + "&redirect_uri=https://redirect.uri.com/redirect"
@@ -283,6 +284,7 @@ class TokenRequestValidatorTest {
     }
 
     private static String getValidRequestBodyWithClientAssertion(String clientAssertion) {
+        // pragma: allowlist nextline secret
         return "code=vC-WxcXDLoOHaJN0YvPB0IwG2LiT1ekSVRSccwubwlI"
                 + "&grant_type=authorization_code"
                 + "&redirect_uri=https://redirect.uri.com/redirect"

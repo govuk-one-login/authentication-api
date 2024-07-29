@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -72,11 +73,6 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "01234567890";
-    private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
-    private static final String TEST_PASSWORD = "password-1";
-    private static final String CLIENT_ID = "client-id-one";
     private static final String APP_CLIENT_ID = "app-client-id-one";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final Subject PUBLIC_SUBJECT = new Subject();
@@ -87,8 +83,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
     private static String DOC_APP_CREDENTIAL;
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     private static final List<String> SCOPES =
             List.of(
@@ -102,9 +96,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     new JWTClaimsSet.Builder()
                             .subject(INTERNAL_PAIRWISE_SUBJECT.getValue())
                             .claim("email_verified", true)
-                            .claim("email", TEST_EMAIL_ADDRESS)
+                            .claim("email", EMAIL)
                             .claim("phone_number_verified", true)
-                            .claim("phone_number", FORMATTED_PHONE_NUMBER)
+                            .claim("phone_number", UK_LANDLINE_NUMBER)
                             .build());
 
     @RegisterExtension
@@ -168,15 +162,15 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.empty(),
                         Map.ofEntries(
                                 Map.entry("Authorization", accessToken.toAuthorizationHeader()),
-                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
                         Map.of());
 
         assertThat(response, hasStatus(200));
 
         var userInfoResponse = UserInfo.parse(response.getBody());
         assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
-        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
-        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(EMAIL));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(UK_LANDLINE_NUMBER));
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(5));
@@ -191,7 +185,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.empty(),
                         Map.ofEntries(
                                 Map.entry("Authorization", "ru"),
-                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
                         Map.of());
 
         assertThat(response, hasStatus(401));
@@ -232,8 +226,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var userInfoResponse = UserInfo.parse(response.getBody());
 
         assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
-        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
-        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(EMAIL));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(UK_LANDLINE_NUMBER));
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
 
@@ -278,8 +272,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         var userInfoResponse = UserInfo.parse(response.getBody());
         assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
-        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
-        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(EMAIL));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(UK_LANDLINE_NUMBER));
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         assertNull(userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue()));
@@ -299,8 +293,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         var userInfoResponse = UserInfo.parse(response.getBody());
         assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
-        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
-        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(EMAIL));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(UK_LANDLINE_NUMBER));
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         assertNull(userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue()));
@@ -420,7 +414,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Optional.empty(),
                 Map.ofEntries(
                         Map.entry("Authorization", accessToken.toAuthorizationHeader()),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
                 Map.of());
     }
 
@@ -452,7 +446,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Optional.empty(),
                 Map.ofEntries(
                         Map.entry("Authorization", accessToken.toAuthorizationHeader()),
-                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION)),
+                        Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
                 Map.of());
     }
 
@@ -472,14 +466,14 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (Objects.nonNull(coreIdentityJWT)) {
             identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
         }
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
+        userStore.signUp(EMAIL, PASSWORD, INTERNAL_SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL, UK_LANDLINE_NUMBER_NO_CC);
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList("redirect-url"),
-                singletonList(TEST_EMAIL_ADDRESS),
+                singletonList(EMAIL),
                 List.of("openid", "email", "phone"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
@@ -498,7 +492,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 APP_CLIENT_ID,
                 "app-test-client",
                 singletonList("redirect-url"),
-                singletonList(TEST_EMAIL_ADDRESS),
+                singletonList(EMAIL),
                 List.of("openid", "doc-checking-app"),
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),

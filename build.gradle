@@ -37,10 +37,7 @@ ext {
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
 
-    awsCredentialsEnvironment = terraformEnvironment == "localstack" ? [
-        AWS_ACCESS_KEY_ID: "mock-access-key",
-        AWS_SECRET_ACCESS_KEY: "mock-secret-key",
-    ] : [:]
+    awsCredentialsEnvironment = [:]
 
     noXray = {
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-bom"

@@ -30,6 +30,7 @@ class FetchJwksHandlerTest {
         // given
         Map<String, String> event = Map.of("url", url, "keyId", keyId);
         String jwkJson =
+                // pragma: allowlist nextline secret
                 "{\"kty\":\"EC\",\"use\":\"sig\",\"crv\":\"P-256\",\"kid\":\"f27ff20940cdc6c8b34f97f44c24c8601ded9465c0713dd190ed152272d07ddb\",\"x\":\"sSdmBkED2EfjTdX-K2_cT6CfBwXQFt-DJ6v8-6tr_n8\",\"y\":\"WTXmQdqLwrmHN5tiFsTFUtNAvDYhhTQB4zyfteCrWIE\",\"alg\":\"ES256\"}";
         JWK jwk = JWK.parse(jwkJson);
         when(jwksService.retrieveJwkFromURLWithKeyId(new URL(url), keyId)).thenReturn(jwk);

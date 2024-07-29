@@ -48,20 +48,18 @@ import static java.util.Collections.singletonList;
 import static java.util.Map.entry;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 public abstract class HandlerIntegrationTest<Q, S> {
     private static final String REDIS_HOST = "localhost";
     private static final int REDIS_PORT = 6379;
     private static final String REDIS_PASSWORD = null;
     private static final boolean DOES_REDIS_USE_TLS = false;
-    private static final String BEARER_TOKEN = "notify-test-@bearer-token";
     protected static final String FRONTEND_API_KEY =
             Optional.ofNullable(System.getenv().get("FRONTEND_API_KEY")).orElse("");
 
     public static final ECKey EC_KEY_PAIR;
     public static final String EC_PUBLIC_KEY;
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     static {
         try {
@@ -147,7 +145,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                                     valueOf(DOES_REDIS_USE_TLS)),
                             entry("local-password-pepper", "pepper"),
                             entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
-                            entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
+                            entry("local-notify-callback-bearer-token", NOTIFY_BEARER_TOKEN)));
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
@@ -222,10 +220,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
         var headers = new HashMap<String, String>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         clientSessionId.ifPresent(id -> headers.put("Client-Session-Id", id));
-        persistentSessionId.ifPresent(id -> headers.put("di-persistent-session-id", id));
+        persistentSessionId.ifPresent(id -> headers.put(PERSISTENT_SESSION_ID, id));
         headers.put(TXMA_AUDIT_ENCODED_HEADER, "base64 encoded");
         return headers;
     }

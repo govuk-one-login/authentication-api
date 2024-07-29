@@ -4,23 +4,22 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PASSWORD;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PASSWORD_BAD;
 
 class Argon2HelperTest {
 
     @Test
     void correctPasswordShouldMatchEncodedPassword() {
-        String testPassword = "test-password123";
-        String encodedPassword = Argon2EncoderHelper.argon2Hash(testPassword);
+        String encodedPassword = Argon2EncoderHelper.argon2Hash(PASSWORD);
 
-        assertTrue(Argon2MatcherHelper.matchRawStringWithEncoded(testPassword, encodedPassword));
+        assertTrue(Argon2MatcherHelper.matchRawStringWithEncoded(PASSWORD, encodedPassword));
     }
 
     @Test
     void wrongPasswordShouldNotMatchEncodedPassword() {
-        String testPassword = "test-password123";
-        String wrongPassword = "test-password";
-        String encodedPassword = Argon2EncoderHelper.argon2Hash(testPassword);
+        String encodedPassword = Argon2EncoderHelper.argon2Hash(PASSWORD);
 
-        assertFalse(Argon2MatcherHelper.matchRawStringWithEncoded(wrongPassword, encodedPassword));
+        assertFalse(Argon2MatcherHelper.matchRawStringWithEncoded(PASSWORD_BAD, encodedPassword));
     }
 }

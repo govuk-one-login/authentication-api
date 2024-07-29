@@ -54,18 +54,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    public static final String TEST_CLIENT_NAME = "test-client-name";
     private static final State STATE = new State();
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
@@ -89,7 +84,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean isAuthenticated)
             throws Json.JsonException {
         String sessionId = redis.createSession(isAuthenticated);
-        userStore.signUp(EMAIL, "password");
+        userStore.signUp(EMAIL, PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
         Scope scope = new Scope();
@@ -102,7 +97,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customAuthParameters.forEach(builder::customParameter);
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
@@ -151,7 +146,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200AndStartResponseWithAuthenticatedFalseWhenReauthenticationIsRequested()
             throws Json.JsonException {
         String sessionId = redis.createSession(true);
-        userStore.signUp(EMAIL, "password");
+        userStore.signUp(EMAIL, PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
         Scope scope = new Scope();
@@ -163,7 +158,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .state(state);
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
@@ -193,10 +188,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = redis.createSession(true);
         redis.addEmailToSession(sessionId, userEmail);
 
-        userStore.signUp(userEmail, "rubbbishPassword");
+        userStore.signUp(userEmail, PASSWORD_BAD);
 
         if (Objects.nonNull(mfaMethodType) && mfaMethodType.equals(MFAMethodType.SMS)) {
-            userStore.addVerifiedPhoneNumber(userEmail, "+447316763843");
+            userStore.addVerifiedPhoneNumber(userEmail, UK_MOBILE_NUMBER);
         } else if (Objects.nonNull(mfaMethodType) && mfaMethodType.equals(MFAMethodType.AUTH_APP)) {
             userStore.addMfaMethod(
                     userEmail, MFAMethodType.AUTH_APP, true, true, "rubbish-credential-value");
@@ -212,7 +207,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .customParameter("vtr", "[\"Cl.Cm\"]");
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
@@ -259,7 +254,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .nonce(new Nonce())
                         .requestObject(createSignedJWT(keyPair, state))
                         .build();
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
 
         registerClient(keyPair, ClientType.APP);
 
@@ -293,7 +288,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .state(STATE)
                         .customParameter("vtr", "[\"Cl.Cm\"]")
                         .build();
-        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession(true);
         redis.addEmailToSession(sessionId, userEmail);
@@ -317,7 +312,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private void registerClient(KeyPair keyPair, ClientType clientType) {
         clientStore.registerClient(
                 CLIENT_ID,
-                TEST_CLIENT_NAME,
+                CLIENT_NAME,
                 singletonList(REDIRECT_URI.toString()),
                 singletonList(EMAIL),
                 List.of("openid", "email"),
@@ -355,7 +350,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void verifyStandardClientInformationSetOnResponse(
             ClientStartInfo clientStartInfo, Scope scope, State state) {
-        assertThat(clientStartInfo.clientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(clientStartInfo.clientName(), equalTo(CLIENT_NAME));
         assertThat(clientStartInfo.serviceType(), equalTo(ServiceType.MANDATORY.toString()));
         assertFalse(clientStartInfo.cookieConsentShared());
         assertThat(clientStartInfo.scopes(), equalTo(scope.toStringList()));
@@ -374,7 +369,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         return headers;
     }
 

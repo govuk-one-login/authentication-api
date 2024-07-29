@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -36,6 +37,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
@@ -44,17 +46,11 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    public static final String SESSION_ID = "some-session-id";
-    public static final String CLIENT_SESSION_ID = "some-client-session-id";
-    private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "client-name";
+    private static final ClientID CLIENT_ID = new ClientID(CommonTestVariables.CLIENT_ID);
     private static final String CLIENT_SECTOR = "https://test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
-    private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final State STATE = new State();
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
@@ -79,13 +75,10 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
-                makeRequest(
-                        Optional.of(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS)),
-                        headers,
-                        Map.of());
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
         assertThat(
@@ -113,13 +106,10 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
-                makeRequest(
-                        Optional.of(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS)),
-                        headers,
-                        Map.of());
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
         assertThat(
@@ -140,13 +130,10 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
-                makeRequest(
-                        Optional.of(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS)),
-                        headers,
-                        Map.of());
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
         assertThat(
@@ -167,13 +154,10 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
-                makeRequest(
-                        Optional.of(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS)),
-                        headers,
-                        Map.of());
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
         assertThat(
@@ -211,7 +195,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 CLIENT_ID.getValue(),
                 "test-client",
                 singletonList(URI.create("http://localhost/redirect").toString()),
-                singletonList(TEST_EMAIL_ADDRESS),
+                singletonList(EMAIL),
                 singletonList("openid"),
                 "",
                 singletonList("http://localhost/post-redirect-logout"),
@@ -225,7 +209,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     }
 
     private byte[] setupUser() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, "password-1", INTERNAL_SUBJECT);
-        return userStore.addSalt(TEST_EMAIL_ADDRESS);
+        userStore.signUp(EMAIL, PASSWORD, INTERNAL_SUBJECT);
+        return userStore.addSalt(EMAIL);
     }
 }

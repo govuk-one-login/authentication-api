@@ -94,6 +94,8 @@ import static uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -121,7 +123,6 @@ class AuthCodeHandlerTest {
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
@@ -300,7 +301,7 @@ class AuthCodeHandlerTest {
                                 .withSessionId(SESSION_ID)
                                 .withUserId(expectedCommonSubject)
                                 .withEmail(EMAIL)
-                                .withIpAddress("123.123.123.123")
+                                .withIpAddress(IP_ADDRESS)
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", SUBJECT.getValue()),
                         pair("isNewAccount", AccountState.NEW),
@@ -405,7 +406,7 @@ class AuthCodeHandlerTest {
                                 .withSessionId(SESSION_ID)
                                 .withUserId(DOC_APP_SUBJECT_ID)
                                 .withEmail("")
-                                .withIpAddress("123.123.123.123")
+                                .withIpAddress(IP_ADDRESS)
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", AccountState.UNKNOWN),
@@ -519,7 +520,7 @@ class AuthCodeHandlerTest {
     @Test
     void shouldReturn400IfSessionIdMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -531,7 +532,7 @@ class AuthCodeHandlerTest {
     @Test
     void shouldReturn400IfClientSessionIdMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.of(
                         "Session-Id",
@@ -581,7 +582,7 @@ class AuthCodeHandlerTest {
 
     private APIGatewayProxyResponseEvent generateApiRequest() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setHeaders(
                 Map.of(
                         "Session-Id",

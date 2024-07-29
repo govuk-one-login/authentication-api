@@ -66,6 +66,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class IPVCallbackHelperTest {
@@ -90,8 +91,9 @@ class IPVCallbackHelperTest {
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String TEST_EMAIL_ADDRESS = EMAIL;
     private static final Subject PUBLIC_SUBJECT =
+            // pragma: allowlist nextline secret
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final Subject SUBJECT = new Subject("subject-id");
     private static final ClientID CLIENT_ID = new ClientID();

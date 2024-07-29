@@ -83,12 +83,7 @@ import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AU
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -122,7 +117,7 @@ class ResetPasswordRequestHandlerTest {
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+                    new Subject().getValue(), INTERNAL_SECTOR_HOST, SaltHelper.generateNewSalt());
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -130,9 +125,9 @@ class ResetPasswordRequestHandlerTest {
                     .withClientID(TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(
                             List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
+                                    buildTestEmail(5),
                                     CommonTestVariables.EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
+                                    buildTestEmail(6)));
 
     private final Session session =
             new Session(SESSION_ID)
@@ -159,7 +154,7 @@ class ResetPasswordRequestHandlerTest {
                     CommonTestVariables.EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     @RegisterExtension

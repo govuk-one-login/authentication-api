@@ -23,6 +23,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SALT_B64;
 
 class ManualAccountDeletionServiceTest {
     private final AccountDeletionService accountDeletionService =
@@ -37,11 +38,10 @@ class ManualAccountDeletionServiceTest {
     private static final String LEGACY_SUBJECT_ID = "legacySubject";
     private static final String SUBJECT_ID = "subjectId";
     private static final String COMMON_SUBJECT_ID =
+            // pragma: allowlist nextline secret
             "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
     private static final ByteBuffer SALT =
-            ByteBuffer.wrap(
-                    "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw="
-                            .getBytes(StandardCharsets.UTF_8));
+            ByteBuffer.wrap(SALT_B64.getBytes(StandardCharsets.UTF_8));
 
     @BeforeEach
     void setUp() {

@@ -51,6 +51,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -76,7 +77,7 @@ public class IdentityProgressHandlerTest {
             TxmaAuditUser.user()
                     .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                     .withSessionId(SESSION_ID)
-                    .withIpAddress("123.123.123.123")
+                    .withIpAddress(IP_ADDRESS)
                     .withPersistentSessionId("unknown");
 
     private final Context context = mock(Context.class);
@@ -104,7 +105,7 @@ public class IdentityProgressHandlerTest {
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         handler =
                 new IdentityProgressFrontendHandler(
                         configurationService,

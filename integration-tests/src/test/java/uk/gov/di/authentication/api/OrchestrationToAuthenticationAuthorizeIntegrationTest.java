@@ -215,6 +215,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                                 "redirect_uri",
                                 RP_REDIRECT_URI,
                                 "state",
+                                // pragma: allowlist nextline secret
                                 "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
                                 "nonce",
                                 new Nonce().getValue(),

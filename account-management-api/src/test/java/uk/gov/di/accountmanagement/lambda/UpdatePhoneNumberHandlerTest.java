@@ -42,6 +42,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -115,7 +116,7 @@ class UpdatePhoneNumberHandlerTest {
                                 AuditService.UNKNOWN,
                                 expectedCommonSubject,
                                 userProfile.getEmail(),
-                                "123.123.123.123",
+                                IP_ADDRESS,
                                 NEW_PHONE_NUMBER,
                                 PERSISTENT_ID,
                                 Optional.of(TXMA_ENCODED_HEADER_VALUE)));
@@ -206,7 +207,7 @@ class UpdatePhoneNumberHandlerTest {
         Map<String, Object> authorizerParams = new HashMap<>();
         authorizerParams.put("principalId", principalId);
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp(IP_ADDRESS));
         event.setRequestContext(proxyRequestContext);
         event.setHeaders(
                 Map.of(

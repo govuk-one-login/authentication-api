@@ -73,17 +73,13 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_NAME;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AccountInterventionsHandlerTest {
-    private static final String TEST_CLIENT_ID = "test_client_id";
-    private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
+    private static final String INTERNAL_SUBJECT_ID = "test-internal-subject-id";
     private static final String TEST_SUBJECT_ID = "subject-id";
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
     private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
 
@@ -117,18 +113,18 @@ class AccountInterventionsHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setSessionId(SESSION_ID)
-                    .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
+                    .setInternalCommonSubjectIdentifier(INTERNAL_SUBJECT_ID);
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
-                    CommonTestVariables.CLIENT_ID,
+                    CLIENT_ID,
                     CommonTestVariables.CLIENT_SESSION_ID,
                     CommonTestVariables.SESSION_ID,
-                    TEST_INTERNAL_SUBJECT_ID,
+                    INTERNAL_SUBJECT_ID,
                     EMAIL,
                     CommonTestVariables.IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    CommonTestVariables.DI_PERSISTENT_SESSION_ID,
+                    CommonTestVariables.PERSISTENT_SESSION_ID,
                     Optional.of(CommonTestVariables.ENCODED_DEVICE_DETAILS));
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -142,14 +138,15 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(true);
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorUri())
+                .thenReturn(CommonTestVariables.INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(userContext.getSession()).thenReturn(session);
         when(userContext.getClientSession()).thenReturn(clientSession);
-        when(userContext.getClientId()).thenReturn(CommonTestVariables.CLIENT_ID);
+        when(userContext.getClientId()).thenReturn(CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded())
                 .thenReturn(CommonTestVariables.ENCODED_DEVICE_DETAILS);
@@ -506,7 +503,7 @@ class AccountInterventionsHandlerTest {
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", CommonTestVariables.SESSION_ID);
-        headers.put("di-persistent-session-id", CommonTestVariables.DI_PERSISTENT_SESSION_ID);
+        headers.put("di-persistent-session-id", CommonTestVariables.PERSISTENT_SESSION_ID);
         headers.put("X-Forwarded-For", CommonTestVariables.IP_ADDRESS);
         return headers;
     }
@@ -519,7 +516,7 @@ class AccountInterventionsHandlerTest {
                 new AuthenticationRequest.Builder(
                                 responseType,
                                 scope,
-                                new ClientID(TEST_CLIENT_ID),
+                                new ClientID(CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .build();
         return new ClientSession(

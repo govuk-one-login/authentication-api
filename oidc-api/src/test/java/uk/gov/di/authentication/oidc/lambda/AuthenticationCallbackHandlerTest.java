@@ -48,6 +48,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.eq;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -78,7 +79,7 @@ class AuthenticationCallbackHandlerTest {
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID =
-            "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787";
+            "uDjIfGhoKwP8bFpRewlpd-AVrI4--1700750982787"; // pragma: allowlist secret
     private static final String SESSION_ID = "a-session-id";
     private static final Session session =
             new Session(SESSION_ID)
@@ -223,7 +224,7 @@ class AuthenticationCallbackHandlerTest {
                                         .withSessionId(SESSION_ID)
                                         .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                         .withGovukSigninJourneyId(CLIENT_SESSION_ID)
-                                        .withIpAddress("123.123.123.123")
+                                        .withIpAddress(IP_ADDRESS)
                                         .withUserId(PAIRWISE_SUBJECT_ID.getValue())
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
@@ -238,7 +239,7 @@ class AuthenticationCallbackHandlerTest {
                                         .withSessionId(SESSION_ID)
                                         .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                         .withGovukSigninJourneyId(CLIENT_SESSION_ID)
-                                        .withIpAddress("123.123.123.123")
+                                        .withIpAddress(IP_ADDRESS)
                                         .withUserId(PAIRWISE_SUBJECT_ID.getValue())
                                         .withEmail(TEST_EMAIL_ADDRESS)
                                         .withPhone("1234")),
@@ -647,7 +648,7 @@ class AuthenticationCallbackHandlerTest {
 
     private static void setValidHeadersAndQueryParameters(APIGatewayProxyRequestEvent event) {
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE_ORCH_TO_AUTH.getValue());
         responseHeaders.put("state", STATE.getValue());

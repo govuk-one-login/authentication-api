@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.HashMap;
 import java.util.List;
@@ -19,19 +20,18 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
-    private static final String TEST_PASSWORD = "password-1";
+    private static final String TEST_EMAIL_ADDRESS = CommonTestVariables.EMAIL;
+    private static final String TEST_PASSWORD = CommonTestVariables.PASSWORD;
     private static final String TEST_REDIRECT_URI = "https://redirect_uri.com";
     private static final String TEST_STATE = "xyz";
     private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
     private static final String TEST_SUBJECT_ID = "subject-id";
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
@@ -125,7 +125,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         headers.put("Session-Id", sessionId);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
         return headers;
     }
 }

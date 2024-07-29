@@ -1,12 +1,12 @@
-package uk.gov.di.authentication.sharedtest.helper;
+package uk.gov.di.orchestration.sharedtest.helper;
 
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 
 /** Common values for use in tests. */
 public class CommonTestVariables {

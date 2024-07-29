@@ -31,15 +31,12 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
-    public static final String CLIENT_SESSION_ID = "some-client-session-id";
-    private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
 
     DynamoEmailCheckResultService dynamoEmailCheckResultService =
@@ -59,7 +56,7 @@ public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegr
 
     @Test
     void shouldReturnCorrectStatusBasedOnDbResult() throws Json.JsonException {
-        userStore.signUp(EMAIL, "password-1", SUBJECT);
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
         var sessionId = redis.createSession();
         dynamoEmailCheckResultService.saveEmailCheckResult(
                 EMAIL, EmailCheckResultStatus.ALLOW, unixTimePlusNDays(), "test-reference");

@@ -15,12 +15,11 @@ import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 class DynamoDeleteServiceIntegrationTest {
 
-    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
 
     @RegisterExtension
     protected static final UserStoreExtension userStoreExtension = new UserStoreExtension();
@@ -37,17 +36,17 @@ class DynamoDeleteServiceIntegrationTest {
 
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+                    SUBJECT.getValue(), INTERNAL_SECTOR_HOST, SaltHelper.generateNewSalt());
 
     @Test
     void shouldDeleteAccountAndEntryInAccountModifiersIfPresent() {
-        userStoreExtension.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        userStoreExtension.signUp(EMAIL, PASSWORD, SUBJECT);
         accountModifiersExtension.setAccountRecoveryBlock(internalCommonSubjectId);
 
-        dynamoDeleteService.deleteAccount(TEST_EMAIL, internalCommonSubjectId);
+        dynamoDeleteService.deleteAccount(EMAIL, internalCommonSubjectId);
 
-        var userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var userProfile = dynamoService.getUserProfileByEmail(EMAIL);
+        var userCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
         var accountModifiers =
                 dynamoAccountModifiersService.getAccountModifiers(internalCommonSubjectId);
         assertThat(Objects.isNull(userProfile), equalTo(true));
@@ -57,12 +56,12 @@ class DynamoDeleteServiceIntegrationTest {
 
     @Test
     void shouldDeleteAccountWhenEntryInAccountModifiersIsNotPresent() {
-        userStoreExtension.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        userStoreExtension.signUp(EMAIL, PASSWORD, SUBJECT);
 
-        dynamoDeleteService.deleteAccount(TEST_EMAIL, internalCommonSubjectId);
+        dynamoDeleteService.deleteAccount(EMAIL, internalCommonSubjectId);
 
-        var userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var userProfile = dynamoService.getUserProfileByEmail(EMAIL);
+        var userCredentials = dynamoService.getUserCredentialsFromEmail(EMAIL);
         var accountModifiers =
                 dynamoAccountModifiersService.getAccountModifiers(internalCommonSubjectId);
         assertThat(Objects.isNull(userProfile), equalTo(true));

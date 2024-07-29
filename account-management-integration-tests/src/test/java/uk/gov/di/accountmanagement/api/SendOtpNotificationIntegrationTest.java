@@ -1,6 +1,5 @@
 package uk.gov.di.accountmanagement.api;
 
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,24 +18,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.SEND_OTP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+    private static final String TEST_EMAIL = buildTestEmail(3);
     private static final String TEST_TESTER_CLIENT_ID = "tester-client-id";
-    private static final String TEST_PHONE_NUMBER =
-            Long.toString(
-                    PhoneNumberUtil.getInstance()
-                            .getExampleNumberForType("GB", MOBILE)
-                            .getNationalNumber());
 
     @BeforeEach
     void setup() {
@@ -50,7 +44,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                        TEST_EMAIL, VERIFY_EMAIL, UK_MOBILE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -67,14 +61,13 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Test
     void shouldReturn400ForVerifyEmailRequestWhenUserAlreadyExists() throws Exception {
-        String password = "password-1";
-        userStore.signUp(TEST_EMAIL, password);
+        userStore.signUp(TEST_EMAIL, PASSWORD);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
+                                        TEST_EMAIL, VERIFY_EMAIL, UK_MOBILE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -94,7 +87,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, UK_MOBILE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -106,7 +99,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 notificationsQueue,
                 List.of(
                         new NotifyRequest(
-                                TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
+                                UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(SEND_OTP));
     }
@@ -121,7 +114,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                 new SendNotificationRequest(
                                         nonExistentUserEmail,
                                         VERIFY_PHONE_NUMBER,
-                                        TEST_PHONE_NUMBER)),
+                                        UK_MOBILE_NUMBER)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -133,7 +126,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 notificationsQueue,
                 List.of(
                         new NotifyRequest(
-                                TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
+                                UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(SEND_OTP));
     }
@@ -163,13 +156,13 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     @Test
     void shouldReturn400WhenNewPhoneNumberIsTheSameAsCurrentPhoneNumber()
             throws Json.JsonException {
-        userStore.signUp(TEST_EMAIL, "password");
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
+        userStore.signUp(TEST_EMAIL, PASSWORD);
+        userStore.addVerifiedPhoneNumber(TEST_EMAIL, UK_MOBILE_NUMBER);
         var response =
                 makeRequest(
                         Optional.of(
                                 new SendNotificationRequest(
-                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, "07755551084")),
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, UK_MOBILE_NUMBER_NO_CC)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),

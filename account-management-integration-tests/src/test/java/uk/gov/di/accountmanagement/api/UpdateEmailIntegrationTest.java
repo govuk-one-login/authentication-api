@@ -28,13 +28,14 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
+    private static final String EXISTING_EMAIL_ADDRESS = EMAIL;
+    private static final String NEW_EMAIL_ADDRESS = buildTestEmail("new");
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_ID = "some-client-id";
@@ -133,7 +134,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenNewEmailIsAlreadyTaken() throws Exception {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
-        userStore.signUp(NEW_EMAIL_ADDRESS, "password-2", new Subject());
+        userStore.signUp(NEW_EMAIL_ADDRESS, PASSWORD, new Subject());
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
         var response =
@@ -156,8 +157,9 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
+        var OTHER_EMAIL = buildTestEmail("other");
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
-        userStore.signUp("other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
+        userStore.signUp(OTHER_EMAIL, PASSWORD, new Subject());
         String otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
         Exception ex =
@@ -167,9 +169,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 makeRequest(
                                         Optional.of(
                                                 new UpdateEmailRequest(
-                                                        "other.user@digital.cabinet-office.gov.uk",
-                                                        NEW_EMAIL_ADDRESS,
-                                                        otp)),
+                                                        OTHER_EMAIL, NEW_EMAIL_ADDRESS, otp)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
@@ -200,7 +200,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {
-        userStore.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.signUp(EXISTING_EMAIL_ADDRESS, PASSWORD, SUBJECT);
         byte[] salt = userStore.addSalt(EXISTING_EMAIL_ADDRESS);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(

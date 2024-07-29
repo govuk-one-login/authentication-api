@@ -16,7 +16,8 @@ public class CodeStorageService {
 
     public static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
     public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
-    public static final String PASSWORD_BLOCKED_KEY_PREFIX = "password-blocked:";
+    public static final String PASSWORD_BLOCKED_KEY_PREFIX =
+            "password-blocked:"; // pragma: allowlist secret
 
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
 
@@ -29,7 +30,8 @@ public class CodeStorageService {
     private static final String MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX =
             "multiple-incorrect-mfa-codes:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
-    private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
+    private static final String RESET_PASSWORD_KEY_PREFIX =
+            "reset-password-code:"; // pragma: allowlist secret
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
             "multiple-incorrect-passwords:";
     private static final String MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX =

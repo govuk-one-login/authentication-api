@@ -28,6 +28,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasNumeri
 class AuditServiceTest {
 
     public static final String ENCODED_DEVICE_INFORMATION =
+            // pragma: allowlist nextline secret
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
     private static final Clock FIXED_CLOCK =
@@ -160,6 +161,7 @@ class AuditServiceTest {
     @Test
     void txmaHeaderShouldBeAddedToAuditEvent() {
         var auditEncodedHeaderValue =
+                // pragma: allowlist nextline secret
                 "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
         auditService.submitAuditEvent(

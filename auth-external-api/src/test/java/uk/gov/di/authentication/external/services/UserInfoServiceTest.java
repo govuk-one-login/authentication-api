@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 public class UserInfoServiceTest {
     private UserInfoService userInfoService;
@@ -35,18 +36,14 @@ public class UserInfoServiceTest {
                     TEST_SUBJECT.getValue(),
                     TEST_RP_SECTOR_HOST,
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
-    private static final String TEST_INTERNAL_SECTOR_URI = "https://test-internal-sector-uri";
-    private static final String TEST_INTERNAL_SECTOR_HOST = "test-internal-sector-uri";
     private static final String TEST_INTERNAL_PAIRWISE_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT.getValue(),
-                    TEST_INTERNAL_SECTOR_HOST,
+                    INTERNAL_SECTOR_HOST,
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
     private static final String TEST_LEGACY_SUBJECT_ID = "test-legacy-subject-id";
     private static final String TEST_PUBLIC_SUBJECT_ID = "test-public-subject-id";
-    private static final String TEST_EMAIL = "test-email";
     private static final boolean TEST_EMAIL_VERIFIED = true;
-    private static final String TEST_PHONE = "test-phone";
     private static final boolean TEST_PHONE_VERIFIED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
@@ -55,9 +52,9 @@ public class UserInfoServiceTest {
                     .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
                     .withPublicSubjectID(TEST_PUBLIC_SUBJECT_ID)
                     .withSubjectID(TEST_SUBJECT.getValue())
-                    .withEmail(TEST_EMAIL)
+                    .withEmail(EMAIL)
                     .withEmailVerified(TEST_EMAIL_VERIFIED)
-                    .withPhoneNumber(TEST_PHONE)
+                    .withPhoneNumber(UK_LANDLINE_NUMBER)
                     .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
                     .withSalt(TEST_SALT);
 
@@ -70,7 +67,7 @@ public class UserInfoServiceTest {
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(TEST_USER_PROFILE);
         when(authenticationService.getOrGenerateSalt(TEST_USER_PROFILE)).thenCallRealMethod();
-        when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
     }
 
     @ParameterizedTest
@@ -120,7 +117,7 @@ public class UserInfoServiceTest {
                         TEST_LEGACY_SUBJECT_ID,
                         null,
                         null,
-                        TEST_EMAIL,
+                        EMAIL,
                         TEST_EMAIL_VERIFIED,
                         null,
                         null,
@@ -139,9 +136,9 @@ public class UserInfoServiceTest {
                         TEST_LEGACY_SUBJECT_ID,
                         TEST_PUBLIC_SUBJECT_ID,
                         TEST_SUBJECT.getValue(),
-                        TEST_EMAIL,
+                        EMAIL,
                         TEST_EMAIL_VERIFIED,
-                        TEST_PHONE,
+                        UK_LANDLINE_NUMBER,
                         TEST_PHONE_VERIFIED,
                         bytesToBase64(TEST_SALT)));
     }

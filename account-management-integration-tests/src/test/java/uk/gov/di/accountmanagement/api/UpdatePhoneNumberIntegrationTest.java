@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -31,17 +30,12 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-    private static final String NEW_PHONE_NUMBER =
-            Long.toString(
-                    PhoneNumberUtil.getInstance()
-                            .getExampleNumberForType("GB", MOBILE)
-                            .getNationalNumber());
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
 
@@ -60,18 +54,18 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 "+33645453322",
                 "+33645453322",
                 "07911123456",
-                NEW_PHONE_NUMBER);
+                UK_LANDLINE_NUMBER);
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumbers")
     void shouldSendNotificationAndReturn204WhenUpdatingPhoneNumberIsSuccessful(String phoneNumber) {
         var internalSubId = setupUserAndRetrieveInternalCommonSubId();
-        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        var otp = redis.generateAndSavePhoneNumberCode(EMAIL, 300);
 
         var response =
                 makeRequest(
-                        Optional.of(new UpdatePhoneNumberRequest(TEST_EMAIL, phoneNumber, otp)),
+                        Optional.of(new UpdatePhoneNumberRequest(EMAIL, phoneNumber, otp)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -87,13 +81,12 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(
                 PhoneNumberUtil.getInstance()
-                        .isNumberMatch(
-                                userStore.getPhoneNumberForUser(TEST_EMAIL).get(), phoneNumber),
+                        .isNumberMatch(userStore.getPhoneNumberForUser(EMAIL).get(), phoneNumber),
                 is(expectedMatchType));
 
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue,
-                List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED, SupportedLanguage.EN)));
+                List.of(new NotifyRequest(EMAIL, PHONE_NUMBER_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(UPDATE_PHONE_NUMBER));
@@ -102,13 +95,13 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldReturn400WhenOtpIsInvalid() throws Exception {
         var internalSubId = setupUserAndRetrieveInternalCommonSubId();
-        redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        redis.generateAndSavePhoneNumberCode(EMAIL, 300);
         var badOtp = "012345";
 
         var response =
                 makeRequest(
                         Optional.of(
-                                new UpdatePhoneNumberRequest(TEST_EMAIL, NEW_PHONE_NUMBER, badOtp)),
+                                new UpdatePhoneNumberRequest(EMAIL, UK_LANDLINE_NUMBER, badOtp)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -125,10 +118,9 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
         var internalSubId = setupUserAndRetrieveInternalCommonSubId();
-        userStore.signUp("other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
-        var otp =
-                redis.generateAndSavePhoneNumberCode(
-                        "other.user@digital.cabinet-office.gov.uk", 300);
+        var OTHER_EMAIL = buildTestEmail("other");
+        userStore.signUp(OTHER_EMAIL, buildTestPassword("other"), new Subject());
+        var otp = redis.generateAndSavePhoneNumberCode(OTHER_EMAIL, 300);
 
         Exception ex =
                 assertThrows(
@@ -137,9 +129,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                 makeRequest(
                                         Optional.of(
                                                 new UpdatePhoneNumberRequest(
-                                                        "other.user@digital.cabinet-office.gov.uk",
-                                                        NEW_PHONE_NUMBER,
-                                                        otp)),
+                                                        OTHER_EMAIL, UK_LANDLINE_NUMBER, otp)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
@@ -151,7 +141,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldThrowExceptionWhenSubjectIdMissing() {
         setupUserAndRetrieveInternalCommonSubId();
-        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        var otp = redis.generateAndSavePhoneNumberCode(EMAIL, 300);
 
         Exception ex =
                 assertThrows(
@@ -160,7 +150,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                 makeRequest(
                                         Optional.of(
                                                 new UpdatePhoneNumberRequest(
-                                                        TEST_EMAIL, NEW_PHONE_NUMBER, otp)),
+                                                        EMAIL, UK_LANDLINE_NUMBER, otp)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap()));
 
@@ -168,8 +158,8 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {
-        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);

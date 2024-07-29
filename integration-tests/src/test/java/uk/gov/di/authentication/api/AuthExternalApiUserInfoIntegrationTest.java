@@ -31,17 +31,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String RP_SECTOR_ID_HOST = "rp-test-uri.com";
-    private static final String INTERNAL_SECTOR_ID_HOST = "test.account.gov.uk";
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PHONE_NUMBER = "01234567890";
-    private static final String TEST_PASSWORD = "password-1";
     private static final Subject TEST_SUBJECT = new Subject();
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     protected static final AccessTokenStoreExtension accessTokenStoreExtension =
@@ -96,15 +91,13 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         var internalPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         TEST_SUBJECT.getValue(),
-                        INTERNAL_SECTOR_ID_HOST,
+                        INTERNAL_SECTOR_HOST,
                         SdkBytes.fromByteBuffer(createdUser.getSalt()).asByteArray());
         var userInfoResponse = UserInfo.parse(response.getBody());
         assertEquals(userInfoResponse.getSubject().getValue(), internalPairwiseId);
         assertThat(userInfoResponse.getClaim("rp_pairwise_id"), equalTo(rpPairwiseId));
         assertThat(userInfoResponse.getClaim("new_account"), equalTo(isNewAccount));
-        assertThat(
-                userInfoResponse.getClaim(OIDCScopeValue.EMAIL.getValue()),
-                equalTo(TEST_EMAIL_ADDRESS));
+        assertThat(userInfoResponse.getClaim(OIDCScopeValue.EMAIL.getValue()), equalTo(EMAIL));
 
         assertNull(userInfoResponse.getClaim("legacy_subject_id"));
         assertNull(userInfoResponse.getClaim("public_subject_id"));
@@ -203,8 +196,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 RP_SECTOR_ID_HOST,
                 1710255455L);
 
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
-        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
-        return userStore.getUserProfileFromEmail(TEST_EMAIL_ADDRESS).get();
+        userStore.signUp(EMAIL, PASSWORD, TEST_SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL, UK_LANDLINE_NUMBER_NO_CC);
+        return userStore.getUserProfileFromEmail(EMAIL).get();
     }
 }

@@ -40,7 +40,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
@@ -50,13 +53,9 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class CheckEmailFraudBlockHandlerTest {
 
     private static final byte[] SALT = SaltHelper.generateNewSalt();
-    private static final String EMAIL = "joe.bloggs@test.com";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final String CLIENT_ID = "some-client-id";
-    private static final String IP_ADDRESS = "123.123.123.123";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     private static AuditService auditServiceMock;
     private static AuthenticationService authenticationServiceMock;
@@ -186,7 +185,7 @@ class CheckEmailFraudBlockHandlerTest {
                                     EMAIL,
                                     IP_ADDRESS,
                                     AuditService.UNKNOWN,
-                                    DI_PERSISTENT_SESSION_ID,
+                                    PERSISTENT_SESSION_ID,
                                     Optional.of(ENCODED_DEVICE_DETAILS)),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.REGISTRATION.getValue()),

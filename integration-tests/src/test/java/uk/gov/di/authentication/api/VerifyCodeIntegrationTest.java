@@ -37,6 +37,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static uk.gov.di.authentication.api.AuthenticationCallbackHandlerIntegrationTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
@@ -47,18 +48,14 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String EMAIL_ADDRESS = "test@test.com";
-    private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    public static final String CLIENT_SESSION_ID = "a-client-session-id";
-    public static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
 
     @BeforeEach
     void setup() {
@@ -76,7 +73,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             NotificationType emailNotificationType) throws Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
+        String code = redis.generateAndSaveEmailCode(EMAIL, 900, emailNotificationType);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         var response =
@@ -101,7 +98,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         redis.incrementSessionCodeRequestCount(
                 sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
         setUpTestWithoutSignUp(sessionId, withScope());
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
+        String code = redis.generateAndSaveEmailCode(EMAIL, 900, emailNotificationType);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         var response =
@@ -111,7 +108,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
+        assertThat(redis.getMfaCodeAttemptsCount(EMAIL), equalTo(0));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
@@ -123,7 +120,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
 
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 2, emailNotificationType);
+        String code = redis.generateAndSaveEmailCode(EMAIL, 2, emailNotificationType);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         TimeUnit.SECONDS.sleep(3);
@@ -146,7 +143,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             NotificationType emailNotificationType) throws Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
+        String code = redis.generateAndSaveEmailCode(EMAIL, 900, emailNotificationType);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         var response =
@@ -173,9 +170,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedButNotSetBlockWhenVerifyEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
@@ -190,9 +187,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(false));
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix), equalTo(false));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
@@ -200,13 +195,13 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxCodesReachedIfAccountRecoveryEmailCodeIsBlocked()
             throws Json.JsonException {
         String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
 
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix);
+        redis.blockMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix);
 
         var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
 
@@ -224,9 +219,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
 
@@ -240,9 +235,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(true));
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix), equalTo(true));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
@@ -250,9 +243,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSetBlockWhenPasswordResetEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL);
         }
         var codeRequest = new VerifyCodeRequest(RESET_PASSWORD_WITH_CODE, "123456");
 
@@ -266,9 +259,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1039));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(true));
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix), equalTo(true));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
@@ -281,9 +272,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSetBlockWhenSignInSmsCodeAttemptsExceedMaxRetryCount(
             JourneyType journeyType) throws Json.JsonException {
         String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL);
         }
         var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456", journeyType);
 
@@ -296,9 +287,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(true));
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix), equalTo(true));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
@@ -307,14 +296,14 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturn204WhenUserEntersValidMfaSmsCode(JourneyType journeyType) throws Exception {
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, SaltHelper.generateNewSalt());
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
-        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
-        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
+        userStore.updateTermsAndConditions(EMAIL, "1.0");
 
-        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSaveMfaCode(EMAIL, 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
 
         var response =
@@ -335,15 +324,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             JourneyType journeyType) throws Exception {
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         setUpTestWithoutSignUp(sessionId, withScope());
-        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
-        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
+        userStore.updateTermsAndConditions(EMAIL, "1.0");
 
-        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSaveMfaCode(EMAIL, 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
 
         var response =
@@ -363,10 +352,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             throws Exception {
         var sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
-        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
-        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
+        userStore.updateTermsAndConditions(EMAIL, "1.0");
 
-        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var code = redis.generateAndSaveMfaCode(EMAIL, 900);
         var codeRequest =
                 new VerifyCodeRequest(
                         NotificationType.MFA_SMS, code, JourneyType.PASSWORD_RESET_MFA);
@@ -389,14 +378,14 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             JourneyType journeyType) throws Json.JsonException {
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, SaltHelper.generateNewSalt());
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         setUpTestWithSignUp(sessionId, withScope());
-        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        userStore.updateTermsAndConditions(EMAIL, "1.0");
 
-        redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        redis.generateAndSaveMfaCode(EMAIL, 900);
         var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, "123456", journeyType);
 
         var response =
@@ -411,7 +400,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -426,7 +415,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 CLIENT_ID,
                 "test-client",
                 singletonList("redirect-url"),
-                singletonList(EMAIL_ADDRESS),
+                singletonList(EMAIL),
                 List.of("openid", "email", "phone"),
                 "public-key",
                 singletonList("http://localhost/post-redirect-logout"),
@@ -438,7 +427,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     private void setUpTestWithSignUp(String sessionId, Scope scope) throws Json.JsonException {
         setUpTestWithoutSignUp(sessionId, scope);
-        userStore.signUp(EMAIL_ADDRESS, "password");
+        userStore.signUp(EMAIL, PASSWORD);
     }
 
     private Scope withScope() {
