@@ -1,11 +1,11 @@
 <Configuration status="WARN">
     <Appenders>
         <Lambda name="Lambda">
-            <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
-                <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
-                <KeyValuePair key="persistent-session-id" value="$${ctx:persistentSessionId:-}"/>
-                <KeyValuePair key="aws-request-id" value="$${ctx:awsRequestId:-}"/>
-            </JsonLayout>
+            <JsonTemplateLayout eventTemplateUri="classpath:LambdaJsonLayout.json" >
+                <EventTemplateAdditionalField key="session-id" value="$${ctx:sessionId:-unknown}"/>
+                <EventTemplateAdditionalField key="persistent-session-id" value="$${ctx:persistentSessionId:-}"/>
+                <EventTemplateAdditionalField key="aws-request-id" value="$${ctx:awsRequestId:-}"/>
+            </JsonTemplateLayout>
         </Lambda>
     </Appenders>
     <Loggers>
