@@ -186,7 +186,7 @@ variable "email_check_results_sqs_queue_encryption_key_arn" {
 }
 
 variable "support_email_check_enabled" {
-  default     = false
+  default     = true
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }
