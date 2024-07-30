@@ -1,10 +1,15 @@
 package uk.gov.di.authentication.shared.entity;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.validation.RequiredFieldValidator;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AuthenticationAttemptsTest {
+
     @Test
     void testFluentSetters() {
         AuthenticationAttempts attempts = new AuthenticationAttempts();
@@ -65,5 +70,36 @@ class AuthenticationAttemptsTest {
                 "2024-07-29T10:30:00Z",
                 attempts.getUpdated(),
                 "getUpdated should return '2024-07-29T10:30:00Z'");
+    }
+
+    @Test
+    void testValidationWithMissingRequiredFields() {
+        AuthenticationAttempts attempts = new AuthenticationAttempts();
+        // Intentionally not setting any fields to check for validation errors
+
+        RequiredFieldValidator validator = new RequiredFieldValidator();
+        List<String> violations = validator.validate(attempts);
+
+        // Check that all required fields are reported as missing
+        assertTrue(violations.contains("attemptIdentifier"));
+        assertTrue(violations.contains("authenticationMethod"));
+        assertTrue(violations.contains("code"));
+        assertTrue(violations.contains("count"));
+    }
+
+    @Test
+    void testValidationWithAllFieldsSet() {
+        AuthenticationAttempts attempts =
+                new AuthenticationAttempts()
+                        .withAttemptIdentifier("attempt-1234")
+                        .withAuthenticationMethod("email")
+                        .withCode("code-5678")
+                        .withCount(3)
+                        .withTimeToLive(42L);
+
+        RequiredFieldValidator validator = new RequiredFieldValidator();
+        List<String> violations = validator.validate(attempts);
+
+        assertTrue(violations.isEmpty());
     }
 }
