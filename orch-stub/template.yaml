@@ -8,6 +8,7 @@ Parameters:
     AllowedValues:
       - local
       - sandpit
+      - authdev2
 
 Mappings:
   EnvironmentConfiguration:
@@ -61,6 +62,29 @@ Mappings:
       authenticationBackendUrl: "https://48oqh70cm7-vpce-040f33c3489ff777b.execute-api.eu-west-2.amazonaws.com/sandpit/"
       authenticationFrontendUrl: "https://signin.sandpit.account.gov.uk/"
       redisUrl: "{{resolve:secretsmanager:sandpit-orchestration-stub-redis-url::::1e143e9d-8b87-4638-a460-66aaf5f60b2d}}"
+
+    authdev2:
+      domain: .authdev2.sandpit.account.gov.uk
+      authPubKey: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlWwvS/QGYHfu8nufIzgo
+        05G4GEjMHvOXGywV61Inev6+46VF36rAs1+ZtxAhR6D4FFDbyLFhej0Rp/H9PMnk
+        rwaIoRkZq89BHAX/yklx3EYPkdRhsXjfWocL7ZJP/JgFcNZV/eE2ZOf9O3UmcVGy
+        DCQMhKDhYX3XFR5mtd2lCHmu9TtONvodQ2zf0REFPJey1X4M3JYWhtW0lm8lxuFM
+        +wq2LiUkwO6qgTiUcweMzKVNMX55pLajsL9o/wVApm9FiGLB1Ndt4aRT6JIbgG3U
+        G+6lf+OkwDRht0L31b0vGGzy263wprcxjd/v3bznttaTP8W2ouwh9UdTBWMq+BIB
+        zwIDAQAB
+        -----END PUBLIC KEY-----
+      subnetAId: "subnet-0ef903f65650689d8"
+      subnetBId: "subnet-0a664da1b8fbe815d"
+      subnetCId: "subnet-03533652fb2b7cd75"
+      endpointSgId: "sg-0d64cc026d540b919"
+      redisSgId: "sg-072d47bbcf7f12d00"
+      vpcId: "vpc-07436f099bccc77df"
+      privateKey: "{{resolve:secretsmanager:authdev2-orchestration-stub-private-key::::8b04bb6d-e467-47a1-ac4f-2725d7b36e5b}}"
+      authenticationBackendUrl: "https://gsk0hjohsf-vpce-0a13e281125335a7e.execute-api.eu-west-2.amazonaws.com/authdev2/"
+      authenticationFrontendUrl: "https://signin.authdev2.sandpit.account.gov.uk/"
+      redisUrl: "{{resolve:secretsmanager:authdev2-orchestration-stub-redis-url::::17471c88-d25a-4e85-b075-5c703ee6db92}}"
 
 Resources:
   ApiGateway:
