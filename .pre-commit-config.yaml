@@ -18,6 +18,7 @@ repos:
   - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
     rev: 0.0.1
     hooks:
+      - id: gradle-spotless-apply
       - id: terraform-format
       - id: terraform-validate
 
@@ -62,14 +63,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: gradle-spotless-apply
-        name: Run Gradle Spotless Apply
-        language: system
-        entry: ./gradlew :spotlessApply -PratchetFrom=origin/main
-        pass_filenames: false
-        types_or:
-          - java
-          - groovy
       - id: shfmt
         name: shfmt (shell scripts)
         language: golang
