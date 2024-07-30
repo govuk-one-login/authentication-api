@@ -27,6 +27,6 @@ logs/
 *.received.json
 
 # Contract Tests
-pact/
+/*/src/test/pact/
 node_modules
 .infracost
