@@ -19,7 +19,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
-import java.net.URI;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -107,7 +106,7 @@ public class LogoutHandler
         return logoutService.handleLogout(
                 logoutRequest.session(),
                 logoutRequest.errorObject(),
-                logoutRequest.postLogoutRedirectUri().map(URI::create),
+                logoutRequest.postLogoutRedirectUri(),
                 logoutRequest.state(),
                 logoutRequest.auditUser(),
                 logoutRequest.clientId(),
