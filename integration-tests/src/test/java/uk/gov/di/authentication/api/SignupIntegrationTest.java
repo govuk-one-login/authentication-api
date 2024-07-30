@@ -57,7 +57,8 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
-                makeRequest(Optional.of(new SignupRequest(EMAIL, PASSWORD)), headers, Map.of());
+                makeRequest(
+                        Optional.of(new SignupRequest(EMAIL, VALID_PASSWORD)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
         assertTrue(

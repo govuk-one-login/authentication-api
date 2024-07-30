@@ -51,7 +51,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                 Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
         var response =
                 makeRequest(
-                        Optional.of(new UpdatePasswordRequest(EMAIL, PASSWORD_NEW)),
+                        Optional.of(new UpdatePasswordRequest(EMAIL, VALID_PASSWORD)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -69,11 +69,11 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldReturn400WhenNewPasswordIsSameAsOldPassword() throws Exception {
-        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId(PASSWORD);
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId(VALID_PASSWORD);
 
         var response =
                 makeRequest(
-                        Optional.of(new UpdatePasswordRequest(EMAIL, PASSWORD)),
+                        Optional.of(new UpdatePasswordRequest(EMAIL, VALID_PASSWORD)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
@@ -125,7 +125,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 makeRequest(
                                         Optional.of(
                                                 new UpdatePasswordRequest(
-                                                        OTHER_EMAIL, PASSWORD_NEW)),
+                                                        OTHER_EMAIL, VALID_PASSWORD)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
@@ -143,7 +143,8 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                         RuntimeException.class,
                         () ->
                                 makeRequest(
-                                        Optional.of(new UpdatePasswordRequest(EMAIL, PASSWORD)),
+                                        Optional.of(
+                                                new UpdatePasswordRequest(EMAIL, VALID_PASSWORD)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap()));
 

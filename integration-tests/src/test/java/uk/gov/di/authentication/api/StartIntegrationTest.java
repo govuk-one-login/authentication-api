@@ -123,7 +123,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 format(
                         """
                 {
-                "clientName":"test-client-name",
+                "clientName":"%s",
                 "scopes":["openid"],
                 "serviceType":"MANDATORY",
                 "cookieConsentShared":false,
@@ -132,7 +132,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "isOneLoginService":false
                 }
                 """,
-                        state.getValue());
+                        CLIENT_NAME, state.getValue());
 
         var expectedJson =
                 JsonParser.parseString(format("{\"user\": %s,\"client\": %s}", user, client));

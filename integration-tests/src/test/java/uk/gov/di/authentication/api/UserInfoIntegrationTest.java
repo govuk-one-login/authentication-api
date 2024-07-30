@@ -138,7 +138,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .issuer("issuer-id")
                         .expirationTime(EXPIRY_DATE)
                         .issueTime(NowHelper.now())
-                        .claim("client_id", "client-id-one")
+                        .claim("client_id", CLIENT_ID)
                         .subject(PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
@@ -385,7 +385,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .issuer("issuer-id")
                         .expirationTime(EXPIRY_DATE)
                         .issueTime(NowHelper.now())
-                        .claim("client_id", "client-id-one")
+                        .claim("client_id", CLIENT_ID)
                         .subject(PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .claim(
