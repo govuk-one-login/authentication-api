@@ -30,7 +30,6 @@ module "send_otp_notification" {
     ENVIRONMENT                            = var.environment
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
-    SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
     DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
     LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key
