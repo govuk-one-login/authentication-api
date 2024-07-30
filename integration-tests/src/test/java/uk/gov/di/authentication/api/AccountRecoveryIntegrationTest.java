@@ -31,18 +31,14 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
-    public static final String CLIENT_SESSION_ID = "some-client-session-id";
-    private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @BeforeEach
     void setup() {
@@ -54,11 +50,11 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
     @Test
     void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresent() throws Json.JsonException {
-        userStore.signUp(EMAIL, "password-1", SUBJECT);
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
         var salt = userStore.addSalt(EMAIL);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         var sessionId = redis.createSession();
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         redis.addEmailToSession(sessionId, EMAIL);
@@ -79,7 +75,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     @Test
     void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresent() throws Json.JsonException {
         var sessionId = redis.createSession();
-        userStore.signUp(EMAIL, "password-1", SUBJECT);
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
 
@@ -125,7 +121,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
         @Override
         public String getInternalSectorUri() {
-            return INTERNAl_SECTOR_URI;
+            return INTERNAL_SECTOR_URI;
         }
 
         @Override

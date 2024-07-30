@@ -36,13 +36,12 @@ import static uk.gov.di.authentication.clientregistry.services.ClientConfigValid
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SUBJECT_TYPE;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.PUBLIC_CERT_VALID;
 
 class ClientConfigValidationServiceTest {
 
     private final ClientConfigValidationService validationService =
             new ClientConfigValidationService();
-    private static final String VALID_PUBLIC_KEY =
-            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
 
     private static final boolean IDENTITY_VERIFICATION_SUPPORTED = false;
 
@@ -52,7 +51,7 @@ class ClientConfigValidationServiceTest {
                         emptyList(),
                         null,
                         PublicKeySource.STATIC.getValue(),
-                        VALID_PUBLIC_KEY,
+                        PUBLIC_CERT_VALID,
                         null,
                         emptyList(),
                         null,
@@ -73,7 +72,7 @@ class ClientConfigValidationServiceTest {
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
                         PublicKeySource.STATIC.getValue(),
-                        VALID_PUBLIC_KEY,
+                        PUBLIC_CERT_VALID,
                         null,
                         List.of(ValidClaims.ADDRESS.getValue()),
                         String.valueOf(MANDATORY),
@@ -85,7 +84,7 @@ class ClientConfigValidationServiceTest {
                                 "http://localhost/post-redirect-logout-v2"),
                         "http://back-channel.com",
                         null,
-                        VALID_PUBLIC_KEY,
+                        PUBLIC_CERT_VALID,
                         null,
                         List.of(
                                 ValidClaims.CORE_IDENTITY_JWT.getValue(),
@@ -134,7 +133,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
@@ -155,7 +154,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("invalid-redirect-uri"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -176,7 +175,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 "invalid-public-key-source",
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -239,7 +238,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -260,7 +259,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 List.of("openid", "am"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -281,7 +280,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -302,7 +301,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -324,7 +323,7 @@ class ClientConfigValidationServiceTest {
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
                         PublicKeySource.STATIC.getValue(),
-                        VALID_PUBLIC_KEY,
+                        PUBLIC_CERT_VALID,
                         null,
                         singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"),
@@ -353,7 +352,7 @@ class ClientConfigValidationServiceTest {
                         singletonList("http://localhost:1000/redirect"),
                         singletonList("test-client@test.com"),
                         PublicKeySource.STATIC.getValue(),
-                        VALID_PUBLIC_KEY,
+                        PUBLIC_CERT_VALID,
                         null,
                         singletonList("openid"),
                         singletonList("http://localhost/post-redirect-logout"),
@@ -381,7 +380,7 @@ class ClientConfigValidationServiceTest {
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -431,13 +430,16 @@ class ClientConfigValidationServiceTest {
     static Stream<Arguments> validUpdateCaseSource() {
         return Stream.of(
                 Arguments.of(
-                        ES256.getName(), PublicKeySource.STATIC.getValue(), VALID_PUBLIC_KEY, null),
+                        ES256.getName(),
+                        PublicKeySource.STATIC.getValue(),
+                        PUBLIC_CERT_VALID,
+                        null),
                 Arguments.of(
                         RS256.getName(),
                         PublicKeySource.JWKS.getValue(),
                         null,
                         "https://valid.jwks.url.gov.uk"),
-                Arguments.of(RS256.getName(), null, VALID_PUBLIC_KEY, null),
+                Arguments.of(RS256.getName(), null, PUBLIC_CERT_VALID, null),
                 Arguments.of(RS256.getName(), null, null, null));
     }
 
@@ -455,7 +457,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
@@ -475,7 +477,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("invalid-redirect-uri"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -495,7 +497,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 "invalid-public-key-source",
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -555,7 +557,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -575,7 +577,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 List.of("openid", "email"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -595,7 +597,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
@@ -617,7 +619,7 @@ class ClientConfigValidationServiceTest {
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
                                 PublicKeySource.STATIC.getValue(),
-                                VALID_PUBLIC_KEY,
+                                PUBLIC_CERT_VALID,
                                 null,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),

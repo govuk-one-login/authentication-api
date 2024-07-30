@@ -71,6 +71,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
@@ -82,11 +83,8 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String CLIENT_ID = "test-client";
     private static final URI RP_REDIRECT_URI = URI.create("https://rp-uri/redirect");
     private static final String AM_CLIENT_ID = "am-test-client";
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     public static final String DUMMY_CLIENT_SESSION_ID = "456";
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
@@ -443,7 +441,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         registerUser();
 
         var response =
@@ -482,7 +480,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRedirectToLoginUriWhenUserHasPreviousSessionButRequiresIdentity() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         registerUser();
 
         var response =
@@ -519,7 +517,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         registerUser();
 
         var response =
@@ -569,7 +567,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldNotPromptForLoginWhenPromptNoneAndUserAuthenticated() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         registerUser();
 
         var response =
@@ -609,7 +607,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldPromptForLoginWhenPromptLoginAndUserAuthenticated() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         registerUser();
 
         var response =
@@ -651,7 +649,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldRequireUpliftWhenHighCredentialLevelOfTrustRequested() throws Exception {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(LOW_LEVEL);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         registerUser();
 
         var response =
@@ -898,6 +896,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "redirect_uri",
                                 redirectUri.toString(),
                                 "state",
+                                // pragma: allowlist nextline secret
                                 "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
                                 "nonce",
                                 new Nonce().getValue(),
@@ -949,7 +948,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void registerUser() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
+        userStore.signUp(EMAIL, PASSWORD);
     }
 
     private void registerClient(

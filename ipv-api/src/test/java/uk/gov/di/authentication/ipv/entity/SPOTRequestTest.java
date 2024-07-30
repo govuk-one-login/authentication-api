@@ -11,6 +11,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.SALT_B64;
 
 class SPOTRequestTest {
 
@@ -22,8 +23,8 @@ class SPOTRequestTest {
         String saltString =
                 Base64.getEncoder()
                         .encodeToString(
-                                "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw="
-                                        .getBytes(StandardCharsets.UTF_8));
+                                //  pragma: allowlist nextline secret
+                                SALT_B64.getBytes(StandardCharsets.UTF_8));
         String spotRequestJson = buildSpotRequestJson("P2", "/trustmark", saltString);
 
         SPOTRequest spotRequest = objectMapper.readValue(spotRequestJson, SPOTRequest.class);

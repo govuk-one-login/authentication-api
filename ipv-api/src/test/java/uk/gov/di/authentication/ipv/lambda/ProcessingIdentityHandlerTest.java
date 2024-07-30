@@ -65,6 +65,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -126,7 +127,7 @@ class ProcessingIdentityHandlerTest {
         headers.put(SESSION_ID_HEADER, SESSION_ID);
         event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\"}", EMAIL_ADDRESS));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         handler =
                 new ProcessingIdentityHandler(
                         dynamoIdentityService,

@@ -21,7 +21,6 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -51,6 +50,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -78,17 +78,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -122,7 +117,7 @@ class ResetPasswordRequestHandlerTest {
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+                    new Subject().getValue(), INTERNAL_SECTOR_HOST, SaltHelper.generateNewSalt());
 
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
@@ -130,9 +125,9 @@ class ResetPasswordRequestHandlerTest {
                     .withClientID(TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(
                             List.of(
-                                    "joe.bloggs@digital.cabinet-office.gov.uk",
+                                    buildTestEmail(5),
                                     CommonTestVariables.EMAIL,
-                                    "jb2@digital.cabinet-office.gov.uk"));
+                                    buildTestEmail(6)));
 
     private final Session session =
             new Session(SESSION_ID)
@@ -159,7 +154,7 @@ class ResetPasswordRequestHandlerTest {
                     CommonTestVariables.EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     @RegisterExtension

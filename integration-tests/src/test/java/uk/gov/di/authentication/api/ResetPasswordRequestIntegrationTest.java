@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.net.URI;
 import java.util.Collections;
@@ -23,14 +24,14 @@ import static org.hamcrest.Matchers.hasSize;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
-    private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "some-client-name";
+    private static final ClientID CLIENT_ID = new ClientID(CommonTestVariables.CLIENT_ID);
 
     @BeforeEach
     public void setUp() {
@@ -42,20 +43,17 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
     @Test
     public void shouldCallResetPasswordEndpointAndReturn200ForCodeFlowRequest()
             throws Json.JsonException {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        String phoneNumber = "01234567890";
-        userStore.signUp(email, password);
-        userStore.addVerifiedPhoneNumber(email, phoneNumber);
+        userStore.signUp(EMAIL, PASSWORD);
+        userStore.addVerifiedPhoneNumber(EMAIL, UK_LANDLINE_NUMBER_NO_CC);
         String sessionId = redis.createSession();
         String persistentSessionId = "test-persistent-id";
-        redis.addEmailToSession(sessionId, email);
+        redis.addEmailToSession(sessionId, EMAIL);
         var clientSessionId = IdGenerator.generate();
-        setUpClientSession(email, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
+        setUpClientSession(EMAIL, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordRequest(email)),
+                        Optional.of(new ResetPasswordRequest(EMAIL)),
                         constructFrontendHeaders(sessionId, clientSessionId, persistentSessionId),
                         Map.of());
 
@@ -64,7 +62,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(email));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD_WITH_CODE));
         assertThat(requests.get(0).getCode(), hasLength(6));
 

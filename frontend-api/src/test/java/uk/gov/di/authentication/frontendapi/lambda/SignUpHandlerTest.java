@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -57,15 +56,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.PASSWORD;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -86,15 +78,13 @@ class SignUpHandlerTest {
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final String EMAIL = CommonTestVariables.EMAIL;
 
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
+                    INTERNAL_SUBJECT_ID.getValue(), INTERNAL_SECTOR_HOST, SALT);
 
     private SignUpHandler handler;
 
@@ -112,7 +102,7 @@ class SignUpHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     @RegisterExtension
@@ -166,14 +156,10 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(200));
         verify(authenticationService)
-                .signUp(
-                        eq(EMAIL),
-                        eq("computer-1"),
-                        any(Subject.class),
-                        any(TermsAndConditions.class));
+                .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
+                        INTERNAL_SUBJECT_ID.getValue(), INTERNAL_SECTOR_HOST, SALT);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
@@ -208,7 +194,7 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(200));
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
+                        INTERNAL_SUBJECT_ID.getValue(), INTERNAL_SECTOR_HOST, SALT);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
@@ -330,7 +316,7 @@ class SignUpHandlerTest {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(INTERNAL_SECTOR_URI)
                 .withSubjectType("pairwise");
     }
 }

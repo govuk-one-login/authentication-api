@@ -22,7 +22,6 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -46,6 +45,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -80,21 +80,21 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -146,7 +146,7 @@ class SendNotificationHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     private final SendNotificationHandler handler =
@@ -256,7 +256,7 @@ class SendNotificationHandlerTest {
                                             EMAIL,
                                             SESSION_ID,
                                             CLIENT_SESSION_ID,
-                                            DI_PERSISTENT_SESSION_ID,
+                                            PERSISTENT_SESSION_ID,
                                             IP_ADDRESS,
                                             JourneyType.REGISTRATION,
                                             mockedDate.toInstant().getEpochSecond(),

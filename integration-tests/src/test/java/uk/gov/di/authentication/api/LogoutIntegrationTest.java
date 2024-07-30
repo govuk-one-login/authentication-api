@@ -49,7 +49,8 @@ import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.queryParame
 public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String BASE_URL = System.getenv().getOrDefault("BASE_URL", "rubbish");
-    public static final String STATE = "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU";
+    public static final String STATE =
+            "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU"; // pragma: allowlist secret
     public static final String REDIRECT_URL = "https://rp-build.build.stubs.account.gov.uk/";
     public static final String SESSION_ID = "session-id";
     public static final String CLIENT_SESSION_ID = "client-session-id";

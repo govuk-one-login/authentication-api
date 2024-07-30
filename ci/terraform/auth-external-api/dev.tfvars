@@ -6,5 +6,6 @@ lambda_min_concurrency   = 1
 endpoint_memory_size     = 1536
 scaling_trigger          = 0.6
 
-orch_client_id                  = "orchestrationAuth"
+orch_client_id = "orchestrationAuth"
+# pragma: allowlist nextline secret
 orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHzG8IFx1jE1+Ul44jQk96efPknCXVxWS4PqLrKfR/31UQovFQLfyxA46uiMOvr7+0hRwFX1fQhagsIK+dfB5PA=="

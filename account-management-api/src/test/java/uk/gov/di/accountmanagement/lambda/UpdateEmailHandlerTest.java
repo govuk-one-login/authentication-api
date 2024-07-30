@@ -54,6 +54,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -89,7 +90,7 @@ class UpdateEmailHandlerTest {
                     AuditService.UNKNOWN,
                     expectedCommonSubject,
                     NEW_EMAIL_ADDRESS,
-                    "123.123.123.123",
+                    IP_ADDRESS,
                     null,
                     PERSISTENT_ID,
                     Optional.of(TXMA_ENCODED_HEADER_VALUE));
@@ -320,7 +321,7 @@ class UpdateEmailHandlerTest {
         authorizerParams.put("principalId", principalId);
         authorizerParams.put("clientId", CLIENT_ID);
         proxyRequestContext.setAuthorizer(authorizerParams);
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setIdentity(identityWithSourceIp(IP_ADDRESS));
         event.setRequestContext(proxyRequestContext);
         event.setHeaders(
                 Map.of(

@@ -45,6 +45,7 @@ public abstract class BaseFrontendHandler<T>
 
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
+    public static final String TXMA_AUDIT_ENCODED_HEADER = "txma-audit-encoded";
     private final Class<T> clazz;
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;

@@ -70,6 +70,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -195,7 +196,7 @@ class DocAppCallbackHandlerTest {
                 .submitAuditEvent(
                         DocAppAuditableEvent.AUTH_CODE_ISSUED,
                         CLIENT_ID.getValue(),
-                        BASE_AUDIT_USER.withIpAddress("123.123.123.123"),
+                        BASE_AUDIT_USER.withIpAddress(IP_ADDRESS),
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", session.isNewAccount()),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
@@ -552,7 +553,7 @@ class DocAppCallbackHandlerTest {
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         return handler.handleRequest(
-                event.withRequestContext(contextWithSourceIp("123.123.123.123")), context);
+                event.withRequestContext(contextWithSourceIp(IP_ADDRESS)), context);
     }
 
     private static String buildCookieString() {

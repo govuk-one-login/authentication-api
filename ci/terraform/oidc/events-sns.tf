@@ -27,7 +27,7 @@ data "aws_iam_policy_document" "events_policy_document" {
 
   statement {
     effect = "Allow"
-    sid    = "AllowLambdasToEncryptWithCustomKey"
+    sid    = "AllowLambdasToEncryptWithCustomKey" # pragma: allowlist secret
     actions = [
       "kms:GenerateDataKey",
       "kms:Decrypt"

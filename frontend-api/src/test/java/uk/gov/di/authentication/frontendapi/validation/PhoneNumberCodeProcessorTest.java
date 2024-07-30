@@ -11,7 +11,6 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -29,6 +28,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -43,10 +43,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_NOTIFY_MOBILE_TEST_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 class PhoneNumberCodeProcessorTest {
 
@@ -64,12 +63,7 @@ class PhoneNumberCodeProcessorTest {
             mock(DynamoAccountModifiersService.class);
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
-    private static final String PERSISTENT_ID = "some-persistent-session-id";
-    private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String SESSION_ID = "a-session-id";
-    private static final String IP_ADDRESS = "123.123.123.123";
     private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
-    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
                     CLIENT_ID,
@@ -79,7 +73,7 @@ class PhoneNumberCodeProcessorTest {
                     CommonTestVariables.EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    PERSISTENT_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
@@ -256,7 +250,7 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
@@ -284,7 +278,7 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verify(authenticationService)
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
@@ -306,7 +300,7 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, JourneyType.SIGN_IN),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verifyNoInteractions(authenticationService);
         verifyNoInteractions(auditService);
@@ -324,7 +318,7 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verify(sqsClient)
                 .send(
@@ -351,7 +345,7 @@ class PhoneNumberCodeProcessorTest {
                 CodeRequestType.SMS_ACCOUNT_RECOVERY);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verifyNoInteractions(sqsClient);
     }
@@ -367,7 +361,7 @@ class PhoneNumberCodeProcessorTest {
                         CommonTestVariables.UK_MOBILE_NUMBER),
                 CodeRequestType.SMS_REGISTRATION);
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verifyNoInteractions(sqsClient);
     }
@@ -384,7 +378,7 @@ class PhoneNumberCodeProcessorTest {
         when(clientRegistry.isSmokeTest()).thenReturn(true);
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verifyNoInteractions(sqsClient);
     }

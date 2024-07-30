@@ -67,27 +67,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class InitiateIPVAuthorisationServiceTest {
-    private static final String CLIENT_SESSION_ID = "client-session-v1";
-    private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
-    private static final String CLIENT_ID = "test-client-id";
     private static final List<String> LEVELS_OF_CONFIDENCE = List.of("P0", "P2");
     private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
-    private static final String SESSION_ID = "a-session-id";
-    private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final String LANDING_PAGE_URL = "https//test.account.gov.uk/landingPage";
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
     private static final String ENVIRONMENT = "test-environment";
-    private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final String RP_PAIRWISE_ID = "urn:fdc:gov.uk:2022:dkjfshsdkjh";
-    private static final String IP_ADDRESS = "123.123.123.123";
     private static final Boolean REPROVE_IDENTITY = true;
     private static final String SERIALIZED_JWT =
+            // pragma: allowlist nextline secret
             "eyJraWQiOiIwOWRkYjY1ZWIzY2U0MWEzYjczYTJhOTM0ZTM5NDg4NmQyYTIyYjU0ZmQwMzVmYWJlZWM3YWMxYzllYzliNzBiIiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLnRlc3QuYWNjb3VudC5nb3YudWsiLCJodHRwczovL2lkZW50aXR5LnRlc3QuYWNjb3VudC5nb3YudWsiXSwic3ViIjoia3NFUjVWcDRuZU1ONWM2WHJlSV9uUDhGNFZuc2VqS2x1b3BOX05mZjlfNCIsImlzcyI6Imh0dHBzOi8vb2lkYy50ZXN0LmFjY291bnQuZ292LnVrLyIsImV4cCI6MTcwOTA1MTE2MywiaWF0IjoxNzA5MDQ3NTYzLCJqdGkiOiJkZmNjZjc1MS1iZTU1LTRkZjQtYWEzZi1hOTkzMTkzZDUyMTYifQ.rpZ2IqMwlFLbZ8a7En-EuQ480zcorvNd-GZcwjlxlK3Twq9J1GNiuj9teSLINP_zmeirx7Y8p3DUYWk_hyRhww";
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -124,7 +119,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private final UserInfo userInfo = generateUserInfo();
     private final Session session =
             new Session(SESSION_ID)
-                    .setEmailAddress(EMAIL_ADDRESS)
+                    .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ClientRegistry client = generateClientRegistry();
 
@@ -222,7 +217,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(Subject.class),
                         eq(claimsSetRequest),
                         eq(CLIENT_SESSION_ID),
-                        eq(EMAIL_ADDRESS),
+                        eq(EMAIL),
                         eq(List.of("P0", "P2")),
                         eq(REPROVE_IDENTITY));
         verify(auditService)
@@ -233,7 +228,7 @@ public class InitiateIPVAuthorisationServiceTest {
                                 .withGovukSigninJourneyId(CLIENT_SESSION_ID)
                                 .withSessionId(SESSION_ID)
                                 .withUserId(expectedCommonSubject)
-                                .withEmail(EMAIL_ADDRESS)
+                                .withEmail(EMAIL)
                                 .withIpAddress(IP_ADDRESS)
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID),
                         pair("clientLandingPageUrl", LANDING_PAGE_URL),
@@ -272,7 +267,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(Subject.class),
                         actualClaimsSetRequest.capture(),
                         eq(CLIENT_SESSION_ID),
-                        eq(EMAIL_ADDRESS),
+                        eq(EMAIL),
                         eq(List.of("P0", "P2")),
                         eq(REPROVE_IDENTITY));
 
@@ -329,7 +324,7 @@ public class InitiateIPVAuthorisationServiceTest {
                                     "salt": ""
                                 }
                                 """,
-                        RP_PAIRWISE_ID, EMAIL_ADDRESS);
+                        RP_PAIRWISE_ID, EMAIL);
         return UserInfo.parse(jsonString);
     }
 

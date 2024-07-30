@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
@@ -44,20 +45,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
-    private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "some-client-name";
+    private static final ClientID CLIENT_ID = new ClientID(CommonTestVariables.CLIENT_ID);
     private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
@@ -67,19 +65,18 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200WithSuccessfulAuthResponse() throws Json.JsonException {
-        var clientSessionId = "some-client-session-id";
         var sessionID = redis.createSession();
         redis.addEmailToSession(sessionID, EMAIL);
         redis.setVerifiedMfaMethodType(sessionID, MFAMethodType.AUTH_APP);
         redis.addAuthRequestToSession(
-                clientSessionId, sessionID, generateAuthRequest().toParameters(), CLIENT_NAME);
-        userStore.signUp(EMAIL, "password");
+                CLIENT_SESSION_ID, sessionID, generateAuthRequest().toParameters(), CLIENT_NAME);
+        userStore.signUp(EMAIL, PASSWORD);
         registerClient(new Scope(OIDCScopeValue.OPENID));
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put("Client-Session-Id", clientSessionId);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response = makeRequest(Optional.empty(), headers, Map.of());
 
@@ -115,7 +112,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put("Client-Session-Id", clientSessionId);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response = makeRequest(Optional.empty(), headers, Map.of());
 

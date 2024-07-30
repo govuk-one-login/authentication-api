@@ -9,7 +9,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -26,6 +25,7 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,9 +41,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 class AuthAppCodeProcessorTest {
     AuthAppCodeProcessor authAppCodeProcessor;
@@ -55,14 +55,7 @@ class AuthAppCodeProcessorTest {
     UserContext mockUserContext;
     DynamoAccountModifiersService mockAccountModifiersService;
 
-    private static final String AUTH_APP_SECRET =
-            "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
-    private static final String PERSISTENT_ID = "some-persistent-session-id";
-    private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String SESSION_ID = "a-session-id";
-    private static final String IP_ADDRESS = "123.123.123.123";
     private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
-    private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private final int MAX_RETRIES = 5;
 
     private final AuditContext auditContext =
@@ -74,7 +67,7 @@ class AuthAppCodeProcessorTest {
                     CommonTestVariables.EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    PERSISTENT_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
@@ -202,7 +195,7 @@ class AuthAppCodeProcessorTest {
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verify(mockDynamoService, never())
                 .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
@@ -225,7 +218,7 @@ class AuthAppCodeProcessorTest {
                         JourneyType.ACCOUNT_RECOVERY,
                         AUTH_APP_SECRET));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
         verify(mockDynamoService)
@@ -246,7 +239,7 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
@@ -264,7 +257,7 @@ class AuthAppCodeProcessorTest {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
-        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_SESSION_ID);
 
         verifyNoInteractions(mockDynamoService);
         verify(mockAccountModifiersService, never())

@@ -24,6 +24,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final String PUBLIC_KEY_SOURCE = PublicKeySource.STATIC.getValue();
     private static final String PUBLIC_KEY =
+            //  pragma: allowlist nextline secret
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0o0K0A7H58Ngl4FyxTKece+hNhWIbeqm/YO4g7G2Cm8UvNvg4kUDsLVtTKMJNuoEaugkILOm393u4MPy7VT0O0ksL8e3tI6ehtfKiIaCaX/pyFiTimojBJTugwtrraJ3gd6rXm/qzUdBoY+AbYzN5OUkpuJ6/Hfm2w7GrOur5bMgiD8DvqQZA5HOqTswjoPeQK/NW3jaca7gQ9LRKu/QeuYXpQHsALoW2xr+Xpz57NWyutq1Ttt5aWHUQ7EzUBfwBDsBDef8a0cWKMUPcEdUaPD8MLVgbRRGbabkBAEO7sYdMlb3IhYMM9j8N8oct8cPgJtEYEN20TFai5fwQM3dUQIDAQAB";
     private static final List<String> POST_LOGOUT_REDIRECT_URIS = List.of();
     private static final String BACK_CHANNEL_LOGOUT_URI = null;

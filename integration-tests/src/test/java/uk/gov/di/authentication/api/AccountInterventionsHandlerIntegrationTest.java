@@ -40,21 +40,15 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-
-    public static final String CLIENT_SESSION_ID = "some-client-session-id";
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER =
-            "blocked.user@blocked.com";
-    private static final String TEST_PASSWORD = "password-1";
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+            buildTestEmail("blocked");
     private static final Subject SUBJECT = new Subject();
     private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
-    public static final String ENCODED_DEVICE_DETAILS =
-            "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
     @RegisterExtension
     public static final AccountInterventionsStubExtension accountInterventionsStubExtension =
@@ -75,14 +69,14 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                         redisConnectionService,
                         new LambdaInvokerService(mockLambdaClient));
         accountInterventionsStubExtension.initWithBlockedUserId(
-                setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS),
+                setupUserAndRetrieveUserId(EMAIL),
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER));
         txmaAuditQueue.clear();
     }
 
     static Stream<Arguments> accountInterventionResponseParameters() {
         return Stream.of(
-                Arguments.of(TEST_EMAIL_ADDRESS, false, FrontendAuditableEvent.NO_INTERVENTION),
+                Arguments.of(EMAIL, false, FrontendAuditableEvent.NO_INTERVENTION),
                 Arguments.of(
                         TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER,
                         true,
@@ -120,10 +114,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     @ValueSource(booleans = {true, false})
     void shouldReturnSuccessful200ResponseWhenAuthenticatedFieldIsSent(boolean authenticated)
             throws Json.JsonException {
-        var body =
-                format(
-                        "{\"email\":\"%s\",\"authenticated\":%b}",
-                        TEST_EMAIL_ADDRESS, authenticated);
+        var body = format("{\"email\":\"%s\",\"authenticated\":%b}", EMAIL, authenticated);
         var response =
                 makeRequest(Optional.of(body), getHeadersForAuthenticatedSession(), Map.of());
         assertThat(response, hasStatus(200));
@@ -131,7 +122,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
 
     private Map<String, String> getHeadersForAuthenticatedSession() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
-        var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL_ADDRESS);
+        var sessionId = redis.createAuthenticatedSessionWithEmail(EMAIL);
 
         var clientSession =
                 new ClientSession(
@@ -192,9 +183,9 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
     }
 
     private String setupUserAndRetrieveUserId(String emailAddress) {
-        userStore.signUp(emailAddress, TEST_PASSWORD, SUBJECT);
+        userStore.signUp(emailAddress, PASSWORD, SUBJECT);
         byte[] salt = userStore.addSalt(emailAddress);
         return ClientSubjectHelper.calculatePairwiseIdentifier(
-                SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
     }
 }

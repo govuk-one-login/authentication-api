@@ -60,7 +60,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
   name           = "${var.environment}-di-authentication-api"
-  api_key_source = "HEADER"
+  api_key_source = "HEADER" # pragma: allowlist secret
 
   tags = local.default_tags
 }

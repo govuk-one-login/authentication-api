@@ -25,15 +25,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DeleteSyntheticsUserHandlerTest {
 
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final Subject PUBLIC_SUBJECT = new Subject();
-    private static final String PERSISTENT_ID = "some-persistent-session-id";
 
     private DeleteSyntheticsUserHandler handler;
     private final Context context = mock(Context.class);
@@ -48,7 +47,7 @@ class DeleteSyntheticsUserHandlerTest {
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     EMAIL,
-                    "123.123.123.123",
+                    IP_ADDRESS,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     Optional.empty());
@@ -108,9 +107,10 @@ class DeleteSyntheticsUserHandlerTest {
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setBody(format("{\"email\": \"%s\" }", EMAIL));
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+        event.setHeaders(
+                Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID));
 
         return event;
     }

@@ -22,22 +22,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticateHandlerTest {
 
-    private static final String EMAIL = "computer-1";
-    private static final String PASSWORD = "joe.bloggs@test.com";
-    private static final String PHONE_NUMBER = "01234567890";
-    private static final String IP_ADDRESS = "123.123.123.123";
-    private static final String persistentIdValue = "some-persistent-session-id";
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final Map<String, String> headers =
             Map.of(
                     PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                    persistentIdValue,
+                    PERSISTENT_SESSION_ID,
                     AuditHelper.TXMA_ENCODED_HEADER_NAME,
                     TXMA_ENCODED_HEADER_VALUE);
     private APIGatewayProxyRequestEvent event;
@@ -54,7 +50,7 @@ class AuthenticateHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    persistentIdValue,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(TXMA_ENCODED_HEADER_VALUE));
 
     @BeforeEach
@@ -63,6 +59,7 @@ class AuthenticateHandlerTest {
         event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
+        //  pragma: allowlist nextline secret
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
     }
 
@@ -70,7 +67,8 @@ class AuthenticateHandlerTest {
     public void shouldReturn204IfLoginIsSuccessful() {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        when(authenticationService.getPhoneNumber(EMAIL))
+                .thenReturn(Optional.of(UK_LANDLINE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -80,10 +78,12 @@ class AuthenticateHandlerTest {
 
     @Test
     public void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setHeaders(
+                Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID));
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        when(authenticationService.getPhoneNumber(EMAIL))
+                .thenReturn(Optional.of(UK_LANDLINE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -110,6 +110,7 @@ class AuthenticateHandlerTest {
 
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
+        //  pragma: allowlist nextline secret
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

@@ -66,7 +66,7 @@ Conditions:
 Mappings:
   EnvironmentConfiguration:
     dev:
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables # pragma: allowlist secret
       authApiId: "dfwubyergf"
       authExternalApiId: "48oqh70cm7"
       authAccountId: "761723964695"
@@ -97,7 +97,7 @@ Mappings:
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
     build:
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables # pragma: allowlist secret
       authApiId: "6of9f4amvg"
       authExternalApiId: "fag06zqnve"
       authAccountId: "761723964695"
@@ -128,7 +128,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
     staging:
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables # pragma: allowlist secret
       authApiId: "1rvwudxmbk"
       authExternalApiId: "rr86yg3r28"
       authAccountId: "758531536632"
@@ -159,7 +159,7 @@ Mappings:
       defaultProvisionedConcurrency: 3
       aisUriSecretId: daea90b7-b7a9-45b1-98fb-7d9ce8da5a72
     integration:
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables # pragma: allowlist secret
       authApiId: "k2skqhxed6"
       authExternalApiId: "ivaclg7wrf"
       authAccountId: "761723964695"
@@ -190,7 +190,7 @@ Mappings:
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
     production:
-      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables # pragma: allowlist secret
       authApiId: "s4gj268zy6"
       authExternalApiId: "crf9dwolp4"
       authAccountId: "172348255554"
@@ -232,7 +232,7 @@ Globals:
       Variables:
         AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
         DT_CONNECTION_AUTH_TOKEN: !Sub
-          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}"
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_AUTH_TOKEN}}" # pragma: allowlist secret
           - SecretArn:
               !FindInMap [
                 EnvironmentConfiguration,
@@ -240,7 +240,7 @@ Globals:
                 dynatraceSecretArn,
               ]
         DT_CONNECTION_BASE_URL: !Sub
-          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}"
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CONNECTION_BASE_URL}}" # pragma: allowlist secret
           - SecretArn:
               !FindInMap [
                 EnvironmentConfiguration,
@@ -248,7 +248,7 @@ Globals:
                 dynatraceSecretArn,
               ]
         DT_CLUSTER_ID: !Sub
-          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}"
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_CLUSTER_ID}}" # pragma: allowlist secret
           - SecretArn:
               !FindInMap [
                 EnvironmentConfiguration,
@@ -256,7 +256,7 @@ Globals:
                 dynatraceSecretArn,
               ]
         DT_LOG_COLLECTION_AUTH_TOKEN: !Sub
-          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}"
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_LOG_COLLECTION_AUTH_TOKEN}}" # pragma: allowlist secret
           - SecretArn:
               !FindInMap [
                 EnvironmentConfiguration,
@@ -264,7 +264,7 @@ Globals:
                 dynatraceSecretArn,
               ]
         DT_TENANT: !Sub
-          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}"
+          - "{{resolve:secretsmanager:${SecretArn}:SecretString:DT_TENANT}}" # pragma: allowlist secret
           - SecretArn:
               !FindInMap [
                 EnvironmentConfiguration,
@@ -288,7 +288,7 @@ Globals:
       - !Ref AWS::NoValue
     Layers:
       - !Sub
-        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}"
+        - "{{resolve:secretsmanager:${SecretArn}:SecretString:JAVA_LAYER}}" # pragma: allowlist secret
         - SecretArn:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4485,7 +4485,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - secretsmanager:GetSecretValue
+              - secretsmanager:GetSecretValue # pragma: allowlist secret
             Resource: !Ref AccountInterventionsServiceUriSecret
           - Effect: Allow
             Action: kms:Decrypt

@@ -25,11 +25,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.lang.String.valueOf;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 
 class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         extends HandlerIntegrationTest<ScheduledEvent, Void> {
@@ -127,7 +127,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     @Test
     void shouldLoadSingleUserFromUserProfile() {
 
-        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
+        userStore.signUp(EMAIL, PASSWORD, new Subject("1"));
 
         makeRequest(Optional.empty());
 
@@ -139,7 +139,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
     @Test
     void shouldSetCreatedAtAndStatusWhenLoadingSingleUser() {
-        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
+        userStore.signUp(EMAIL, PASSWORD, new Subject("1"));
 
         makeRequest(Optional.empty());
 
@@ -210,27 +210,26 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
     private void setupDynamo(int numberOfUsers) {
         for (int i = 1; i <= numberOfUsers; i++) {
-            userStore.signUp(
-                    format("user.%o@account.gov.uk", i), "password123", new Subject(valueOf(i)));
+            userStore.signUp(buildTestEmail(i), buildTestPassword(i), new Subject(valueOf(i)));
         }
     }
 
     private void setupDynamoUsersWithTermsAndConditionsVersions() {
-        userStore.signUp("email0", "password-1", new Subject("0000"), "1.0");
-        userStore.signUp("email1", "password-1", new Subject("1111"), "1.0");
-        userStore.signUp("email2", "password-1", new Subject("2222"), "1.0");
-        userStore.signUp("email3", "password-1", new Subject("3333"), "1.1");
-        userStore.signUp("email4", "password-1", new Subject("4444"), "1.2");
-        userStore.signUp("email5", "password-1", new Subject("5555"), "1.2");
-        userStore.signUp("email6", "password-1", new Subject("6666"), "1.2");
-        userStore.signUp("email7", "password-1", new Subject("7777"), "1.5");
-        userStore.signUp("email8", "password-1", new Subject("8888"), "1.5");
-        userStore.signUp("email9", "password-1", new Subject("9999"), "1.6");
-        userStore.signUp("email10", "password-1", new Subject("A0000"), null);
-        userStore.signUp("email11", "password-1", new Subject("A1111"), null);
-        userStore.addUnverifiedUser("email12", "password-1", new Subject("A2222"), "1.3");
-        userStore.addUnverifiedUser("email13", "password-1", new Subject("A3333"), "1.3");
-        userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
+        userStore.signUp("email0", PASSWORD, new Subject("0000"), "1.0");
+        userStore.signUp("email1", PASSWORD, new Subject("1111"), "1.0");
+        userStore.signUp("email2", PASSWORD, new Subject("2222"), "1.0");
+        userStore.signUp("email3", PASSWORD, new Subject("3333"), "1.1");
+        userStore.signUp("email4", PASSWORD, new Subject("4444"), "1.2");
+        userStore.signUp("email5", PASSWORD, new Subject("5555"), "1.2");
+        userStore.signUp("email6", PASSWORD, new Subject("6666"), "1.2");
+        userStore.signUp("email7", PASSWORD, new Subject("7777"), "1.5");
+        userStore.signUp("email8", PASSWORD, new Subject("8888"), "1.5");
+        userStore.signUp("email9", PASSWORD, new Subject("9999"), "1.6");
+        userStore.signUp("email10", PASSWORD, new Subject("A0000"), null);
+        userStore.signUp("email11", PASSWORD, new Subject("A1111"), null);
+        userStore.addUnverifiedUser("email12", PASSWORD, new Subject("A2222"), "1.3");
+        userStore.addUnverifiedUser("email13", PASSWORD, new Subject("A3333"), "1.3");
+        userStore.addUnverifiedUser("email14", PASSWORD, new Subject("A4444"), "1.3");
     }
 
     private void makeRequest(Optional<Map<String, Object>> exclusiveStartKey) {

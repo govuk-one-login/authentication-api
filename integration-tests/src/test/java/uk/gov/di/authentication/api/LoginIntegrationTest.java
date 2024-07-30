@@ -44,20 +44,16 @@ import static uk.gov.di.authentication.shared.entity.MFAMethodType.NONE;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String CURRENT_TERMS_AND_CONDITIONS = "1.0";
     private static final String OLD_TERMS_AND_CONDITIONS = "0.1";
-    public static final String CLIENT_NAME = "test-client-name";
-    public static final String ENCODED_DEVICE_INFORMATION =
-            "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
     @BeforeEach
     void setup() {
@@ -73,19 +69,17 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType,
             boolean mfaMethodVerified)
             throws Json.JsonException {
-        var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var password = "password-1";
-        var sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        var sessionId = redis.createUnauthenticatedSessionWithEmail(EMAIL);
         var scope = new Scope(OIDCScopeValue.OPENID);
 
-        userStore.signUp(email, password);
-        userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
+        userStore.signUp(EMAIL, PASSWORD);
+        userStore.updateTermsAndConditions(EMAIL, termsAndConditionsVersion);
         if (mfaMethodType.equals(SMS)) {
             userStore.setPhoneNumberAndVerificationStatus(
-                    email, "01234567890", mfaMethodVerified, mfaMethodVerified);
+                    EMAIL, UK_LANDLINE_NUMBER_NO_CC, mfaMethodVerified, mfaMethodVerified);
         } else {
             userStore.updateMFAMethod(
-                    email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
+                    EMAIL, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
         }
 
         AuthenticationRequest.Builder builder =
@@ -103,7 +97,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 CLIENT_ID,
                 "The test client",
                 singletonList(REDIRECT_URI),
-                singletonList("test-client@test.com"),
+                singletonList(CLIENT_EMAIL),
                 singletonList(scope.toString()),
                 Base64.getMimeEncoder()
                         .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
@@ -117,11 +111,11 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
                 makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        Optional.of(new LoginRequest(EMAIL, PASSWORD, JourneyType.SIGN_IN)),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -174,17 +168,16 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials()
             throws Json.JsonException {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
+        userStore.signUp(email, PASSWORD_BAD);
         String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
         var response =
                 makeRequest(
-                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        Optional.of(new LoginRequest(email, PASSWORD, JourneyType.SIGN_IN)),
                         headers,
                         Map.of());
         assertThat(response, hasStatus(401));
@@ -193,16 +186,15 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallLoginEndpoint6TimesAndReturn400WhenUserIdLockedOut() throws Json.JsonException {
-        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
+        String email = buildTestEmail(4);
+        userStore.signUp(email, PASSWORD_BAD);
         String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+        var request = new LoginRequest(email, PASSWORD, JourneyType.SIGN_IN);
 
         for (int i = 0; i < 5; i++) {
             var response = makeRequest(Optional.of(request), headers, Map.of());
@@ -227,16 +219,15 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallLoginEndpoint6TimesAndReturn400TwiceWhenUserIdLockedOut()
             throws Json.JsonException {
-        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
+        String email = buildTestEmail(4);
+        userStore.signUp(email, PASSWORD_BAD);
         String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS);
 
-        var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
+        var request = new LoginRequest(email, PASSWORD, JourneyType.SIGN_IN);
 
         for (int i = 0; i < 5; i++) {
             var response = makeRequest(Optional.of(request), headers, Map.of());

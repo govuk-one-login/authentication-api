@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -36,6 +37,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -43,8 +45,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
-    private static final ClientID CLIENT_ID = new ClientID("test-client");
-    private static final String CLIENT_NAME = "some-client-name";
+    private static final ClientID CLIENT_ID = new ClientID(CommonTestVariables.CLIENT_ID);
 
     @BeforeEach
     void setup() {
@@ -60,26 +61,20 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             names = {"SMS", "AUTH_APP"})
     void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists(
             MFAMethodType mfaMethodType) throws JsonException {
-        var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         var clientSessionId = IdGenerator.generate();
-        userStore.signUp(emailAddress, "password-1");
+        userStore.signUp(EMAIL, PASSWORD);
 
         if (MFAMethodType.SMS == mfaMethodType) {
-            userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, "credential");
-            userStore.addVerifiedPhoneNumber(emailAddress, "+44987654321");
+            userStore.addMfaMethod(EMAIL, mfaMethodType, false, true, "credential");
+            userStore.addVerifiedPhoneNumber(EMAIL, "+44987654321");
         } else {
-            userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");
+            userStore.addMfaMethod(EMAIL, mfaMethodType, true, true, "credential");
         }
 
-        setUpClientSession(
-                "joe.bloggs+1@digital.cabinet-office.gov.uk",
-                clientSessionId,
-                CLIENT_ID,
-                CLIENT_NAME,
-                REDIRECT_URI);
+        setUpClientSession(EMAIL, clientSessionId, CLIENT_ID, CLIENT_NAME, REDIRECT_URI);
 
-        var request = new CheckUserExistsRequest(emailAddress);
+        var request = new CheckUserExistsRequest(EMAIL);
         var response =
                 makeRequest(
                         Optional.of(request),
@@ -89,7 +84,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.email(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.email(), equalTo(EMAIL));
         assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(mfaMethodType));
         assertTrue(checkUserExistsResponse.doesUserExist());
         if (MFAMethodType.SMS.equals(mfaMethodType)) {
@@ -103,19 +98,18 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallUserExistsEndpointAndReturnLockoutInformationForAuthAppMfa()
             throws JsonException {
-        var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
 
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(EMAIL);
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN);
 
-        userStore.signUp(emailAddress, "password-1");
-        userStore.addMfaMethod(emailAddress, MFAMethodType.AUTH_APP, true, true, "credential");
+        userStore.signUp(EMAIL, PASSWORD);
+        userStore.addMfaMethod(EMAIL, MFAMethodType.AUTH_APP, true, true, "credential");
 
         var clientSessionId = IdGenerator.generate();
 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        redis.blockMfaCodesForEmail(emailAddress, codeBlockedKeyPrefix);
+        redis.blockMfaCodesForEmail(EMAIL, codeBlockedKeyPrefix);
 
         setUpClientSession(
                 "joe.bloggs+1@digital.cabinet-office.gov.uk",
@@ -124,7 +118,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 CLIENT_NAME,
                 REDIRECT_URI);
 
-        var request = new CheckUserExistsRequest(emailAddress);
+        var request = new CheckUserExistsRequest(EMAIL);
         var response =
                 makeRequest(
                         Optional.of(request),
@@ -134,7 +128,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.email(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.email(), equalTo(EMAIL));
         assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertTrue(checkUserExistsResponse.doesUserExist());
         var lockoutInformation = checkUserExistsResponse.lockoutInformation();

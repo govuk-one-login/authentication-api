@@ -27,12 +27,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_EMAIL_SENT;
 import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT;
@@ -50,6 +50,9 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
     private BulkEmailUsersService bulkEmailUsersService;
 
+    private static final String EMAIL_ERROR_SENDING = buildTestEmail("error-sending");
+    private static final String EMAIL_SENT_ALREADY = buildTestEmail("sent-already");
+
     @BeforeEach
     void setup() {
         notifyStub.init();
@@ -64,8 +67,9 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
     @Test
     void shouldSendSingleEmailWhenSinglePendingUserAndUpdateStatus() throws Json.JsonException {
+        var email = buildTestEmail(1);
         bulkEmailUsersExtension.addBulkEmailUser("1", BulkEmailStatus.PENDING);
-        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
+        userStore.signUp(email, PASSWORD, new Subject("1"));
 
         makeRequest();
 
@@ -73,7 +77,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         var noOfStatusEmailSent =
                 bulkEmailUsersService.getNSubjectIdsByStatus(10, BulkEmailStatus.EMAIL_SENT).size();
 
-        assertThat(request, hasFieldWithValue("email_address", equalTo("user.1@account.gov.uk")));
+        assertThat(request, hasFieldWithValue("email_address", equalTo(email)));
         assertThat(noOfStatusEmailSent, equalTo(1));
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(BULK_EMAIL_SENT));
     }
@@ -135,11 +139,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                         i -> {
                             bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
                                     i, "temporary-failure", BulkEmailStatus.EMAIL_SENT);
-                            userStore.signUp(
-                                    format("user.%s@account.gov.uk", i),
-                                    "password123",
-                                    new Subject(i),
-                                    "1.2");
+                            userStore.signUp(buildTestEmail(i), PASSWORD, new Subject(i), "1.2");
                         });
 
         IntStream.range(noOfUsersWithTempFailures, noOfUsersWithTempFailures + 5)
@@ -148,11 +148,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                         i -> {
                             bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
                                     i, "permanent-failure", BulkEmailStatus.EMAIL_SENT);
-                            userStore.signUp(
-                                    format("user.%s@account.gov.uk", i),
-                                    "password123",
-                                    new Subject(i),
-                                    "1.2");
+                            userStore.signUp(buildTestEmail(i), PASSWORD, new Subject(i), "1.2");
                         });
 
         IntStream.range(10, 15)
@@ -160,11 +156,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                 .forEach(
                         i -> {
                             bulkEmailUsersExtension.addBulkEmailUser(i, BulkEmailStatus.EMAIL_SENT);
-                            userStore.signUp(
-                                    format("user.%s@account.gov.uk", i),
-                                    "password123",
-                                    new Subject(i),
-                                    "1.2");
+                            userStore.signUp(buildTestEmail(i), PASSWORD, new Subject(i), "1.2");
                         });
 
         handler.handleRequest(scheduledEvent, context);
@@ -211,8 +203,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                         .size(),
                 equalTo(2));
         assertThat(emailsSent.size(), equalTo(8));
-        assertEmailNotSentTo(emailsSent, "user.email.sent.already@account.gov.uk");
-        assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
+        assertEmailNotSentTo(emailsSent, EMAIL_SENT_ALREADY);
+        assertEmailNotSentTo(emailsSent, EMAIL_ERROR_SENDING);
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
     }
@@ -237,21 +229,19 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         bulkEmailUsersExtension.addBulkEmailUser("12", BulkEmailStatus.PENDING);
         bulkEmailUsersExtension.addBulkEmailUser("13", BulkEmailStatus.ERROR_SENDING_EMAIL);
 
-        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"), null);
-        userStore.signUp("user.2@account.gov.uk", "password123", new Subject("2"), "1.0");
-        userStore.signUp(
-                "user.email.sent.already@account.gov.uk", "password123", new Subject("3"), "1.0");
-        userStore.signUp("user.4@account.gov.uk", "password123", new Subject("4"), "1.1");
-        userStore.signUp("user.5@account.gov.uk", "password123", new Subject("5"), "1.1");
-        userStore.signUp(
-                "user.error.sending@account.gov.uk", "password123", new Subject("6"), "1.2");
-        userStore.signUp("user.7@account.gov.uk", "password123", new Subject("7"), "1.2");
-        userStore.signUp("user.8@account.gov.uk", "password123", new Subject("8"), "1.3");
-        userStore.signUp("user.9@account.gov.uk", "password123", new Subject("9"), "1.3");
-        userStore.signUp("user.10@account.gov.uk", "password123", new Subject("10"), "1.4");
-        userStore.signUp("user.11@account.gov.uk", "password123", new Subject("11"), "1.5");
-        userStore.signUp("user.12@account.gov.uk", "password123", new Subject("12"), "1.6");
-        userStore.signUp("user.13@account.gov.uk", "password123", new Subject("13"), "1.2");
+        userStore.signUp(buildTestEmail(1), PASSWORD, new Subject("1"), null);
+        userStore.signUp(buildTestEmail(2), PASSWORD, new Subject("2"), "1.0");
+        userStore.signUp(EMAIL_SENT_ALREADY, PASSWORD, new Subject("3"), "1.0");
+        userStore.signUp(buildTestEmail(4), PASSWORD, new Subject("4"), "1.1");
+        userStore.signUp(buildTestEmail(5), PASSWORD, new Subject("5"), "1.1");
+        userStore.signUp(EMAIL_ERROR_SENDING, PASSWORD, new Subject("6"), "1.2");
+        userStore.signUp(buildTestEmail(7), PASSWORD, new Subject("7"), "1.2");
+        userStore.signUp(buildTestEmail(8), PASSWORD, new Subject("8"), "1.3");
+        userStore.signUp(buildTestEmail(9), PASSWORD, new Subject("9"), "1.3");
+        userStore.signUp(buildTestEmail(10), PASSWORD, new Subject("10"), "1.4");
+        userStore.signUp(buildTestEmail(11), PASSWORD, new Subject("11"), "1.5");
+        userStore.signUp(buildTestEmail(12), PASSWORD, new Subject("12"), "1.6");
+        userStore.signUp(buildTestEmail(13), PASSWORD, new Subject("13"), "1.2");
     }
 
     private ScheduledEvent scheduledEvent =

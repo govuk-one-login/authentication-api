@@ -29,14 +29,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String EMAIL_ADDRESS = "test@test.com";
-    private static final String PASSWORD = "Pa55word";
-    private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
-    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
@@ -50,12 +47,12 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
         var sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        userStore.signUp(EMAIL, PASSWORD_OLD, SUBJECT);
+        redis.addEmailToSession(sessionId, EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(new ResetPasswordCompletionRequest(VALID_PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -64,7 +61,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
@@ -74,15 +71,15 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber()
             throws Json.JsonException {
         var sessionId = redis.createSession();
-        var phoneNumber = "+441234567890";
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
-        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        var phoneNumber = UK_LANDLINE_NUMBER;
+        userStore.signUp(EMAIL, PASSWORD_OLD, SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL);
+        userStore.addVerifiedPhoneNumber(EMAIL, phoneNumber);
+        redis.addEmailToSession(sessionId, EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(new ResetPasswordCompletionRequest(VALID_PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -91,14 +88,14 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(2));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
         assertThat(requests.get(1).getDestination(), equalTo(phoneNumber));
         assertThat(requests.get(1).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION_SMS));
 
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
 
         assertTxmaAuditEventsReceived(
@@ -108,8 +105,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
         var sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        userStore.signUp(EMAIL, PASSWORD_OLD, SUBJECT);
+        redis.addEmailToSession(sessionId, EMAIL);
 
         var response =
                 makeRequest(
@@ -127,12 +124,12 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue()
             throws Json.JsonException {
         var sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        userStore.signUp(EMAIL, PASSWORD_OLD, SUBJECT);
+        redis.addEmailToSession(sessionId, EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, true)),
+                        Optional.of(new ResetPasswordCompletionRequest(VALID_PASSWORD, true)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -141,7 +138,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
         assertTxmaAuditEventsReceived(
@@ -158,16 +155,16 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordAndWriteToAccountModifiersTableWithIfUserHasVerifiedPhoneNumber(
             boolean phoneNumberVerified) throws Json.JsonException {
         var sessionId = redis.createSession();
-        var phoneNumber = "+441234567890";
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        var phoneNumber = UK_LANDLINE_NUMBER;
+        userStore.signUp(EMAIL, PASSWORD_OLD, SUBJECT);
         userStore.setPhoneNumberAndVerificationStatus(
-                EMAIL_ADDRESS, phoneNumber, phoneNumberVerified, phoneNumberVerified);
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
+                EMAIL, phoneNumber, phoneNumberVerified, phoneNumberVerified);
+        redis.addEmailToSession(sessionId, EMAIL);
+        byte[] salt = userStore.addSalt(EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(new ResetPasswordCompletionRequest(VALID_PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -176,11 +173,11 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(phoneNumberVerified ? 2 : 1));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         assertThat(
                 accountModifiersStore.isBlockPresent(internalCommonSubjectId),
                 equalTo(phoneNumberVerified));
@@ -208,15 +205,14 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedAuthApp(
             boolean authAppVerified) throws Json.JsonException {
         var sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        userStore.signUp(EMAIL, PASSWORD_OLD, SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL);
+        userStore.addMfaMethod(EMAIL, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
+        redis.addEmailToSession(sessionId, EMAIL);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
+                        Optional.of(new ResetPasswordCompletionRequest(VALID_PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -225,12 +221,12 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
 
         assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
         assertThat(
                 accountModifiersStore.isBlockPresent(internalCommonSubjectId),
                 equalTo(authAppVerified));
@@ -255,7 +251,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         @Override
         public String getInternalSectorUri() {
-            return INTERNAl_SECTOR_URI;
+            return INTERNAL_SECTOR_URI;
         }
 
         @Override

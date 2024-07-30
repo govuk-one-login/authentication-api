@@ -25,6 +25,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -61,6 +62,7 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQ
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
@@ -84,13 +86,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                     ipvPrivateKeyJwtSigner,
                     spotQueue);
 
-    private static final String CLIENT_ID = "test-client-id";
-    private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
-    public static final String CLIENT_NAME = "test-client-name";
-    public static final String CLIENT_SESSION_ID = "some-client-session-id";
     public static final State RP_STATE = new State();
     public static final State ORCHESTRATION_STATE = new State();
 
@@ -119,9 +116,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         setUpDynamo();
-        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+        var salt = userStore.addSalt(EMAIL);
 
         var response =
                 makeRequest(
@@ -352,9 +349,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         setUpDynamo();
-        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+        var salt = userStore.addSalt(EMAIL);
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
         var response =
@@ -440,7 +437,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         setUpDynamo();
         var response =
                 makeRequest(
@@ -487,7 +484,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         redis.createClientSession(
                 CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
-        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addEmailToSession(sessionId, EMAIL);
         setUpDynamo();
         var response =
                 makeRequest(
@@ -514,12 +511,12 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     }
 
     private void setUpDynamo() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
+        userStore.signUp(EMAIL, PASSWORD, INTERNAL_SUBJECT);
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList(REDIRECT_URI),
-                singletonList(EMAIL),
+                singletonList(CommonTestVariables.EMAIL),
                 singletonList("openid"),
                 null,
                 singletonList("http://localhost/post-redirect-logout"),

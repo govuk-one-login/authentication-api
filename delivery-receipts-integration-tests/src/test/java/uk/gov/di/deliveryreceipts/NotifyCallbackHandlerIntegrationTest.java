@@ -26,10 +26,10 @@ import java.util.UUID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String BEARER_TOKEN = "notify-test-@bearer-token";
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String EMAIL_SENT_TEMPLATE_ID = "35454-543543-3435435-12340";
     private static final String VERIFY_PHONE_NUMBER_TEMPLATE_ID = "35454-543543-3435435-12348";
@@ -73,7 +73,7 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         new NotifyDeliveryReceipt(
                                 IdGenerator.generate(),
                                 null,
-                                "+447316763843",
+                                UK_MOBILE_NUMBER,
                                 "delivered",
                                 new Date().toString(),
                                 new Date().toString(),
@@ -81,7 +81,7 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 "sms",
                                 VERIFY_PHONE_NUMBER_TEMPLATE_ID,
                                 1),
-                        Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+                        Map.of("Authorization", "Bearer " + NOTIFY_BEARER_TOKEN));
 
         assertThat(response, hasStatus(204));
     }
@@ -93,7 +93,7 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         new NotifyDeliveryReceipt(
                                 IdGenerator.generate(),
                                 null,
-                                "joe.bloggs@digital.cabinet-office.gov.uk",
+                                EMAIL,
                                 "delivered",
                                 new Date().toString(),
                                 new Date().toString(),
@@ -101,24 +101,23 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 "email",
                                 EMAIL_SENT_TEMPLATE_ID,
                                 1),
-                        Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+                        Map.of("Authorization", "Bearer " + NOTIFY_BEARER_TOKEN));
 
         assertThat(response, hasStatus(204));
     }
 
     @Test
     void shouldUpdateBulkUserDeliveryStatusWhenTermsAndConditionsEmailReceived() {
-        String email = "joe.bloggs@digital.cabinet-office.gov.uk";
         String subjectId = "subject-1";
         bulkEmailUsersExtension.addBulkEmailUser(subjectId, BulkEmailStatus.EMAIL_SENT);
-        userStore.signUp(email, "password-1", new Subject(subjectId));
+        userStore.signUp(EMAIL, PASSWORD, new Subject(subjectId));
 
         var response =
                 makeRequest(
                         new NotifyDeliveryReceipt(
                                 IdGenerator.generate(),
                                 null,
-                                email,
+                                EMAIL,
                                 "delivered",
                                 new Date().toString(),
                                 new Date().toString(),
@@ -126,7 +125,7 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 "email",
                                 TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID,
                                 1),
-                        Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+                        Map.of("Authorization", "Bearer " + NOTIFY_BEARER_TOKEN));
 
         assertThat(response, hasStatus(204));
         BulkEmailUser bulkEmailUserAfterUpdate =

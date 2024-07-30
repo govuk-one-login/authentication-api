@@ -20,7 +20,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
@@ -47,6 +46,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -66,16 +66,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -87,8 +80,6 @@ class VerifyMfaCodeHandlerTest {
     private static final String CLIENT_NAME = "client-name";
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String SUBJECT_ID = "test-subject-id";
-    private static final String AUTH_APP_SECRET =
-            "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
@@ -134,7 +125,7 @@ class VerifyMfaCodeHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(ENCODED_DEVICE_DETAILS));
 
     @BeforeEach

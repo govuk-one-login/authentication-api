@@ -22,7 +22,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
-import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -51,6 +50,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -75,16 +75,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNAL_SECTOR_URI;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -93,8 +95,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class LoginHandlerTest {
 
-    private static final String EMAIL = CommonTestVariables.EMAIL;
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     public static final int MAX_ALLOWED_PASSWORD_RETRIES = 6;
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
@@ -155,7 +155,7 @@ class LoginHandlerTest {
                     EMAIL,
                     IP_ADDRESS,
                     CommonTestVariables.UK_MOBILE_NUMBER,
-                    DI_PERSISTENT_SESSION_ID,
+                    PERSISTENT_SESSION_ID,
                     Optional.empty());
 
     private final AuditContext auditContextWithoutUserInfo =

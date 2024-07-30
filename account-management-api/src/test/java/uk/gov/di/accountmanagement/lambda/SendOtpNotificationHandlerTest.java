@@ -55,6 +55,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -94,7 +95,7 @@ class SendOtpNotificationHandlerTest {
                     AuditService.UNKNOWN,
                     expectedCommonSubject,
                     TEST_EMAIL_ADDRESS,
-                    "123.123.123.123",
+                    IP_ADDRESS,
                     TEST_PHONE_NUMBER,
                     PERSISTENT_ID,
                     Optional.of(TXMA_ENCODED_HEADER_VALUE));
@@ -123,7 +124,7 @@ class SendOtpNotificationHandlerTest {
         when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
                 .thenReturn(true);
 
-        eventContext = contextWithSourceIp("123.123.123.123");
+        eventContext = contextWithSourceIp(IP_ADDRESS);
         Map<String, Object> authorizer =
                 Map.of("clientId", TEST_CLIENT_ID, "principalId", expectedCommonSubject);
         eventContext.setAuthorizer(authorizer);
@@ -177,7 +178,7 @@ class SendOtpNotificationHandlerTest {
                                         "some-session-id",
                                         "some-client-session-id",
                                         "some-persistent-session-id",
-                                        "123.123.123.123",
+                                        IP_ADDRESS,
                                         JourneyType.ACCOUNT_MANAGEMENT,
                                         mockedDate.toInstant().getEpochSecond(),
                                         false));

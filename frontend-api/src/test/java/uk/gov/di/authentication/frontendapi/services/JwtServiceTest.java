@@ -39,6 +39,7 @@ import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256Strin
 class JwtServiceTest {
     private static final Base64URL TEST_SIGNATURE =
             new Base64URL(
+                    // pragma: allowlist nextline secret
                     "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q");
     private static final String TEST_CLAIM_NAME = "sub";
     private static final String TEST_CLAIM_VALUE = "urn:some:user:identifier:rhbefhrbeqidnejrf";

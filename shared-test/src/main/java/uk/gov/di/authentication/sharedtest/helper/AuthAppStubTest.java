@@ -47,10 +47,12 @@ class AuthAppStubTest {
     void worksWithAuthAppCodeProcessorAlgorithm() {
         String generatedCode =
                 authAppStub.getAuthAppOneTimeCode(
+                        // pragma: allowlist nextline secret
                         "ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ");
 
         assertTrue(
                 authAppCodeProcessor.isCodeValid(
+                        // pragma: allowlist nextline secret
                         generatedCode, "ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ"));
     }
 }

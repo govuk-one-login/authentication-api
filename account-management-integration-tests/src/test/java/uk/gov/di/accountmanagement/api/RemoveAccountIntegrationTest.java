@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -31,7 +32,6 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
-    private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
 
     @BeforeEach
     void setup() {
@@ -83,12 +83,11 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToDeleteDifferentAccount() {
-        String user2Email = "i-do-not-exist@example.com";
-        String password2 = "password-2";
+        String user2Email = buildTestEmail("nonexistent");
         Subject subject2 = new Subject();
 
         var subjectId1 = setupUserAndRetrieveInternalCommonSubId();
-        userStore.signUp(user2Email, password2, subject2);
+        userStore.signUp(user2Email, PASSWORD, subject2);
 
         Exception ex =
                 assertThrows(
@@ -106,7 +105,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void shouldReturn400WhenAttemptingToDeleteNonexistentUser() throws Json.JsonException {
-        String email = "i.do.not.exist@digital.cabinet-office.gov.uk";
+        String email = buildTestEmail("nonexistent");
 
         var response =
                 makeRequest(
@@ -122,7 +121,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {
-        userStore.signUp(EMAIL, "password-1", SUBJECT);
+        userStore.signUp(EMAIL, PASSWORD, SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL);
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(

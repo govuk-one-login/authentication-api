@@ -101,6 +101,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.sharedtest.helper.CommonTestVariables.SALT_B64;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.CREDENTIAL_JWT_CLAIM;
@@ -151,15 +152,14 @@ class IPVCallbackHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
     private static final Subject PUBLIC_SUBJECT =
-            new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
+            new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc"); // pragma: allowlist secret
     private static final State STATE = new State();
     private static final List<VectorOfTrust> VTR_LIST =
             List.of(
                     new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
                     new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
     private IPVCallbackHandler handler;
-    private final byte[] salt =
-            "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+    private final byte[] salt = SALT_B64.getBytes(StandardCharsets.UTF_8);
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
     private final URI accessDeniedURI =
             new AuthenticationErrorResponse(
@@ -763,7 +763,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
-        var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
+        var salt = SALT_B64.getBytes(StandardCharsets.UTF_8);
         var clientRegistry = generateClientRegistryNoClaims();
         var userProfile = generateUserProfile();
         usingValidSession();

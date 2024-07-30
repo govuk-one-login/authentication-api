@@ -19,9 +19,11 @@ import java.util.Map;
 public class CommonPasswordsExtension extends DynamoExtension
         implements AfterEachCallback, BeforeEachCallback {
 
-    public static final String COMMON_PASSWORDS_TABLE = "local-common-passwords";
-    public static final String PASSWORD_FIELD = "Password";
-    public static final String TEST_COMMON_PASSWORD = "TestCommonPassword1";
+    public static final String COMMON_PASSWORDS_TABLE =
+            "local-common-passwords"; // pragma: allowlist secret
+    public static final String PASSWORD_FIELD = "Password"; // pragma: allowlist secret
+    public static final String TEST_COMMON_PASSWORD =
+            "TestCommonPassword1"; // pragma: allowlist secret
 
     private CommonPasswordsService commonPasswordsService;
 

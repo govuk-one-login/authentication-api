@@ -14,6 +14,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.*;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -26,13 +27,12 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Test
     public void shouldCallLoginEndpointAndReturn204WhenLoginIsSuccessful() throws Exception {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, password);
+        String email = buildTestEmail(3);
+        userStore.signUp(email, PASSWORD);
 
         var response =
                 makeRequest(
-                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+                        Optional.of(new AuthenticateRequest(email, PASSWORD)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(204));
 
@@ -42,13 +42,12 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Test
     public void shouldCallLoginEndpointAndReturn401henUserHasInvalidCredentials() {
-        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        userStore.signUp(email, "wrong-password");
+        String email = buildTestEmail(4);
+        userStore.signUp(email, PASSWORD_BAD);
 
         var response =
                 makeRequest(
-                        Optional.of(new AuthenticateRequest(email, password)), Map.of(), Map.of());
+                        Optional.of(new AuthenticateRequest(email, PASSWORD)), Map.of(), Map.of());
 
         assertThat(response, hasStatus(401));
 
