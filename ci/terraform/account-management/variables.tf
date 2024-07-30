@@ -219,7 +219,7 @@ variable "test_clients_enabled" {
 }
 
 variable "support_email_check_enabled" {
-  default     = false
+  default     = true
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }

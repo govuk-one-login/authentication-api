@@ -57,8 +57,6 @@ orch_frontend_api_gateway_integration_enabled = true
 orch_redirect_uri                  = "https://oidc.sandpit.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled = true
 
-support_email_check_enabled = true
-
 contra_state_bucket = "digital-identity-dev-tfstate"
 
 orch_openid_configuration_enabled    = true
