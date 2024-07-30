@@ -156,14 +156,10 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(200));
         verify(authenticationService)
-                .signUp(
-                        eq(EMAIL),
-                        eq("computer-1"),
-                        any(Subject.class),
-                        any(TermsAndConditions.class));
+                .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
+                        INTERNAL_SUBJECT_ID.getValue(), INTERNAL_SECTOR_HOST, SALT);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
@@ -198,7 +194,7 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(200));
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
-                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
+                        INTERNAL_SUBJECT_ID.getValue(), INTERNAL_SECTOR_HOST, SALT);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
@@ -320,7 +316,7 @@ class SignUpHandlerTest {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withClientName("test-client")
-                .withSectorIdentifierUri("https://test.com")
+                .withSectorIdentifierUri(INTERNAL_SECTOR_URI)
                 .withSubjectType("pairwise");
     }
 }

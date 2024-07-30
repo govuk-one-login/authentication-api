@@ -26,8 +26,10 @@ class UserMigrationServiceTest {
     private UserMigrationService userMigrationService;
     private static final String LEGACY_SUBJECT = "some-subject";
     private static final String LEGACY_PASSWORD_DECRYPTED = buildTestPassword("legacy");
+    private static final String SALT = "0123456789abcdef"; // pragma: allowlist secret
+    private static final String PEPPER = "CUokSd0tqVvM64dEiGNe9-LwZoE"; // pragma: allowlist secret
     private static final String LEGACY_PASSWORD_ENCRYPTED =
-            bcryptEncryptPassword(LEGACY_PASSWORD_DECRYPTED, SALT_16, PEPPER);
+            bcryptEncryptPassword(LEGACY_PASSWORD_DECRYPTED, SALT, PEPPER);
 
     @BeforeEach
     public void setUp() {

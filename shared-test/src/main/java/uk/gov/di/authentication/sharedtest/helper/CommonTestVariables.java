@@ -27,12 +27,6 @@ public class CommonTestVariables {
     public static final String PASSWORD_OLD = buildTestPassword("old");
     public static final String VALID_PASSWORD = "ValidPassword123!"; // pragma: allowlist secret
 
-    public static final String PEPPER = "CUokSd0tqVvM64dEiGNe9-LwZoE"; // pragma: allowlist secret
-    public static final String SALT_16 = "0123456789abcdef"; // pragma: allowlist secret
-
-    public static final String SALT_B64 =
-            "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw="; // pragma: allowlist secret
-
     public static final String IP_ADDRESS = buildNet3Ip(1);
 
     public static final String UK_LANDLINE_NUMBER = "+441234567890";
