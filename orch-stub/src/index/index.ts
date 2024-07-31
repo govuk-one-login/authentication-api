@@ -119,7 +119,7 @@ const signRequestObject = async (
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "ES256" })
     .setIssuer("orchstub")
-    .setAudience("orchstub")
+    .setAudience(process.env.AUTHENTICATION_FRONTEND_URL!!)
     .setNotBefore("-1s")
     .setIssuedAt("-1s")
     .setExpirationTime("2h")
@@ -153,16 +153,23 @@ const setUpSession = async (headers: APIGatewayProxyEventHeaders) => {
 const createNewClientSession = async (id: string) => {
   const client = await getRedisClient();
   const clientSession: ClientSession = {
-    creationTime: new Date(),
-    clientName: "Example RP",
+    creation_time: new Date(),
+    client_name: "Example RP",
+    auth_request_params: {
+      client_id: ["rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"],
+    },
   };
-  await client.set(id, JSON.stringify(clientSession));
+  await client.setEx(
+    `client-session-${id}`,
+    3600,
+    JSON.stringify(clientSession),
+  );
 };
 
 const createNewSession = async (id: string) => {
-  const session: Session = { sessionId: id };
+  const session: Session = { session_id: id };
   const client = await getRedisClient();
-  await client.set(id, JSON.stringify(session));
+  await client.setEx(id, 3600, JSON.stringify(session));
 };
 
 const renameExistingSession = async (
@@ -172,8 +179,8 @@ const renameExistingSession = async (
   const client = await getRedisClient();
   const existingSession = await getSession(existingSessionId);
   await client.del(existingSessionId);
-  existingSession.sessionId = newSessionId;
-  await client.set(newSessionId, JSON.stringify(existingSession));
+  existingSession.session_id = newSessionId;
+  await client.setEx(newSessionId, 3600, JSON.stringify(existingSession));
 };
 
 const attachClientSessionToSession = async (
@@ -183,8 +190,8 @@ const attachClientSessionToSession = async (
   const client = await getRedisClient();
   const session = await getSession(sessionId);
 
-  session.clientSessions ||= [];
-  session.clientSessions.push(clientSessionId);
+  session.client_sessions ||= [];
+  session.client_sessions.push(clientSessionId);
 
-  await client.set(sessionId, JSON.stringify(session));
+  await client.setEx(sessionId, 3600, JSON.stringify(session));
 };
