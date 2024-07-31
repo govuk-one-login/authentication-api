@@ -74,11 +74,6 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.email_check_results_writer_lambda.name
 
   provisioned_concurrent_executions = var.email_check_results_writer_provisioned_concurrency
-
-  lifecycle {
-    ignore_changes = [provisioned_concurrent_executions]
-  }
-
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
