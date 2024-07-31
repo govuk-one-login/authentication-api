@@ -18,7 +18,7 @@ dependencies {
             configurations.sqs,
             configurations.ssm,
             configurations.cloudwatch,
-            "org.eclipse.jetty:jetty-server:11.0.18",
+            "org.eclipse.jetty:jetty-server:12.0.12",
             "com.google.code.gson:gson:2.10.1"
 
     implementation project(":shared")
