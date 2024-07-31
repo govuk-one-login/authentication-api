@@ -8,3 +8,13 @@ confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Environment=\"sandpit\""
 image_repositories = []
+
+[authdev2.deploy.parameters]
+stack_name = "authdev2-orch-stub"
+resolve_s3 = true
+s3_prefix = "authdev2-orch-stub"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"authdev2\""
+image_repositories = []

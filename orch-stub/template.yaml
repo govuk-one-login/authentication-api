@@ -39,6 +39,7 @@ Mappings:
       authenticationBackendUrl: "https://www.example.com/"
       authenticationFrontendUrl: "https://www.example.com/"
       redisUrl: "redis://redis-local:6379"
+      hostedZoneId: placeholder
 
     sandpit:
       domain: .sandpit.account.gov.uk
@@ -62,6 +63,7 @@ Mappings:
       authenticationBackendUrl: "https://48oqh70cm7-vpce-040f33c3489ff777b.execute-api.eu-west-2.amazonaws.com/sandpit/"
       authenticationFrontendUrl: "https://signin.sandpit.account.gov.uk/"
       redisUrl: "{{resolve:secretsmanager:sandpit-orchestration-stub-redis-url::::1e143e9d-8b87-4638-a460-66aaf5f60b2d}}"
+      hostedZoneId: placeholder
 
     authdev2:
       domain: .authdev2.sandpit.account.gov.uk
@@ -85,6 +87,7 @@ Mappings:
       authenticationBackendUrl: "https://gsk0hjohsf-vpce-0a13e281125335a7e.execute-api.eu-west-2.amazonaws.com/authdev2/"
       authenticationFrontendUrl: "https://signin.authdev2.sandpit.account.gov.uk/"
       redisUrl: "{{resolve:secretsmanager:authdev2-orchestration-stub-redis-url::::17471c88-d25a-4e85-b075-5c703ee6db92}}"
+      hostedZoneId: "Z062001013DJY2F0YXEJR"
 
 Resources:
   ApiGateway:
@@ -92,6 +95,8 @@ Resources:
     Properties:
       StageName: Prod
       AlwaysDeploy: true
+      EndpointConfiguration:
+        Type: REGIONAL
 
   IndexFunction:
     Type: AWS::Serverless::Function
@@ -217,3 +222,60 @@ Resources:
           IpProtocol: tcp
           FromPort: 6379
           ToPort: 6379
+
+  GatewayDomain:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: !Sub
+        - "orchstub${domain}"
+        - domain:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      SecurityPolicy: TLS_1_2
+      RegionalCertificateArn: !Ref Certificate
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub
+        - "orchstub${domain}"
+        - domain:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub
+            - "orchstub${domain}"
+            - domain:
+                !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+          HostedZoneId:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              hostedZoneId,
+            ]
+
+  Domain:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, hostedZoneId]
+      Type: A
+      Name: !Sub
+        - "orchstub${domain}"
+        - domain:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      AliasTarget:
+        DNSName: !GetAtt GatewayDomain.RegionalDomainName
+        HostedZoneId: !GetAtt GatewayDomain.RegionalHostedZoneId
+
+  BasePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !Sub
+        - "orchstub${domain}"
+        - domain:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      RestApiId: !Ref ApiGateway
+      Stage: Prod
