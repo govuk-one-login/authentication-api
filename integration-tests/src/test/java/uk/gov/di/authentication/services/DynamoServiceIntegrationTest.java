@@ -85,7 +85,9 @@ class DynamoServiceIntegrationTest {
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
@@ -97,7 +99,9 @@ class DynamoServiceIntegrationTest {
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
@@ -110,7 +114,9 @@ class DynamoServiceIntegrationTest {
 
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
@@ -124,7 +130,9 @@ class DynamoServiceIntegrationTest {
 
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
@@ -379,9 +387,8 @@ class DynamoServiceIntegrationTest {
         userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
     }
 
-    private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {
-        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
-
+    private void assertEmailHasBeenUpdated(
+            UserProfile userProfile, UserCredentials userCredentials) {
         UserProfile updatedUserProfile =
                 dynamoService.getUserProfileByEmailMaybe(UPDATED_TEST_EMAIL).orElseThrow();
 
