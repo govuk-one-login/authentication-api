@@ -62,7 +62,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new VerifyCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler =
+                new VerifyCodeHandler(
+                        REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
+                        redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -273,7 +276,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private static Stream<JourneyType> journeyTypes() {
-        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+        return Stream.of(
+                JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATION);
     }
 
     @ParameterizedTest
@@ -298,7 +302,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(true));
+                equalTo(journeyType != JourneyType.REAUTHENTICATION));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 

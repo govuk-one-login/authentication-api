@@ -47,6 +47,7 @@ module "verify_mfa_code" {
     CODE_MAX_RETRIES_INCREASED          = var.code_max_retries_increased
     REDUCED_LOCKOUT_DURATION            = var.reduced_lockout_duration
     SQS_ENDPOINT                        = var.use_localstack ? "http://localhost:45678/" : null
+    SUPPORT_REAUTH_SIGNOUT_ENABLED      = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
 
