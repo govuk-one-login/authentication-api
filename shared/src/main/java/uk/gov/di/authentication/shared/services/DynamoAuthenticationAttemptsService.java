@@ -9,7 +9,7 @@ import java.util.Optional;
 public class DynamoAuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
 
     public DynamoAuthenticationAttemptsService(ConfigurationService configurationService) {
-        super(AuthenticationAttempts.class, "authentication-attempts", configurationService);
+        super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
     }
 
     public void addCode(
