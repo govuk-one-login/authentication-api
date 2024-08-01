@@ -9,7 +9,9 @@ module "frontend_api_check_reauth_user_role" {
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    module.oidc_txma_audit.access_policy_arn
+    module.oidc_txma_audit.access_policy_arn,
+    local.client_registry_encryption_policy_arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn
   ]
 }
 
@@ -56,7 +58,7 @@ module "check_reauth_user" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_orch_auth_code_role.arn
+  lambda_role_arn                        = module.frontend_api_check_reauth_user_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
