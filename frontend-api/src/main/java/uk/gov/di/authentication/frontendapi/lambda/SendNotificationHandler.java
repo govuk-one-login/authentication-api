@@ -371,7 +371,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     newCodeRequestBlockPrefix);
             if (!configurationService.supportReauthSignoutEnabled()) {
                 codeStorageService.saveBlockedForEmail(
-                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
+                        email,
+                        newCodeRequestBlockPrefix,
+                        configurationService.getLockoutDuration());
             }
 
             LOG.info("Resetting code request count");
