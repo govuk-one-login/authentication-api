@@ -85,6 +85,18 @@ const post = async (
 };
 
 const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
+  const claim = {
+    userinfo: {
+      salt: "",
+      email: "",
+      email_verified: "",
+      phone_number: "",
+      phone_number_verified: "",
+      local_account_id: "",
+      public_account_id: "",
+      legacy_account_id: "",
+    },
+  };
   let payload: JWTPayload = {
     rp_client_id: process.env.RP_CLIENT_ID,
     rp_sector_host: "a.example.com",
@@ -100,9 +112,7 @@ const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
     client_id: "orchstub",
     redirect_uri:
       "https://orchstub.authdev2.sandpit.account.gov.uk/orchestration-redirect",
-    claims: {
-      salt: null,
-    },
+    claim: JSON.stringify(claim),
   };
   if (form["reauthenticate"] !== "") {
     payload["reauthenticate"] = form["reauthenticate"];
