@@ -48,7 +48,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void getOrGenerateSaltShouldReturnNewSaltWhenUserDoesNotHaveOne() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         UserProfile userProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
         byte[] salt = dynamoService.getOrGenerateSalt(userProfile);
@@ -62,7 +62,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void getOrGenerateSaltShouldReturnExistingSaltWhenOneExists() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         byte[] existingSalt = userStore.addSalt(TEST_EMAIL);
 
         UserProfile userProfile =
@@ -77,13 +77,9 @@ class DynamoServiceIntegrationTest {
                 equalTo(SdkBytes.fromByteBuffer(savedProfile.getSalt()).asByteArray()));
     }
 
-    private void setUpDynamo() {
-        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-    }
-
     @Test
     void shouldUpdateEmailAndDeletePreviousItems() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
         UserProfile userProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
@@ -94,7 +90,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithAccountVerified() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.setAccountVerified(TEST_EMAIL);
 
         UserProfile userProfile =
@@ -106,7 +102,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithSalt() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         userStore.addSalt(TEST_EMAIL);
 
         UserProfile userProfile =
@@ -119,7 +115,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithMfaMethods() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, false, true, TEST_MFA_APP_CREDENTIAL);
@@ -133,7 +129,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldAddAuthAppMFAMethod() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         UserCredentials updatedUserCredentials =
@@ -150,7 +146,7 @@ class DynamoServiceIntegrationTest {
     @Test
     void
             shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
@@ -171,7 +167,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetSetPhoneNumberAndAccountVerifiedWhenMfaMethodDoesNotExists() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, "+4407316763843", true, true);
         var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
@@ -185,7 +181,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetAccountAndAuthVerifiedToTrue() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
         dynamoService.setAuthAppAndAccountVerified(TEST_EMAIL, TEST_MFA_APP_CREDENTIAL);
 
@@ -203,7 +199,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedPhoneNumberAndRemoveAuthAppWhenPresent() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.setAccountVerified(TEST_EMAIL);
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
@@ -220,7 +216,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedPhoneNumberAndReplaceExistingPhoneNumber() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
@@ -236,7 +232,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedAuthAppAndRemovePhoneNumberWhenPresent() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
@@ -257,7 +253,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedAuthAppAndRemoveExistingAuthAppWhenPresent() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.setAccountVerified(TEST_EMAIL);
