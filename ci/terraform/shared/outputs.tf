@@ -248,3 +248,7 @@ output "identity_credentials_encryption_key_arn" {
 output "user_profile_kms_key_arn" {
   value = aws_kms_key.user_profile_table_encryption_key.arn
 }
+
+output "authentication_attempt_kms_key_arn" {
+  value = aws_kms_key.authentication_attempt_encryption_key.arn
+}
