@@ -86,7 +86,7 @@ const post = async (
 
 const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
   let payload: JWTPayload = {
-    rp_client_id: "a",
+    rp_client_id: process.env.RP_CLIENT_ID,
     rp_sector_host: "a.example.com",
     rp_redirect_uri: "https://a.example.com/redirect",
     rp_state: "state",
@@ -166,7 +166,7 @@ const createNewClientSession = async (id: string) => {
       state: ["dwG_gAlpIuRK-6FKReKEnoNUZdwgy8BUxYKUaXmIXeY"],
       prompt: ["none"],
       nonce: ["AJYiGSXv6euaffiuG5jMNgCwQW0ne7yuqDR9PrjsuvQ"],
-      client_id: ["rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"],
+      client_id: [process.env.RP_CLIENT_ID!!],
     },
     effective_vector_of_trust: {
       credential_trust_level: "Cl.Cm",

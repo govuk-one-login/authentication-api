@@ -40,6 +40,7 @@ Mappings:
       authenticationFrontendUrl: "https://www.example.com/"
       redisUrl: "redis://redis-local:6379"
       hostedZoneId: placeholder
+      rpClientId: "rpclient"
 
     sandpit:
       domain: .sandpit.account.gov.uk
@@ -64,6 +65,7 @@ Mappings:
       authenticationFrontendUrl: "https://signin.sandpit.account.gov.uk/"
       redisUrl: "{{resolve:secretsmanager:sandpit-orchestration-stub-redis-url::::1e143e9d-8b87-4638-a460-66aaf5f60b2d}}"
       hostedZoneId: placeholder
+      rpClientId: "1Dlz5rYheTqzZASRMmSBtgFIYgZlysnQ"
 
     authdev2:
       domain: .authdev2.sandpit.account.gov.uk
@@ -88,6 +90,7 @@ Mappings:
       authenticationFrontendUrl: "https://signin.authdev2.sandpit.account.gov.uk/"
       redisUrl: "{{resolve:secretsmanager:authdev2-orchestration-stub-redis-url::::17471c88-d25a-4e85-b075-5c703ee6db92}}"
       hostedZoneId: "Z062001013DJY2F0YXEJR"
+      rpClientId: "rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"
 
 Resources:
   ApiGateway:
@@ -128,6 +131,8 @@ Resources:
               !Ref Environment,
               authenticationFrontendUrl,
             ]
+          RP_CLIENT_ID:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, rpClientId]
       Architectures:
         - arm64
       Events:
