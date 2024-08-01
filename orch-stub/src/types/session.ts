@@ -4,7 +4,7 @@ export type Session = {
   email_address?: string;
   retry_count?: number;
   password_reset_count?: number;
-  code_request_count_map?: { string: number };
+  code_request_count_map?: { [key: string]: number };
   current_credential_strength?: string;
   is_new_account?: string;
   authenticated?: boolean;

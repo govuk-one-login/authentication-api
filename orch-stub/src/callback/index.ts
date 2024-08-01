@@ -4,8 +4,8 @@ import { JWTPayload } from "jose";
 import * as jose from "jose";
 import { getPrivateKey } from "../utils/key";
 
-const TOKEN_URL = `${process.env.AUTHENTICATION_BACKEND_URL}/token`;
-const USER_INFO_URL = `${process.env.AUTHENTICATION_BACKEND_URL}/userinfo`;
+const TOKEN_URL = `${process.env.AUTHENTICATION_BACKEND_URL}token`;
+const USER_INFO_URL = `${process.env.AUTHENTICATION_BACKEND_URL}userinfo`;
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -70,15 +70,18 @@ const buildClientAssertion = async () => {
 
 const getToken = async (authCode: string, clientAssertion: string) => {
   const tokenUrl = new URL(TOKEN_URL);
-  tokenUrl.searchParams.set("grant_type", "authorization_code");
-  tokenUrl.searchParams.set("code", authCode);
-  tokenUrl.searchParams.set(
-    "client_assertion_type",
-    "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-  );
-  tokenUrl.searchParams.set("client_assertion", clientAssertion);
 
-  const response = await fetch(tokenUrl);
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    code: authCode,
+    client_assertion_type:
+      "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    client_assertion: clientAssertion,
+    redirect_uri: "",
+    client_id: "orchstub",
+  });
+
+  const response = await fetch(tokenUrl, { method: "POST", body });
   if (!response.ok) {
     throw new Error(
       `Error while fetching token. Status code: ${response.status} Message: ${await response.text()}`,

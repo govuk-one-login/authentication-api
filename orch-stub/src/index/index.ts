@@ -95,10 +95,11 @@ const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
     is_one_login_service: false,
     service_type: "essential",
     govuk_signin_journey_id: journeyId,
-    confidence: "Cl",
+    confidence: "Cl.Cm",
     state: "3",
     client_id: "orchstub",
-    redirect_uri: "http://localhost:3000/callback",
+    redirect_uri:
+      "https://orchstub.authdev2.sandpit.account.gov.uk/orchestration-redirect",
     claims: {
       salt: null,
     },
@@ -156,7 +157,19 @@ const createNewClientSession = async (id: string) => {
     creation_time: new Date(),
     client_name: "Example RP",
     auth_request_params: {
+      vtr: ["[Cl.Cm]"],
+      scope: ["openid email phone"],
+      response_type: ["code"],
+      redirect_uri: [
+        "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      ],
+      state: ["dwG_gAlpIuRK-6FKReKEnoNUZdwgy8BUxYKUaXmIXeY"],
+      prompt: ["none"],
+      nonce: ["AJYiGSXv6euaffiuG5jMNgCwQW0ne7yuqDR9PrjsuvQ"],
       client_id: ["rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"],
+    },
+    effective_vector_of_trust: {
+      credential_trust_level: "Cl.Cm",
     },
   };
   await client.setEx(
@@ -167,7 +180,7 @@ const createNewClientSession = async (id: string) => {
 };
 
 const createNewSession = async (id: string) => {
-  const session: Session = { session_id: id };
+  const session: Session = { session_id: id, code_request_count_map: {} };
   const client = await getRedisClient();
   await client.setEx(id, 3600, JSON.stringify(session));
 };
