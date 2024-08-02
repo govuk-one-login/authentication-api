@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: 2c9f875913ee60ca25ce70243dc24d5b6415598c # v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -9,50 +9,40 @@ repos:
       - id: check-executables-have-shebangs
 
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v0.86.2
+    rev: b16d6b4ce0796020a0ad5ee1c56453fde6079f2b # v1.9.3
     hooks:
       - id: cfn-python-lint
-        exclude: ^(ci|.github|.sonarlint)/.*|docker-compose.*|.pre-commit-config.yaml|.*.approved.json|checkov-policies.*$
+        exclude: ^(ci|.github|.sonarlint)/.*|docker-compose.*|.pre-commit-config.yaml|.*.approved.json|checkov-policies.*|.*/pacts/.*.json$
 
-  - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
-    rev: 0.0.1
+  - repo: local
     hooks:
       - id: gradle-spotless-apply
-      - id: terraform-format
-      - id: terraform-validate
+        name: Run Gradle Spotless Apply
+        language: script
+        entry: ./scripts/pre-commit__spotless-apply.sh
+        types_or:
+          - java
+          - groovy
+          - yaml
+          - markdown
+          - json
+        pass_filenames: false
+        require_serial: true
 
-  - repo: https://github.com/pylint-dev/pylint
-    rev: "v3.2.2"
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: debe478691c6711d19679b9973309e19368e79b6 # v1.92.1
     hooks:
-      - id: pylint
+      - id: terraform_validate
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+      - id: terraform_fmt
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: "7.0.0"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 1ee2e387938ec90ec10a64f85fc0b4be527ade6a # v0.5.5
     hooks:
-      - id: flake8
-        additional_dependencies:
-          - "Flake8-pyproject"
-
-  - repo: https://github.com/psf/black
-    rev: "24.4.2"
-    hooks:
-      - id: black
-
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.13.2"
-    hooks:
-      - id: isort
-
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff # v0.10.0.1 # pragma: allowlist secret
-    hooks:
-      - id: shellcheck
-        exclude: ./gradlew|./pre-commit.sh
-
-  - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.0
-    hooks:
-      - id: actionlint
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
 
   - repo: local
     hooks:
@@ -62,19 +52,25 @@ repos:
         additional_dependencies:
           - mvdan.cc/sh/v3/cmd/shfmt@v3.8.0
         entry: shfmt
+        args: ["-w", "-s", "-l"]
         types:
           - file
           - shell
         exclude_types:
           - zsh
-        args:
-          - -w # write
-          - -s # simplify
-          - -l # list files that differ
-      - id: prettier
-        name: Run prettier
-        language: node
-        types: [text]
-        entry: prettier --write --ignore-unknown
-        additional_dependencies: ["prettier@^3.3.2"]
-        pass_filenames: true
+        exclude: ^gradlew$
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff # v0.10.0.1
+    hooks:
+      - id: shellcheck
+        exclude: ^gradlew$
+
+  - repo: https://github.com/lalten/check-gha-pinning
+    rev: 225deee5dff16fae532978007ce6e37045e14c68 # v1.3.0
+    hooks:
+      - id: check-gha-pinning
+  - repo: https://github.com/rhysd/actionlint
+    rev: 62dc61a45fc95efe8c800af7a557ab0b9165d63b # v1.7.1
+    hooks:
+      - id: actionlint
