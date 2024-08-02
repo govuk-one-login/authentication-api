@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -81,6 +82,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final AuditService auditService;
 
     public SendNotificationHandler(
@@ -93,6 +95,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             AwsSqsClient pendingEmailCheckSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
+            DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService) {
         super(
                 SendNotificationRequest.class,
@@ -105,6 +108,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
+        this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
     }
 
@@ -122,6 +126,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
@@ -140,6 +146,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
@@ -157,6 +165,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
@@ -291,25 +301,31 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         if (configurationService.isEmailCheckEnabled()
                 && notificationType == NotificationType.VERIFY_EMAIL
                 && request.getJourneyType() == JourneyType.REGISTRATION) {
-            String sessionId = userContext.getSession().getSessionId();
-            String clientSessionId = userContext.getClientSessionId();
-            String persistentSessionId =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-            pendingEmailCheckSqsClient.send(
-                    objectMapper.writeValueAsString(
-                            new PendingEmailCheckRequest(
-                                    AuditService.UNKNOWN,
-                                    UUID.randomUUID(),
-                                    destination,
-                                    sessionId,
-                                    clientSessionId,
-                                    persistentSessionId,
-                                    IpAddressHelper.extractIpAddress(input),
-                                    JourneyType.REGISTRATION,
-                                    NowHelper.now().toInstant().getEpochSecond(),
-                                    testClientWithAllowedEmail)));
-            LOG.info("PendingEmailCheckRequest enqueued");
+            var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(destination);
+            if (emailCheckResult.isEmpty()) {
+                String sessionId = userContext.getSession().getSessionId();
+                String clientSessionId = userContext.getClientSessionId();
+                String persistentSessionId =
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+                pendingEmailCheckSqsClient.send(
+                        objectMapper.writeValueAsString(
+                                new PendingEmailCheckRequest(
+                                        AuditService.UNKNOWN,
+                                        UUID.randomUUID(),
+                                        destination,
+                                        sessionId,
+                                        clientSessionId,
+                                        persistentSessionId,
+                                        IpAddressHelper.extractIpAddress(input),
+                                        JourneyType.REGISTRATION,
+                                        NowHelper.now().toInstant().getEpochSecond(),
+                                        testClientWithAllowedEmail)));
+                LOG.info("Email address check requested");
+            } else {
+                LOG.info("Skipped request for new email address check. Result already cached");
+            }
         }
 
         if (!testClientWithAllowedEmail) {
