@@ -17,12 +17,14 @@ public class MFAMethod {
     public static final String ATTRIBUTE_ENABLED = "Enabled";
     public static final String ATTRIBUTE_METHOD_VERIFIED = "MethodVerified";
     public static final String ATTRIBUTE_UPDATED = "Updated";
+    public static final String ATTRIBUTE_DESTINATION = "Destination";
 
     private String mfaMethodType;
     private String credentialValue;
     private boolean methodVerified;
     private boolean enabled;
     private String updated;
+    private String destination;
 
     public MFAMethod() {}
 
@@ -36,6 +38,19 @@ public class MFAMethod {
         this.credentialValue = credentialValue;
         this.methodVerified = methodVerified;
         this.enabled = enabled;
+        this.updated = updated;
+    }
+
+    public MFAMethod(
+            String mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String destination,
+            String updated) {
+        this.mfaMethodType = mfaMethodType;
+        this.methodVerified = methodVerified;
+        this.enabled = enabled;
+        this.destination = destination;
         this.updated = updated;
     }
 
@@ -64,6 +79,20 @@ public class MFAMethod {
 
     public MFAMethod withCredentialValue(String credentialValue) {
         this.credentialValue = credentialValue;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_DESTINATION)
+    public String getDestination() {
+        return destination;
+    }
+
+    public void setDestination(String destination) {
+        this.destination = destination;
+    }
+
+    public MFAMethod withDestination(String destination) {
+        this.destination = destination;
         return this;
     }
 
@@ -136,7 +165,8 @@ public class MFAMethod {
                 && Objects.equals(credentialValue, that.credentialValue)
                 && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
-                && Objects.equals(updated, that.updated);
+                && Objects.equals(updated, that.updated)
+                && Objects.equals(destination, that.destination);
     }
 
     @Override

@@ -1,11 +1,15 @@
 package uk.gov.di.authentication.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -139,6 +143,45 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
         assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+    }
+
+    @Nested
+    class AddMFAMethodSupportingMultipleTests {
+        @BeforeEach
+        void setup() {
+            userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        }
+
+        @Test
+        void shouldAddAuthAppMFAMethodWhenNoOtherMethodExists() {
+            var data = new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, data);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
+            var mfaMethod = userCredentials.getMfaMethods().get(0);
+            assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+            assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+            assertThat(mfaMethod.isEnabled(), equalTo(true));
+            assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        }
+
+        @Test
+        void shouldAddSmsMFAMethodWhenNoOtherDefaultExists() {
+            var data = new SmsMfaData(PHONE_NUMBER, true, true);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, data);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
+            var mfaMethod = userCredentials.getMfaMethods().get(0);
+            assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
+            assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+            assertThat(mfaMethod.isEnabled(), equalTo(true));
+            assertThat(mfaMethod.getCredentialValue(), equalTo(null));
+            assertThat(mfaMethod.getDestination(), equalTo(PHONE_NUMBER));
+        }
     }
 
     @Test

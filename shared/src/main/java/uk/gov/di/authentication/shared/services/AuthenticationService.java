@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -71,6 +72,8 @@ public interface AuthenticationService {
             boolean methodVerified,
             boolean enabled,
             String credentialValue);
+
+    void addMFAMethodSupportingMultiple(String email, MfaData mfaData);
 
     void setAuthAppAndAccountVerified(String email, String credentialValue);
 
