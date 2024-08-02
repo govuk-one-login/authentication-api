@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.MfaData;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -155,20 +157,19 @@ class DynamoServiceIntegrationTest {
         }
 
         private SmsMfaData defaultPrioritySmsData =
-                new SmsMfaData(PHONE_NUMBER, true, true, "DEFAULT");
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT);
         private SmsMfaData backupPrioritySmsData =
-                new SmsMfaData(PHONE_NUMBER, true, true, "BACKUP");
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP);
         private AuthAppMfaData defaultPriorityAuthAppData =
-                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, "DEFAULT");
+                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT);
         private AuthAppMfaData backupAuthAppData =
-                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, "BACKUP");
+                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.BACKUP);
 
         private MFAMethod findMethodWithPriority(
                 String priority, List<MFAMethod> retrievedMethods) {
-            return retrievedMethods.stream()
-                    .filter(method -> Objects.equals(method.getPriority(), priority))
-                    .findFirst()
-                    .get();
+            Predicate<MFAMethod> findCondition =
+                    (MFAMethod method) -> Objects.equals(method.getPriority(), priority);
+            return retrievedMethods.stream().filter(findCondition).findFirst().get();
         }
 
         private void assertBackupAndDefaultMfaMethodsWithData(
@@ -199,7 +200,7 @@ class DynamoServiceIntegrationTest {
             assertThat(retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
             assertThat(retrievedMethod.isMethodVerified(), equalTo(expectedData.verified()));
             assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
-            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority()));
+            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority().toString()));
             assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
         }
 
@@ -210,7 +211,7 @@ class DynamoServiceIntegrationTest {
             assertThat(retrievedMethod.isMethodVerified(), equalTo(expectedData.verified()));
             assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
             assertThat(retrievedMethod.getCredentialValue(), equalTo(expectedData.credential()));
-            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority()));
+            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority().toString()));
             assertThat(retrievedMethod.getDestination(), equalTo(null));
         }
 

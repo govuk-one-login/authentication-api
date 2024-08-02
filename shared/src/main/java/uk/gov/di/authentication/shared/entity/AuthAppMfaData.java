@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
-public record AuthAppMfaData(String credential, boolean verified, boolean enabled, String priority)
+public record AuthAppMfaData(
+        String credential, boolean verified, boolean enabled, PriorityIdentifier priority)
         implements MfaData {
     @Override
     public MFAMethod toDatabaseRecord(String updated) {
