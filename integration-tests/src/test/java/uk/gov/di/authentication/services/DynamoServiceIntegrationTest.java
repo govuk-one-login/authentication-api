@@ -6,8 +6,9 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaMethod;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -23,6 +24,7 @@ import java.util.Set;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DynamoServiceIntegrationTest {
 
@@ -140,7 +142,8 @@ class DynamoServiceIntegrationTest {
                 dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
-        MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        AuthAppMfaMethod mfaMethod =
+                (AuthAppMfaMethod) updatedUserCredentials.getMfaMethods().get(0);
         assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
@@ -159,7 +162,7 @@ class DynamoServiceIntegrationTest {
         var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
-        MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        var mfaMethod = (AuthAppMfaMethod) updatedUserCredentials.getMfaMethods().get(0);
         assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(false));
@@ -193,7 +196,7 @@ class DynamoServiceIntegrationTest {
         var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
-        var mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        var mfaMethod = (AuthAppMfaMethod) updatedUserCredentials.getMfaMethods().get(0);
         assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(true));
@@ -245,11 +248,12 @@ class DynamoServiceIntegrationTest {
 
         var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
         var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-        List<MFAMethod> mfaMethods = updatedUserCredentials.getMfaMethods();
+        List<MfaMethod> mfaMethods = updatedUserCredentials.getMfaMethods();
         assertThat(mfaMethods.size(), equalTo(1));
-        assertThat(mfaMethods.get(0).isMethodVerified(), equalTo(true));
-        assertThat(mfaMethods.get(0).isEnabled(), equalTo(true));
-        assertThat(mfaMethods.get(0).getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        var method = (AuthAppMfaMethod) mfaMethods.get(0);
+        assertThat(method.isMethodVerified(), equalTo(true));
+        assertThat(method.isEnabled(), equalTo(true));
+        assertThat(method.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserProfile.getPhoneNumber(), equalTo(null));
         assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(false));
@@ -267,13 +271,14 @@ class DynamoServiceIntegrationTest {
 
         var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
         var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-        List<MFAMethod> mfaMethods = updatedUserCredentials.getMfaMethods();
+        List<MfaMethod> mfaMethods = updatedUserCredentials.getMfaMethods();
         assertThat(mfaMethods.size(), equalTo(1));
-        assertThat(mfaMethods.get(0).isMethodVerified(), equalTo(true));
-        assertThat(mfaMethods.get(0).isEnabled(), equalTo(true));
+        assertTrue(mfaMethods.get(0) instanceof AuthAppMfaMethod);
+        var authAppMethod = (AuthAppMfaMethod) mfaMethods.get(0);
+        assertThat(authAppMethod.isMethodVerified(), equalTo(true));
+        assertThat(authAppMethod.isEnabled(), equalTo(true));
         assertThat(
-                mfaMethods.get(0).getCredentialValue(),
-                equalTo(ALTERNATIVE_TEST_MFA_APP_CREDENTIAL));
+                authAppMethod.getCredentialValue(), equalTo(ALTERNATIVE_TEST_MFA_APP_CREDENTIAL));
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserProfile.getPhoneNumber(), equalTo(null));
         assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(false));

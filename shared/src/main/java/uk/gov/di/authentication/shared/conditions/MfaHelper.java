@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.conditions;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.entity.UserMfaDetail;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -32,10 +32,15 @@ public class MfaHelper {
         return !vectorOfTrust.getCredentialTrustLevel().equals(LOW_LEVEL);
     }
 
-    public static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
-        return Optional.ofNullable(userCredentials.getMfaMethods())
-                .flatMap(
-                        mfaMethods -> mfaMethods.stream().filter(MFAMethod::isEnabled).findFirst());
+    public static Optional<AuthAppMfaMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
+        var maybeMfaMethods = Optional.ofNullable(userCredentials.getMfaMethods());
+        return maybeMfaMethods.flatMap(
+                mfaMethods ->
+                        mfaMethods.stream()
+                                .filter(t -> t instanceof AuthAppMfaMethod)
+                                .map(t -> (AuthAppMfaMethod) t)
+                                .filter(AuthAppMfaMethod::isEnabled)
+                                .findFirst());
     }
 
     public static UserMfaDetail getUserMFADetail(
@@ -48,7 +53,7 @@ public class MfaHelper {
         var mfaMethodType = isPhoneNumberVerified ? MFAMethodType.SMS : MFAMethodType.NONE;
 
         var mfaMethod = getPrimaryMFAMethod(userCredentials);
-        if (mfaMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
+        if (mfaMethod.filter(AuthAppMfaMethod::isMethodVerified).isPresent()) {
             mfaMethodVerified = true;
             mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
         } else if (!isPhoneNumberVerified && mfaMethod.isPresent()) {

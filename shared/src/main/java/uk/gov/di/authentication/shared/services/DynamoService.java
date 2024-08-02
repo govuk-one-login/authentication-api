@@ -16,7 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
@@ -395,7 +395,8 @@ public class DynamoService implements AuthenticationService {
                                 mf.stream()
                                         .filter(
                                                 method ->
-                                                        method.getMfaMethodType()
+                                                        method instanceof AuthAppMfaMethod
+                                                                && method.getMfaMethodType()
                                                                         .equals(
                                                                                 MFAMethodType
                                                                                         .AUTH_APP
@@ -405,8 +406,10 @@ public class DynamoService implements AuthenticationService {
                                         .findFirst())
                 .ifPresent(
                         t -> {
+                            AuthAppMfaMethod authAppMfaMethod = (AuthAppMfaMethod) t;
                             userCredentials
-                                    .removeAuthAppByCredentialIfPresent(t.getCredentialValue())
+                                    .removeAuthAppByCredentialIfPresent(
+                                            authAppMfaMethod.getCredentialValue())
                                     .withUpdated(dateTime);
                             transactWriteBuilder.addUpdateItem(
                                     dynamoUserCredentialsTable, userCredentials);
@@ -433,8 +436,8 @@ public class DynamoService implements AuthenticationService {
             boolean enabled,
             String credentialValue) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
-        MFAMethod mfaMethod =
-                new MFAMethod(
+        AuthAppMfaMethod mfaMethod =
+                new AuthAppMfaMethod(
                         MFAMethodType.AUTH_APP.getValue(),
                         credentialValue,
                         methodVerified,
@@ -453,7 +456,7 @@ public class DynamoService implements AuthenticationService {
     public void setAuthAppAndAccountVerified(String email, String credentialValue) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var mfaMethod =
-                new MFAMethod(
+                new AuthAppMfaMethod(
                         MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
         var userCredentials =
                 dynamoUserCredentialsTable
@@ -483,7 +486,7 @@ public class DynamoService implements AuthenticationService {
     public void setVerifiedAuthAppAndRemoveExistingMfaMethod(String email, String credentialValue) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var mfaMethod =
-                new MFAMethod(
+                new AuthAppMfaMethod(
                         MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
         var userCredentials =
                 dynamoUserCredentialsTable

@@ -13,8 +13,8 @@ import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaMethod;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -197,8 +197,8 @@ public class StartService {
                 .filter(Objects::nonNull)
                 .filter(not(List::isEmpty))
                 .flatMap(Collection::stream)
-                .filter(MFAMethod::isMethodVerified)
-                .map(MFAMethod::getMfaMethodType)
+                .filter(MfaMethod::isMethodVerified)
+                .map(MfaMethod::getMfaMethodType)
                 .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);
     }
 

@@ -11,8 +11,9 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaMethod;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -183,9 +184,9 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
         if (isAuthAppSecondAuthFactor) {
             String authAppSecret = testUser[5];
-            List<MFAMethod> mfaMethods = new ArrayList<>();
+            List<MfaMethod> mfaMethods = new ArrayList<>();
             var authAppMfaMethod =
-                    new MFAMethod(
+                    new AuthAppMfaMethod(
                             MFAMethodType.AUTH_APP.getValue(), authAppSecret, true, true, dateTime);
             mfaMethods.add(authAppMfaMethod);
             userCredentials.setMfaMethods(mfaMethods);

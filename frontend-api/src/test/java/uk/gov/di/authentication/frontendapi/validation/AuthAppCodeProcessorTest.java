@@ -10,11 +10,12 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaMethod;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaMethod;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -360,11 +361,11 @@ class AuthAppCodeProcessorTest {
         when(mockConfigurationService.getAuthAppCodeWindowLength()).thenReturn(30);
 
         UserCredentials mockUserCredentials = mock(UserCredentials.class);
-        MFAMethod mockMfaMethod = mock(MFAMethod.class);
+        AuthAppMfaMethod mockMfaMethod = mock(AuthAppMfaMethod.class);
         when(mockMfaMethod.getMfaMethodType()).thenReturn(MFAMethodType.AUTH_APP.getValue());
         when(mockMfaMethod.getCredentialValue()).thenReturn(AUTH_APP_SECRET);
         when(mockMfaMethod.isEnabled()).thenReturn(true);
-        List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
+        List<MfaMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
         when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
                 .thenReturn(mockUserCredentials);

@@ -2,8 +2,10 @@ package uk.gov.di.authentication.shared.entity;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import uk.gov.di.authentication.shared.dynamodb.MfaMethodListConverter;
 
 import java.util.List;
 
@@ -25,7 +27,7 @@ public class UserCredentials {
     private String created;
     private String updated;
     private String migratedPassword;
-    private List<MFAMethod> mfaMethods;
+    private List<MfaMethod> mfaMethods;
     private int testUser;
 
     public UserCredentials() {}
@@ -65,7 +67,7 @@ public class UserCredentials {
         this.migratedPassword = migratedPassword;
     }
 
-    public void setMfaMethods(List<MFAMethod> mfaMethods) {
+    public void setMfaMethods(List<MfaMethod> mfaMethods) {
         this.mfaMethods = mfaMethods;
     }
 
@@ -121,16 +123,17 @@ public class UserCredentials {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHODS)
-    public List<MFAMethod> getMfaMethods() {
+    @DynamoDbConvertedBy(MfaMethodListConverter.class)
+    public List<MfaMethod> getMfaMethods() {
         return mfaMethods;
     }
 
-    public UserCredentials withMfaMethods(List<MFAMethod> mfaMethods) {
+    public UserCredentials withMfaMethods(List<MfaMethod> mfaMethods) {
         this.mfaMethods = mfaMethods;
         return this;
     }
 
-    public UserCredentials setMfaMethod(MFAMethod mfaMethod) {
+    public UserCredentials setMfaMethod(MfaMethod mfaMethod) {
         if (this.mfaMethods == null) {
             this.mfaMethods = List.of(mfaMethod);
         } else {
@@ -145,7 +148,12 @@ public class UserCredentials {
         if (this.mfaMethods == null) {
             return this;
         } else {
-            this.mfaMethods.removeIf(t -> t.getCredentialValue().equals(authAppCredential));
+            this.mfaMethods.removeIf(
+                    t ->
+                            t instanceof AuthAppMfaMethod
+                                    && ((AuthAppMfaMethod) t)
+                                            .getCredentialValue()
+                                            .equals(authAppCredential));
             return this;
         }
     }
