@@ -30,3 +30,4 @@ logs/
 /*/src/test/pact/
 node_modules
 .infracost
+.ruff_cache
