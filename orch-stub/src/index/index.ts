@@ -15,6 +15,7 @@ import { getRedisClient, getSession } from "../services/redis";
 import { ClientSession } from "../types/client-session";
 import * as process from "node:process";
 import { getPrivateKey } from "../utils/key";
+import { renderGovukPage } from "../utils/page";
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -37,21 +38,33 @@ export const handler = async (
 };
 
 const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
-  const form = `<html>
-<body><h1>Hello world</h1>
-<form method='post'>
-    <label for="reauthenticate">Reauthenticate (RP pairwise ID)</label>
-    <input name="reauthenticate" id="reauthenticate">
-    <button>submit</button>
+  const form = `<form method='post'>
+    <label for="reauthenticate" class="govuk-label">Reauthenticate (RP pairwise ID)</label>
+    <input name="reauthenticate" id="reauthenticate" class="govuk-input">
+    <label for="level" class="govuk-label">Credential Trust Level</label>
+    <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
+        <div class="govuk-radios__item">
+            <input class="govuk-radios__input" id="level" name="level" type="radio" value="medium" checked>
+            <label class="govuk-label govuk-radios__label" for="level">
+                Cl.Cm (2FA)
+            </label>
+        </div>
+        <div class="govuk-radios__item">
+            <input class="govuk-radios__input" id="level-2" name="level" type="radio" value="low">
+            <label class="govuk-label govuk-radios__label" for="level-2">
+                Cl (No 2FA)
+            </label>
+        </div>
+    </div>
+    <button class="govuk-button">Submit</button>
 </form>
-</body>
-</html>`;
+`;
   return {
     statusCode: 200,
     headers: {
       "Content-Type": "text/html",
     },
-    body: form,
+    body: renderGovukPage(form),
   };
 };
 
