@@ -1,20 +1,5 @@
-[tool.pylint]
-max-line-length = "88"
-disable = '''missing-module-docstring,
-        missing-class-docstring,
-        missing-function-docstring,
-        invalid-name,
-        too-few-public-methods,
-        too-many-branches
-        '''
-ignore = ".venv"
+[tool.ruff]
+line-length = 88
+indent-width = 4
 
-[tool.pylint.main]
-load-plugins = "pylint_actions"
-
-[tool.flake8]
-max-line-length = "88"
-extend-ignore = ["E203", "E701"]
-
-[tool.isort]
-profile = "black"
+target-version = "py310"
