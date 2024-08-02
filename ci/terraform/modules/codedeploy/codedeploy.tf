@@ -84,3 +84,22 @@ EOT
   }
 
 }
+
+# ----------------------------------------------------------
+# notify deployment Failure
+# ----------------------------------------------------------
+
+data "aws_cloudformation_export" "notifications" {
+  name = "${var.environment}-notifications-BuildNotificationTopicArn"
+}
+resource "aws_codestarnotifications_notification_rule" "auth" {
+  detail_type    = "BASIC"
+  event_type_ids = ["codedeploy-application-deployment-failed"]
+
+  name     = replace("${var.environment}-${var.endpoint_name}-notify", ".", "")
+  resource = aws_codedeploy_app.auth.arn
+
+  target {
+    address = data.aws_cloudformation_export.notifications.value
+  }
+}
