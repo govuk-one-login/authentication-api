@@ -47,14 +47,7 @@ public class AuthoriseAccessTokenHandler
     }
 
     public AuthoriseAccessTokenHandler() {
-        configurationService = ConfigurationService.getInstance();
-        tokenValidationService =
-                new TokenValidationService(
-                        new JwksService(
-                                configurationService,
-                                new KmsConnectionService(configurationService)),
-                        configurationService);
-        clientService = new DynamoClientService(configurationService);
+        this(ConfigurationService.getInstance());
     }
 
     public AuthoriseAccessTokenHandler(ConfigurationService configurationService) {
