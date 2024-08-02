@@ -1,15 +1,16 @@
 package uk.gov.di.orchestration.sharedtest.extensions;
 
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.testcontainers.Testcontainers;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.CreateTopicRequest;
 import software.amazon.awssdk.services.sns.model.SubscribeRequest;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
-import java.net.URI;
 import java.security.SecureRandom;
 
 import static java.text.MessageFormat.format;
@@ -18,11 +19,8 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 
-public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCallback {
-
-    protected static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
-    protected static final String LOCALSTACK_ENDPOINT =
-            System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
+public class SnsTopicExtension extends BaseAwsResourceExtension
+        implements BeforeEachCallback, AfterAllCallback {
 
     private final String topicNameSuffix;
     private final SnsClient snsClient;
@@ -34,16 +32,19 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
         this.topicNameSuffix = topicNameSuffix;
         this.snsClient =
                 SnsClient.builder()
-                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
-                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                        .endpointOverride(LOCALSTACK_ENDPOINT)
+                        .credentialsProvider(LOCALSTACK_CREDENTIALS_PROVIDER)
                         .region(Region.of(REGION))
                         .build();
     }
 
+    @RegisterExtension protected static final HttpStubExtension httpStub = new HttpStubExtension();
+
     @Override
     @java.lang.SuppressWarnings("java:S2245")
     public void beforeEach(ExtensionContext context) {
-        startStub();
+        httpStub.startStub();
+        Testcontainers.exposeHostPorts(httpStub.getHttpPort());
         var topicName =
                 format(
                         "{0}-{1}-{2}",
@@ -57,8 +58,8 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
 
         // Wait for topic subscription message to be received, so that it doesn't pollute the tests.
         await().atMost(1, SECONDS)
-                .untilAsserted(() -> assertThat(getCountOfRequests(), greaterThan(0)));
-        clearRequests();
+                .untilAsserted(() -> assertThat(httpStub.getCountOfRequests(), greaterThan(0)));
+        httpStub.clearRequests();
     }
 
     private String createTopic(String topicName) {
@@ -67,7 +68,10 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
     }
 
     private void subscribeToTopic(String topicArn) {
-        String url = format("http://subscriber.internal:{0,number,#}/subscriber", getHttpPort());
+        String url =
+                format(
+                        "http://{0}:{1,number,#}/subscriber",
+                        LOCALSTACK_HOST_HOSTNAME, httpStub.getHttpPort());
         var subscribeRequest =
                 SubscribeRequest.builder()
                         .topicArn(topicArn)
@@ -78,6 +82,10 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
     }
 
     private void initSubscriber() {
-        register("/subscriber", 200);
+        httpStub.register("/subscriber", 200);
+    }
+
+    public void afterAll(ExtensionContext context) throws Exception {
+        httpStub.afterAll(context);
     }
 }

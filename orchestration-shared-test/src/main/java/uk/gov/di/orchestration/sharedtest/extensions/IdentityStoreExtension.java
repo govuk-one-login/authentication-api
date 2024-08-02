@@ -27,7 +27,7 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
     public IdentityStoreExtension(long ttl) {
         createInstance();
         this.configuration =
-                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
+                new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT) {
                     @Override
                     public long getAccessTokenExpiry() {
                         return ttl;

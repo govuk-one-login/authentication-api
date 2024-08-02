@@ -23,7 +23,7 @@ public class BulkTestUserS3Extension extends S3Extension {
     }
 
     @Override
-    void deleteBuckets() {
+    protected void deleteBuckets() {
         if (bucketExists(BULK_TEST_USER_BUCKET)) {
             deleteS3BucketContents(BULK_TEST_USER_BUCKET);
             s3Client.deleteBucket(

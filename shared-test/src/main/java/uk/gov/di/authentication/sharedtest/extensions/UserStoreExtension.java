@@ -213,7 +213,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         super.beforeAll(context);
         dynamoService =
                 new DynamoService(
-                        new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT));
+                        new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT));
     }
 
     @Override

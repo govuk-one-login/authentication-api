@@ -31,7 +31,7 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
                 new DynamoTestConfiguration(
                         BaseAwsResourceExtension.REGION,
                         DynamoExtension.ENVIRONMENT,
-                        DynamoExtension.DYNAMO_ENDPOINT) {
+                        DynamoExtension.LOCALSTACK_ENDPOINT) {
                     @Override
                     public long getAccessTokenExpiry() {
                         return ttl;

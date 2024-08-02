@@ -28,10 +28,8 @@ test {
     environment "AWS_ACCESS_KEY_ID", "mock-access-key"
     environment "AWS_REGION", "eu-west-2"
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
-    environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
     environment "HEADERS_CASE_INSENSITIVE", "true"
-    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "session"
     environment "TRACING_ENABLED", "false"
     environment "VERIFY_EMAIL_TEMPLATE_ID", "35454-543543-3435435-12340"
@@ -63,7 +61,7 @@ test {
                 project(":account-management-api").sourceSets.main.output,
                 project(":shared").sourceSets.main.output)
     }
-    dependsOn ":composeUp"
+    //    dependsOn ":composeUp"
 }
 
 jacocoTestReport {

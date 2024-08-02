@@ -27,7 +27,7 @@ public class AuthCodeExtension extends DynamoExtension implements AfterEachCallb
     public AuthCodeExtension(long ttl) {
         createInstance();
         this.configuration =
-                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
+                new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT) {
                     @Override
                     public long getAuthCodeExpiry() {
                         return ttl;

@@ -3,7 +3,7 @@ package uk.gov.di.authentication.services;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 
 import java.util.List;
@@ -12,7 +12,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class DynamoAccessTokenServiceIntegrationTest {
+public class DynamoAccessTokenServiceIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final AccessTokenStoreExtension accessTokenStoreExtension =
@@ -26,8 +26,7 @@ public class DynamoAccessTokenServiceIntegrationTest {
     public static final String ACCESS_TOKEN_STRING_4 = "access-token-string-4";
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
-    AccessTokenService accessTokenService =
-            new AccessTokenService(ConfigurationService.getInstance());
+    AccessTokenService accessTokenService = new AccessTokenService(TEST_CONFIGURATION_SERVICE);
 
     @Test
     void shouldRetrieveAccessTokenForKey() {

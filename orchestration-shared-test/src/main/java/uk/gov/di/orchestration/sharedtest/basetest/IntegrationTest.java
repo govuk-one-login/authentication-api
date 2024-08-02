@@ -4,9 +4,11 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -23,10 +25,21 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class IntegrationTest {
-    private static final String REDIS_HOST = "localhost";
-    private static final int REDIS_PORT = 6379;
+    private static final DockerImageName REDIS_IMAGE = DockerImageName.parse("redis:6.2.14-alpine");
+    private static final RedisContainer sessionRedisContainer;
+    private static final RedisContainer amRedisContainer;
+
+    static {
+        sessionRedisContainer = new RedisContainer(REDIS_IMAGE);
+        amRedisContainer = new RedisContainer(REDIS_IMAGE);
+        Stream.of(sessionRedisContainer, amRedisContainer).forEach(RedisContainer::start);
+    }
+
+    private static final String REDIS_HOST = sessionRedisContainer.getRedisHost();
+    private static final int REDIS_PORT = sessionRedisContainer.getRedisPort();
     private static final String REDIS_PASSWORD = null;
     private static final boolean DOES_REDIS_USE_TLS = false;
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
@@ -202,6 +215,15 @@ public class IntegrationTest {
             new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
+    protected static final DynamoExtension dynamo =
+            new DynamoExtension() {
+                @Override
+                protected void createTables() {
+                    // no-op
+                }
+            };
+
+    @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
 
     @RegisterExtension
@@ -325,6 +347,26 @@ public class IntegrationTest {
         @Override
         public Optional<String> getIPVCapacity() {
             return Optional.of("1");
+        }
+
+        @Override
+        public Optional<String> getDynamoEndpointURI() {
+            return Optional.of(dynamo.getLocalstackEndpoint());
+        }
+
+        @Override
+        public Optional<String> getSqsEndpointURI() {
+            return Optional.of(dynamo.getLocalstackEndpoint());
+        }
+
+        @Override
+        public String getAwsRegion() {
+            return dynamo.getRegion();
+        }
+
+        @Override
+        public Optional<String> getLocalstackEndpointUri() {
+            return Optional.of(dynamo.getLocalstackEndpoint());
         }
     }
 }

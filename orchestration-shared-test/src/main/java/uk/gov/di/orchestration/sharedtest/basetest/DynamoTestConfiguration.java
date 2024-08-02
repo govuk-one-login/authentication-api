@@ -2,15 +2,16 @@ package uk.gov.di.orchestration.sharedtest.basetest;
 
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
+import java.net.URI;
 import java.util.Optional;
 
 public class DynamoTestConfiguration extends ConfigurationService {
 
     private final String region;
     private final String environment;
-    private final String dynamoDbUri;
+    private final URI dynamoDbUri;
 
-    public DynamoTestConfiguration(String region, String environment, String dynamoDbUri) {
+    public DynamoTestConfiguration(String region, String environment, URI dynamoDbUri) {
         this.region = region;
         this.environment = environment;
         this.dynamoDbUri = dynamoDbUri;
@@ -28,6 +29,6 @@ public class DynamoTestConfiguration extends ConfigurationService {
 
     @Override
     public Optional<String> getDynamoEndpointURI() {
-        return Optional.of(dynamoDbUri);
+        return Optional.of(String.valueOf(dynamoDbUri));
     }
 }

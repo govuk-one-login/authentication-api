@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
@@ -16,7 +15,6 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,8 +34,8 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
         this.queueNameSuffix = queueNameSuffix;
         this.sqsClient =
                 SqsClient.builder()
-                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
-                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                        .endpointOverride(LOCALSTACK_ENDPOINT)
+                        .credentialsProvider(LOCALSTACK_CREDENTIALS_PROVIDER)
                         .region(Region.of(REGION))
                         .build();
     }

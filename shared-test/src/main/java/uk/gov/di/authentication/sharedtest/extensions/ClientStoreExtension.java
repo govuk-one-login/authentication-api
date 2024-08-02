@@ -160,7 +160,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
         super.beforeAll(context);
         dynamoClientService =
                 new DynamoClientService(
-                        new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT));
+                        new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT));
     }
 
     @Override

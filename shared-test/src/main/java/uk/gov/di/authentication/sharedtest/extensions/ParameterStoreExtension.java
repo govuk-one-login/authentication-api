@@ -2,14 +2,11 @@ package uk.gov.di.authentication.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ssm.SsmClient;
 import software.amazon.awssdk.services.ssm.model.ParameterType;
 import software.amazon.awssdk.services.ssm.model.PutParameterRequest;
 
-import java.net.URI;
 import java.util.Map;
 
 public class ParameterStoreExtension extends BaseAwsResourceExtension implements BeforeAllCallback {
@@ -18,12 +15,9 @@ public class ParameterStoreExtension extends BaseAwsResourceExtension implements
     public ParameterStoreExtension(Map<String, String> parameters) {
         this.ssmClient =
                 SsmClient.builder()
-                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                        .endpointOverride(LOCALSTACK_ENDPOINT)
                         .region(Region.of(REGION))
-                        .credentialsProvider(
-                                StaticCredentialsProvider.create(
-                                        AwsBasicCredentials.create(
-                                                "FAKEACCESSKEY", "FAKESECRETKEY")))
+                        .credentialsProvider(LOCALSTACK_CREDENTIALS_PROVIDER)
                         .build();
 
         parameters.forEach(this::createOrOverwriteParameter);

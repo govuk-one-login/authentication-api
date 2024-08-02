@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 public class TokenSigningExtension extends KmsKeyExtension {
 
@@ -32,8 +31,7 @@ public class TokenSigningExtension extends KmsKeyExtension {
     @Override
     public void beforeAll(ExtensionContext context) {
         super.beforeAll(context);
-        kmsConnectionService =
-                new KmsConnectionService(Optional.of(LOCALSTACK_ENDPOINT), REGION, getKeyAlias());
+        kmsConnectionService = new KmsConnectionService(LOCALSTACK_ENDPOINT, REGION, getKeyAlias());
     }
 
     public SignedJWT signJwt(JWTClaimsSet claimsSet) {

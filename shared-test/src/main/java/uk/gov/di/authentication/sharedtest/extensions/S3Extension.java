@@ -3,8 +3,6 @@ package uk.gov.di.authentication.sharedtest.extensions;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -13,7 +11,6 @@ import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 
 public abstract class S3Extension extends BaseAwsResourceExtension
@@ -21,11 +18,9 @@ public abstract class S3Extension extends BaseAwsResourceExtension
 
     protected static final S3Client s3Client =
             S3Client.builder()
-                    .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                    .endpointOverride(LOCALSTACK_ENDPOINT)
                     .region(Region.of(REGION))
-                    .credentialsProvider(
-                            StaticCredentialsProvider.create(
-                                    AwsBasicCredentials.create("access", "secret")))
+                    .credentialsProvider(LOCALSTACK_CREDENTIALS_PROVIDER)
                     .serviceConfiguration(
                             S3Configuration.builder().pathStyleAccessEnabled(true).build())
                     .build();
@@ -67,5 +62,9 @@ public abstract class S3Extension extends BaseAwsResourceExtension
                                                 .build()));
     }
 
-    abstract void deleteBuckets();
+    protected abstract void deleteBuckets();
+
+    public S3Client getS3Client() {
+        return s3Client;
+    }
 }

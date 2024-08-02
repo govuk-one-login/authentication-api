@@ -19,11 +19,12 @@ public class AwsSqsClient {
     public AwsSqsClient(String region, String queueUrl, Optional<String> sqsEndpoint) {
         SqsClientBuilder amazonSqsBuilder = SqsClient.builder().region(Region.of(region));
 
-        if (sqsEndpoint.isPresent()) {
-            amazonSqsBuilder
-                    .endpointOverride(URI.create(sqsEndpoint.get()))
-                    .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
-        }
+        sqsEndpoint.ifPresent(
+                s ->
+                        amazonSqsBuilder
+                                .endpointOverride(URI.create(s))
+                                .credentialsProvider(
+                                        EnvironmentVariableCredentialsProvider.create()));
         this.client = amazonSqsBuilder.build();
         this.queueUrl = queueUrl;
     }

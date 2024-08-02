@@ -3,8 +3,8 @@ package uk.gov.di.authentication.services;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
 
 import java.util.List;
@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
 
-class DynamoAuthCodeServiceIntegrationTest {
+class DynamoAuthCodeServiceIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String SUBJECT_ID = "test-subject-id";
     private static final String AUTH_CODE = "test-auth-code";
@@ -29,7 +29,7 @@ class DynamoAuthCodeServiceIntegrationTest {
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
 
     DynamoAuthCodeService dynamoAuthCodeService =
-            new DynamoAuthCodeService(ConfigurationService.getInstance());
+            new DynamoAuthCodeService(TEST_CONFIGURATION_SERVICE);
 
     private void setUpDynamo() {
         authCodeExtension.saveAuthCode(

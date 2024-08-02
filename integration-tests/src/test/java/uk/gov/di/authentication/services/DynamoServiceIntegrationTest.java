@@ -11,8 +11,8 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.time.LocalDateTime;
@@ -24,7 +24,7 @@ import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-class DynamoServiceIntegrationTest {
+class DynamoServiceIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String UPDATED_TEST_EMAIL = "user.one@test.com";
@@ -44,7 +44,7 @@ class DynamoServiceIntegrationTest {
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
 
-    DynamoService dynamoService = new DynamoService(ConfigurationService.getInstance());
+    DynamoService dynamoService = new DynamoService(TEST_CONFIGURATION_SERVICE);
 
     @Test
     void getOrGenerateSaltShouldReturnNewSaltWhenUserDoesNotHaveOne() {

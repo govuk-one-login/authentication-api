@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 
 import java.time.temporal.ChronoUnit;
@@ -15,14 +15,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class DynamoEmailCheckResultServiceIntegrationTest {
+class DynamoEmailCheckResultServiceIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static String email = "test.user@example.com";
     private static String referenceNumber = "test-reference";
     private static EmailCheckResultStatus status = EmailCheckResultStatus.PENDING;
 
     DynamoEmailCheckResultService dynamoEmailCheckResultService =
-            new DynamoEmailCheckResultService(ConfigurationService.getInstance());
+            new DynamoEmailCheckResultService(TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final EmailCheckResultExtension emailCheckResultExtension =

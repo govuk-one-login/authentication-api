@@ -2,7 +2,6 @@ package uk.gov.di.authentication.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.CreateAliasRequest;
@@ -11,8 +10,6 @@ import software.amazon.awssdk.services.kms.model.DescribeKeyRequest;
 import software.amazon.awssdk.services.kms.model.KeySpec;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import software.amazon.awssdk.services.kms.model.NotFoundException;
-
-import java.net.URI;
 
 import static java.text.MessageFormat.format;
 import static software.amazon.awssdk.services.kms.model.KeyUsageType.ENCRYPT_DECRYPT;
@@ -39,9 +36,9 @@ public class KmsKeyExtension extends BaseAwsResourceExtension implements BeforeA
     public void beforeAll(ExtensionContext context) {
         kms =
                 KmsClient.builder()
-                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                        .endpointOverride(LOCALSTACK_ENDPOINT)
                         .region(Region.of(REGION))
-                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .credentialsProvider(LOCALSTACK_CREDENTIALS_PROVIDER)
                         .build();
 
         keyAlias =

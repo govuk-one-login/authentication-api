@@ -19,6 +19,7 @@ dependencies {
             configurations.ssm,
             configurations.cloudwatch,
             configurations.pact_provider,
+            configurations.testcontainers,
             "org.eclipse.jetty:jetty-server:11.0.18",
             "com.google.code.gson:gson:2.10.1"
 

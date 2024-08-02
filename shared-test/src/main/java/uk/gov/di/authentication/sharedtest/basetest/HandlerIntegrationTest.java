@@ -12,9 +12,11 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -22,17 +24,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
-import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
-import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
-import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
-import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.*;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -42,6 +34,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.valueOf;
 import static java.util.Collections.singletonList;
@@ -50,8 +43,18 @@ import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 
 public abstract class HandlerIntegrationTest<Q, S> {
-    private static final String REDIS_HOST = "localhost";
-    private static final int REDIS_PORT = 6379;
+    private static final DockerImageName REDIS_IMAGE = DockerImageName.parse("redis:6.2.14-alpine");
+    private static final RedisContainer sessionRedisContainer;
+    private static final RedisContainer amRedisContainer;
+
+    static {
+        sessionRedisContainer = new RedisContainer(REDIS_IMAGE);
+        amRedisContainer = new RedisContainer(REDIS_IMAGE);
+        Stream.of(sessionRedisContainer, amRedisContainer).forEach(RedisContainer::start);
+    }
+
+    private static final String REDIS_HOST = sessionRedisContainer.getRedisHost();
+    private static final int REDIS_PORT = sessionRedisContainer.getRedisPort();
     private static final String REDIS_PASSWORD = null;
     private static final boolean DOES_REDIS_USE_TLS = false;
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
@@ -176,6 +179,29 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final RedisExtension redis =
             new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
+
+    @RegisterExtension
+    protected static final S3Extension s3 =
+            new S3Extension() {
+                @Override
+                protected void createBuckets() {
+                    // no-op
+                }
+
+                @Override
+                protected void deleteBuckets() {
+                    // no-op
+                }
+            };
+
+    @RegisterExtension
+    protected static final DynamoExtension dynamo =
+            new DynamoExtension() {
+                @Override
+                protected void createTables() {
+                    // no-op
+                }
+            };
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
@@ -315,6 +341,26 @@ public abstract class HandlerIntegrationTest<Q, S> {
         @Override
         public String getFrontendBaseUrl() {
             return "http://localhost:3000/reset-password?code=";
+        }
+
+        @Override
+        public Optional<String> getDynamoEndpointUri() {
+            return Optional.of(dynamo.getLocalstackEndpoint());
+        }
+
+        @Override
+        public String getAwsRegion() {
+            return dynamo.getRegion();
+        }
+
+        @Override
+        public Optional<String> getLocalstackEndpointUri() {
+            return Optional.of(dynamo.getLocalstackEndpoint());
+        }
+
+        @Override
+        public Optional<String> getSqsEndpointUri() {
+            return Optional.of(dynamo.getLocalstackEndpoint());
         }
     }
 }

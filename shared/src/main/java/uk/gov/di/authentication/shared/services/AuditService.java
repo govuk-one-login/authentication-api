@@ -37,7 +37,7 @@ public class AuditService {
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
-                        configurationService.getLocalstackEndpointUri());
+                        configurationService.getSqsEndpointUri());
     }
 
     private static void addRestrictedSectionToAuditEvent(

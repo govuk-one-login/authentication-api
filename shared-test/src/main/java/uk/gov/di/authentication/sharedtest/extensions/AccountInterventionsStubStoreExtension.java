@@ -24,7 +24,8 @@ public class AccountInterventionsStubStoreExtension extends DynamoExtension
 
     public AccountInterventionsStubStoreExtension() {
         createInstance();
-        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
+        createTables();
+        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT);
     }
 
     @Override

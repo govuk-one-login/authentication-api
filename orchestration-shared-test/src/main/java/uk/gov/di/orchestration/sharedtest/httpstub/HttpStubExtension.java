@@ -5,12 +5,13 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.sharedtest.extensions.BaseAwsResourceExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
-public class HttpStubExtension implements AfterAllCallback {
+public class HttpStubExtension extends BaseAwsResourceExtension implements AfterAllCallback {
 
     protected final HttpStub httpStub;
 
@@ -61,7 +62,7 @@ public class HttpStubExtension implements AfterAllCallback {
         return httpStub.getHttpsPort();
     }
 
-    protected void startStub() {
+    public void startStub() {
         httpStub.start();
     }
 

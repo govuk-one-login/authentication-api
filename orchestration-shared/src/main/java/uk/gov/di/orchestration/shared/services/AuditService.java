@@ -39,7 +39,7 @@ public class AuditService {
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
-                        configurationService.getLocalstackEndpointUri());
+                        configurationService.getSqsEndpointURI());
     }
 
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {

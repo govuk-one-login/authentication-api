@@ -34,7 +34,7 @@ public class CommonPasswordsExtension extends DynamoExtension
         super.beforeAll(context);
         commonPasswordsService =
                 new CommonPasswordsService(
-                        new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT));
+                        new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT));
     }
 
     @Override

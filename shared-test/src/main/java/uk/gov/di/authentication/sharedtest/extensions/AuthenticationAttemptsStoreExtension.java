@@ -27,7 +27,7 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
 
     public AuthenticationAttemptsStoreExtension() {
         createInstance();
-        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
+        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT);
         dynamoService = new DynamoAuthenticationAttemptsService(configuration);
     }
 

@@ -22,7 +22,7 @@ public class AccountModifiersStoreExtension extends DynamoExtension implements A
 
     public AccountModifiersStoreExtension() {
         createInstance();
-        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
+        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, LOCALSTACK_ENDPOINT);
         dynamoAccountModifiersService = new DynamoAccountModifiersService(configuration);
     }
 

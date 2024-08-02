@@ -5,8 +5,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 
 import java.time.Instant;
@@ -16,7 +16,7 @@ import java.util.Date;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class DynamoAuthenticationAttemptsServiceIntegrationTest {
+class DynamoAuthenticationAttemptsServiceIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String ATTEMPT_IDENTIFIER = "attempt-identifier-1234";
     private static final String NON_EXISTENT_ATTEMPT_IDENTIFIER =
@@ -32,7 +32,7 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
             new AuthenticationAttemptsStoreExtension();
 
     DynamoAuthenticationAttemptsService dynamoAuthenticationAttemptsService =
-            new DynamoAuthenticationAttemptsService(ConfigurationService.getInstance());
+            new DynamoAuthenticationAttemptsService(TEST_CONFIGURATION_SERVICE);
 
     @Test
     void shouldAddCode() {

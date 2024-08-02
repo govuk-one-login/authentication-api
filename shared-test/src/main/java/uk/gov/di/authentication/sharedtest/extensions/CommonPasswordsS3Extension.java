@@ -23,7 +23,7 @@ public class CommonPasswordsS3Extension extends S3Extension {
     }
 
     @Override
-    void deleteBuckets() {
+    protected void deleteBuckets() {
         if (bucketExists(COMMON_PASSWORDS_BUCKET)) {
             deleteS3BucketContents(COMMON_PASSWORDS_BUCKET);
             s3Client.deleteBucket(

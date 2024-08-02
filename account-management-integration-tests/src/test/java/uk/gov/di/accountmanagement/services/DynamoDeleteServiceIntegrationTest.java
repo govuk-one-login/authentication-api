@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
@@ -16,7 +16,7 @@ import java.util.Objects;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
-class DynamoDeleteServiceIntegrationTest {
+class DynamoDeleteServiceIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
@@ -29,11 +29,10 @@ class DynamoDeleteServiceIntegrationTest {
     protected static final AccountModifiersStoreExtension accountModifiersExtension =
             new AccountModifiersStoreExtension();
 
-    DynamoDeleteService dynamoDeleteService =
-            new DynamoDeleteService(ConfigurationService.getInstance());
-    DynamoService dynamoService = new DynamoService(ConfigurationService.getInstance());
+    DynamoDeleteService dynamoDeleteService = new DynamoDeleteService(TEST_CONFIGURATION_SERVICE);
+    DynamoService dynamoService = new DynamoService(TEST_CONFIGURATION_SERVICE);
     DynamoAccountModifiersService dynamoAccountModifiersService =
-            new DynamoAccountModifiersService(ConfigurationService.getInstance());
+            new DynamoAccountModifiersService(TEST_CONFIGURATION_SERVICE);
 
     private final String internalCommonSubjectId =
             ClientSubjectHelper.calculatePairwiseIdentifier(

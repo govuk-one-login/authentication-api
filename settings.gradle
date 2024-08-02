@@ -18,3 +18,15 @@ include 'test-services-api'
 include 'auth-external-api'
 include 'interventions-api-stub'
 include 'ticf-cri-stub'
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        testLibs {
+            version("testcontainers", "1.20.1")
+            library("testcontainers-core", "org.testcontainers", "testcontainers").versionRef("testcontainers")
+            library("testcontainers-dynalite", "org.testcontainers", "dynalite").versionRef("testcontainers")
+            library("testcontainers-localstack", "org.testcontainers", "localstack").versionRef("testcontainers")
+            library("testcontainers-redis", "com.redis:testcontainers-redis:2.2.2")
+        }
+    }
+}

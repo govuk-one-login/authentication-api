@@ -39,9 +39,7 @@ test {
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
     environment "HEADERS_CASE_INSENSITIVE", "true"
-    environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
-    environment "SQS_ENDPOINT", "http://localhost:45678"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
@@ -58,8 +56,8 @@ test {
                 project(":account-management-api").sourceSets.main.output,
                 project(":shared").sourceSets.main.output)
     }
-    dependsOn ":composeUp"
-    finalizedBy ":composeDown"
+    //    dependsOn ":composeUp"
+    //    finalizedBy ":composeDown"
 }
 
 jacocoTestReport {

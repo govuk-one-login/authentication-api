@@ -45,6 +45,16 @@ public class KmsConnectionService {
         warmUp(tokenSigningKeyId);
     }
 
+    public KmsConnectionService(URI endpointOverride, String region, String tokenSigningKeyId) {
+        this.kmsClient =
+                KmsClient.builder()
+                        .endpointOverride(endpointOverride)
+                        .region(Region.of(region))
+                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .build();
+        warmUp(tokenSigningKeyId);
+    }
+
     public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
         LOG.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.keyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
