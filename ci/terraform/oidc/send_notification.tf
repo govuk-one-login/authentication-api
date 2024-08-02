@@ -15,7 +15,9 @@ module "frontend_api_send_notification_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn,
-    local.pending_email_check_queue_access_policy_arn
+    local.pending_email_check_queue_access_policy_arn,
+    local.email_check_results_encryption_policy_arn,
+    aws_iam_policy.check_email_fraud_block_read_dynamo_read_access_policy.arn,
   ]
 }
 

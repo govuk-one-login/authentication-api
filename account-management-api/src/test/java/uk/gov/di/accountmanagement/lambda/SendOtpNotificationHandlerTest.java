@@ -6,6 +6,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -17,6 +20,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.domain.RequestHeaders;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -31,6 +35,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -38,6 +43,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -82,6 +88,8 @@ class SendOtpNotificationHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
+            mock(DynamoEmailCheckResultService.class);
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -108,6 +116,7 @@ class SendOtpNotificationHandlerTest {
                     codeGeneratorService,
                     codeStorageService,
                     dynamoService,
+                    dynamoEmailCheckResultService,
                     auditService,
                     clientService);
 
@@ -158,42 +167,89 @@ class SendOtpNotificationHandlerTest {
 
         Date mockedDate = new Date();
         UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class);
+                MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class)) {
+            mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+            mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+            assertEquals(204, result.getStatusCode());
+
+            verify(emailSqsClient).send(serialisedRequest);
+            verify(codeStorageService)
+                    .saveOtpCode(
+                            TEST_EMAIL_ADDRESS,
+                            TEST_SIX_DIGIT_CODE,
+                            CODE_EXPIRY_TIME,
+                            VERIFY_EMAIL);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AccountManagementAuditableEvent.SEND_OTP,
+                            auditContext.withPhoneNumber(null),
+                            pair("notification-type", VERIFY_EMAIL),
+                            pair("test-user", false));
+        }
+    }
+
+    private static Stream<Arguments> requestEmailCheckPermutations() {
+        return Stream.of(Arguments.of(true, false), Arguments.of(false, true));
+    }
+
+    @ParameterizedTest
+    @MethodSource("requestEmailCheckPermutations")
+    void shouldCorrectlyRequestEmailCheck(
+            boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_ID,
+                        RequestHeaders.SESSION_ID_HEADER,
+                        "some-session-id",
+                        RequestHeaders.CLIENT_SESSION_ID_HEADER,
+                        "some-client-session-id",
+                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
+                        TXMA_ENCODED_HEADER_VALUE));
+        event.setRequestContext(eventContext);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        if (cachedResultAlreadyExists) {
+            when(dynamoEmailCheckResultService.getEmailCheckStore(TEST_EMAIL_ADDRESS))
+                    .thenReturn(
+                            Optional.of(new EmailCheckResultStore().withEmail(TEST_EMAIL_ADDRESS)));
+        }
+
+        Date mockedDate = new Date();
+        UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
             try (MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class)) {
                 mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
                 mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
 
-                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-                assertEquals(204, result.getStatusCode());
+                handler.handleRequest(event, context);
 
-                verify(emailSqsClient).send(serialisedRequest);
-                verify(pendingEmailCheckSqsClient)
-                        .send(
-                                format(
-                                        "{\"userId\":\"%s\",\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
-                                        expectedCommonSubject,
-                                        mockedUUID,
-                                        TEST_EMAIL_ADDRESS,
-                                        "some-session-id",
-                                        "some-client-session-id",
-                                        "some-persistent-session-id",
-                                        "123.123.123.123",
-                                        JourneyType.ACCOUNT_MANAGEMENT,
-                                        mockedDate.toInstant().getEpochSecond(),
-                                        false));
-                verify(codeStorageService)
-                        .saveOtpCode(
-                                TEST_EMAIL_ADDRESS,
-                                TEST_SIX_DIGIT_CODE,
-                                CODE_EXPIRY_TIME,
-                                VERIFY_EMAIL);
-
-                verify(auditService)
-                        .submitAuditEvent(
-                                AccountManagementAuditableEvent.SEND_OTP,
-                                auditContext.withPhoneNumber(null),
-                                pair("notification-type", VERIFY_EMAIL),
-                                pair("test-user", false));
+                if (expectedCheckRequested) {
+                    verify(pendingEmailCheckSqsClient)
+                            .send(
+                                    format(
+                                            "{\"userId\":\"%s\",\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
+                                            expectedCommonSubject,
+                                            mockedUUID,
+                                            TEST_EMAIL_ADDRESS,
+                                            "some-session-id",
+                                            "some-client-session-id",
+                                            "some-persistent-session-id",
+                                            "123.123.123.123",
+                                            JourneyType.ACCOUNT_MANAGEMENT,
+                                            mockedDate.toInstant().getEpochSecond(),
+                                            false));
+                } else {
+                    verifyNoInteractions(pendingEmailCheckSqsClient);
+                }
             }
         }
     }
