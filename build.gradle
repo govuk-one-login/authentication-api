@@ -127,7 +127,7 @@ subprojects {
 
         gson "com.google.code.gson:gson:${dependencyVersions.gson}"
 
-        hamcrest "org.hamcrest:hamcrest:2.2"
+        hamcrest "org.hamcrest:hamcrest:3.0"
 
         jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
 
