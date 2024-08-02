@@ -9,6 +9,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Collections.emptyList;
@@ -152,35 +154,113 @@ class DynamoServiceIntegrationTest {
             userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         }
 
-        @Test
-        void shouldAddAuthAppMFAMethodWhenNoOtherMethodExists() {
-            var data = new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true);
+        private SmsMfaData defaultPrioritySmsData =
+                new SmsMfaData(PHONE_NUMBER, true, true, "DEFAULT");
+        private SmsMfaData backupPrioritySmsData =
+                new SmsMfaData(PHONE_NUMBER, true, true, "BACKUP");
+        private AuthAppMfaData defaultPriorityAuthAppData =
+                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, "DEFAULT");
+        private AuthAppMfaData backupAuthAppData =
+                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, "BACKUP");
 
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, data);
+        private MFAMethod findMethodWithPriority(
+                String priority, List<MFAMethod> retrievedMethods) {
+            return retrievedMethods.stream()
+                    .filter(method -> Objects.equals(method.getPriority(), priority))
+                    .findFirst()
+                    .get();
+        }
 
-            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        private void assertBackupAndDefaultMfaMethodsWithData(
+                UserCredentials userCredentials, MfaData expectedDefault, MfaData expectedBackup) {
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(2));
+            var backupMethod = findMethodWithPriority("BACKUP", userCredentials.getMfaMethods());
+            var defaultMethod = findMethodWithPriority("DEFAULT", userCredentials.getMfaMethods());
+            assertRetrievedMethodHasData(backupMethod, expectedBackup);
+            assertRetrievedMethodHasData(defaultMethod, expectedDefault);
+        }
+
+        private void assertRetrievedMethodHasData(MFAMethod retrievedMethod, MfaData expectedData) {
+            if (expectedData instanceof SmsMfaData) {
+                assertRetrievedMethodHasSmsData(retrievedMethod, (SmsMfaData) expectedData);
+            } else {
+                assertRetrievedMethodHasAuthAppData(retrievedMethod, (AuthAppMfaData) expectedData);
+            }
+        }
+
+        private void assertSingleMfaMethodExistsWithData(
+                UserCredentials userCredentials, MfaData expectedData) {
             assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
-            var mfaMethod = userCredentials.getMfaMethods().get(0);
-            assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
-            assertThat(mfaMethod.isMethodVerified(), equalTo(true));
-            assertThat(mfaMethod.isEnabled(), equalTo(true));
-            assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+            assertRetrievedMethodHasData(userCredentials.getMfaMethods().get(0), expectedData);
+        }
+
+        private void assertRetrievedMethodHasSmsData(
+                MFAMethod retrievedMethod, SmsMfaData expectedData) {
+            assertThat(retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
+            assertThat(retrievedMethod.isMethodVerified(), equalTo(expectedData.verified()));
+            assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
+            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority()));
+            assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
+        }
+
+        private void assertRetrievedMethodHasAuthAppData(
+                MFAMethod retrievedMethod, AuthAppMfaData expectedData) {
+            assertThat(
+                    retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+            assertThat(retrievedMethod.isMethodVerified(), equalTo(expectedData.verified()));
+            assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
+            assertThat(retrievedMethod.getCredentialValue(), equalTo(expectedData.credential()));
+            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority()));
+            assertThat(retrievedMethod.getDestination(), equalTo(null));
         }
 
         @Test
-        void shouldAddSmsMFAMethodWhenNoOtherDefaultExists() {
-            var data = new SmsMfaData(PHONE_NUMBER, true, true);
-
-            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, data);
+        void shouldAddDefaultPriorityAuthAppMFAMethodWhenNoOtherMethodExists() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
 
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-            assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
-            var mfaMethod = userCredentials.getMfaMethods().get(0);
-            assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
-            assertThat(mfaMethod.isMethodVerified(), equalTo(true));
-            assertThat(mfaMethod.isEnabled(), equalTo(true));
-            assertThat(mfaMethod.getCredentialValue(), equalTo(null));
-            assertThat(mfaMethod.getDestination(), equalTo(PHONE_NUMBER));
+
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
+        }
+
+        @Test
+        void shouldAddDefaultPriortySmsMFAMethodWhenNoOtherDefaultExists() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPrioritySmsData);
+        }
+
+        @Test
+        void aDefaultPriorityMfaMethodShouldReplaceAnExistingDefaultPriorityMethod() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
+        }
+
+        @Test
+        void anMfaMethodShouldNotReplaceAnExistingMethodOfADifferentTypeWithDifferentPriority() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupAuthAppData);
+        }
+
+        @Test
+        void anMfaMethodShouldNotReplaceAnExistingMethodOfTheSameTypeWithDifferentPriority() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
         }
     }
 

@@ -18,6 +18,7 @@ public class MFAMethod {
     public static final String ATTRIBUTE_METHOD_VERIFIED = "MethodVerified";
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_DESTINATION = "Destination";
+    public static final String ATTRIBUTE_PRIORITY = "PriorityIdentifier";
 
     private String mfaMethodType;
     private String credentialValue;
@@ -25,6 +26,7 @@ public class MFAMethod {
     private boolean enabled;
     private String updated;
     private String destination;
+    private String priority;
 
     public MFAMethod() {}
 
@@ -43,15 +45,32 @@ public class MFAMethod {
 
     public MFAMethod(
             String mfaMethodType,
+            String credentialValue,
+            boolean methodVerified,
+            boolean enabled,
+            String updated,
+            String priority) {
+        this.mfaMethodType = mfaMethodType;
+        this.credentialValue = credentialValue;
+        this.methodVerified = methodVerified;
+        this.enabled = enabled;
+        this.updated = updated;
+        this.priority = priority;
+    }
+
+    public MFAMethod(
+            String mfaMethodType,
             boolean methodVerified,
             boolean enabled,
             String destination,
-            String updated) {
+            String updated,
+            String priority) {
         this.mfaMethodType = mfaMethodType;
         this.methodVerified = methodVerified;
         this.enabled = enabled;
         this.destination = destination;
         this.updated = updated;
+        this.priority = priority;
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)
@@ -93,6 +112,20 @@ public class MFAMethod {
 
     public MFAMethod withDestination(String destination) {
         this.destination = destination;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PRIORITY)
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public MFAMethod withPriority(String priority) {
+        this.priority = priority;
         return this;
     }
 
@@ -166,7 +199,8 @@ public class MFAMethod {
                 && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
                 && Objects.equals(updated, that.updated)
-                && Objects.equals(destination, that.destination);
+                && Objects.equals(destination, that.destination)
+                && Objects.equals(priority, that.priority);
     }
 
     @Override

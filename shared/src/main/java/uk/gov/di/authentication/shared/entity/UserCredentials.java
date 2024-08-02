@@ -6,6 +6,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 import java.util.List;
+import java.util.Objects;
 
 @DynamoDbBean
 public class UserCredentials {
@@ -136,6 +137,16 @@ public class UserCredentials {
         } else {
             this.mfaMethods.removeIf(
                     t -> t.getMfaMethodType().equals(mfaMethod.getMfaMethodType()));
+            this.mfaMethods.add(mfaMethod);
+        }
+        return this;
+    }
+
+    public UserCredentials setMfaMethodBasedOnPriority(MFAMethod mfaMethod) {
+        if (this.mfaMethods == null) {
+            this.mfaMethods = List.of(mfaMethod);
+        } else {
+            this.mfaMethods.removeIf(t -> Objects.equals(t.getPriority(), mfaMethod.getPriority()));
             this.mfaMethods.add(mfaMethod);
         }
         return this;
