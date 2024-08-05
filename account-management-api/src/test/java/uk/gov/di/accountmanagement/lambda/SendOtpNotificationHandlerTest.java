@@ -52,7 +52,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -148,22 +147,7 @@ class SendOtpNotificationHandlerTest {
                         SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        PERSISTENT_ID,
-                        RequestHeaders.SESSION_ID_HEADER,
-                        "some-session-id",
-                        RequestHeaders.CLIENT_SESSION_ID_HEADER,
-                        "some-client-session-id",
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
-                        TXMA_ENCODED_HEADER_VALUE));
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+        APIGatewayProxyRequestEvent event = getApiGatewayProxyRequestEvent();
 
         Date mockedDate = new Date();
         UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
@@ -192,14 +176,7 @@ class SendOtpNotificationHandlerTest {
         }
     }
 
-    private static Stream<Arguments> requestEmailCheckPermutations() {
-        return Stream.of(Arguments.of(true, false), Arguments.of(false, true));
-    }
-
-    @ParameterizedTest
-    @MethodSource("requestEmailCheckPermutations")
-    void shouldCorrectlyRequestEmailCheck(
-            boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
+    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
@@ -216,6 +193,18 @@ class SendOtpNotificationHandlerTest {
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+        return event;
+    }
+
+    private static Stream<Arguments> requestEmailCheckPermutations() {
+        return Stream.of(Arguments.of(true, false), Arguments.of(false, true));
+    }
+
+    @ParameterizedTest
+    @MethodSource("requestEmailCheckPermutations")
+    void shouldCorrectlyRequestEmailCheck(
+            boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
+        APIGatewayProxyRequestEvent event = getApiGatewayProxyRequestEvent();
 
         if (cachedResultAlreadyExists) {
             when(dynamoEmailCheckResultService.getEmailCheckStore(TEST_EMAIL_ADDRESS))
@@ -255,18 +244,10 @@ class SendOtpNotificationHandlerTest {
     }
 
     @Test
-    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled()
-            throws Json.JsonException {
+    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled() {
         when(configurationService.isEmailCheckEnabled()).thenReturn(false);
 
         String persistentIdValue = "some-persistent-session-id";
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        VERIFY_EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
@@ -485,7 +466,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-        Mockito.doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
+        Mockito.doThrow(SdkClientException.class).when(emailSqsClient).send(serialisedRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
@@ -525,7 +506,7 @@ class SendOtpNotificationHandlerTest {
 
     @Test
     void shouldReturn400WhenAccountAlreadyExistsWithGivenEmail() {
-        when(dynamoService.userExists(eq(TEST_EMAIL_ADDRESS))).thenReturn(true);
+        when(dynamoService.userExists(TEST_EMAIL_ADDRESS)).thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
