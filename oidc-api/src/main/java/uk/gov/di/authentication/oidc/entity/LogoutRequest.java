@@ -14,6 +14,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
+import java.net.URI;
 import java.text.ParseException;
 import java.util.Map;
 import java.util.Objects;
@@ -38,7 +39,7 @@ public class LogoutRequest {
     private Optional<ErrorObject> errorObject = Optional.empty();
     private Optional<String> clientId = Optional.empty();
     private Optional<String> rpPairwiseId = Optional.empty();
-    Optional<String> postLogoutRedirectUri = Optional.empty();
+    Optional<URI> postLogoutRedirectUri = Optional.empty();
     private Optional<ClientRegistry> clientRegistry = Optional.empty();
     private final CookieHelper cookieHelper = new CookieHelper();
 
@@ -128,39 +129,47 @@ public class LogoutRequest {
             return;
         }
 
-        postLogoutRedirectUri =
+        var postLogoutRedirectUriString =
                 Optional.ofNullable(queryStringParameters.get().get("post_logout_redirect_uri"));
-        if (postLogoutRedirectUri.isEmpty()) {
+
+        if (postLogoutRedirectUriString.isEmpty()) {
             LOG.info("Post logout redirect URI not present in logout request");
             return;
         }
 
-        if (!postLogoutRedirectUriInClientReg()) {
+        if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUriString.get())) {
             errorObject =
                     Optional.of(
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "client registry does not contain post_logout_redirect_uri"));
+            return;
+        }
+
+        try {
+            postLogoutRedirectUri = Optional.of(URI.create(postLogoutRedirectUriString.get()));
+        } catch (IllegalArgumentException e) {
+            LOG.warn("Invalid post logout redirect URI: {}", postLogoutRedirectUriString.get());
+            errorObject =
+                    Optional.of(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "invalid post logout redirect URI"));
         }
     }
 
-    private boolean postLogoutRedirectUriInClientReg() {
-        return postLogoutRedirectUri
-                .map(
-                        uri -> {
-                            if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
-                                LOG.warn(
-                                        "Client registry does not contain the post logout redirect URI which was sent in the logout request. Value is {}",
-                                        uri);
-                                return false;
-                            } else {
-                                LOG.info(
-                                        "Post logout redirect URI is present in logout request and client registry. Value is {}",
-                                        uri);
-                                return true;
-                            }
-                        })
-                .orElse(false);
+    private boolean postLogoutRedirectUriInClientReg(String uri) {
+        if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
+            LOG.warn(
+                    "Client registry does not contain the post logout redirect URI which was sent in the logout request. Value is {}",
+                    uri);
+            return false;
+        } else {
+            LOG.info(
+                    "Post logout redirect URI is present in logout request and client registry. Value is {}",
+                    uri);
+            return true;
+        }
     }
 
     private Optional<String> extractClientSessionIdFromCookieHeaders(Map<String, String> headers) {
@@ -212,7 +221,7 @@ public class LogoutRequest {
         return rpPairwiseId;
     }
 
-    public Optional<String> postLogoutRedirectUri() {
+    public Optional<URI> postLogoutRedirectUri() {
         return postLogoutRedirectUri;
     }
 
