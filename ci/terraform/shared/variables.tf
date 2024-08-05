@@ -120,6 +120,11 @@ variable "dynamo_default_write_capacity" {
   default = 20
 }
 
+variable "dynamo_deletion_protection_enabled" {
+  type    = bool
+  default = true
+}
+
 variable "test_client_email_allowlist" {
   type = string
 }

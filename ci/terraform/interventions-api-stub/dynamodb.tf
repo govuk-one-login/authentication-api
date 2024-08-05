@@ -4,6 +4,8 @@ resource "aws_dynamodb_table" "stub_account_interventions_table" {
 
   hash_key = "InternalPairwiseId"
 
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
   attribute {
     name = "InternalPairwiseId"
     type = "S"

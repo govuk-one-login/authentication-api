@@ -6,6 +6,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
   attribute {
     name = "Email"
     type = "S"
@@ -62,6 +64,8 @@ resource "aws_dynamodb_table" "user_profile_table" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "Email"
@@ -146,6 +150,8 @@ resource "aws_dynamodb_table" "client_registry_table" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
   attribute {
     name = "ClientID"
     type = "S"
@@ -188,6 +194,8 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
   attribute {
     name = "SubjectID"
     type = "S"
@@ -221,6 +229,8 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "SubjectID"
@@ -281,6 +291,8 @@ resource "aws_dynamodb_table" "common_passwords_table" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
   attribute {
     name = "Password"
     type = "S"
@@ -308,6 +320,8 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "InternalCommonSubjectIdentifier"
@@ -337,6 +351,8 @@ resource "aws_dynamodb_table" "access_token_store" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "AccessToken"
@@ -371,6 +387,8 @@ resource "aws_dynamodb_table" "auth_code_store" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "AuthCode"
@@ -407,6 +425,8 @@ resource "aws_dynamodb_table" "bulk_email_users" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "SubjectID"
@@ -463,6 +483,8 @@ resource "aws_dynamodb_table" "authentication_callback_userinfo" {
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
+
   attribute {
     name = "SubjectID"
     type = "S"
@@ -510,6 +532,8 @@ resource "aws_dynamodb_table" "email-check-result" {
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  deletion_protection_enabled = var.dynamo_deletion_protection_enabled
 
   attribute {
     name = "Email"

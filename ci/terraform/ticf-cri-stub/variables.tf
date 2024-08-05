@@ -59,6 +59,11 @@ variable "ticf_cri_stub_release_zip_file" {
   type        = string
 }
 
+variable "dynamo_deletion_protection_enabled" {
+  type    = bool
+  default = false
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

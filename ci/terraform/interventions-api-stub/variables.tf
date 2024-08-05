@@ -65,6 +65,11 @@ variable "orchestration_vpc_endpoint_id" {
   default     = ""
 }
 
+variable "dynamo_deletion_protection_enabled" {
+  type    = bool
+  default = false
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
