@@ -16,6 +16,10 @@ import { ClientSession } from "../types/client-session";
 import * as process from "node:process";
 import { getPrivateKey } from "../utils/key";
 import { renderGovukPage } from "../utils/page";
+import {
+  parseRequestParameters,
+  RequestParameters,
+} from "../services/request-parameters";
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -71,7 +75,7 @@ const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
 const post = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
-  const form = parseForm(event.body);
+  const form = parseRequestParameters(event.body);
   const gsCookie = await setUpSession(event.headers, form);
   const journeyId = gsCookie.split(".")[0];
   const signingPrivKey = await getPrivateKey();
@@ -95,29 +99,6 @@ const post = async (
     },
     body: "",
   };
-};
-
-type RequestParameters = {
-  confidence: "Cl" | "Cl.Cm";
-  reauthenticate?: string;
-};
-
-const parseForm = (body: string | null): RequestParameters => {
-  if (body === null) {
-    throw new Error("No body");
-  }
-
-  const parsedForm = querystring.parse(body);
-  return {
-    confidence: getConfidence(parsedForm),
-    reauthenticate: getReauthenticate(parsedForm),
-  };
-};
-
-const getReauthenticate = (form: ParsedUrlQuery): string | undefined => {
-  if (typeof form.reauthenticate === "string" && form.reauthenticate !== "") {
-    return form.reauthenticate;
-  }
 };
 
 const jarPayload = (form: RequestParameters, journeyId: string): JWTPayload => {
@@ -154,17 +135,6 @@ const jarPayload = (form: RequestParameters, journeyId: string): JWTPayload => {
     payload["reauthenticate"] = form["reauthenticate"];
   }
   return payload;
-};
-
-const getConfidence = (form: ParsedUrlQuery) => {
-  switch (form.level) {
-    case "low":
-      return "Cl";
-    case "medium":
-      return "Cl.Cm";
-    default:
-      throw new Error("Unknown level " + form.level);
-  }
 };
 
 const sandpitFrontendPublicKey = async () =>
