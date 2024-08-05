@@ -400,8 +400,11 @@ public class DynamoService implements AuthenticationService {
                                                                                 MFAMethodType
                                                                                         .AUTH_APP
                                                                                         .getValue())
+                                                                && method
+                                                                        instanceof AuthAppMFAMethod
                                                                 && method.isEnabled()
                                                                 && method.isMethodVerified())
+                                        .map(method -> (AuthAppMFAMethod) method)
                                         .findFirst())
                 .ifPresent(
                         t -> {

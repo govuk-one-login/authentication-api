@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -159,8 +160,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
+        var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
         assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
+                authAppMfaMethod.getCredentialValue(),
                 equalTo(ALTERNATIVE_AUTH_APP_SECRET_BASE_32));
         assertThat(userStore.getPhoneNumberForUser(EMAIL_ADDRESS), equalTo(Optional.empty()));
         assertThat(userStore.isPhoneNumberVerified(EMAIL_ADDRESS), equalTo(false));
@@ -190,8 +192,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
+        var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
         assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
+                authAppMfaMethod.getCredentialValue(),
                 equalTo(ALTERNATIVE_AUTH_APP_SECRET_BASE_32));
         assertThat(userStore.getPhoneNumberForUser(EMAIL_ADDRESS), equalTo(Optional.empty()));
         assertThat(userStore.isPhoneNumberVerified(EMAIL_ADDRESS), equalTo(false));
@@ -220,6 +223,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(
                 mfaMethod.stream()
                         .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
+                        .map(t -> (AuthAppMFAMethod) t)
                         .anyMatch(
                                 t ->
                                         t.getCredentialValue().equals(secret)
@@ -266,9 +270,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
-        assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                equalTo(AUTH_APP_SECRET_BASE_32));
+        var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
+        assertThat(authAppMfaMethod.getCredentialValue(), equalTo(AUTH_APP_SECRET_BASE_32));
     }
 
     @Test
@@ -302,13 +305,19 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(
                 mfaMethod.stream()
                         .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
-                        .noneMatch(t -> t.getCredentialValue().equals(currentAuthAppCredential)));
+                        .noneMatch(
+                                t ->
+                                        ((AuthAppMFAMethod) t)
+                                                .getCredentialValue()
+                                                .equals(currentAuthAppCredential)));
         assertTrue(
                 mfaMethod.stream()
                         .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
                         .anyMatch(
                                 t ->
-                                        t.getCredentialValue().equals(newAuthAppCredential)
+                                        ((AuthAppMFAMethod) t)
+                                                        .getCredentialValue()
+                                                        .equals(newAuthAppCredential)
                                                 && t.isMethodVerified()));
     }
 
@@ -372,9 +381,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, expectedAuditableEvents);
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
-        assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                equalTo(authAppSecret));
+        var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
+        assertThat(authAppMfaMethod.getCredentialValue(), equalTo(authAppSecret));
     }
 
     @ParameterizedTest
@@ -404,9 +412,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         if (isAccountVerified) {
-            assertThat(
-                    userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                    equalTo(AUTH_APP_SECRET_BASE_32));
+            var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
+            assertThat(authAppMfaMethod.getCredentialValue(), equalTo(AUTH_APP_SECRET_BASE_32));
         }
     }
 
@@ -432,9 +439,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         if (isAccountVerified) {
-            assertThat(
-                    userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                    equalTo(AUTH_APP_SECRET_BASE_32));
+            var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
+            assertThat(authAppMfaMethod.getCredentialValue(), equalTo(AUTH_APP_SECRET_BASE_32));
         }
     }
 
@@ -523,9 +529,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         if (isAccountVerified) {
-            assertThat(
-                    userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                    equalTo(AUTH_APP_SECRET_BASE_32));
+            var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
+            assertThat(authAppMfaMethod.getCredentialValue(), equalTo(AUTH_APP_SECRET_BASE_32));
         }
     }
 
@@ -561,9 +566,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         if (isAccountVerified) {
-            assertThat(
-                    userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                    equalTo(AUTH_APP_SECRET_BASE_32));
+            var authAppMfaMethod = (AuthAppMFAMethod) userStore.getMfaMethod(EMAIL_ADDRESS).get(0);
+            assertThat(authAppMfaMethod.getCredentialValue(), equalTo(AUTH_APP_SECRET_BASE_32));
         }
     }
 

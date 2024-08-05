@@ -2,6 +2,7 @@ package uk.gov.di.authentication.testsupport.helpers;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -104,7 +105,7 @@ public class BulkTestUserCsvHelper {
 
         if (isAuthAppSecondAuthFactor) {
             String authAppSecret = testUser.get(4);
-            List<AuthAppMFAMethod> authAppMfaMethods = new ArrayList<>();
+            List<MFAMethod> authAppMfaMethods = new ArrayList<>();
             var authAppMfaMethod =
                     new AuthAppMFAMethod(
                             MFAMethodType.AUTH_APP.getValue(), authAppSecret, true, true, dateTime);

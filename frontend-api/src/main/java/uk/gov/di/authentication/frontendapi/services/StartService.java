@@ -197,6 +197,8 @@ public class StartService {
                 .filter(Objects::nonNull)
                 .filter(not(List::isEmpty))
                 .flatMap(Collection::stream)
+                .filter(m -> m instanceof AuthAppMFAMethod)
+                .map(m -> (AuthAppMFAMethod) m)
                 .filter(AuthAppMFAMethod::isMethodVerified)
                 .map(AuthAppMFAMethod::getMfaMethodType)
                 .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);

@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -364,8 +365,7 @@ class AuthAppCodeProcessorTest {
         when(mockAuthAppMfaMethod.getMfaMethodType()).thenReturn(MFAMethodType.AUTH_APP.getValue());
         when(mockAuthAppMfaMethod.getCredentialValue()).thenReturn(AUTH_APP_SECRET);
         when(mockAuthAppMfaMethod.isEnabled()).thenReturn(true);
-        List<AuthAppMFAMethod> mockAuthAppMfaMethodList =
-                Collections.singletonList(mockAuthAppMfaMethod);
+        List<MFAMethod> mockAuthAppMfaMethodList = Collections.singletonList(mockAuthAppMfaMethod);
         when(mockUserCredentials.getMfaMethods()).thenReturn(mockAuthAppMfaMethodList);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
                 .thenReturn(mockUserCredentials);

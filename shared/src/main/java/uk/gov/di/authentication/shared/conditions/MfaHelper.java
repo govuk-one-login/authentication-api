@@ -37,7 +37,12 @@ public class MfaHelper {
                 .flatMap(
                         mfaMethods ->
                                 mfaMethods.stream()
-                                        .filter(AuthAppMFAMethod::isEnabled)
+                                        .filter(
+                                                mfaMethod ->
+                                                        mfaMethod.isEnabled()
+                                                                && mfaMethod
+                                                                        instanceof AuthAppMFAMethod)
+                                        .map(mfaMethod -> (AuthAppMFAMethod) mfaMethod)
                                         .findFirst());
     }
 

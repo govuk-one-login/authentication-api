@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -164,16 +165,18 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.empty();
         }
 
-        var mfaMethod =
+        var authAppMFAMethod =
                 userCredentials.getMfaMethods().stream()
                         .filter(
                                 method ->
                                         method.getMfaMethodType()
-                                                .equals(MFAMethodType.AUTH_APP.getValue()))
-                        .filter(AuthAppMFAMethod::isEnabled)
+                                                        .equals(MFAMethodType.AUTH_APP.getValue())
+                                                && method instanceof AuthAppMFAMethod)
+                        .map(m -> (AuthAppMFAMethod) m)
+                        .filter(MFAMethod::isEnabled)
                         .findAny();
 
-        return mfaMethod.map(AuthAppMFAMethod::getCredentialValue);
+        return authAppMFAMethod.map(AuthAppMFAMethod::getCredentialValue);
     }
 
     private boolean checkCode(String secret, long code, long timestamp) {

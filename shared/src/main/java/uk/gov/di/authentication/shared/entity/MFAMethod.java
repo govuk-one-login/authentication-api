@@ -8,4 +8,8 @@ public interface MFAMethod {
     boolean isEnabled();
 
     String getUpdated();
+
+    MFAMethod withEnabled(boolean enabled);
+
+    MFAMethod withUpdated(String updated);
 }
