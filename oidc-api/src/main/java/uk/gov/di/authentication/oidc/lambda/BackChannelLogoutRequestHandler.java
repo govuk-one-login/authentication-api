@@ -106,8 +106,10 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
     }
 
     public JWTClaimsSet generateClaims(BackChannelLogoutMessage inputEvent) {
+        String jti = UUID.randomUUID().toString();
+        LOG.info("Generating backchannel logout object. jti: {}", jti);
         return new JWTClaimsSet.Builder()
-                .jwtID(UUID.randomUUID().toString())
+                .jwtID(jti)
                 .audience(inputEvent.getClientId())
                 .subject(inputEvent.getSubjectId())
                 .expirationTime(clock.nowPlus(2, ChronoUnit.MINUTES))
