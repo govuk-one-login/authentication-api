@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @DynamoDbBean
-public class AuthAppMFAMethod {
+public class AuthAppMFAMethod implements MFAMethod {
 
     public static final String ATTRIBUTE_MFA_METHOD_TYPE = "MfaMethodType";
     public static final String ATTRIBUTE_CREDENTIAL_VALUE = "CredentialValue";
@@ -40,6 +40,7 @@ public class AuthAppMFAMethod {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)
+    @Override
     public String getMfaMethodType() {
         return mfaMethodType;
     }
@@ -69,6 +70,7 @@ public class AuthAppMFAMethod {
 
     @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
     @DynamoDbAttribute(ATTRIBUTE_METHOD_VERIFIED)
+    @Override
     public boolean isMethodVerified() {
         return methodVerified;
     }
@@ -84,6 +86,7 @@ public class AuthAppMFAMethod {
 
     @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
     @DynamoDbAttribute(ATTRIBUTE_ENABLED)
+    @Override
     public boolean isEnabled() {
         return enabled;
     }
@@ -98,6 +101,7 @@ public class AuthAppMFAMethod {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_UPDATED)
+    @Override
     public String getUpdated() {
         return updated;
     }
