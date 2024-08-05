@@ -13,23 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     name: Run pre-commit
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           fetch-depth: 0
 
       - name: 🏗️ Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 #v4.2.1
         with:
           java-version: "17"
-          distribution: "temurin"
+          distribution: "corretto"
 
       - name: 🏗️ Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4
         with:
           cache-read-only: false
+          add-job-summary: never
 
       - name: 🏗️ Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5.1.1
         with:
           python-version: "3.x"
 

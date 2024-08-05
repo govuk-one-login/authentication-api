@@ -20,12 +20,13 @@ logs/
 .vscode/
 .venv/
 .aws-sam
+**/.DS_Store
 
 # Approval Tests
 *.received.txt
 *.received.json
 
 # Contract Tests
-pact/
+/*/src/test/pact/
 node_modules
 .infracost

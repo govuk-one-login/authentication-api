@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -22,15 +23,15 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 public class TrustMarkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private final ConfigurationService configurationService;
+    private final OidcAPI oidcApi;
     private static final Logger LOG = LogManager.getLogger(TrustMarkHandler.class);
 
-    public TrustMarkHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
+    public TrustMarkHandler(OidcAPI oidcApi) {
+        this.oidcApi = oidcApi;
     }
 
     public TrustMarkHandler() {
-        this.configurationService = ConfigurationService.getInstance();
+        this(new OidcAPI(ConfigurationService.getInstance()));
     }
 
     @Override
@@ -55,8 +56,8 @@ public class TrustMarkHandler
 
     private TrustMarkResponse createTrustMarkResponse() {
         return new TrustMarkResponse(
-                configurationService.getOidcApiBaseURL().orElseThrow(),
-                configurationService.getOidcApiBaseURL().orElseThrow(),
+                oidcApi.baseURI().toString(),
+                oidcApi.baseURI().toString(),
                 Arrays.asList(
                         CredentialTrustLevel.LOW_LEVEL.getValue(),
                         CredentialTrustLevel.MEDIUM_LEVEL.getValue()),

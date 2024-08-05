@@ -249,7 +249,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var metadataPairs = metadataPairsForEvent(auditableEvent, session, codeRequest);
+        var metadataPairs = metadataPairsForEvent(auditableEvent, emailAddress, codeRequest);
 
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
@@ -276,7 +276,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix)) {
             return;
         }
-
         boolean reducedLockout =
                 List.of(CodeRequestType.SMS_REGISTRATION, CodeRequestType.SMS_ACCOUNT_RECOVERY)
                         .contains(CodeRequestType.getCodeRequestType(mfaMethodType, journeyType));
@@ -285,7 +284,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         ? configurationService.getReducedLockoutDuration()
                         : configurationService.getLockoutDuration();
 
-        codeStorageService.saveBlockedForEmail(emailAddress, codeBlockedKeyPrefix, blockDuration);
+        if (!configurationService.isReauthSignoutEnabled()
+                || journeyType != JourneyType.REAUTHENTICATION) {
+            codeStorageService.saveBlockedForEmail(
+                    emailAddress, codeBlockedKeyPrefix, blockDuration);
+        }
 
         if (mfaMethodType == MFAMethodType.SMS) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
@@ -295,12 +298,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private AuditService.MetadataPair[] metadataPairsForEvent(
-            FrontendAuditableEvent auditableEvent,
-            Session session,
-            VerifyMfaCodeRequest codeRequest) {
+            FrontendAuditableEvent auditableEvent, String email, VerifyMfaCodeRequest codeRequest) {
+        var methodType = codeRequest.getMfaMethodType();
         var basicMetadataPairs =
                 List.of(
-                        pair("mfa-type", codeRequest.getMfaMethodType().getValue()),
+                        pair("mfa-type", methodType.getValue()),
                         pair(
                                 "account-recovery",
                                 codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY),
@@ -309,9 +311,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 switch (auditableEvent) {
                     case CODE_MAX_RETRIES_REACHED -> List.of(
                             pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
-                    case INVALID_CODE_SENT -> List.of(
-                            pair("loginFailureCount", session.getRetryCount()),
-                            pair("MFACodeEntered", codeRequest.getCode()));
+                    case INVALID_CODE_SENT -> {
+                        var failureCount =
+                                methodType.equals(MFAMethodType.AUTH_APP)
+                                        ? codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                                                email, MFAMethodType.AUTH_APP)
+                                        : codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                                                email);
+                        yield List.of(
+                                pair("loginFailureCount", failureCount),
+                                pair("MFACodeEntered", codeRequest.getCode()));
+                    }
                     case CODE_VERIFIED -> List.of(pair("MFACodeEntered", codeRequest.getCode()));
                     default -> List.<AuditService.MetadataPair>of();
                 };

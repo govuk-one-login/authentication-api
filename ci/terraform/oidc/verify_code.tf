@@ -45,6 +45,7 @@ module "verify_code" {
     LOCKOUT_COUNT_TTL                        = var.lockout_count_ttl
     EMAIL_ACCOUNT_CREATION_LOCKOUT_COUNT_TTL = var.account_creation_lockout_count_ttl
     SUPPORT_ACCOUNT_CREATION_COUNT_TTL       = var.support_account_creation_count_ttl
+    SUPPORT_REAUTH_SIGNOUT_ENABLED           = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest"
 

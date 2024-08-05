@@ -52,7 +52,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        var sessionId = redis.createSession();
+        var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL);
         headers = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
         handler =
@@ -178,13 +178,14 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         var randomEmail = "random_email@email.com";
 
-        redis.incrementEmailCount(randomEmail);
-        redis.incrementEmailCount(randomEmail);
-        redis.incrementEmailCount(randomEmail);
-        redis.incrementEmailCount(randomEmail);
-        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
 
         var request = new CheckReauthUserRequest(randomEmail, "random-pairwise-id");
+
         var response =
                 makeRequest(
                         Optional.of(request),
@@ -192,6 +193,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of());
+
         assertThat(response, hasStatus(400));
     }
 

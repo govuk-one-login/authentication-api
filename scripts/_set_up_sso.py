@@ -200,6 +200,8 @@ def get_aws_accounts_and_roles(sso_token: StrAnyDict) -> list[StrAnyDict]:
         account["roleList"] = []
         for page in iterator:
             account["roleList"].extend(page["roleList"])
+
+        account["roles"] = [role["roleName"] for role in account["roleList"]]
     return accounts
 
 
@@ -225,7 +227,7 @@ def account_is_prod(account: StrAnyDict) -> bool:
     )
 
 
-def role_ends_with(role: StrAnyDict, test_string: str) -> bool:
+def role_ends_with(role_name: str, test_string: str) -> bool:
     """
     Checks if the given AWS role contains a specific string.
 
@@ -241,19 +243,27 @@ def role_ends_with(role: StrAnyDict, test_string: str) -> bool:
     Returns:
         bool: True if the role contains the string, False otherwise.
     """
-    return re.search(rf"\b{test_string}$", role["roleName"], re.IGNORECASE) is not None
+    return re.search(rf"\b{test_string}$", role_name, re.IGNORECASE) is not None
 
 
-def role_is_admin(role: StrAnyDict) -> bool:
-    return role_ends_with(role, "admin") or role_ends_with(role, "administrator")
-
-
-def role_is_readonly(role: StrAnyDict) -> bool:
+def role_is_admin(role_name: str) -> bool:
     return (
-        role_ends_with(role, "readonly")
-        or role_ends_with(role, "read-only")
-        or role_ends_with(role, "ReadOnlyAccess")
+        role_ends_with(role_name, "admin")
+        or role_ends_with(role_name, "administrator")
+        or role_ends_with(role_name, "AWSAdministratorAccess")
     )
+
+
+def role_is_readonly(role_name: str) -> bool:
+    return (
+        role_ends_with(role_name, "readonly")
+        or role_ends_with(role_name, "read-only")
+        or role_ends_with(role_name, "ReadOnlyAccess")
+    )
+
+
+def account_has_named_role(account: StrAnyDict, role_name: str) -> bool:
+    return any(role["roleName"] == role_name for role in account["roleList"])
 
 
 def create_aws_profiles(accounts: list[StrAnyDict]):
@@ -261,39 +271,57 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
     config = configparser.ConfigParser()
     config.read(AWS_CONFIG_FILE)
 
-    created_profiles = []
     for account in accounts:
+        account["profiles"] = {}
         account_name = account["accountName"]
-        for role in account["roleList"]:
-            role_name: str = role["roleName"]
+
+        if "AWSAdministratorAccess" in account["roles"]:
+            account["profiles"][f"{account_name}-admin"] = {
+                "name": f"{account_name}-admin",
+                "roleName": "AWSAdministratorAccess",
+            }
+            account["roles"].remove("AWSAdministratorAccess")
+
+        if "ReadOnlyAccess" in account["roles"]:
+            account["profiles"][f"{account_name}-readonly"] = {
+                "name": f"{account_name}-readonly",
+                "roleName": "ReadOnlyAccess",
+            }
+            account["roles"].remove("ReadOnlyAccess")
+
+        for role in account["roles"]:
             profile_name = None
 
             if role_is_admin(role):
-                _name = f"{account_name}-admin"
-                if _name not in created_profiles:
-                    # Skip if profile already exists, we'll use a generic name later
-                    profile_name = _name
+                profile_name = f"{account_name}-admin"
+                if profile_name in account["profiles"].keys():
+                    continue
             elif role_is_readonly(role):
-                _name = f"{account_name}-readonly"
-                if _name not in created_profiles:
-                    # Skip if profile already exists, we'll use a generic name later
-                    profile_name = _name
+                profile_name = f"{account_name}-readonly"
+                if profile_name in account["profiles"].keys():
+                    continue
 
             if profile_name is None:
                 logger.warning(
                     "Role name %s does not match any known patterns or is"
                     " already in use. Using %s-%s instead.",
-                    role_name,
+                    role,
                     account_name,
-                    role_name,
+                    role,
                 )
-                profile_name = f"{account_name}-{role_name}"
+                profile_name = f"{account_name}-{role}"
 
+            account["profiles"][profile_name] = {
+                "name": profile_name,
+                "roleName": role,
+            }
+
+        for profile_name, profile in account["profiles"].items():
             profile_section_title = f"profile {profile_name}"
             if (
                 account_is_prod(account)
                 and not INCLUDE_PROD
-                and not role_is_readonly(role)
+                and not role_is_readonly(profile_name)
             ):
                 if profile_section_title in config:
                     config.remove_section(profile_section_title)
@@ -312,7 +340,7 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
                     "Updating profile %s: %s:%s",
                     profile_name,
                     account["accountId"],
-                    role_name,
+                    profile["roleName"],
                 )
                 config.remove_section(profile_section_title)
             else:
@@ -320,18 +348,17 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
                     "Adding profile %s: %s:%s",
                     profile_name,
                     account["accountId"],
-                    role_name,
+                    profile["roleName"],
                 )
 
             config[profile_section_title] = {
                 "sso_session": SESSION_NAME,
                 "sso_account_id": account["accountId"],
-                "sso_role_name": role_name,
+                "sso_role_name": profile["roleName"],
                 "sso_region": DEFAULT_REGION,
                 "sso_start_url": SESSION_START_URL,
                 "region": DEFAULT_REGION,
             }
-            created_profiles.append(profile_name)
 
     # Write config file
     with AWS_CONFIG_FILE.open("w", encoding="utf-8") as f:

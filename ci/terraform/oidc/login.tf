@@ -42,6 +42,7 @@ module "login" {
     LOCKOUT_DURATION                     = var.lockout_duration
     LOCKOUT_COUNT_TTL                    = var.lockout_count_ttl
     INCORRECT_PASSWORD_LOCKOUT_COUNT_TTL = var.incorrect_password_lockout_count_ttl
+    SUPPORT_REAUTH_SIGNOUT_ENABLED       = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 

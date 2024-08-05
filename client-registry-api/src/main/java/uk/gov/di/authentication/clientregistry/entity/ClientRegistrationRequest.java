@@ -3,7 +3,6 @@ package uk.gov.di.authentication.clientregistry.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.validation.Required;
 
@@ -32,7 +31,7 @@ public class ClientRegistrationRequest {
 
     @SerializedName("public_key_source")
     @Expose
-    private String publicKeySource = PublicKeySource.STATIC.getValue();
+    private String publicKeySource;
 
     @SerializedName("public_key")
     @Expose
@@ -153,9 +152,7 @@ public class ClientRegistrationRequest {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
-        if (Objects.nonNull(publicKeySource)) {
-            this.publicKeySource = publicKeySource;
-        }
+        this.publicKeySource = publicKeySource;
         this.publicKey = publicKey;
         this.jwksUrl = jwksUrl;
         this.scopes = scopes;

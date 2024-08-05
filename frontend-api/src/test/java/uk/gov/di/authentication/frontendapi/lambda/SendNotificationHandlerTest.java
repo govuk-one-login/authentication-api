@@ -26,6 +26,7 @@ import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -44,6 +45,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -119,6 +121,8 @@ class SendNotificationHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
+            mock(DynamoEmailCheckResultService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientRegistry clientRegistry =
@@ -160,6 +164,7 @@ class SendNotificationHandlerTest {
                     pendingEmailCheckSqsClient,
                     codeGeneratorService,
                     codeStorageService,
+                    dynamoEmailCheckResultService,
                     auditService);
 
     @RegisterExtension
@@ -282,6 +287,58 @@ class SendNotificationHandlerTest {
                                         ? EMAIL_CODE_SENT
                                         : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
                                 expectedAuditContext);
+            }
+        }
+    }
+
+    private static Stream<Arguments> requestEmailCheckPermutations() {
+        return Stream.of(Arguments.of(true, false), Arguments.of(false, true));
+    }
+
+    @ParameterizedTest
+    @MethodSource("requestEmailCheckPermutations")
+    void shouldCorrectlyRequestEmailCheck(
+            boolean cachedResultAlreadyExists, boolean expectedCheckRequested) {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        if (cachedResultAlreadyExists) {
+            when(dynamoEmailCheckResultService.getEmailCheckStore(EMAIL))
+                    .thenReturn(Optional.of(new EmailCheckResultStore().withEmail(EMAIL)));
+        }
+
+        Date mockedDate = new Date();
+        UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class);
+                MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class)) {
+            mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+            mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
+
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                            EMAIL, NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            handler.handleRequest(event, context);
+
+            if (expectedCheckRequested) {
+                verify(pendingEmailCheckSqsClient)
+                        .send(
+                                format(
+                                        "{\"userId\":\"%s\",\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":%d,\"isTestUserRequest\":%b}",
+                                        AuditService.UNKNOWN,
+                                        mockedUUID,
+                                        EMAIL,
+                                        SESSION_ID,
+                                        CLIENT_SESSION_ID,
+                                        DI_PERSISTENT_SESSION_ID,
+                                        IP_ADDRESS,
+                                        JourneyType.REGISTRATION,
+                                        mockedDate.toInstant().getEpochSecond(),
+                                        false));
+            } else {
+                verifyNoInteractions(pendingEmailCheckSqsClient);
             }
         }
     }

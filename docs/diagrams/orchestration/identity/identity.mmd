@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    participant rp as Relying Party
+    participant orch_api as Orchestration OIDC API
+    participant auth as Authentication
+    participant ipv as IPV Core
+    participant spot as SPOT
+    Note over rp,orch_api: Dotted lines indicate 302 redirects of the user's browser
+    rp -->> orch_api : OIDC Authentication request to /authorize
+    orch_api  ->> orch_api : Validates Authentication request
+    orch_api ->> orch_api : Create and store session, set cookie
+    orch_api -->> auth : OAuth 2.0 Authorization request to /authorize
+    auth ->> auth : Authenticates the user
+    auth -->> orch_api : Return the user with an auth code query parameter
+    Note over orch_api,auth: Solid lines indicate machine-machine API calls
+    orch_api ->> auth : Token request containing auth code to /token
+    auth ->> orch_api : Token response containing access token
+    orch_api ->> auth : UserInfo request containing access token to /userinfo
+    auth ->> orch_api : UserInfo response
+    orch_api -->> ipv : OAuth 2.0 Authorization request to /authorize
+    ipv -->> orch_api : Return the user with an auth code query parameter
+    orch_api ->> ipv : Token request with signed client assertion and auth code to /token
+    ipv ->> orch_api : Token response containing access token
+    orch_api ->> ipv : User identity request containing access token to /useridentity
+    ipv ->> orch_api : User identity response
+    orch_api ->> orch_api : Store any additional identity claims
+    orch_api -) spot : Send identity VCs to SPOT
+    orch_api -->> auth : Redirect the user to a holding page on the Auth Frontend
+    loop Every 5 seconds
+        auth ->> orch_api : Poll for updates
+        orch_api ->> auth : PROCESSING response
+    end
+    spot -) orch_api : Return a signed Core Identity JWT
+    orch_api ->> orch_api : Store signed Core Identity JWT
+    auth ->> orch_api : Poll for updates
+    orch_api ->> auth : COMPLETED response
+    auth ->> orch_api : Request an RP auth code
+
+
+    orch_api ->> orch_api : Generates and store Authorization Code with 5 min TTL
+    orch_api ->> auth : Generate a redirect URL containing the auth code
+
+    auth -->> rp : Redirect the user to the redirect URL
+    rp ->> orch_api : Token request containing signed client assertion and auth code to /token
+    orch_api ->> orch_api : Validates token request, then generates and stores access token with 3 min TTL
+    orch_api ->> rp : Token response containing access and id tokens
+    rp ->> orch_api : UserInfo request containing access token to /userinfo
+    orch_api ->> orch_api : Validates access token
+    orch_api ->> rp : UserInfo response containing user information, including signed Core Identity JWT and any additional permitted identity claims

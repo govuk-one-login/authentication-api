@@ -212,7 +212,7 @@ public class IpvTokenTest {
         try {
             signature_bytes =
                     ECDSA.transcodeSignatureToDER(
-                            Base64.getDecoder().decode(CLIENT_ASSERTION_SIGNATURE));
+                            Base64.getUrlDecoder().decode(CLIENT_ASSERTION_SIGNATURE));
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }

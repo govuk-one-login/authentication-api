@@ -39,7 +39,7 @@ on:
       java_distribution:
         description: "The Java distribution to use"
         type: string
-        default: "temurin"
+        default: "corretto"
 
 jobs:
   build:
@@ -57,35 +57,26 @@ jobs:
       artifact_url: ${{ steps.upload-artifacts.outputs.artifact-url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4.0.2
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
           role-to-assume: ${{ inputs.aws_role }}
           aws-region: ${{ inputs.aws_region }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@99b8673ff64fbf99d8d325f52d9a5bdedb8483e9 #v4.2.1
         with:
           java-version: ${{ inputs.java_version }}
           distribution: ${{ inputs.java_distribution }}
 
-      - name: Set up Gradle cache for ${{ inputs.module_name }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ inputs.module_name }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-${{ inputs.module_name }}
-            ${{ runner.os }}-gradle-
-
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4
         with:
-          cache-disabled: true
+          gradle-version: wrapper
+          cache-read-only: true
+          add-job-summary: "on-failure"
 
       - name: Build ${{ inputs.module_name }}
         id: build
@@ -198,7 +189,7 @@ jobs:
 
       - name: Upload artifacts
         id: upload-artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4.3.5
         with:
           name: signed-${{ inputs.module_name }}
           path: "${{ steps.create_artifacts.outputs.artifact_dir }}/"

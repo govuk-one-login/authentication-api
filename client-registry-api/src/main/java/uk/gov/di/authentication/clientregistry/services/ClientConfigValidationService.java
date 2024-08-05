@@ -81,7 +81,9 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(RegistrationError.INVALID_REDIRECT_URI);
         }
-        if (!isPublicKeySourceValid(registrationRequest.getPublicKeySource())) {
+        if (!Optional.ofNullable(registrationRequest.getPublicKeySource())
+                .map(this::isPublicKeySourceValid)
+                .orElse(true)) {
             return Optional.of(INVALID_PUBLIC_KEY_SOURCE);
         }
         if (!Optional.ofNullable(registrationRequest.getPublicKey())
@@ -97,7 +99,8 @@ public class ClientConfigValidationService {
         if (!isPublicKeySourceConsistent(
                 registrationRequest.getPublicKeySource(),
                 registrationRequest.getPublicKey(),
-                registrationRequest.getJwksUrl())) {
+                registrationRequest.getJwksUrl(),
+                false)) {
             return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
         if (!areScopesValid(registrationRequest.getScopes())) {
@@ -159,7 +162,8 @@ public class ClientConfigValidationService {
         if (!isPublicKeySourceConsistent(
                 updateRequest.getPublicKeySource(),
                 updateRequest.getPublicKey(),
-                updateRequest.getJwksUrl())) {
+                updateRequest.getJwksUrl(),
+                true)) {
             return Optional.of(INCONSISTENT_PUBLIC_KEY_SOURCE);
         }
         if (!Optional.ofNullable(updateRequest.getScopes())
@@ -213,8 +217,8 @@ public class ClientConfigValidationService {
     }
 
     private boolean isPublicKeySourceConsistent(
-            String publicKeySource, String publicKey, String jwksUri) {
-        return (publicKeySource == null && publicKey == null && jwksUri == null)
+            String publicKeySource, String publicKey, String jwksUri, boolean isUpdate) {
+        return (publicKeySource == null && (isUpdate || publicKey != null) && jwksUri == null)
                 || (PublicKeySource.STATIC.getValue().equals(publicKeySource)
                         && publicKey != null
                         && jwksUri == null)

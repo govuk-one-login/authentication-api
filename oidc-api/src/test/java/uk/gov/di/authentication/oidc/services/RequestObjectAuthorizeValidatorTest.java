@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -22,6 +23,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
+import uk.gov.di.orchestration.shared.exceptions.JwksException;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -63,19 +65,20 @@ class RequestObjectAuthorizeValidatorTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final ClientID CLIENT_ID = new ClientID("test-id");
-    private static final String OIDC_BASE_URI = "https://localhost";
-    private static final String AUDIENCE = "https://localhost/authorize";
+    private static final URI OIDC_BASE_AUTHORIZE_URI = URI.create("https://localhost/authorize");
     private RequestObjectAuthorizeValidator service;
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
 
     @BeforeEach
     void setup() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
+        when(oidcApi.authorizeURI()).thenReturn(OIDC_BASE_AUTHORIZE_URI);
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service =
                 new RequestObjectAuthorizeValidator(
                         configurationService,
                         dynamoClientService,
                         ipvCapacityService,
+                        oidcApi,
                         clientSignatureValidationService);
         var clientRegistry =
                 generateClientRegistry(
@@ -88,14 +91,15 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestUriPayload() throws JOSEException {
+    void shouldSuccessfullyProcessRequestUriPayload()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         List<String> scopes = new ArrayList<>();
         scopes.add("openid");
         scopes.add("doc-checking-app");
         var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", scope.toString())
@@ -112,7 +116,8 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent() throws JOSEException {
+    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         List<String> scopes = new ArrayList<>();
         scopes.add("openid");
@@ -120,7 +125,7 @@ class RequestObjectAuthorizeValidatorTest {
         var scope = Scope.parse(scopes);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", scope.toString())
@@ -141,7 +146,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", "https://invalid-redirect-uri")
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -161,7 +166,7 @@ class RequestObjectAuthorizeValidatorTest {
     void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
                         .claim("nonce", NONCE.getValue())
@@ -181,7 +186,7 @@ class RequestObjectAuthorizeValidatorTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -199,7 +204,8 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb() throws JOSEException {
+    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var clientRegistry =
                 generateClientRegistry(
                         "not-app-or-web",
@@ -210,7 +216,7 @@ class RequestObjectAuthorizeValidatorTest {
                 .thenReturn(Optional.of(clientRegistry));
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -231,10 +237,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidResponseType() throws JOSEException {
+    void shouldReturnErrorForInvalidResponseType()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
                         .claim("scope", SCOPE)
@@ -255,10 +262,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidResponseTypeInQueryParams() throws JOSEException {
+    void shouldReturnErrorForInvalidResponseTypeInQueryParams()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -289,10 +297,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientIDIsInvalid() throws JOSEException {
+    void shouldReturnErrorWhenClientIDIsInvalid()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -312,10 +321,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForUnsupportedScope() throws JOSEException {
+    void shouldReturnErrorForUnsupportedScope()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid profile")
@@ -334,10 +344,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfVtrIsNotPermittedForGivenClient() throws JOSEException {
+    void shouldReturnErrorIfVtrIsNotPermittedForGivenClient()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
@@ -362,7 +373,8 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws JOSEException {
+    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var clientRegistry =
                 generateClientRegistry(
                         ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
@@ -371,7 +383,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -391,10 +403,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenAuthRequestContainsInvalidScope() throws JOSEException {
+    void shouldReturnErrorWhenAuthRequestContainsInvalidScope()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -417,10 +430,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForUnregisteredScope() throws JOSEException {
+    void shouldReturnErrorForUnregisteredScope()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid email")
@@ -439,7 +453,8 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidAudience() throws JOSEException {
+    void shouldReturnErrorForInvalidAudience()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience("invalid-audience")
@@ -462,10 +477,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidIssuer() throws JOSEException {
+    void shouldReturnErrorForInvalidIssuer()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
@@ -485,10 +501,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfRequestClaimIsPresentJwt() throws JOSEException {
+    void shouldReturnErrorIfRequestClaimIsPresentJwt()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
@@ -509,10 +526,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfRequestUriClaimIsPresentJwt() throws JOSEException {
+    void shouldReturnErrorIfRequestUriClaimIsPresentJwt()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
@@ -533,11 +551,14 @@ class RequestObjectAuthorizeValidatorTest {
 
     @Test
     void shouldThrowWhenUnableToValidateRequestJwtSignature()
-            throws JOSEException, NoSuchAlgorithmException, ClientSignatureValidationException {
+            throws JOSEException,
+                    NoSuchAlgorithmException,
+                    ClientSignatureValidationException,
+                    JwksException {
         var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -557,10 +578,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfStateIsMissingFromRequestObject() throws JOSEException {
+    void shouldReturnErrorIfStateIsMissingFromRequestObject()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -582,10 +604,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfNonceIsMissingFromRequestObject() throws JOSEException {
+    void shouldReturnErrorIfNonceIsMissingFromRequestObject()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
@@ -607,10 +630,11 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorForInvalidUILocales() throws JOSEException {
+    void shouldReturnErrorForInvalidUILocales()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)

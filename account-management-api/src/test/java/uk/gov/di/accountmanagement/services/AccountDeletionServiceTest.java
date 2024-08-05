@@ -5,14 +5,13 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -24,7 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -53,6 +51,10 @@ class AccountDeletionServiceTest {
             mock(APIGatewayProxyRequestEvent.ProxyRequestContext.class);
     private static final MockedStatic<ClientSessionIdHelper> clientSessionIdHelperMockedStatic =
             Mockito.mockStatic(ClientSessionIdHelper.class);
+    private static final MockedStatic<PersistentIdHelper> persistentSessionIdHelperMockedStatic =
+            Mockito.mockStatic(PersistentIdHelper.class);
+    private static final MockedStatic<IpAddressHelper> ipAddressHelperMockedStatic =
+            Mockito.mockStatic(IpAddressHelper.class);
     private final AccountDeletionService underTest =
             new AccountDeletionService(
                     authenticationService,
@@ -67,6 +69,8 @@ class AccountDeletionServiceTest {
     private static final Map<String, Object> TEST_AUTHORIZER =
             Map.of("clientId", testClientIdObject);
     private static final String SUBJECT_ID = new Subject().getValue();
+    private static final String TEST_PERSISTENT_SESSION_ID = "test-persistent-session-id";
+    private static final String TEST_IP_ADDRESS = "test-ip-address";
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -76,40 +80,6 @@ class AccountDeletionServiceTest {
     public void setup() {
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any())).thenReturn(new byte[0xaa]);
-    }
-
-    @ParameterizedTest
-    @MethodSource("identifiersSource")
-    void removeAccountReturnsCorrectIdentifiers(
-            String expectedPublicSubjectId,
-            String expectedLegacySubjectId,
-            String expectedSubjectId)
-            throws Json.JsonException {
-        // given
-        when(userProfile.getPublicSubjectID()).thenReturn(expectedPublicSubjectId);
-        when(userProfile.getLegacySubjectID()).thenReturn(expectedLegacySubjectId);
-        when(userProfile.getSubjectID()).thenReturn(expectedSubjectId);
-
-        // when
-        var deletedAccountIdentifiers =
-                underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
-
-        // then
-        assertEquals(expectedPublicSubjectId, deletedAccountIdentifiers.publicSubjectId());
-        assertEquals(expectedLegacySubjectId, deletedAccountIdentifiers.legacySubjectId());
-        assertEquals(expectedSubjectId, deletedAccountIdentifiers.subjectId());
-    }
-
-    private static Stream<Arguments> identifiersSource() {
-        var publicSubjectId = new Subject().getValue();
-        var legacySubjectId = new Subject().getValue();
-        var subjectId = new Subject().getValue();
-
-        return Stream.of(
-                Arguments.of(publicSubjectId, legacySubjectId, subjectId),
-                Arguments.of(publicSubjectId, null, subjectId),
-                Arguments.of(null, legacySubjectId, subjectId),
-                Arguments.of(null, null, subjectId));
     }
 
     @Test
@@ -188,6 +158,12 @@ class AccountDeletionServiceTest {
         when(input.getRequestContext()).thenReturn(proxyRequestContext);
         when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
         when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+        persistentSessionIdHelperMockedStatic
+                .when(() -> PersistentIdHelper.extractPersistentIdFromHeaders(TEST_HEADERS))
+                .thenReturn(TEST_PERSISTENT_SESSION_ID);
+        ipAddressHelperMockedStatic
+                .when(() -> IpAddressHelper.extractIpAddress(input))
+                .thenReturn(TEST_IP_ADDRESS);
 
         // when
         underTest.removeAccount(Optional.of(input), userProfile, Optional.empty());
@@ -206,7 +182,12 @@ class AccountDeletionServiceTest {
                                                         auditContext.email(), expectedEmail)
                                                 && Objects.equals(
                                                         auditContext.phoneNumber(),
-                                                        expectedPhoneNumber)));
+                                                        expectedPhoneNumber)
+                                                && Objects.equals(
+                                                        auditContext.ipAddress(), TEST_IP_ADDRESS)
+                                                && Objects.equals(
+                                                        auditContext.persistentSessionId(),
+                                                        TEST_PERSISTENT_SESSION_ID)));
     }
 
     @Test

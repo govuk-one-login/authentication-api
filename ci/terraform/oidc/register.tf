@@ -27,6 +27,7 @@ module "register" {
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
     LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    OIDC_API_BASE_URL    = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
 
@@ -35,11 +36,7 @@ module "register" {
   root_resource_id       = aws_api_gateway_resource.register_resource.id
   execution_arn          = aws_api_gateway_rest_api.di_authentication_api.execution_arn
   authentication_vpc_arn = local.authentication_vpc_arn
-
-  memory_size                 = lookup(var.performance_tuning, "register", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "register", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "register", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "register", local.default_performance_parameters).scaling_trigger
+  memory_size            = lookup(var.performance_tuning, "register", local.default_performance_parameters).memory
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_object.client_api_release_zip.key

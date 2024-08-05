@@ -84,10 +84,6 @@ public class Session {
         return this;
     }
 
-    public int getRetryCount() {
-        return retryCount;
-    }
-
     public int getPasswordResetCount() {
         return passwordResetCount;
     }

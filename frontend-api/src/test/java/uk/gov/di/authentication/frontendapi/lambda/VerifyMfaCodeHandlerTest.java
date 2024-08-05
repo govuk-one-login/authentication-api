@@ -507,6 +507,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("blockedCodeForAuthAppOTPEnteredTooManyTimes")
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
             JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
+        when(configurationService.isReauthSignoutEnabled()).thenReturn(true);
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -521,8 +522,10 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
-        verify(codeStorageService)
-                .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
+        }
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP);
         verifyNoInteractions(cloudwatchMetricsService);
@@ -586,6 +589,8 @@ class VerifyMfaCodeHandlerTest {
                         ? null
                         : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP))
+                .thenReturn(3);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
@@ -607,7 +612,7 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("loginFailureCount", 0),
+                pair("loginFailureCount", 3),
                 pair("MFACodeEntered", CODE));
     }
 
@@ -623,6 +628,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("blockedCodeForInvalidPhoneNumberTooManyTimes")
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeTooManyTimes(
             JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
+        when(configurationService.isReauthSignoutEnabled()).thenReturn(true);
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
@@ -640,8 +646,11 @@ class VerifyMfaCodeHandlerTest {
                 .contains(codeRequestType)) {
             blockTime = 300L;
         }
-        verify(codeStorageService)
-                .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
+        }
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
@@ -692,6 +701,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(3);
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, CODE, journeyType, CommonTestVariables.UK_MOBILE_NUMBER);
@@ -713,7 +723,7 @@ class VerifyMfaCodeHandlerTest {
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
-                pair("loginFailureCount", 0),
+                pair("loginFailureCount", 3),
                 pair("MFACodeEntered", CODE));
     }
 

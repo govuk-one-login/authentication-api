@@ -89,13 +89,13 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
-        assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(mfaMethodType));
+        assertThat(checkUserExistsResponse.email(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(mfaMethodType));
         assertTrue(checkUserExistsResponse.doesUserExist());
         if (MFAMethodType.SMS.equals(mfaMethodType)) {
-            assertThat(checkUserExistsResponse.getPhoneNumberLastThree(), equalTo("321"));
+            assertThat(checkUserExistsResponse.phoneNumberLastThree(), equalTo("321"));
         } else if (MFAMethodType.AUTH_APP.equals(mfaMethodType)) {
-            assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
+            assertNull(checkUserExistsResponse.phoneNumberLastThree());
         }
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
     }
@@ -134,10 +134,10 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
-        assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+        assertThat(checkUserExistsResponse.email(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertTrue(checkUserExistsResponse.doesUserExist());
-        var lockoutInformation = checkUserExistsResponse.getLockoutInformation();
+        var lockoutInformation = checkUserExistsResponse.lockoutInformation();
         assertNotNull(lockoutInformation);
         assertThat(lockoutInformation.get(0).lockTTL() > 0, is(true));
         assertThat(lockoutInformation.get(0).journeyType(), is(JourneyType.SIGN_IN));
@@ -165,10 +165,10 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
-        assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
-        assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(MFAMethodType.NONE));
+        assertThat(checkUserExistsResponse.email(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(MFAMethodType.NONE));
         assertFalse(checkUserExistsResponse.doesUserExist());
-        assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
+        assertNull(checkUserExistsResponse.phoneNumberLastThree());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
     }
 

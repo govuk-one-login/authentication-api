@@ -1,9 +1,10 @@
 resource "aws_sqs_queue" "pending_email_check_queue" {
-  name                      = "${var.environment}-pending-email-check-queue"
-  delay_seconds             = 10
-  max_message_size          = 2048
-  message_retention_seconds = 1209600
-  receive_wait_time_seconds = 10
+  name                       = "${var.environment}-pending-email-check-queue"
+  delay_seconds              = 10
+  max_message_size           = 2048
+  message_retention_seconds  = 1209600
+  receive_wait_time_seconds  = 10
+  visibility_timeout_seconds = 46
 
   kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.pending_email_check_queue_encryption_key.arn
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300

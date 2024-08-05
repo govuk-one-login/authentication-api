@@ -415,7 +415,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
-        assertThat(session.getRetryCount(), equalTo(0));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verify(codeStorageService, never())
@@ -503,6 +502,7 @@ class VerifyCodeHandlerTest {
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(4);
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         session.setNewAccount(Session.AccountState.EXISTING);
 
@@ -527,7 +527,7 @@ class VerifyCodeHandlerTest {
                                 "journey-type",
                                 journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", 0),
+                        pair("loginFailureCount", 4),
                         pair("MFACodeEntered", "123456"));
         verify(auditService)
                 .submitAuditEvent(
@@ -543,8 +543,10 @@ class VerifyCodeHandlerTest {
     void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(4);
         when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
                 .thenReturn(false);
+        when(configurationService.isReauthSignoutEnabled()).thenReturn(true);
         session.setNewAccount(Session.AccountState.EXISTING);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -562,7 +564,7 @@ class VerifyCodeHandlerTest {
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", 0),
+                        pair("loginFailureCount", 4),
                         pair("MFACodeEntered", "123456"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
@@ -573,6 +575,7 @@ class VerifyCodeHandlerTest {
     void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(4);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
@@ -587,7 +590,7 @@ class VerifyCodeHandlerTest {
                         pair("account-recovery", false),
                         pair("journey-type", "SIGN_IN"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", 0),
+                        pair("loginFailureCount", 4),
                         pair("MFACodeEntered", "6543221"),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
@@ -596,6 +599,7 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
             CodeRequestType codeRequestType, JourneyType journeyType) {
+        when(configurationService.isReauthSignoutEnabled()).thenReturn(true);
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
@@ -605,10 +609,11 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(session.getRetryCount(), equalTo(0));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
+        if (codeRequestType != CodeRequestType.SMS_REAUTHENTICATION) {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
+        }
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verify(auditService)
@@ -621,7 +626,7 @@ class VerifyCodeHandlerTest {
                                 "journey-type",
                                 journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", 0),
+                        pair("loginFailureCount", 1),
                         pair("MFACodeEntered", "6543221"),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
@@ -638,7 +643,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
-        assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         EMAIL,

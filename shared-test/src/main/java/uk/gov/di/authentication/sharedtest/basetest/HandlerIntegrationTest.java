@@ -169,6 +169,24 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
+    protected static final ConfigurationService
+            REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE =
+                    new IntegrationTestConfigurationService(
+                            notificationsQueue,
+                            tokenSigner,
+                            docAppPrivateKeyJwtSigner,
+                            configurationParameters) {
+                        @Override
+                        public String getTxmaAuditQueueUrl() {
+                            return txmaAuditQueue.getQueueUrl();
+                        }
+
+                        @Override
+                        public boolean isReauthSignoutEnabled() {
+                            return true;
+                        }
+                    };
+
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);

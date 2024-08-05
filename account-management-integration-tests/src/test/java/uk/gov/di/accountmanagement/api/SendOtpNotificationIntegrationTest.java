@@ -4,6 +4,7 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
@@ -12,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
@@ -37,6 +39,10 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                     PhoneNumberUtil.getInstance()
                             .getExampleNumberForType("GB", MOBILE)
                             .getNationalNumber());
+
+    @RegisterExtension
+    protected static final EmailCheckResultExtension emailCheckResultExtension =
+            new EmailCheckResultExtension();
 
     @BeforeEach
     void setup() {

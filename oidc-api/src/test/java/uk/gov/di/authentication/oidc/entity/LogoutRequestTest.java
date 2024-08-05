@@ -139,8 +139,7 @@ class LogoutRequestTest {
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
         assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
-        assertEquals(
-                Optional.of(CLIENT_LOGOUT_URI.toString()), logoutRequest.postLogoutRedirectUri());
+        assertEquals(Optional.of(CLIENT_LOGOUT_URI), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
     }
 
@@ -198,8 +197,7 @@ class LogoutRequestTest {
         assertEquals(Optional.empty(), logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
         assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
-        assertEquals(
-                Optional.of(CLIENT_LOGOUT_URI.toString()), logoutRequest.postLogoutRedirectUri());
+        assertEquals(Optional.of(CLIENT_LOGOUT_URI), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
     }
 
@@ -414,9 +412,7 @@ class LogoutRequestTest {
                 logoutRequest.errorObject());
         assertEquals(Optional.of("client-id"), logoutRequest.clientId());
         assertEquals(Optional.of(rpPairwiseId), logoutRequest.rpPairwiseId());
-        assertEquals(
-                Optional.of("http://localhost/invalidlogout"),
-                logoutRequest.postLogoutRedirectUri());
+        assertEquals(Optional.empty(), logoutRequest.postLogoutRedirectUri());
         assertEquals(Optional.of(clientRegistry), logoutRequest.clientRegistry());
     }
 

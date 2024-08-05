@@ -7,38 +7,20 @@ updates:
       time: "03:00"
     open-pull-requests-limit: 100
     target-branch: main
-    commit-message: 
-      prefix: BAU
-    labels:
-      - dependabot
-  - package-ecosystem: docker
-    directory: "/docker"
-    schedule:
-      interval: daily
-      time: "03:00"
-    open-pull-requests-limit: 100
-    target-branch: main
     commit-message:
       prefix: BAU
-    labels:
-      - dependabot
-    ignore:
-      - dependency-name: localstack/localstack
-        versions:
-          - ">= 0.13"
+
   - package-ecosystem: github-actions
-    directory: /
+    directory: "/"
     open-pull-requests-limit: 100
     target-branch: main
+    schedule:
+      interval: weekly
     commit-message:
       prefix: BAU
-    labels:
-      - dependabot
-    schedule:
-      interval: daily
 
   - package-ecosystem: pip
-    directory: /
+    directory: "/"
     open-pull-requests-limit: 5
     target-branch: main
     commit-message:

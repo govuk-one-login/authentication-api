@@ -142,7 +142,7 @@ variable "use_localstack" {
 
 variable "terms_and_conditions" {
   type    = string
-  default = "1.10"
+  default = "1.11"
 }
 
 variable "localstack_endpoint" {
@@ -643,7 +643,7 @@ variable "authorize_protected_subnet_enabled" {
 }
 
 variable "support_email_check_enabled" {
-  default     = false
+  default     = true
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }
@@ -652,6 +652,12 @@ variable "send_storage_token_to_ipv_enabled" {
   default     = false
   type        = bool
   description = "Feature flag which toggles whether signed VC storage token is included as claim in JAR sent to IPV"
+}
+
+variable "support_reauth_signout_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles sign-out instead of lockout for reauth journeys"
 }
 
 variable "orch_account_id" {

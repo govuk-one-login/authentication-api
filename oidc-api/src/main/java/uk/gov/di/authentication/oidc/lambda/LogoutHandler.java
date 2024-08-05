@@ -10,7 +10,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.LogoutRequest;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
@@ -20,7 +19,6 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
-import java.net.URI;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -38,7 +36,6 @@ public class LogoutHandler
     private final SessionService sessionService;
     private final DynamoClientService dynamoClientService;
     private final TokenValidationService tokenValidationService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CookieHelper cookieHelper;
 
     private final LogoutService logoutService;
@@ -56,7 +53,6 @@ public class LogoutHandler
                                 configurationService,
                                 new KmsConnectionService(configurationService)),
                         configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
     }
@@ -70,7 +66,6 @@ public class LogoutHandler
                                 configurationService,
                                 new KmsConnectionService(configurationService)),
                         configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.cookieHelper = new CookieHelper();
         this.logoutService = new LogoutService(configurationService);
     }
@@ -79,12 +74,10 @@ public class LogoutHandler
             SessionService sessionService,
             DynamoClientService dynamoClientService,
             TokenValidationService tokenValidationService,
-            CloudwatchMetricsService cloudwatchMetricsService,
             LogoutService logoutService) {
         this.sessionService = sessionService;
         this.dynamoClientService = dynamoClientService;
         this.tokenValidationService = tokenValidationService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.cookieHelper = new CookieHelper();
         this.logoutService = logoutService;
     }
@@ -108,13 +101,12 @@ public class LogoutHandler
         if (logoutRequest.session().isPresent()) {
             Session session = logoutRequest.session().get();
             attachSessionToLogs(session, input.getHeaders());
-            segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
-            cloudwatchMetricsService.incrementLogout(logoutRequest.clientId());
         }
 
         return logoutService.handleLogout(
+                logoutRequest.session(),
                 logoutRequest.errorObject(),
-                logoutRequest.postLogoutRedirectUri().map(URI::create),
+                logoutRequest.postLogoutRedirectUri(),
                 logoutRequest.state(),
                 logoutRequest.auditUser(),
                 logoutRequest.clientId(),

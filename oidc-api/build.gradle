@@ -20,6 +20,7 @@ dependencies {
             configurations.bouncycastle,
             configurations.cloudwatch,
             configurations.apache,
+            configurations.jetbrains_annotations,
             project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api")

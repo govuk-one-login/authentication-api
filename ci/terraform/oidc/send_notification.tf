@@ -15,7 +15,9 @@ module "frontend_api_send_notification_role" {
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
     local.user_profile_encryption_policy_arn,
-    local.pending_email_check_queue_access_policy_arn
+    local.pending_email_check_queue_access_policy_arn,
+    local.email_check_results_encryption_policy_arn,
+    aws_iam_policy.check_email_fraud_block_read_dynamo_read_access_policy.arn,
   ]
 }
 
@@ -33,7 +35,6 @@ module "send_notification" {
     LOCKOUT_COUNT_TTL                      = var.lockout_count_ttl
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
-    SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
     LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key

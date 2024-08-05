@@ -63,7 +63,7 @@ variable "cloudwatch_log_retention" {
 
 variable "terms_and_conditions" {
   type        = string
-  default     = "1.10"
+  default     = "1.11"
   description = "The latest Terms and Conditions version number"
 }
 
@@ -186,7 +186,7 @@ variable "email_check_results_sqs_queue_encryption_key_arn" {
 }
 
 variable "support_email_check_enabled" {
-  default     = false
+  default     = true
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }

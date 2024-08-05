@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
@@ -24,8 +23,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.Optional;
-
+import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
@@ -82,22 +80,18 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             ReverificationResultRequest request,
             UserContext userContext) {
 
-        AuditContext auditContext =
-                new AuditContext(
-                        userContext.getClientId(),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
                         AuditService.UNKNOWN,
-                        request.getEmail(),
+                        request.email(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        Optional.ofNullable(userContext.getTxmaAuditEncoded()));
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         var tokenResponse =
                 InstrumentationHelper.segmentedFunctionCall(
-                        "getIpvToken",
-                        () -> reverificationResultService.getToken(request.getCode()));
+                        "getIpvToken", () -> reverificationResultService.getToken(request.code()));
 
         if (!tokenResponse.indicatesSuccess()) {
             LOG.error(

@@ -39,6 +39,7 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -51,6 +52,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -90,6 +92,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String DIFFERENT_CLIENT_ID = "different-test-id";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String REDIRECT_URI = "http://localhost/redirect";
+
+    @RegisterExtension
+    public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
+            new RpPublicKeyCacheExtension(180);
 
     @BeforeEach
     void setup() {

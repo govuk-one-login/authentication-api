@@ -43,6 +43,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
@@ -87,8 +88,10 @@ class TokenServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final TokenService tokenService =
-            new TokenService(configurationService, redisConnectionService, kmsConnectionService);
+            new TokenService(
+                    configurationService, redisConnectionService, kmsConnectionService, oidcApi);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
@@ -108,7 +111,8 @@ class TokenServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String BASE_URL = "https://oidc.test.account.gov.uk";
+    private static final String OIDC_BASE_URI = "https://oidc.test.account.gov.uk";
+    private static final String OIDC_TRUSTMARK_URI = "https://oidc.test.account.gov.uk/trustmark";
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
@@ -124,7 +128,8 @@ class TokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URL));
+        when(oidcApi.baseURI()).thenReturn(URI.create(OIDC_BASE_URI));
+        when(oidcApi.trustmarkURI()).thenReturn(URI.create(OIDC_TRUSTMARK_URI));
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
@@ -497,7 +502,7 @@ class TokenServiceTest {
     private SignedJWT createSignedIdToken(ECKey ecSigningKey) {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
         return TokenGeneratorHelper.generateIDToken(
-                CLIENT_ID, PUBLIC_SUBJECT, BASE_URL, ecSigningKey, expiryDate);
+                CLIENT_ID, PUBLIC_SUBJECT, OIDC_BASE_URI, ecSigningKey, expiryDate);
     }
 
     private void createSignedAccessToken() throws JOSEException {
@@ -510,7 +515,7 @@ class TokenServiceTest {
         SignedJWT signedJWT =
                 TokenGeneratorHelper.generateSignedToken(
                         CLIENT_ID,
-                        BASE_URL,
+                        OIDC_BASE_URI,
                         SCOPES.toStringList(),
                         signer,
                         PUBLIC_SUBJECT,
@@ -557,10 +562,10 @@ class TokenServiceTest {
                 equalTo(nonce.getValue()));
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("vtm"),
-                equalTo(buildURI(BASE_URL, "/trustmark").toString()));
+                equalTo(buildURI(OIDC_BASE_URI, "/trustmark").toString()));
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer(),
-                equalTo(BASE_URL));
+                equalTo(OIDC_BASE_URI));
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("at_hash"),
                 equalTo(

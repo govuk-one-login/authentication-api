@@ -192,7 +192,7 @@ class ClientRegistrationHandlerTest {
                         CLIENT_NAME,
                         REDIRECT_URIS,
                         CONTACTS,
-                        PublicKeySource.STATIC.getValue(),
+                        null,
                         "some-public-key",
                         null,
                         singletonList("openid"),

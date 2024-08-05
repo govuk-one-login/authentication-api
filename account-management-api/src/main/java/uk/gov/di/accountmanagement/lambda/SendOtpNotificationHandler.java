@@ -35,6 +35,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -69,6 +70,7 @@ public class SendOtpNotificationHandler
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
+    private final DynamoEmailCheckResultService dynamoEmailCheckResultService;
     private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
@@ -81,6 +83,7 @@ public class SendOtpNotificationHandler
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
+            DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
             ClientService clientService) {
         this.configurationService = configurationService;
@@ -89,6 +92,7 @@ public class SendOtpNotificationHandler
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
+        this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
         this.clientService = clientService;
     }
@@ -109,6 +113,8 @@ public class SendOtpNotificationHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.dynamoService = new DynamoService(configurationService);
+        this.dynamoEmailCheckResultService =
+                new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
     }
@@ -186,25 +192,32 @@ public class SendOtpNotificationHandler
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
                     if (configurationService.isEmailCheckEnabled()) {
-                        var userId =
-                                input.getRequestContext()
-                                        .getAuthorizer()
-                                        .getOrDefault("principalId", AuditService.UNKNOWN)
-                                        .toString();
-                        pendingEmailCheckSqsClient.send(
-                                objectMapper.writeValueAsString(
-                                        new PendingEmailCheckRequest(
-                                                userId,
-                                                UUID.randomUUID(),
-                                                email,
-                                                sessionId,
-                                                clientSessionId,
-                                                persistentSessionId,
-                                                IpAddressHelper.extractIpAddress(input),
-                                                JourneyType.ACCOUNT_MANAGEMENT,
-                                                NowHelper.now().toInstant().getEpochSecond(),
-                                                isTestUserRequest)));
-                        LOG.info("PendingEmailCheckRequest enqueued");
+                        var emailCheckResult =
+                                dynamoEmailCheckResultService.getEmailCheckStore(email);
+                        if (emailCheckResult.isEmpty()) {
+                            var userId =
+                                    input.getRequestContext()
+                                            .getAuthorizer()
+                                            .getOrDefault("principalId", AuditService.UNKNOWN)
+                                            .toString();
+                            pendingEmailCheckSqsClient.send(
+                                    objectMapper.writeValueAsString(
+                                            new PendingEmailCheckRequest(
+                                                    userId,
+                                                    UUID.randomUUID(),
+                                                    email,
+                                                    sessionId,
+                                                    clientSessionId,
+                                                    persistentSessionId,
+                                                    IpAddressHelper.extractIpAddress(input),
+                                                    JourneyType.ACCOUNT_MANAGEMENT,
+                                                    NowHelper.now().toInstant().getEpochSecond(),
+                                                    isTestUserRequest)));
+                            LOG.info("Email address check requested");
+                        } else {
+                            LOG.info(
+                                    "Skipped request for new email address check. Result already cached");
+                        }
                     }
 
                     return handleNotificationRequest(

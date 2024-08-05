@@ -49,17 +49,11 @@ public class AccountDeletionService {
         this.dynamoDeleteService = dynamoDeleteService;
     }
 
-    public DeletedAccountIdentifiers removeAccount(
+    public void removeAccount(
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
             Optional<String> txmaAuditEncoded)
             throws Json.JsonException {
-        var accountIdentifiers =
-                new DeletedAccountIdentifiers(
-                        userProfile.getPublicSubjectID(),
-                        userProfile.getLegacySubjectID(),
-                        userProfile.getSubjectID());
-
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -87,7 +81,8 @@ public class AccountDeletionService {
         String persistentSessionID = AuditService.UNKNOWN;
         String ipAddress = AuditService.UNKNOWN;
         if (input.isPresent()) {
-            ipAddress = PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
+            persistentSessionID =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
             ipAddress = IpAddressHelper.extractIpAddress(input.get());
         }
@@ -128,9 +123,5 @@ public class AccountDeletionService {
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }
-        return accountIdentifiers;
     }
-
-    public record DeletedAccountIdentifiers(
-            String publicSubjectId, String legacySubjectId, String subjectId) {}
 }

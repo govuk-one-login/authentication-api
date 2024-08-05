@@ -196,6 +196,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
+    public boolean fetchRpPublicKeyFromJwksEnabled() {
+        return getFlagOrFalse("FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED");
+    }
+
     public String getSpotQueueURI() {
         return System.getenv("SPOT_QUEUE_URL");
     }
@@ -300,8 +304,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return notifyCallbackBearerToken;
     }
 
-    public Optional<String> getOidcApiBaseURL() {
-        return Optional.ofNullable(System.getenv("OIDC_API_BASE_URL"));
+    public URI getOidcApiBaseURL() {
+        return getURIOrThrow("OIDC_API_BASE_URL");
     }
 
     public String getRedisHost() {

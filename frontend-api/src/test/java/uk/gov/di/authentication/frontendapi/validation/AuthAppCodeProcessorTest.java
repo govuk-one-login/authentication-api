@@ -354,7 +354,6 @@ class AuthAppCodeProcessorTest {
     private void setUpValidAuthCode(CodeRequest codeRequest) {
         when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
         when(mockSession.getEmailAddress()).thenReturn("email-address");
-        when(mockSession.getRetryCount()).thenReturn(0);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
