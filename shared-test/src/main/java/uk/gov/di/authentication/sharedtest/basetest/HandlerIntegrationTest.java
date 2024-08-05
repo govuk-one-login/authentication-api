@@ -92,6 +92,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new SqsQueueExtension("notification-queue");
 
     @RegisterExtension
+    protected static final SqsQueueExtension pendingEmailCheckQueue =
+            new SqsQueueExtension("pending-email-check-queue");
+
+    @RegisterExtension
     protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
 
     @RegisterExtension
@@ -154,14 +158,16 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     notificationsQueue,
                     tokenSigner,
                     docAppPrivateKeyJwtSigner,
-                    configurationParameters);
+                    configurationParameters,
+                    pendingEmailCheckQueue);
 
     protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     notificationsQueue,
                     tokenSigner,
                     docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
+                    configurationParameters,
+                    pendingEmailCheckQueue) {
 
                 @Override
                 public String getTxmaAuditQueueUrl() {
@@ -175,7 +181,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
                             notificationsQueue,
                             tokenSigner,
                             docAppPrivateKeyJwtSigner,
-                            configurationParameters) {
+                            configurationParameters,
+                            pendingEmailCheckQueue) {
                         @Override
                         public String getTxmaAuditQueueUrl() {
                             return txmaAuditQueue.getQueueUrl();
@@ -288,6 +295,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     public static class IntegrationTestConfigurationService extends ConfigurationService {
 
         private final SqsQueueExtension notificationQueue;
+        private SqsQueueExtension pendingEmailCheckQueue;
         private final TokenSigningExtension tokenSigningKey;
         private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
@@ -307,6 +315,34 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension,
+                SqsQueueExtension pendingEmailCheckQueue) {
+            super(parameterStoreExtension.getClient());
+            this.notificationQueue = notificationQueue;
+            this.tokenSigningKey = tokenSigningKey;
+            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
+            this.pendingEmailCheckQueue = pendingEmailCheckQueue;
+        }
+
+        public IntegrationTestConfigurationService(
+                SqsQueueExtension notificationQueue,
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                ParameterStoreExtension parameterStoreExtension,
+                SystemService systemService,
+                SqsQueueExtension pendingEmailCheckQueue) {
+            super(parameterStoreExtension.getClient());
+            this.notificationQueue = notificationQueue;
+            this.tokenSigningKey = tokenSigningKey;
+            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
+            super.systemService = systemService;
+            this.pendingEmailCheckQueue = pendingEmailCheckQueue;
+        }
+
+        public IntegrationTestConfigurationService(
+                SqsQueueExtension notificationQueue,
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                ParameterStoreExtension parameterStoreExtension,
                 SystemService systemService) {
             super(parameterStoreExtension.getClient());
             this.notificationQueue = notificationQueue;
@@ -318,6 +354,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
         @Override
         public String getEmailQueueUri() {
             return notificationQueue.getQueueUrl();
+        }
+
+        @Override
+        public String getPendingEmailCheckQueueUri() {
+            return pendingEmailCheckQueue.getQueueUrl();
         }
 
         @Override

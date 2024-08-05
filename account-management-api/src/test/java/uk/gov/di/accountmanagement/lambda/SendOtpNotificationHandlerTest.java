@@ -123,7 +123,6 @@ class SendOtpNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
-        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
@@ -252,43 +251,6 @@ class SendOtpNotificationHandlerTest {
                 }
             }
         }
-    }
-
-    @Test
-    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled()
-            throws Json.JsonException {
-        when(configurationService.isEmailCheckEnabled()).thenReturn(false);
-
-        String persistentIdValue = "some-persistent-session-id";
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        VERIFY_EMAIL,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        persistentIdValue,
-                        RequestHeaders.SESSION_ID_HEADER,
-                        "some-session-id",
-                        RequestHeaders.CLIENT_SESSION_ID_HEADER,
-                        "some-client-session-id",
-                        AuditHelper.TXMA_ENCODED_HEADER_NAME,
-                        TXMA_ENCODED_HEADER_VALUE));
-        event.setRequestContext(eventContext);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        assertEquals(204, result.getStatusCode());
-
-        verifyNoInteractions(pendingEmailCheckSqsClient);
     }
 
     @Test
