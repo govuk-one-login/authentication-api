@@ -19,6 +19,7 @@ public class MFAMethod {
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_DESTINATION = "Destination";
     public static final String ATTRIBUTE_PRIORITY = "PriorityIdentifier";
+    public static final String ATTRIBUTE_MFA_IDENTIFIER = "MFAIdentifier";
 
     private String mfaMethodType;
     private String credentialValue;
@@ -27,6 +28,7 @@ public class MFAMethod {
     private String updated;
     private String destination;
     private String priority;
+    private int mfaIdentifier;
 
     public MFAMethod() {}
 
@@ -49,13 +51,15 @@ public class MFAMethod {
             boolean methodVerified,
             boolean enabled,
             String updated,
-            PriorityIdentifier priority) {
+            PriorityIdentifier priority,
+            int mfaIdentifier) {
         this.mfaMethodType = mfaMethodType;
         this.credentialValue = credentialValue;
         this.methodVerified = methodVerified;
         this.enabled = enabled;
         this.updated = updated;
         this.priority = priority.name();
+        this.mfaIdentifier = mfaIdentifier;
     }
 
     public MFAMethod(
@@ -64,13 +68,15 @@ public class MFAMethod {
             boolean enabled,
             String destination,
             String updated,
-            PriorityIdentifier priority) {
+            PriorityIdentifier priority,
+            int mfaIdentifier) {
         this.mfaMethodType = mfaMethodType;
         this.methodVerified = methodVerified;
         this.enabled = enabled;
         this.destination = destination;
         this.updated = updated;
         this.priority = priority.name();
+        this.mfaIdentifier = mfaIdentifier;
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)
@@ -173,6 +179,20 @@ public class MFAMethod {
         return this;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_MFA_IDENTIFIER)
+    public int getMfaIdentifier() {
+        return mfaIdentifier;
+    }
+
+    public void setMfaIdentifier(int mfaIdentifier) {
+        this.mfaIdentifier = mfaIdentifier;
+    }
+
+    public MFAMethod withMfaIdentifier(int mfaIdentifier) {
+        this.mfaIdentifier = mfaIdentifier;
+        return this;
+    }
+
     AttributeValue toAttributeValue() {
         return AttributeValue.fromM(
                 Map.ofEntries(
@@ -200,7 +220,8 @@ public class MFAMethod {
                 && Objects.equals(enabled, that.enabled)
                 && Objects.equals(updated, that.updated)
                 && Objects.equals(destination, that.destination)
-                && Objects.equals(priority, that.priority);
+                && Objects.equals(priority, that.priority)
+                && Objects.equals(mfaIdentifier, that.mfaIdentifier);
     }
 
     @Override

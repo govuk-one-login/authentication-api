@@ -157,13 +157,15 @@ class DynamoServiceIntegrationTest {
         }
 
         private SmsMfaData defaultPrioritySmsData =
-                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT);
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, 1);
         private SmsMfaData backupPrioritySmsData =
-                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP);
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP, 2);
         private AuthAppMfaData defaultPriorityAuthAppData =
-                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT);
+                new AuthAppMfaData(
+                        TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 3);
         private AuthAppMfaData backupAuthAppData =
-                new AuthAppMfaData(TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.BACKUP);
+                new AuthAppMfaData(
+                        TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, 4);
 
         private MFAMethod findMethodWithPriority(
                 String priority, List<MFAMethod> retrievedMethods) {
@@ -202,6 +204,7 @@ class DynamoServiceIntegrationTest {
             assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
             assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority().toString()));
             assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
+            assertThat(retrievedMethod.getMfaIdentifier(), equalTo(expectedData.mfaIdentifier()));
         }
 
         private void assertRetrievedMethodHasAuthAppData(
@@ -213,6 +216,7 @@ class DynamoServiceIntegrationTest {
             assertThat(retrievedMethod.getCredentialValue(), equalTo(expectedData.credential()));
             assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority().toString()));
             assertThat(retrievedMethod.getDestination(), equalTo(null));
+            assertThat(retrievedMethod.getMfaIdentifier(), equalTo(expectedData.mfaIdentifier()));
         }
 
         @Test
