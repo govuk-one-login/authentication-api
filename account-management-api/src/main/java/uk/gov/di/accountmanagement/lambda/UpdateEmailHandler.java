@@ -173,8 +173,7 @@ public class UpdateEmailHandler
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
-            if (configurationService.isEmailCheckEnabled()
-                    && resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
+            if (resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
                 auditService.submitAuditEvent(
                         AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
                         auditContext.withSubjectId(userProfile.getSubjectID()),

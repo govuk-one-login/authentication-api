@@ -191,33 +191,30 @@ public class SendOtpNotificationHandler
                     if (dynamoService.userExists(email)) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
-                    if (configurationService.isEmailCheckEnabled()) {
-                        var emailCheckResult =
-                                dynamoEmailCheckResultService.getEmailCheckStore(email);
-                        if (emailCheckResult.isEmpty()) {
-                            var userId =
-                                    input.getRequestContext()
-                                            .getAuthorizer()
-                                            .getOrDefault("principalId", AuditService.UNKNOWN)
-                                            .toString();
-                            pendingEmailCheckSqsClient.send(
-                                    objectMapper.writeValueAsString(
-                                            new PendingEmailCheckRequest(
-                                                    userId,
-                                                    UUID.randomUUID(),
-                                                    email,
-                                                    sessionId,
-                                                    clientSessionId,
-                                                    persistentSessionId,
-                                                    IpAddressHelper.extractIpAddress(input),
-                                                    JourneyType.ACCOUNT_MANAGEMENT,
-                                                    NowHelper.now().toInstant().getEpochSecond(),
-                                                    isTestUserRequest)));
-                            LOG.info("Email address check requested");
-                        } else {
-                            LOG.info(
-                                    "Skipped request for new email address check. Result already cached");
-                        }
+                    var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(email);
+                    if (emailCheckResult.isEmpty()) {
+                        var userId =
+                                input.getRequestContext()
+                                        .getAuthorizer()
+                                        .getOrDefault("principalId", AuditService.UNKNOWN)
+                                        .toString();
+                        pendingEmailCheckSqsClient.send(
+                                objectMapper.writeValueAsString(
+                                        new PendingEmailCheckRequest(
+                                                userId,
+                                                UUID.randomUUID(),
+                                                email,
+                                                sessionId,
+                                                clientSessionId,
+                                                persistentSessionId,
+                                                IpAddressHelper.extractIpAddress(input),
+                                                JourneyType.ACCOUNT_MANAGEMENT,
+                                                NowHelper.now().toInstant().getEpochSecond(),
+                                                isTestUserRequest)));
+                        LOG.info("Email address check requested");
+                    } else {
+                        LOG.info(
+                                "Skipped request for new email address check. Result already cached");
                     }
 
                     return handleNotificationRequest(

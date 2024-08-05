@@ -1,5 +1,4 @@
 module "frontend_api_check_email_fraud_block_role" {
-  count       = local.deploy_check_email_fraud_block_count
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "frontend-api-check-email-fraud-block-role"
@@ -18,7 +17,6 @@ module "frontend_api_check_email_fraud_block_role" {
 }
 
 module "check_email_fraud_block" {
-  count  = local.deploy_check_email_fraud_block_count
   source = "../modules/endpoint-module"
 
   endpoint_name   = "check-email-fraud-block"
@@ -27,15 +25,14 @@ module "check_email_fraud_block" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
-    ENVIRONMENT                 = var.environment
-    TXMA_AUDIT_QUEUE_URL        = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI         = var.internal_sector_uri
-    REDIS_KEY                   = local.redis_key
-    LOCKOUT_DURATION            = var.lockout_duration
-    LOCKOUT_COUNT_TTL           = var.lockout_count_ttl
-    SUPPORT_EMAIL_CHECK_ENABLED = var.support_email_check_enabled
+    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT          = var.environment
+    TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    REDIS_KEY            = local.redis_key
+    LOCKOUT_DURATION     = var.lockout_duration
+    LOCKOUT_COUNT_TTL    = var.lockout_count_ttl
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandler::handleRequest"
@@ -60,7 +57,7 @@ module "check_email_fraud_block" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.frontend_api_check_email_fraud_block_role[0].arn
+  lambda_role_arn                        = module.frontend_api_check_email_fraud_block_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

@@ -40,11 +40,10 @@ locals {
     application = "oidc-api"
   }
 
-  request_tracing_allowed              = contains(["build", "sandpit"], var.environment)
-  deploy_account_interventions_count   = 1
-  deploy_ticf_cri_count                = contains(["sandpit", "authdev1", "authdev2", "dev", "build", "staging", "integration"], var.environment) ? 1 : 0
-  deploy_reauth_user_count             = contains(["build", "sandpit", "authdev1", "authdev2", "staging", "integration"], var.environment) ? 1 : 0
-  deploy_check_email_fraud_block_count = contains(["build", "sandpit", "authdev1", "authdev2", "staging", "integration", "production"], var.environment) ? 1 : 0
+  request_tracing_allowed            = contains(["build", "sandpit"], var.environment)
+  deploy_account_interventions_count = 1
+  deploy_ticf_cri_count              = contains(["sandpit", "authdev1", "authdev2", "dev", "build", "staging", "integration"], var.environment) ? 1 : 0
+  deploy_reauth_user_count           = contains(["build", "sandpit", "authdev1", "authdev2", "staging", "integration"], var.environment) ? 1 : 0
 
   access_logging_template = jsonencode({
     requestId            = "$context.requestId"
