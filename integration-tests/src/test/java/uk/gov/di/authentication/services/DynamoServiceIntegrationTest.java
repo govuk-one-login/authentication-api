@@ -167,58 +167,6 @@ class DynamoServiceIntegrationTest {
                 new AuthAppMfaData(
                         TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, 4);
 
-        private MFAMethod findMethodWithPriority(
-                String priority, List<MFAMethod> retrievedMethods) {
-            Predicate<MFAMethod> findCondition =
-                    (MFAMethod method) -> Objects.equals(method.getPriority(), priority);
-            return retrievedMethods.stream().filter(findCondition).findFirst().get();
-        }
-
-        private void assertBackupAndDefaultMfaMethodsWithData(
-                UserCredentials userCredentials, MfaData expectedDefault, MfaData expectedBackup) {
-            assertThat(userCredentials.getMfaMethods().size(), equalTo(2));
-            var backupMethod = findMethodWithPriority("BACKUP", userCredentials.getMfaMethods());
-            var defaultMethod = findMethodWithPriority("DEFAULT", userCredentials.getMfaMethods());
-            assertRetrievedMethodHasData(backupMethod, expectedBackup);
-            assertRetrievedMethodHasData(defaultMethod, expectedDefault);
-        }
-
-        private void assertRetrievedMethodHasData(MFAMethod retrievedMethod, MfaData expectedData) {
-            if (expectedData instanceof SmsMfaData) {
-                assertRetrievedMethodHasSmsData(retrievedMethod, (SmsMfaData) expectedData);
-            } else {
-                assertRetrievedMethodHasAuthAppData(retrievedMethod, (AuthAppMfaData) expectedData);
-            }
-        }
-
-        private void assertSingleMfaMethodExistsWithData(
-                UserCredentials userCredentials, MfaData expectedData) {
-            assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
-            assertRetrievedMethodHasData(userCredentials.getMfaMethods().get(0), expectedData);
-        }
-
-        private void assertRetrievedMethodHasSmsData(
-                MFAMethod retrievedMethod, SmsMfaData expectedData) {
-            assertThat(retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
-            assertThat(retrievedMethod.isMethodVerified(), equalTo(expectedData.verified()));
-            assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
-            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority().toString()));
-            assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
-            assertThat(retrievedMethod.getMfaIdentifier(), equalTo(expectedData.mfaIdentifier()));
-        }
-
-        private void assertRetrievedMethodHasAuthAppData(
-                MFAMethod retrievedMethod, AuthAppMfaData expectedData) {
-            assertThat(
-                    retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
-            assertThat(retrievedMethod.isMethodVerified(), equalTo(expectedData.verified()));
-            assertThat(retrievedMethod.isEnabled(), equalTo(expectedData.enabled()));
-            assertThat(retrievedMethod.getCredentialValue(), equalTo(expectedData.credential()));
-            assertThat(retrievedMethod.getPriority(), equalTo(expectedData.priority().toString()));
-            assertThat(retrievedMethod.getDestination(), equalTo(null));
-            assertThat(retrievedMethod.getMfaIdentifier(), equalTo(expectedData.mfaIdentifier()));
-        }
-
         @Test
         void shouldAddDefaultPriorityAuthAppMFAMethodWhenNoOtherMethodExists() {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
@@ -266,6 +214,54 @@ class DynamoServiceIntegrationTest {
             var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
             assertBackupAndDefaultMfaMethodsWithData(
                     userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        private MFAMethod findMethodWithPriority(
+                String priority, List<MFAMethod> retrievedMethods) {
+            Predicate<MFAMethod> findCondition =
+                    (MFAMethod method) -> Objects.equals(method.getPriority(), priority);
+            return retrievedMethods.stream().filter(findCondition).findFirst().get();
+        }
+
+        private void assertBackupAndDefaultMfaMethodsWithData(
+                UserCredentials userCredentials, MfaData expectedDefault, MfaData expectedBackup) {
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(2));
+            var backupMethod = findMethodWithPriority("BACKUP", userCredentials.getMfaMethods());
+            var defaultMethod = findMethodWithPriority("DEFAULT", userCredentials.getMfaMethods());
+            assertRetrievedMethodHasData(backupMethod, expectedBackup);
+            assertRetrievedMethodHasData(defaultMethod, expectedDefault);
+        }
+
+        private void assertRetrievedMethodHasData(MFAMethod retrievedMethod, MfaData expectedData) {
+            if (expectedData instanceof SmsMfaData) {
+                var smsData = (SmsMfaData) expectedData;
+                assertThat(
+                        retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
+                assertThat(retrievedMethod.isMethodVerified(), equalTo(smsData.verified()));
+                assertThat(retrievedMethod.isEnabled(), equalTo(smsData.enabled()));
+                assertThat(retrievedMethod.getPriority(), equalTo(smsData.priority().toString()));
+                assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
+                assertThat(retrievedMethod.getMfaIdentifier(), equalTo(smsData.mfaIdentifier()));
+            } else {
+                var authAppData = (AuthAppMfaData) expectedData;
+                assertThat(
+                        retrievedMethod.getMfaMethodType(),
+                        equalTo(MFAMethodType.AUTH_APP.getValue()));
+                assertThat(retrievedMethod.isMethodVerified(), equalTo(authAppData.verified()));
+                assertThat(retrievedMethod.isEnabled(), equalTo(authAppData.enabled()));
+                assertThat(retrievedMethod.getCredentialValue(), equalTo(authAppData.credential()));
+                assertThat(
+                        retrievedMethod.getPriority(), equalTo(authAppData.priority().toString()));
+                assertThat(retrievedMethod.getDestination(), equalTo(null));
+                assertThat(
+                        retrievedMethod.getMfaIdentifier(), equalTo(authAppData.mfaIdentifier()));
+            }
+        }
+
+        private void assertSingleMfaMethodExistsWithData(
+                UserCredentials userCredentials, MfaData expectedData) {
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
+            assertRetrievedMethodHasData(userCredentials.getMfaMethods().get(0), expectedData);
         }
     }
 
