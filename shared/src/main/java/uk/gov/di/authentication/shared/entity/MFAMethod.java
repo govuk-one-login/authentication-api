@@ -28,7 +28,7 @@ public class MFAMethod {
     private String updated;
     private String destination;
     private String priority;
-    private int mfaIdentifier;
+    private Integer mfaIdentifier;
 
     public MFAMethod() {}
 
@@ -180,15 +180,15 @@ public class MFAMethod {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_IDENTIFIER)
-    public int getMfaIdentifier() {
+    public Integer getMfaIdentifier() {
         return mfaIdentifier;
     }
 
-    public void setMfaIdentifier(int mfaIdentifier) {
+    public void setMfaIdentifier(Integer mfaIdentifier) {
         this.mfaIdentifier = mfaIdentifier;
     }
 
-    public MFAMethod withMfaIdentifier(int mfaIdentifier) {
+    public MFAMethod withMfaIdentifier(Integer mfaIdentifier) {
         this.mfaIdentifier = mfaIdentifier;
         return this;
     }

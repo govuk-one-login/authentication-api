@@ -27,6 +27,7 @@ import java.util.function.Predicate;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class DynamoServiceIntegrationTest {
 
@@ -347,6 +348,21 @@ class DynamoServiceIntegrationTest {
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserProfile.getPhoneNumber(), equalTo("+447316763843"));
         assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(true));
+    }
+
+    @Test
+    void mfaMethodShouldNotContainNewFieldsWhenSetByOldMethod() {
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+
+        dynamoService.updateMFAMethod(
+                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertNull(mfaMethod.getDestination());
+        assertNull(mfaMethod.getMfaIdentifier());
     }
 
     @Test
