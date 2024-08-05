@@ -1,8 +1,6 @@
 package uk.gov.di.authentication.services;
 
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
@@ -11,7 +9,6 @@ import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -19,7 +16,6 @@ import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,13 +27,7 @@ class DynamoServiceIntegrationTest {
     private static final String UPDATED_TEST_EMAIL = "user.one@test.com";
     private static final String PHONE_NUMBER = "+447700900000";
     private static final String ALTERNATIVE_PHONE_NUMBER = "+447316763843";
-    private static final String CLIENT_ID = "client-id";
     private static final LocalDateTime CREATED_DATE_TIME = LocalDateTime.now();
-    private static final Scope SCOPES =
-            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
-    private static final Set<String> CLAIMS =
-            ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
-
     private static final String TEST_MFA_APP_CREDENTIAL = "test-mfa-app-credential";
     private static final String ALTERNATIVE_TEST_MFA_APP_CREDENTIAL =
             "alternative-test-mfa-app-credential";
