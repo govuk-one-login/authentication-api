@@ -14,7 +14,7 @@ stack_name = "authdev2-orch-stub"
 resolve_s3 = true
 s3_prefix = "authdev2-orch-stub"
 region = "eu-west-2"
-confirm_changeset = true
+confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Environment=\"authdev2\""
 image_repositories = []

@@ -71,9 +71,9 @@ const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
 const post = async (
   event: APIGatewayProxyEvent,
 ): Promise<APIGatewayProxyResult> => {
-  const gsCookie = await setUpSession(event.headers);
+  const form = parseForm(event.body);
+  const gsCookie = await setUpSession(event.headers, form);
   const journeyId = gsCookie.split(".")[0];
-  const form = querystring.parse(event.body || "");
   const signingPrivKey = await getPrivateKey();
   const payload = jarPayload(form, journeyId);
   const jws = await signRequestObject(payload, signingPrivKey);
@@ -97,7 +97,30 @@ const post = async (
   };
 };
 
-const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
+type RequestParameters = {
+  confidence: "Cl" | "Cl.Cm";
+  reauthenticate?: string;
+};
+
+const parseForm = (body: string | null): RequestParameters => {
+  if (body === null) {
+    throw new Error("No body");
+  }
+
+  const parsedForm = querystring.parse(body);
+  return {
+    confidence: getConfidence(parsedForm),
+    reauthenticate: getReauthenticate(parsedForm),
+  };
+};
+
+const getReauthenticate = (form: ParsedUrlQuery): string | undefined => {
+  if (typeof form.reauthenticate === "string" && form.reauthenticate !== "") {
+    return form.reauthenticate;
+  }
+};
+
+const jarPayload = (form: RequestParameters, journeyId: string): JWTPayload => {
   const claim = {
     userinfo: {
       salt: "",
@@ -120,7 +143,7 @@ const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
     is_one_login_service: false,
     service_type: "essential",
     govuk_signin_journey_id: journeyId,
-    confidence: "Cl.Cm",
+    confidence: form.confidence,
     state: "3",
     client_id: "orchstub",
     redirect_uri:
@@ -131,6 +154,17 @@ const jarPayload = (form: ParsedUrlQuery, journeyId: string): JWTPayload => {
     payload["reauthenticate"] = form["reauthenticate"];
   }
   return payload;
+};
+
+const getConfidence = (form: ParsedUrlQuery) => {
+  switch (form.level) {
+    case "low":
+      return "Cl";
+    case "medium":
+      return "Cl.Cm";
+    default:
+      throw new Error("Unknown level " + form.level);
+  }
 };
 
 const sandpitFrontendPublicKey = async () =>
@@ -156,10 +190,13 @@ const encryptRequestObject = async (jws: string, encPubKey: jose.KeyLike) =>
     .setProtectedHeader({ cty: "JWT", alg: "RSA-OAEP-256", enc: "A256GCM" })
     .encrypt(encPubKey);
 
-const setUpSession = async (headers: APIGatewayProxyEventHeaders) => {
+const setUpSession = async (
+  headers: APIGatewayProxyEventHeaders,
+  config: RequestParameters,
+) => {
   const newSessionId = crypto.randomBytes(20).toString("base64url");
   const newClientSessionId = crypto.randomBytes(20).toString("base64url");
-  await createNewClientSession(newClientSessionId);
+  await createNewClientSession(newClientSessionId, config);
 
   const existingGsCookie = getCookie(headers["cookie"], "gs");
   if (existingGsCookie) {
@@ -178,13 +215,16 @@ const setUpSession = async (headers: APIGatewayProxyEventHeaders) => {
   return `${newSessionId}.${newClientSessionId}`;
 };
 
-const createNewClientSession = async (id: string) => {
+const createNewClientSession = async (
+  id: string,
+  config: RequestParameters,
+) => {
   const client = await getRedisClient();
   const clientSession: ClientSession = {
     creation_time: new Date(),
     client_name: "Example RP",
     auth_request_params: {
-      vtr: ["[Cl.Cm]"],
+      vtr: [`[${config.confidence}]`],
       scope: ["openid email phone"],
       response_type: ["code"],
       redirect_uri: [
@@ -196,7 +236,7 @@ const createNewClientSession = async (id: string) => {
       client_id: [process.env.RP_CLIENT_ID!!],
     },
     effective_vector_of_trust: {
-      credential_trust_level: "Cl.Cm",
+      credential_trust_level: config.confidence,
     },
   };
   await client.setEx(
