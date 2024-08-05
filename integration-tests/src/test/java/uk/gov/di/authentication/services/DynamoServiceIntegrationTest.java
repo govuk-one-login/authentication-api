@@ -195,6 +195,19 @@ class DynamoServiceIntegrationTest {
         }
 
         @Test
+        void aDefaultPriorityMfaMethodShouldReplaceAnExistingMethodWithoutPriority() {
+            // Add auth app mfa using existing method which does not contain the new fields,
+            // resulting in a null priority field
+            dynamoService.updateMFAMethod(
+                    TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
+        }
+
+        @Test
         void anMfaMethodShouldNotReplaceAnExistingMethodOfADifferentTypeWithDifferentPriority() {
             dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
 

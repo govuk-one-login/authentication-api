@@ -147,6 +147,9 @@ public class UserCredentials {
             this.mfaMethods = List.of(mfaMethod);
         } else {
             this.mfaMethods.removeIf(t -> Objects.equals(t.getPriority(), mfaMethod.getPriority()));
+            if (mfaMethod.getPriority().equals(PriorityIdentifier.DEFAULT.name())) {
+                this.mfaMethods.removeIf(t -> Objects.isNull(t.getPriority()));
+            }
             this.mfaMethods.add(mfaMethod);
         }
         return this;
