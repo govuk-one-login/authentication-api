@@ -165,7 +165,11 @@ const setUpSession = async (headers: APIGatewayProxyEventHeaders) => {
   if (existingGsCookie) {
     const idParts = existingGsCookie.split(".");
     const sessionId = idParts[0];
-    await renameExistingSession(sessionId, newSessionId);
+    try {
+      await renameExistingSession(sessionId, newSessionId);
+    } catch (e) {
+      await createNewSession(newSessionId);
+    }
   } else {
     await createNewSession(newSessionId);
   }
