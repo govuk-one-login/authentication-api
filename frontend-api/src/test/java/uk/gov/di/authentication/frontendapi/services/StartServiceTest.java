@@ -21,12 +21,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -283,7 +283,7 @@ class StartServiceTest {
                 new UserCredentials()
                         .withEmail(EMAIL)
                         .setMfaMethod(
-                                (new MFAMethod(
+                                (new AuthAppMFAMethod(
                                         MFAMethodType.AUTH_APP.getValue(),
                                         "rubbish-value",
                                         true,
@@ -295,7 +295,7 @@ class StartServiceTest {
                 new UserCredentials()
                         .withEmail(EMAIL)
                         .setMfaMethod(
-                                (new MFAMethod(
+                                (new AuthAppMFAMethod(
                                         MFAMethodType.AUTH_APP.getValue(),
                                         "rubbish-value",
                                         false,

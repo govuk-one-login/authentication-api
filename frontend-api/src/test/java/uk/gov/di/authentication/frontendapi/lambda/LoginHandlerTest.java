@@ -25,12 +25,12 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -108,8 +108,8 @@ class LoginHandlerTest {
     private static final String CLIENT_NAME = "client-name";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
-    private static final MFAMethod AUTH_APP_MFA_METHOD =
-            new MFAMethod()
+    private static final AuthAppMFAMethod AUTH_APP_MFA_METHOD =
+            new AuthAppMFAMethod()
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
@@ -333,7 +333,7 @@ class LoginHandlerTest {
                         .withEmail(EMAIL)
                         .withPassword(CommonTestVariables.PASSWORD)
                         .setMfaMethod(
-                                new MFAMethod()
+                                new AuthAppMFAMethod()
                                         .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                                         .withMethodVerified(false)
                                         .withEnabled(true));

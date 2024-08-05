@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @DynamoDbBean
-public class MFAMethod {
+public class AuthAppMFAMethod {
 
     public static final String ATTRIBUTE_MFA_METHOD_TYPE = "MfaMethodType";
     public static final String ATTRIBUTE_CREDENTIAL_VALUE = "CredentialValue";
@@ -24,9 +24,9 @@ public class MFAMethod {
     private boolean enabled;
     private String updated;
 
-    public MFAMethod() {}
+    public AuthAppMFAMethod() {}
 
-    public MFAMethod(
+    public AuthAppMFAMethod(
             String mfaMethodType,
             String credentialValue,
             boolean methodVerified,
@@ -48,7 +48,7 @@ public class MFAMethod {
         this.mfaMethodType = mfaMethodType;
     }
 
-    public MFAMethod withMfaMethodType(String mfaMethodType) {
+    public AuthAppMFAMethod withMfaMethodType(String mfaMethodType) {
         this.mfaMethodType = mfaMethodType;
         return this;
     }
@@ -62,7 +62,7 @@ public class MFAMethod {
         this.credentialValue = credentialValue;
     }
 
-    public MFAMethod withCredentialValue(String credentialValue) {
+    public AuthAppMFAMethod withCredentialValue(String credentialValue) {
         this.credentialValue = credentialValue;
         return this;
     }
@@ -77,7 +77,7 @@ public class MFAMethod {
         this.methodVerified = methodVerified;
     }
 
-    public MFAMethod withMethodVerified(boolean methodVerified) {
+    public AuthAppMFAMethod withMethodVerified(boolean methodVerified) {
         this.methodVerified = methodVerified;
         return this;
     }
@@ -92,7 +92,7 @@ public class MFAMethod {
         this.enabled = enabled;
     }
 
-    public MFAMethod withEnabled(boolean enabled) {
+    public AuthAppMFAMethod withEnabled(boolean enabled) {
         this.enabled = enabled;
         return this;
     }
@@ -106,7 +106,7 @@ public class MFAMethod {
         this.updated = updated;
     }
 
-    public MFAMethod withUpdated(String updated) {
+    public AuthAppMFAMethod withUpdated(String updated) {
         this.updated = updated;
         return this;
     }
@@ -131,7 +131,7 @@ public class MFAMethod {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        MFAMethod that = (MFAMethod) o;
+        AuthAppMFAMethod that = (AuthAppMFAMethod) o;
         return Objects.equals(mfaMethodType, that.mfaMethodType)
                 && Objects.equals(credentialValue, that.credentialValue)
                 && Objects.equals(methodVerified, that.methodVerified)

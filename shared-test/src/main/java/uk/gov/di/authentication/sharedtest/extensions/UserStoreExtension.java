@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -144,7 +144,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.setAccountVerified(email);
     }
 
-    public List<MFAMethod> getMfaMethod(String email) {
+    public List<AuthAppMFAMethod> getMfaMethod(String email) {
         return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
     }
 
@@ -177,7 +177,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                                                 .equals(
                                                                         MFAMethodType.AUTH_APP
                                                                                 .getValue()))
-                                        .anyMatch(MFAMethod::isMethodVerified))
+                                        .anyMatch(AuthAppMFAMethod::isMethodVerified))
                 .orElse(false);
     }
 
@@ -186,7 +186,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return mfaMethods != null
                 && mfaMethods.stream()
                         .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
-                        .anyMatch(MFAMethod::isEnabled);
+                        .anyMatch(AuthAppMFAMethod::isEnabled);
     }
 
     public void addMfaMethod(

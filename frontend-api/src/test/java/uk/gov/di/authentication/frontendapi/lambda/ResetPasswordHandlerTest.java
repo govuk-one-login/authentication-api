@@ -16,10 +16,10 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -421,7 +421,7 @@ class ResetPasswordHandlerTest {
     private UserCredentials generateUserCredentialsWithVerifiedAuthApp() {
         return generateUserCredentials()
                 .setMfaMethod(
-                        new MFAMethod(
+                        new AuthAppMFAMethod(
                                 MFAMethodType.AUTH_APP.getValue(),
                                 "auth-app-credential",
                                 true,

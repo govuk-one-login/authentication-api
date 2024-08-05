@@ -19,11 +19,11 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -155,11 +155,12 @@ class CheckUserExistsHandlerTest {
 
         @Test
         void shouldReturn200WithRelevantMfaMethod() {
-            MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
-            MFAMethod mfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
+            AuthAppMFAMethod authAppMfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, false);
+            AuthAppMFAMethod authAppMfaMethod2 = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(
-                            new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
+                            new UserCredentials()
+                                    .withMfaMethods(List.of(authAppMfaMethod1, authAppMfaMethod2)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
             var phoneNumber = CommonTestVariables.UK_MOBILE_NUMBER;
@@ -227,9 +228,9 @@ class CheckUserExistsHandlerTest {
             when(codeStorageService.getIncorrectMfaCodeAttemptsCount(
                             EMAIL_ADDRESS, MFAMethodType.AUTH_APP))
                     .thenReturn(6);
-            MFAMethod mfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
+            AuthAppMFAMethod authAppMfaMethod1 = verifiedMfaMethod(MFAMethodType.AUTH_APP, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1)));
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(authAppMfaMethod1)));
             var event = userExistsRequest(EMAIL_ADDRESS);
 
             var result = handler.handleRequest(event, context);
@@ -252,9 +253,9 @@ class CheckUserExistsHandlerTest {
         void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
             setupUserProfileAndClient(Optional.of(generateUserProfile()));
 
-            MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
+            AuthAppMFAMethod authAppMfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
-                    .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of(authAppMfaMethod)));
 
             var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
 
@@ -418,8 +419,8 @@ class CheckUserExistsHandlerTest {
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
-    private MFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
-        return new MFAMethod(
+    private AuthAppMFAMethod verifiedMfaMethod(MFAMethodType mfaMethodType, Boolean enabled) {
+        return new AuthAppMFAMethod(
                 mfaMethodType.getValue(),
                 "some-credential-value",
                 true,

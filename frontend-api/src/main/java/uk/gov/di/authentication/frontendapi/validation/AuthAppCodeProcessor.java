@@ -4,10 +4,10 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -170,10 +170,10 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                                 method ->
                                         method.getMfaMethodType()
                                                 .equals(MFAMethodType.AUTH_APP.getValue()))
-                        .filter(MFAMethod::isEnabled)
+                        .filter(AuthAppMFAMethod::isEnabled)
                         .findAny();
 
-        return mfaMethod.map(MFAMethod::getCredentialValue);
+        return mfaMethod.map(AuthAppMFAMethod::getCredentialValue);
     }
 
     private boolean checkCode(String secret, long code, long timestamp) {

@@ -16,7 +16,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
@@ -433,8 +433,8 @@ public class DynamoService implements AuthenticationService {
             boolean enabled,
             String credentialValue) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
-        MFAMethod mfaMethod =
-                new MFAMethod(
+        AuthAppMFAMethod authAppMfaMethod =
+                new AuthAppMFAMethod(
                         MFAMethodType.AUTH_APP.getValue(),
                         credentialValue,
                         methodVerified,
@@ -446,14 +446,14 @@ public class DynamoService implements AuthenticationService {
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
-                        .setMfaMethod(mfaMethod));
+                        .setMfaMethod(authAppMfaMethod));
     }
 
     @Override
     public void setAuthAppAndAccountVerified(String email, String credentialValue) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var mfaMethod =
-                new MFAMethod(
+                new AuthAppMFAMethod(
                         MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
         var userCredentials =
                 dynamoUserCredentialsTable
@@ -483,7 +483,7 @@ public class DynamoService implements AuthenticationService {
     public void setVerifiedAuthAppAndRemoveExistingMfaMethod(String email, String credentialValue) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var mfaMethod =
-                new MFAMethod(
+                new AuthAppMFAMethod(
                         MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
         var userCredentials =
                 dynamoUserCredentialsTable

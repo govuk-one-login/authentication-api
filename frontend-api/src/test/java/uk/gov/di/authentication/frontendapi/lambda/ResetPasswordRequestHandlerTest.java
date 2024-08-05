@@ -22,12 +22,12 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
+import uk.gov.di.authentication.shared.entity.AuthAppMFAMethod;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -218,14 +218,14 @@ class ResetPasswordRequestHandlerTest {
             when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                     .thenReturn(Optional.of(getClientSession()));
             var disabledMfaMethod =
-                    new MFAMethod(
+                    new AuthAppMFAMethod(
                             MFAMethodType.AUTH_APP.getValue(),
                             "first-value",
                             true,
                             false,
                             NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
             var enabledMfaMethod =
-                    new MFAMethod(
+                    new AuthAppMFAMethod(
                             MFAMethodType.SMS.getValue(),
                             "second-value",
                             true,

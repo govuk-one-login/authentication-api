@@ -25,7 +25,7 @@ public class UserCredentials {
     private String created;
     private String updated;
     private String migratedPassword;
-    private List<MFAMethod> mfaMethods;
+    private List<AuthAppMFAMethod> authAppMfaMethods;
     private int testUser;
 
     public UserCredentials() {}
@@ -65,8 +65,8 @@ public class UserCredentials {
         this.migratedPassword = migratedPassword;
     }
 
-    public void setMfaMethods(List<MFAMethod> mfaMethods) {
-        this.mfaMethods = mfaMethods;
+    public void setMfaMethods(List<AuthAppMFAMethod> authAppMfaMethods) {
+        this.authAppMfaMethods = authAppMfaMethods;
     }
 
     @DynamoDbSecondaryPartitionKey(indexNames = {"SubjectIDIndex"})
@@ -121,31 +121,31 @@ public class UserCredentials {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHODS)
-    public List<MFAMethod> getMfaMethods() {
-        return mfaMethods;
+    public List<AuthAppMFAMethod> getMfaMethods() {
+        return authAppMfaMethods;
     }
 
-    public UserCredentials withMfaMethods(List<MFAMethod> mfaMethods) {
-        this.mfaMethods = mfaMethods;
+    public UserCredentials withMfaMethods(List<AuthAppMFAMethod> authAppMfaMethods) {
+        this.authAppMfaMethods = authAppMfaMethods;
         return this;
     }
 
-    public UserCredentials setMfaMethod(MFAMethod mfaMethod) {
-        if (this.mfaMethods == null) {
-            this.mfaMethods = List.of(mfaMethod);
+    public UserCredentials setMfaMethod(AuthAppMFAMethod authAppMfaMethod) {
+        if (this.authAppMfaMethods == null) {
+            this.authAppMfaMethods = List.of(authAppMfaMethod);
         } else {
-            this.mfaMethods.removeIf(
-                    t -> t.getMfaMethodType().equals(mfaMethod.getMfaMethodType()));
-            this.mfaMethods.add(mfaMethod);
+            this.authAppMfaMethods.removeIf(
+                    t -> t.getMfaMethodType().equals(authAppMfaMethod.getMfaMethodType()));
+            this.authAppMfaMethods.add(authAppMfaMethod);
         }
         return this;
     }
 
     public UserCredentials removeAuthAppByCredentialIfPresent(String authAppCredential) {
-        if (this.mfaMethods == null) {
+        if (this.authAppMfaMethods == null) {
             return this;
         } else {
-            this.mfaMethods.removeIf(t -> t.getCredentialValue().equals(authAppCredential));
+            this.authAppMfaMethods.removeIf(t -> t.getCredentialValue().equals(authAppCredential));
             return this;
         }
     }
