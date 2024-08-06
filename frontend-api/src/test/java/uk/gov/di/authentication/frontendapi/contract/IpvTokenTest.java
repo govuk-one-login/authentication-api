@@ -69,7 +69,7 @@ class IpvTokenTest {
             "eyJzdWIiOiJhdXRoT3JjaGVzdHJhdG9yIiwiYXVkIjoiaHR0cDovL2lwdi8iLCJuYmYiOjk0NjY4NDgwMCwiaXNzIjoiYXV0aE9yY2hlc3RyYXRvciIsImV4cCI6NDA3MDkwODgwMCwiaWF0Ijo5NDY2ODQ4MDAsImp0aSI6IjEifQ";
     // Generated from jwt.io by using PRIVATE_JWT_KEY
     private static final String CLIENT_ASSERTION_SIGNATURE =
-            "TiUM6VyPG-qiSMe1t5XubtTxzoFCCwS6ux0EC8b5yJqDtgKGS3opRyv8XLN1tOoQR4mUD8BsT5iSGqiuNeIp4A";
+            "ug2Yl23vA5c1KCN2CF2zFEz7v8WMCqKOoaYIitAb7UWSeRO8osltQhjhPp9L9U1NJnuuZc0J0u_QNOqYajpWPQ";
 
     @BeforeEach
     void setUp() {
