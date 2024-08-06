@@ -21,12 +21,14 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -78,6 +80,34 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(UPDATE_EMAIL));
+    }
+
+    @Test
+    void shouldCopyMfaDetailsAndReturn204WhenUpdatingEmailIsSuccessful() {
+        var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
+        userStore.addMfaMethod(EXISTING_EMAIL_ADDRESS, AUTH_APP, true, true, "cred");
+        var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
+
+        Map<String, Object> requestParams =
+                Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new UpdateEmailRequest(
+                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        requestParams);
+
+        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+        assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
+        var retrievedMfaMethods = userStore.getMfaMethod(NEW_EMAIL_ADDRESS);
+        assertThat(retrievedMfaMethods.size(), equalTo(1));
+        assertThat(retrievedMfaMethods.get(0).getMfaMethodType(), equalTo(AUTH_APP.getValue()));
+        assertThat(retrievedMfaMethods.get(0).isEnabled(), equalTo(true));
+        assertThat(retrievedMfaMethods.get(0).isMethodVerified(), equalTo(true));
     }
 
     @Test
