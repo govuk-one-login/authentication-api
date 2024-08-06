@@ -324,14 +324,12 @@ public class AuthorisationHandler
         }
 
         if (!client.isActive()) {
-            String errorMsg = "Client configured as not active in Client Registry";
-            LOG.error(errorMsg);
-            LOG.warn("Redirecting");
+            LOG.error("Client configured as not active in Client Registry");
             return generateErrorResponse(
                     authRequest.getRedirectionURI(),
                     authRequest.getState(),
                     authRequest.getResponseMode(),
-                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, errorMsg),
+                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
                     authRequest.getClientID().getValue(),
                     user);
         }
