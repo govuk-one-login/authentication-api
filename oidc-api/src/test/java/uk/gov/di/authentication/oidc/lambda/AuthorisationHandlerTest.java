@@ -977,7 +977,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldThrowErrorWhenClientIsNotActive() {
+        void shouldRedirectToRPWhenClientIsNotActive() {
             when(clientService.getClient(CLIENT_ID.toString()))
                     .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
 
