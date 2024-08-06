@@ -3,10 +3,8 @@ package uk.gov.di.authentication.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
-import java.util.Map;
 import java.util.Objects;
 
 @DynamoDbBean
@@ -191,22 +189,6 @@ public class MFAMethod {
     public MFAMethod withMfaIdentifier(Integer mfaIdentifier) {
         this.mfaIdentifier = mfaIdentifier;
         return this;
-    }
-
-    AttributeValue toAttributeValue() {
-        return AttributeValue.fromM(
-                Map.ofEntries(
-                        Map.entry(
-                                ATTRIBUTE_MFA_METHOD_TYPE,
-                                AttributeValue.fromS(getMfaMethodType())),
-                        Map.entry(
-                                ATTRIBUTE_CREDENTIAL_VALUE,
-                                AttributeValue.fromS(getCredentialValue())),
-                        Map.entry(
-                                ATTRIBUTE_METHOD_VERIFIED,
-                                AttributeValue.fromN(isMethodVerified() ? "1" : "0")),
-                        Map.entry(ATTRIBUTE_ENABLED, AttributeValue.fromN(isEnabled() ? "1" : "0")),
-                        Map.entry(ATTRIBUTE_UPDATED, AttributeValue.fromS(getUpdated()))));
     }
 
     @Override
