@@ -92,7 +92,6 @@ import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
-import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -262,11 +261,11 @@ public class AuthorisationHandler
                         case "POST" -> parseRequestBody(input.getBody());
                         default -> {
                             LOG.warn(
-                                    format(
+                                    String.format(
                                             "Authentication request sent with invalid HTTP method %s",
                                             input.getHttpMethod()));
                             throw new InvalidHttpMethodException(
-                                    format(
+                                    String.format(
                                             "Authentication request does not support %s requests",
                                             input.getHttpMethod()));
                         }
@@ -325,7 +324,8 @@ public class AuthorisationHandler
         }
 
         if (!client.getIsActive()) {
-            String errorMsg = format("Client not active for ClientId: %s", client.getClientID());
+            String errorMsg =
+                    String.format("Client not active for ClientId: %s", client.getClientID());
             LOG.error(errorMsg);
             var errorResponse =
                     new AuthenticationErrorResponse(
