@@ -324,7 +324,7 @@ public class AuthorisationHandler
         }
 
         if (!client.getIsActive()) {
-            String errorMsg = String.format("Client not active", client.getClientID());
+            String errorMsg = "Client configured as not active in Client Registry";
             LOG.error(errorMsg);
             var errorResponse =
                     new AuthenticationErrorResponse(

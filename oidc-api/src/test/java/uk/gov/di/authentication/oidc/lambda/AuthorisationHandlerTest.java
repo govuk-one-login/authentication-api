@@ -999,12 +999,14 @@ class AuthorisationHandlerTest {
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(401));
-            assertThat(logging.events(), hasItem(withMessage("Client not active")));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessage("Client configured as not active in Client Registry")));
             assertThat(
                     response.getHeaders().get(ResponseHeaders.LOCATION),
                     equalTo(
                             REDIRECT_URI
-                                    + "?error=unauthorized_client&error_description=Client+not+active"));
+                                    + "?error=unauthorized_client&error_description=Client+configured+as+not+active+in+Client+Registry"));
         }
 
         @Test
