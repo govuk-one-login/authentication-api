@@ -364,8 +364,11 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(JourneyType journeyType) {
+    void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(
+            JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
+
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         for (int i = 0; i < MAX_CODE_RETRIES; i++) {
             session.incrementCodeRequestCount(MFA_SMS, journeyType);
@@ -380,9 +383,22 @@ class MfaHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
 
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            if (!reauthEnabled) {
+                verify(codeStorageService)
+                        .saveBlockedForEmail(
+                                EMAIL,
+                                CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
+                                LOCKOUT_DURATION);
+            }
+        } else {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL,
+                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
+                            LOCKOUT_DURATION);
+        }
 
         verify(auditService)
                 .submitAuditEvent(
@@ -394,9 +410,11 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes(JourneyType journeyType) {
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes(
+            JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
         when(codeStorageService.isBlockedForEmail(
                         EMAIL, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
@@ -419,9 +437,11 @@ class MfaHandlerTest {
 
     @ParameterizedTest
     @MethodSource("smsJourneyTypes")
-    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(JourneyType journeyType) {
+    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(
+            JourneyType journeyType, boolean reauthEnabled) {
         usingValidSession();
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(reauthEnabled);
         when(codeStorageService.isBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
 
@@ -539,8 +559,11 @@ class MfaHandlerTest {
 
     private static Stream<Arguments> smsJourneyTypes() {
         return Stream.of(
-                Arguments.of(JourneyType.PASSWORD_RESET_MFA),
-                Arguments.of(JourneyType.SIGN_IN),
-                Arguments.of(JourneyType.REAUTHENTICATION));
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, false),
+                Arguments.of(JourneyType.SIGN_IN, false),
+                Arguments.of(JourneyType.REAUTHENTICATION, false),
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, true),
+                Arguments.of(JourneyType.SIGN_IN, true),
+                Arguments.of(JourneyType.REAUTHENTICATION, true));
     }
 }
