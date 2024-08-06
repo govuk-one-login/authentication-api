@@ -999,9 +999,7 @@ class AuthorisationHandlerTest {
             var response = makeHandlerRequest(event);
 
             assertThat(response, hasStatus(401));
-            assertThat(
-                    logging.events(),
-                    hasItem(withMessage("Client not active for ClientId: test-id")));
+            assertThat(logging.events(), hasItem(withMessage("Client not active")));
             assertThat(
                     response.getHeaders().get(ResponseHeaders.LOCATION),
                     equalTo(

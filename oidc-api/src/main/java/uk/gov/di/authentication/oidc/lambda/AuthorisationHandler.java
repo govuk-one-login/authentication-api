@@ -324,8 +324,7 @@ public class AuthorisationHandler
         }
 
         if (!client.getIsActive()) {
-            String errorMsg =
-                    String.format("Client not active for ClientId: %s", client.getClientID());
+            String errorMsg = String.format("Client not active", client.getClientID());
             LOG.error(errorMsg);
             var errorResponse =
                     new AuthenticationErrorResponse(
