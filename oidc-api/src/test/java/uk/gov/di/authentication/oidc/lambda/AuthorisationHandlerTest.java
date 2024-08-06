@@ -998,7 +998,7 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
-            assertThat(response, hasStatus(401));
+            assertThat(response, hasStatus(302));
             assertThat(
                     logging.events(),
                     hasItem(withMessage("Client configured as not active in Client Registry")));

@@ -326,17 +326,14 @@ public class AuthorisationHandler
         if (!client.getIsActive()) {
             String errorMsg = "Client configured as not active in Client Registry";
             LOG.error(errorMsg);
-            var errorResponse =
-                    new AuthenticationErrorResponse(
-                            authRequest.getRedirectionURI(),
-                            new ErrorObject(UNAUTHORIZED_CLIENT_CODE, errorMsg),
-                            authRequest.getState(),
-                            authRequest.getResponseMode());
-            return generateApiGatewayProxyResponse(
-                    401,
-                    "",
-                    Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                    null);
+            LOG.warn("Redirecting");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, errorMsg),
+                    authRequest.getClientID().getValue(),
+                    user);
         }
 
         try {
