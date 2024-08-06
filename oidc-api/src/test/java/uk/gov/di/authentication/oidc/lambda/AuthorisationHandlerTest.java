@@ -1004,7 +1004,7 @@ class AuthorisationHandlerTest {
                     response.getHeaders().get(ResponseHeaders.LOCATION),
                     equalTo(
                             REDIRECT_URI
-                                    + "?error=unauthorized_client&error_description=Client+not+active+for+ClientId%3A+test-id"));
+                                    + "?error=unauthorized_client&error_description=Client+not+active"));
         }
 
         @Test
