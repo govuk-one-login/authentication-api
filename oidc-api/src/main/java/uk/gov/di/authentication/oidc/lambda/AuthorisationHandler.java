@@ -334,7 +334,7 @@ public class AuthorisationHandler
                             authRequest.getState(),
                             authRequest.getResponseMode());
             return generateApiGatewayProxyResponse(
-                    400,
+                    401,
                     "",
                     Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
                     null);

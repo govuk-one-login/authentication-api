@@ -998,7 +998,7 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             var response = makeHandlerRequest(event);
 
-            assertThat(response, hasStatus(400));
+            assertThat(response, hasStatus(401));
             assertThat(
                     logging.events(),
                     hasItem(withMessage("Client not active for ClientId: test-id")));
