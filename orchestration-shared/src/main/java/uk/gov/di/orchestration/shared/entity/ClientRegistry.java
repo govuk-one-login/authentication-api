@@ -234,15 +234,15 @@ public class ClientRegistry {
     }
 
     @DynamoDbAttribute("IsActive")
-    public boolean getIsActive() {
+    public boolean isActive() {
         return isActive;
     }
 
-    public void setIsActive(boolean isActive) {
+    public void setActive(boolean isActive) {
         this.isActive = isActive;
     }
 
-    public ClientRegistry withIsActive(boolean isActive) {
+    public ClientRegistry withActive(boolean isActive) {
         this.isActive = isActive;
         return this;
     }

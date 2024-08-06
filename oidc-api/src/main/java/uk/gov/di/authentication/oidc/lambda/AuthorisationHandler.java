@@ -323,7 +323,7 @@ public class AuthorisationHandler
             }
         }
 
-        if (!client.getIsActive()) {
+        if (!client.isActive()) {
             String errorMsg = "Client configured as not active in Client Registry";
             LOG.error(errorMsg);
             LOG.warn("Redirecting");

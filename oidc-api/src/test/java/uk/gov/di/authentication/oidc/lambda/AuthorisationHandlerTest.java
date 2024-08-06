@@ -979,7 +979,7 @@ class AuthorisationHandlerTest {
         @Test
         void shouldThrowErrorWhenClientIsNotActive() {
             when(clientService.getClient(CLIENT_ID.toString()))
-                    .thenReturn(Optional.of(generateClientRegistry().withIsActive(false)));
+                    .thenReturn(Optional.of(generateClientRegistry().withActive(false)));
 
             var event = new APIGatewayProxyRequestEvent();
             event.setQueryStringParameters(
