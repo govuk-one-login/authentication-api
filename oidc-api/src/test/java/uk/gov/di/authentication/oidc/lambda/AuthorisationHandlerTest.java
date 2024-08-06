@@ -1006,7 +1006,7 @@ class AuthorisationHandlerTest {
                     response.getHeaders().get(ResponseHeaders.LOCATION),
                     equalTo(
                             REDIRECT_URI
-                                    + "?error=unauthorized_client&error_description=Client+configured+as+not+active+in+Client+Registry"));
+                                    + "?error=unauthorized_client&error_description=client+deactivated"));
         }
 
         @Test
