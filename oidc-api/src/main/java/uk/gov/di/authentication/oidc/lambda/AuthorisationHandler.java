@@ -90,7 +90,9 @@ import java.util.stream.Collectors;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
+import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -260,11 +262,11 @@ public class AuthorisationHandler
                         case "POST" -> parseRequestBody(input.getBody());
                         default -> {
                             LOG.warn(
-                                    String.format(
+                                    format(
                                             "Authentication request sent with invalid HTTP method %s",
                                             input.getHttpMethod()));
                             throw new InvalidHttpMethodException(
-                                    String.format(
+                                    format(
                                             "Authentication request does not support %s requests",
                                             input.getHttpMethod()));
                         }
@@ -320,6 +322,22 @@ public class AuthorisationHandler
                 LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
                 return generateBadRequestResponse(user, errorMsg, client.getClientID());
             }
+        }
+
+        if (!client.getIsActive()) {
+            String errorMsg = format("Client not active for ClientId: %s", client.getClientID());
+            LOG.error(errorMsg);
+            var errorResponse =
+                    new AuthenticationErrorResponse(
+                            authRequest.getRedirectionURI(),
+                            new ErrorObject(UNAUTHORIZED_CLIENT_CODE, errorMsg),
+                            authRequest.getState(),
+                            authRequest.getResponseMode());
+            return generateApiGatewayProxyResponse(
+                    400,
+                    "",
+                    Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                    null);
         }
 
         try {
