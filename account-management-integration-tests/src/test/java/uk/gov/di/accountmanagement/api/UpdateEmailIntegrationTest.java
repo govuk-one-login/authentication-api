@@ -9,6 +9,8 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -29,14 +31,16 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String NEW_EMAIL_ADDRESS = "joe.b@digital.cabinet-office.gov.uk";
+    private static final String EXISTING_EMAIL_ADDRESS =
+            "old.joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String NEW_EMAIL_ADDRESS = "new.joe.b@digital.cabinet-office.gov.uk";
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_ID = "some-client-id";
@@ -86,6 +90,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCopyMfaDetailsAndReturn204WhenUpdatingEmailIsSuccessful() {
         var internalCommonSubId = setupUserAndRetrieveInternalCommonSubId();
         userStore.addMfaMethod(EXISTING_EMAIL_ADDRESS, AUTH_APP, true, true, "cred");
+        var newStyleSmsData = new SmsMfaData("1234", true, true, PriorityIdentifier.BACKUP, 1);
+        userStore.addMfaMethodSupportingMultiple(EXISTING_EMAIL_ADDRESS, newStyleSmsData);
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
         Map<String, Object> requestParams =
@@ -103,11 +109,37 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
         assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
+
         var retrievedMfaMethods = userStore.getMfaMethod(NEW_EMAIL_ADDRESS);
-        assertThat(retrievedMfaMethods.size(), equalTo(1));
-        assertThat(retrievedMfaMethods.get(0).getMfaMethodType(), equalTo(AUTH_APP.getValue()));
-        assertThat(retrievedMfaMethods.get(0).isEnabled(), equalTo(true));
-        assertThat(retrievedMfaMethods.get(0).isMethodVerified(), equalTo(true));
+
+        assertThat(retrievedMfaMethods.size(), equalTo(2));
+
+        var authAppMethod =
+                retrievedMfaMethods.stream()
+                        .filter(m -> m.getMfaMethodType().equals(AUTH_APP.getValue()))
+                        .findFirst()
+                        .get();
+        var smsMethod =
+                retrievedMfaMethods.stream()
+                        .filter(m -> m.getMfaMethodType().equals(SMS.getValue()))
+                        .findFirst()
+                        .get();
+
+        assertThat(authAppMethod.isEnabled(), equalTo(true));
+        assertThat(authAppMethod.isMethodVerified(), equalTo(true));
+        assertThat(smsMethod.isEnabled(), equalTo(true));
+        assertThat(smsMethod.isMethodVerified(), equalTo(true));
+        assertThat(smsMethod.getDestination(), equalTo("1234"));
+        assertThat(smsMethod.getPriority(), equalTo("BACKUP"));
+
+        assertNotificationsReceived(
+                notificationsQueue,
+                List.of(
+                        new NotifyRequest(
+                                EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
+                        new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
+
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(UPDATE_EMAIL));
     }
 
     @Test

@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -196,6 +197,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
             boolean isEnabled,
             String credentialValue) {
         dynamoService.updateMFAMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
+    }
+
+    public void addMfaMethodSupportingMultiple(String email, MfaData mfaData) {
+        dynamoService.addMFAMethodSupportingMultiple(email, mfaData);
     }
 
     public void updateMFAMethod(
