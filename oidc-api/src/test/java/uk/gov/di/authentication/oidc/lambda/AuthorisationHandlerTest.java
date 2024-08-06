@@ -977,6 +977,39 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldThrowErrorWhenClientIsNotActive() {
+            when(clientService.getClient(CLIENT_ID.toString()))
+                    .thenReturn(Optional.of(generateClientRegistry().withIsActive(false)));
+
+            var event = new APIGatewayProxyRequestEvent();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            SCOPE,
+                            "redirect_uri",
+                            REDIRECT_URI,
+                            "response_type",
+                            "code"));
+            event.setHttpMethod("GET");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(400));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessage("Client not active for ClientId: test-id")));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            REDIRECT_URI
+                                    + "?error=unauthorized_client&error_description=Client+not+active+for+ClientId%3A+test-id"));
+        }
+
+        @Test
         void shouldRedirectToLoginWhenRequestObjectIsValid()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
