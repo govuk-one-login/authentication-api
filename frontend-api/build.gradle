@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id "au.com.dius.pact" version "4.6.10"
 }
 
 group "uk.gov.di.authentication.frontendapi"
@@ -34,7 +35,8 @@ dependencies {
             configurations.sqs,
             configurations.s3,
             configurations.kms,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.pact_consumer
 
     testRuntimeOnly configurations.test_runtime
 }
@@ -42,6 +44,29 @@ dependencies {
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
+    exclude 'uk/gov/di/authentication/frontendapi/contract/**'
+}
+
+var pactDir = "$rootDir/frontend-api/src/test/pact"
+
+task pactConsumerTests (type: Test, group: "verification") {
+    useJUnitPlatform()
+    include 'uk/gov/di/authentication/frontendapi/contract/**'
+    systemProperties['pact.rootDir'] = pactDir
+}
+
+pact {
+    publish {
+        pactDirectory = pactDir
+        pactBrokerUrl = "$System.env.PACT_URL".toString() + "?testSource=" + "$System.env.PACT_BROKER_SOURCE_HEADER".toString()
+        pactBrokerUsername = "$System.env.PACT_USER".toString()
+        pactBrokerPassword = "$System.env.PACT_PASSWORD".toString()
+        consumerVersion = "$System.env.CONSUMER_APP_VERSION".toString()
+        consumerBranch = "${System.env.GIT_BRANCH}".toString()
+        tags = [
+            "${System.env.GIT_BRANCH}".toString()
+        ]
+    }
 }
 
 task buildZip(type: Zip) {
