@@ -99,7 +99,8 @@ public class DynamoClientService implements ClientService {
                         .withClientType(clientType)
                         .withIdentityVerificationSupported(identityVerificationSupported)
                         .withIdTokenSigningAlgorithm(idTokenSigningAlgorithm)
-                        .withTokenAuthMethod(tokenAuthMethod);
+                        .withTokenAuthMethod(tokenAuthMethod)
+                        .withActive(true);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
         }

@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
@@ -93,8 +94,12 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         var clientResponse =
                 objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
 
+        Optional<ClientRegistry> client = clientStore.getClient(clientResponse.getClientId());
+
         assertThat(response, hasStatus(200));
         assertTrue(clientStore.clientExists(clientResponse.getClientId()));
+        assertTrue(client.isPresent());
+        assertTrue(client.get().isActive());
         assertThat(clientResponse.getClaims(), equalTo(claims));
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));
         assertThat(clientResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
