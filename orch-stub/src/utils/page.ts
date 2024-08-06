@@ -16,9 +16,9 @@ export const renderGovukPage = (content: string): string => {
 </head>
 
 <body class="govuk-template__body">
-<!--  <script>-->
-<!--    document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');-->
-<!--  </script>-->
+  <script>
+    document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');
+  </script>
   <a href="#main-content" class="govuk-skip-link" data-module="govuk-skip-link">Skip to main content</a>
   <header class="govuk-header" data-module="govuk-header">
     <div class="govuk-header__container govuk-width-container">
@@ -79,6 +79,9 @@ export const renderGovukPage = (content: string): string => {
       </div>
     </div>
   </footer>
+  <script src="https://assets.account.gov.uk/assets/javascripts/all.js"></script>
+  <script>window.GOVUKFrontend.initAll()</script>
+
 </body>
 
 </html>`;

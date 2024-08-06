@@ -1,3 +1,5 @@
+import { CredentialTrustEnum } from "./credential-trust";
+
 export type Session = {
   session_id: string;
   client_sessions?: string[];
@@ -5,7 +7,7 @@ export type Session = {
   retry_count?: number;
   password_reset_count?: number;
   code_request_count_map?: { [key: string]: number };
-  current_credential_strength?: string;
+  current_credential_strength?: CredentialTrustEnum;
   is_new_account?: string;
   authenticated?: boolean;
   processing_identity_attempts?: number;

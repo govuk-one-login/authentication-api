@@ -1,8 +1,11 @@
 import querystring, { ParsedUrlQuery } from "querystring";
+import { CredentialTrustLevel } from "../types/credential-trust";
 
 export type RequestParameters = {
-  confidence: "Cl" | "Cl.Cm";
+  confidence: CredentialTrustLevel;
   reauthenticate?: string;
+  authenticated: boolean;
+  authenticatedLevel?: CredentialTrustLevel;
 };
 
 export const parseRequestParameters = (
@@ -13,21 +16,31 @@ export const parseRequestParameters = (
   }
 
   const parsedForm = querystring.parse(body);
+
+  const existingAuthentication = getExistingAuthentication(parsedForm);
   return {
-    confidence: getConfidence(parsedForm),
+    confidence: validateCredentialTrustLevel(parsedForm.level),
     reauthenticate: getReauthenticate(parsedForm),
+    authenticated: existingAuthentication.authenticated,
+    authenticatedLevel: existingAuthentication.authenticatedLevel,
   };
 };
 
-const getConfidence = (form: ParsedUrlQuery) => {
-  switch (form.level) {
-    case "low":
-      return "Cl";
-    case "medium":
-      return "Cl.Cm";
-    default:
-      throw new Error("Unknown level " + form.level);
+const validateCredentialTrustLevel = (
+  level: string | string[] | undefined,
+): CredentialTrustLevel => {
+  if (level === "Cl" || level === "Cl.Cm") {
+    return level;
   }
+  throw new Error("Unknown level " + level);
+};
+
+const getExistingAuthentication = (form: ParsedUrlQuery) => {
+  const authenticated = form.authenticated === "yes";
+  const authenticatedLevel = authenticated
+    ? validateCredentialTrustLevel(form.authenticatedLevel)
+    : undefined;
+  return { authenticated, authenticatedLevel };
 };
 
 const getReauthenticate = (form: ParsedUrlQuery): string | undefined => {

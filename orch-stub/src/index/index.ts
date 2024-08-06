@@ -5,8 +5,6 @@ import {
 } from "aws-lambda";
 import * as jose from "jose";
 import { JWTPayload } from "jose";
-import * as querystring from "querystring";
-import { ParsedUrlQuery } from "querystring";
 import { getCookie, getOrCreatePersistentSessionId } from "../utils/cookie";
 import crypto from "node:crypto";
 import { downcaseHeaders } from "../utils/headers";
@@ -20,6 +18,7 @@ import {
   parseRequestParameters,
   RequestParameters,
 } from "../services/request-parameters";
+import { credentialTrustToEnum } from "../types/credential-trust";
 
 export const handler = async (
   event: APIGatewayProxyEvent,
@@ -48,17 +47,56 @@ const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
     <label for="level" class="govuk-label">Credential Trust Level</label>
     <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
         <div class="govuk-radios__item">
-            <input class="govuk-radios__input" id="level" name="level" type="radio" value="medium" checked>
+            <input class="govuk-radios__input" id="level" name="level" type="radio" value="Cl.Cm" checked>
             <label class="govuk-label govuk-radios__label" for="level">
                 Cl.Cm (2FA)
             </label>
         </div>
         <div class="govuk-radios__item">
-            <input class="govuk-radios__input" id="level-2" name="level" type="radio" value="low">
+            <input class="govuk-radios__input" id="level-2" name="level" type="radio" value="Cl">
             <label class="govuk-label govuk-radios__label" for="level-2">
                 Cl (No 2FA)
             </label>
         </div>
+    </div>
+    <div class="govuk-form-group">
+    <fieldset class="govuk-fieldset">
+      <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+        <h1 class="govuk-fieldset__heading">
+          Seamless login and uplift
+        </h1>
+      </legend>
+      <div class="govuk-radios" data-module="govuk-radios">
+        <div class="govuk-radios__item">
+          <input class="govuk-radios__input" id="authenticated" name="authenticated" type="radio" value="no" checked>
+          <label class="govuk-label govuk-radios__label" for="authenticated">
+            Not authenticated
+          </label>
+        </div>
+        <div class="govuk-radios__item">
+          <input class="govuk-radios__input" id="authenticated-2" name="authenticated" type="radio" value="yes" data-aria-controls="conditional-authenticated-2">
+          <label class="govuk-label govuk-radios__label" for="authenticated-2">
+            Authenticated
+          </label>
+        </div>
+        <div class="govuk-radios__conditional govuk-radios__conditional--hidden" id="conditional-authenticated-2">
+          <div class="govuk-form-group govuk-radios" data-module="govuk-radios">
+            <div class="govuk-radios__item">
+              <input class="govuk-radios__input govuk-!-width-one-third" id="authenticated-level" name="authenticatedLevel" type="radio" value="Cl">
+              <label class="govuk-label govuk-radios__label" for="authenticated-level">
+                Low level
+              </label>
+            </div>
+            <div class="govuk-radios__item">
+              <input class="govuk-radios__input govuk-!-width-one-third" id="authenticated-level-2" name="authenticatedLevel" type="radio" value="Cl.Cm" checked>
+              <label class="govuk-label govuk-radios__label" for="authenticated-level-2">
+                Medium level
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </fieldset>
     </div>
     <button class="govuk-button">Submit</button>
 </form>
@@ -173,12 +211,12 @@ const setUpSession = async (
     const idParts = existingGsCookie.split(".");
     const sessionId = idParts[0];
     try {
-      await renameExistingSession(sessionId, newSessionId);
+      await renameExistingSession(sessionId, newSessionId, config);
     } catch (e) {
-      await createNewSession(newSessionId);
+      await createNewSession(newSessionId, config);
     }
   } else {
-    await createNewSession(newSessionId);
+    await createNewSession(newSessionId, config);
   }
   await attachClientSessionToSession(newClientSessionId, newSessionId);
 
@@ -206,7 +244,7 @@ const createNewClientSession = async (
       client_id: [process.env.RP_CLIENT_ID!!],
     },
     effective_vector_of_trust: {
-      credential_trust_level: config.confidence,
+      credential_trust_level: credentialTrustToEnum(config.confidence),
     },
   };
   await client.setEx(
@@ -216,8 +254,15 @@ const createNewClientSession = async (
   );
 };
 
-const createNewSession = async (id: string) => {
-  const session: Session = { session_id: id, code_request_count_map: {} };
+const createNewSession = async (id: string, config: RequestParameters) => {
+  const session: Session = {
+    session_id: id,
+    code_request_count_map: {},
+    authenticated: config.authenticated,
+    current_credential_strength: credentialTrustToEnum(
+      config.authenticatedLevel,
+    ),
+  };
   const client = await getRedisClient();
   await client.setEx(id, 3600, JSON.stringify(session));
 };
@@ -225,11 +270,16 @@ const createNewSession = async (id: string) => {
 const renameExistingSession = async (
   existingSessionId: string,
   newSessionId: string,
+  config: RequestParameters,
 ) => {
   const client = await getRedisClient();
   const existingSession = await getSession(existingSessionId);
   await client.del(existingSessionId);
   existingSession.session_id = newSessionId;
+  existingSession.authenticated = config.authenticated;
+  existingSession.current_credential_strength = credentialTrustToEnum(
+    config.authenticatedLevel,
+  );
   await client.setEx(newSessionId, 3600, JSON.stringify(existingSession));
 };
 
