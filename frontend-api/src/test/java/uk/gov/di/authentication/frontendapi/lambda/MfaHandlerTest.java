@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -390,6 +391,14 @@ class MfaHandlerTest {
                 journeyType, reauthEnabled, codeRequestType);
 
         checkUserIsBlockedWhenNotReAuthenticating(journeyType, codeRequestType);
+
+        verify(sessionService)
+                .save(
+                        argThat(
+                                sessionForTestUser ->
+                                        sessionForTestUser.getCodeRequestCount(
+                                                        NotificationType.MFA_SMS, journeyType)
+                                                == 0));
 
         verify(auditService)
                 .submitAuditEvent(
