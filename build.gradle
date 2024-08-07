@@ -122,7 +122,8 @@ subprojects {
         apache "commons-codec:commons-codec:1.17.1",
                 "org.apache.httpcomponents:httpclient:4.5.14",
                 "org.apache.commons:commons-collections4:4.1",
-                "commons-net:commons-net:3.11.1"
+                "commons-net:commons-net:3.11.1",
+                "commons-io:commons-io:2.8.0"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.78.1"
 
@@ -196,7 +197,6 @@ subprojects {
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
     }
 }
-
 
 allprojects {
     gradle.projectsEvaluated {
