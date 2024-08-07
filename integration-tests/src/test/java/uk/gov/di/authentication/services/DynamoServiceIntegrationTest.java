@@ -1,28 +1,33 @@
 package uk.gov.di.authentication.services;
 
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.authentication.shared.entity.AuthAppMfaData;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaData;
+import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
+import uk.gov.di.authentication.shared.entity.SmsMfaData;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
+import java.util.function.Predicate;
 
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class DynamoServiceIntegrationTest {
 
@@ -30,13 +35,7 @@ class DynamoServiceIntegrationTest {
     private static final String UPDATED_TEST_EMAIL = "user.one@test.com";
     private static final String PHONE_NUMBER = "+447700900000";
     private static final String ALTERNATIVE_PHONE_NUMBER = "+447316763843";
-    private static final String CLIENT_ID = "client-id";
     private static final LocalDateTime CREATED_DATE_TIME = LocalDateTime.now();
-    private static final Scope SCOPES =
-            new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
-    private static final Set<String> CLAIMS =
-            ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
-
     private static final String TEST_MFA_APP_CREDENTIAL = "test-mfa-app-credential";
     private static final String ALTERNATIVE_TEST_MFA_APP_CREDENTIAL =
             "alternative-test-mfa-app-credential";
@@ -48,7 +47,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void getOrGenerateSaltShouldReturnNewSaltWhenUserDoesNotHaveOne() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         UserProfile userProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
         byte[] salt = dynamoService.getOrGenerateSalt(userProfile);
@@ -62,7 +61,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void getOrGenerateSaltShouldReturnExistingSaltWhenOneExists() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         byte[] existingSalt = userStore.addSalt(TEST_EMAIL);
 
         UserProfile userProfile =
@@ -77,36 +76,36 @@ class DynamoServiceIntegrationTest {
                 equalTo(SdkBytes.fromByteBuffer(savedProfile.getSalt()).asByteArray()));
     }
 
-    private void setUpDynamo() {
-        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
-    }
-
     @Test
     void shouldUpdateEmailAndDeletePreviousItems() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
         UserProfile userProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithAccountVerified() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.setAccountVerified(TEST_EMAIL);
 
         UserProfile userProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithSalt() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         userStore.addSalt(TEST_EMAIL);
 
         UserProfile userProfile =
@@ -114,12 +113,14 @@ class DynamoServiceIntegrationTest {
 
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithMfaMethods() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, false, true, TEST_MFA_APP_CREDENTIAL);
@@ -128,12 +129,14 @@ class DynamoServiceIntegrationTest {
 
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
-        testUpdateEmail(userProfile, userCredentials);
+        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
+
+        assertEmailHasBeenUpdated(userProfile, userCredentials);
     }
 
     @Test
     void shouldAddAuthAppMFAMethod() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         UserCredentials updatedUserCredentials =
@@ -147,10 +150,139 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
     }
 
+    @Nested
+    class AddMFAMethodSupportingMultipleTests {
+        @BeforeEach
+        void setup() {
+            userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        }
+
+        private SmsMfaData defaultPrioritySmsData =
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.DEFAULT, 1);
+        private SmsMfaData backupPrioritySmsData =
+                new SmsMfaData(PHONE_NUMBER, true, true, PriorityIdentifier.BACKUP, 2);
+        private AuthAppMfaData defaultPriorityAuthAppData =
+                new AuthAppMfaData(
+                        TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.DEFAULT, 3);
+        private AuthAppMfaData backupAuthAppData =
+                new AuthAppMfaData(
+                        TEST_MFA_APP_CREDENTIAL, true, true, PriorityIdentifier.BACKUP, 4);
+
+        @Test
+        void shouldAddDefaultPriorityAuthAppMFAMethodWhenNoOtherMethodExists() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
+        }
+
+        @Test
+        void shouldAddDefaultPriortySmsMFAMethodWhenNoOtherDefaultExists() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPrioritySmsData);
+        }
+
+        @Test
+        void aDefaultPriorityMfaMethodShouldReplaceAnExistingDefaultPriorityMethod() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
+        }
+
+        @Test
+        void aDefaultPriorityMfaMethodShouldReplaceAnExistingMethodWithoutPriority() {
+            // Add auth app mfa using existing method which does not contain the new fields,
+            // resulting in a null priority field
+            dynamoService.updateMFAMethod(
+                    TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, "some-credential");
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPriorityAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertSingleMfaMethodExistsWithData(userCredentials, defaultPriorityAuthAppData);
+        }
+
+        @Test
+        void anMfaMethodShouldNotReplaceAnExistingMethodOfADifferentTypeWithDifferentPriority() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupAuthAppData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupAuthAppData);
+        }
+
+        @Test
+        void anMfaMethodShouldNotReplaceAnExistingMethodOfTheSameTypeWithDifferentPriority() {
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, defaultPrioritySmsData);
+
+            dynamoService.addMFAMethodSupportingMultiple(TEST_EMAIL, backupPrioritySmsData);
+
+            var userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+            assertBackupAndDefaultMfaMethodsWithData(
+                    userCredentials, defaultPrioritySmsData, backupPrioritySmsData);
+        }
+
+        private MFAMethod findMethodWithPriority(
+                String priority, List<MFAMethod> retrievedMethods) {
+            Predicate<MFAMethod> findCondition =
+                    (MFAMethod method) -> Objects.equals(method.getPriority(), priority);
+            return retrievedMethods.stream().filter(findCondition).findFirst().get();
+        }
+
+        private void assertBackupAndDefaultMfaMethodsWithData(
+                UserCredentials userCredentials, MfaData expectedDefault, MfaData expectedBackup) {
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(2));
+            var backupMethod = findMethodWithPriority("BACKUP", userCredentials.getMfaMethods());
+            var defaultMethod = findMethodWithPriority("DEFAULT", userCredentials.getMfaMethods());
+            assertRetrievedMethodHasData(backupMethod, expectedBackup);
+            assertRetrievedMethodHasData(defaultMethod, expectedDefault);
+        }
+
+        private void assertRetrievedMethodHasData(MFAMethod retrievedMethod, MfaData expectedData) {
+            if (expectedData instanceof SmsMfaData) {
+                var smsData = (SmsMfaData) expectedData;
+                assertThat(
+                        retrievedMethod.getMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
+                assertThat(retrievedMethod.isMethodVerified(), equalTo(smsData.verified()));
+                assertThat(retrievedMethod.isEnabled(), equalTo(smsData.enabled()));
+                assertThat(retrievedMethod.getPriority(), equalTo(smsData.priority().toString()));
+                assertThat(retrievedMethod.getCredentialValue(), equalTo(null));
+                assertThat(retrievedMethod.getMfaIdentifier(), equalTo(smsData.mfaIdentifier()));
+            } else {
+                var authAppData = (AuthAppMfaData) expectedData;
+                assertThat(
+                        retrievedMethod.getMfaMethodType(),
+                        equalTo(MFAMethodType.AUTH_APP.getValue()));
+                assertThat(retrievedMethod.isMethodVerified(), equalTo(authAppData.verified()));
+                assertThat(retrievedMethod.isEnabled(), equalTo(authAppData.enabled()));
+                assertThat(retrievedMethod.getCredentialValue(), equalTo(authAppData.credential()));
+                assertThat(
+                        retrievedMethod.getPriority(), equalTo(authAppData.priority().toString()));
+                assertThat(retrievedMethod.getDestination(), equalTo(null));
+                assertThat(
+                        retrievedMethod.getMfaIdentifier(), equalTo(authAppData.mfaIdentifier()));
+            }
+        }
+
+        private void assertSingleMfaMethodExistsWithData(
+                UserCredentials userCredentials, MfaData expectedData) {
+            assertThat(userCredentials.getMfaMethods().size(), equalTo(1));
+            assertRetrievedMethodHasData(userCredentials.getMfaMethods().get(0), expectedData);
+        }
+    }
+
     @Test
     void
             shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
@@ -171,7 +303,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetSetPhoneNumberAndAccountVerifiedWhenMfaMethodDoesNotExists() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, "+4407316763843", true, true);
         var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
@@ -185,7 +317,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetAccountAndAuthVerifiedToTrue() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
 
         dynamoService.setAuthAppAndAccountVerified(TEST_EMAIL, TEST_MFA_APP_CREDENTIAL);
 
@@ -203,7 +335,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedPhoneNumberAndRemoveAuthAppWhenPresent() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.setAccountVerified(TEST_EMAIL);
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
@@ -219,8 +351,23 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void mfaMethodShouldNotContainNewFieldsWhenSetByOldMethod() {
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+
+        dynamoService.updateMFAMethod(
+                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertNull(mfaMethod.getDestination());
+        assertNull(mfaMethod.getMfaIdentifier());
+    }
+
+    @Test
     void shouldSetVerifiedPhoneNumberAndReplaceExistingPhoneNumber() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
@@ -236,7 +383,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedAuthAppAndRemovePhoneNumberWhenPresent() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                 TEST_EMAIL, ALTERNATIVE_PHONE_NUMBER, true, true);
 
@@ -257,7 +404,7 @@ class DynamoServiceIntegrationTest {
 
     @Test
     void shouldSetVerifiedAuthAppAndRemoveExistingAuthAppWhenPresent() {
-        setUpDynamo();
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.setAccountVerified(TEST_EMAIL);
@@ -383,9 +530,8 @@ class DynamoServiceIntegrationTest {
         userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
     }
 
-    private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {
-        dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
-
+    private void assertEmailHasBeenUpdated(
+            UserProfile userProfile, UserCredentials userCredentials) {
         UserProfile updatedUserProfile =
                 dynamoService.getUserProfileByEmailMaybe(UPDATED_TEST_EMAIL).orElseThrow();
 

@@ -18,6 +18,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.MfaData;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -447,6 +448,19 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .setMfaMethod(mfaMethod));
+    }
+
+    @Override
+    public void addMFAMethodSupportingMultiple(String email, MfaData mfaData) {
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var mfaMethod = mfaData.toDatabaseRecord(dateTime);
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .setMfaMethodBasedOnPriority(mfaMethod));
     }
 
     @Override

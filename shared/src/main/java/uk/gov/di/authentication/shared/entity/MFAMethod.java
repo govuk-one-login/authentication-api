@@ -3,10 +3,8 @@ package uk.gov.di.authentication.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
-import java.util.Map;
 import java.util.Objects;
 
 @DynamoDbBean
@@ -17,12 +15,18 @@ public class MFAMethod {
     public static final String ATTRIBUTE_ENABLED = "Enabled";
     public static final String ATTRIBUTE_METHOD_VERIFIED = "MethodVerified";
     public static final String ATTRIBUTE_UPDATED = "Updated";
+    public static final String ATTRIBUTE_DESTINATION = "Destination";
+    public static final String ATTRIBUTE_PRIORITY = "PriorityIdentifier";
+    public static final String ATTRIBUTE_MFA_IDENTIFIER = "MFAIdentifier";
 
     private String mfaMethodType;
     private String credentialValue;
     private boolean methodVerified;
     private boolean enabled;
     private String updated;
+    private String destination;
+    private String priority;
+    private Integer mfaIdentifier;
 
     public MFAMethod() {}
 
@@ -37,6 +41,40 @@ public class MFAMethod {
         this.methodVerified = methodVerified;
         this.enabled = enabled;
         this.updated = updated;
+    }
+
+    public MFAMethod(
+            String mfaMethodType,
+            String credentialValue,
+            boolean methodVerified,
+            boolean enabled,
+            String updated,
+            PriorityIdentifier priority,
+            int mfaIdentifier) {
+        this.mfaMethodType = mfaMethodType;
+        this.credentialValue = credentialValue;
+        this.methodVerified = methodVerified;
+        this.enabled = enabled;
+        this.updated = updated;
+        this.priority = priority.name();
+        this.mfaIdentifier = mfaIdentifier;
+    }
+
+    public MFAMethod(
+            String mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String destination,
+            String updated,
+            PriorityIdentifier priority,
+            int mfaIdentifier) {
+        this.mfaMethodType = mfaMethodType;
+        this.methodVerified = methodVerified;
+        this.enabled = enabled;
+        this.destination = destination;
+        this.updated = updated;
+        this.priority = priority.name();
+        this.mfaIdentifier = mfaIdentifier;
     }
 
     @DynamoDbAttribute(ATTRIBUTE_MFA_METHOD_TYPE)
@@ -64,6 +102,34 @@ public class MFAMethod {
 
     public MFAMethod withCredentialValue(String credentialValue) {
         this.credentialValue = credentialValue;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_DESTINATION)
+    public String getDestination() {
+        return destination;
+    }
+
+    public void setDestination(String destination) {
+        this.destination = destination;
+    }
+
+    public MFAMethod withDestination(String destination) {
+        this.destination = destination;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_PRIORITY)
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public MFAMethod withPriority(String priority) {
+        this.priority = priority;
         return this;
     }
 
@@ -111,20 +177,18 @@ public class MFAMethod {
         return this;
     }
 
-    AttributeValue toAttributeValue() {
-        return AttributeValue.fromM(
-                Map.ofEntries(
-                        Map.entry(
-                                ATTRIBUTE_MFA_METHOD_TYPE,
-                                AttributeValue.fromS(getMfaMethodType())),
-                        Map.entry(
-                                ATTRIBUTE_CREDENTIAL_VALUE,
-                                AttributeValue.fromS(getCredentialValue())),
-                        Map.entry(
-                                ATTRIBUTE_METHOD_VERIFIED,
-                                AttributeValue.fromN(isMethodVerified() ? "1" : "0")),
-                        Map.entry(ATTRIBUTE_ENABLED, AttributeValue.fromN(isEnabled() ? "1" : "0")),
-                        Map.entry(ATTRIBUTE_UPDATED, AttributeValue.fromS(getUpdated()))));
+    @DynamoDbAttribute(ATTRIBUTE_MFA_IDENTIFIER)
+    public Integer getMfaIdentifier() {
+        return mfaIdentifier;
+    }
+
+    public void setMfaIdentifier(Integer mfaIdentifier) {
+        this.mfaIdentifier = mfaIdentifier;
+    }
+
+    public MFAMethod withMfaIdentifier(Integer mfaIdentifier) {
+        this.mfaIdentifier = mfaIdentifier;
+        return this;
     }
 
     @Override
@@ -136,7 +200,10 @@ public class MFAMethod {
                 && Objects.equals(credentialValue, that.credentialValue)
                 && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
-                && Objects.equals(updated, that.updated);
+                && Objects.equals(updated, that.updated)
+                && Objects.equals(destination, that.destination)
+                && Objects.equals(priority, that.priority)
+                && Objects.equals(mfaIdentifier, that.mfaIdentifier);
     }
 
     @Override
