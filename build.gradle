@@ -102,9 +102,16 @@ subprojects {
         pact_provider
     }
 
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
-            force 'org.apache.logging.log4j:log4j-api:2.23.1', 'org.apache.logging.log4j:log4j-core:2.23.1'
+            force 'org.apache.logging.log4j:log4j-api:2.23.1',
+                    'org.apache.logging.log4j:log4j-core:2.23.1'
+
+            eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-compress') {
+                    details.useVersion '1.26.0'
+                }
+            }
         }
     }
 
@@ -186,6 +193,7 @@ subprojects {
         pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
     }
 }
+
 
 allprojects {
     gradle.projectsEvaluated {
