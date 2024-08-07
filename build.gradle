@@ -107,6 +107,8 @@ subprojects {
             force 'org.apache.logging.log4j:log4j-api:2.23.1',
                     'org.apache.logging.log4j:log4j-core:2.23.1'
             force 'io.netty:netty-codec-http:4.1.108.Final'
+            force 'com.google.guava:guava:32.0.0-android'
+
 
             eachDependency { DependencyResolveDetails details ->
                 if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-compress') {
