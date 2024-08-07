@@ -151,12 +151,14 @@ const post = async (
 
   const persistentSessionId = getOrCreatePersistentSessionId(event.headers);
   const cookieDomain =
-    process.env.DOMAIN === "none" ? "" : `; Domain=${process.env.DOMAIN}`;
+    process.env.COOKIE_DOMAIN === "none"
+      ? ""
+      : `; Domain=${process.env.COOKIE_DOMAIN}`;
   return {
     statusCode: 302,
     multiValueHeaders: {
       Location: [
-        `${process.env.AUTHENTICATION_FRONTEND_URL}authorize?request=${jwe}&response_type=code&client_id=orchstub`,
+        `${process.env.AUTHENTICATION_FRONTEND_URL}authorize?request=${jwe}&response_type=code&client_id=orchestrationAuth`,
       ],
       "Set-Cookie": [
         `gs=${gsCookie}; max-age=3600${cookieDomain}`,
@@ -192,9 +194,8 @@ const jarPayload = (form: RequestParameters, journeyId: string): JWTPayload => {
     govuk_signin_journey_id: journeyId,
     confidence: form.confidence,
     state: "3",
-    client_id: "orchstub",
-    redirect_uri:
-      "https://orchstub.authdev2.sandpit.account.gov.uk/orchestration-redirect",
+    client_id: "orchestrationAuth",
+    redirect_uri: `https://${process.env.STUB_DOMAIN}/orchestration-redirect`,
     claim: JSON.stringify(claim),
   };
   if (form["reauthenticate"] !== "") {
@@ -212,7 +213,7 @@ const signRequestObject = async (
 ) => {
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "ES256" })
-    .setIssuer("orchstub")
+    .setIssuer("orchestrationAuth")
     .setAudience(process.env.AUTHENTICATION_FRONTEND_URL!!)
     .setNotBefore("-1s")
     .setIssuedAt("-1s")

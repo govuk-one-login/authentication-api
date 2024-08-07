@@ -102,8 +102,8 @@ const buildClientAssertion = async () => {
   const privateKey = await getPrivateKey();
   return await new jose.SignJWT(payload)
     .setProtectedHeader({ alg: "ES256" })
-    .setIssuer("orchstub")
-    .setSubject("orchstub")
+    .setIssuer("orchestrationAuth")
+    .setSubject("orchestrationAuth")
     .setAudience(TOKEN_URL)
     .setNotBefore("-1s")
     .setIssuedAt("-1s")
@@ -122,7 +122,7 @@ const getToken = async (authCode: string, clientAssertion: string) => {
       "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     client_assertion: clientAssertion,
     redirect_uri: "",
-    client_id: "orchstub",
+    client_id: "orchestrationAuth",
   });
 
   const response = await fetch(tokenUrl, { method: "POST", body });

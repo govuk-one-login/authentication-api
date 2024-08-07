@@ -9,11 +9,13 @@ Parameters:
       - local
       - sandpit
       - authdev2
+      - buildsp
 
 Mappings:
   EnvironmentConfiguration:
     local:
-      domain: none
+      cookieDomain: none
+      stubDomain: placeholder
       authPubKey: |
         -----BEGIN PUBLIC KEY-----
         MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
@@ -43,7 +45,8 @@ Mappings:
       rpClientId: "rpclient"
 
     sandpit:
-      domain: .sandpit.account.gov.uk
+      cookieDomain: .sandpit.account.gov.uk
+      stubDomain: orchstub.sandpit.account.gov.uk
       authPubKey: |
         -----BEGIN PUBLIC KEY-----
         MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
@@ -68,7 +71,8 @@ Mappings:
       rpClientId: "1Dlz5rYheTqzZASRMmSBtgFIYgZlysnQ"
 
     authdev2:
-      domain: .authdev2.sandpit.account.gov.uk
+      cookieDomain: .authdev2.sandpit.account.gov.uk
+      stubDomain: orchstub.authdev2.sandpit.account.gov.uk
       authPubKey: |
         -----BEGIN PUBLIC KEY-----
         MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlWwvS/QGYHfu8nufIzgo
@@ -91,6 +95,32 @@ Mappings:
       redisUrl: "{{resolve:secretsmanager:authdev2-orchestration-stub-redis-url::::17471c88-d25a-4e85-b075-5c703ee6db92}}"
       hostedZoneId: "Z062001013DJY2F0YXEJR"
       rpClientId: "rPEUe0hRrHqf0i0es1gYjKxE5ceGN7VK"
+
+    buildsp:
+      cookieDomain: .build.account.gov.uk
+      stubDomain: orchstub.signin.build.account.gov.uk
+      authPubKey: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsYhuDxeaV5pTFXZruNi7
+        rmQzN2Qm7Imih20l+Kh7VB5MFAZ0oYT0LqkJqCNafAcbfXd7jYB9PWHfTq4FRxM8
+        IOBztiYyCEvTVjHsnCZj1+HuMK4i4HLaiFwQvWTbAj6zAuaGdd4HjKUAD8oCP1Be
+        vFQr363CQ6ul/sbVDDndM1I1D7PqQmfqkWs1/Thw/NAPQoS1VJfxZzzqb7Nbdkkf
+        /rKNBf0tzLPWeYPj5iTWDNVtMru8zys8ITNXO7uMCV49agRe4mnTkSY2ZQb2jW7b
+        xxxOl/rQzaok9eyvIaptGO2JLmjMEXd3jfVXosGdzJr+7cA3scKQA6PT/lbhsrTh
+        9wIDAQAB
+        -----END PUBLIC KEY-----
+      subnetAId: "subnet-06431beae9b136e15"
+      subnetBId: "subnet-016db45a259212743"
+      subnetCId: "subnet-0f595928b921f038a"
+      endpointSgId: "sg-0ac202c3d996f3ad8"
+      redisSgId: "sg-05ff2238b12306a34"
+      vpcId: "vpc-03db44fa71b8d00b2"
+      privateKey: "{{resolve:secretsmanager:buildsp-orchestration-stub-private-key::::fd77a65b-d350-49f8-96d3-95c854e71adf}}"
+      authenticationBackendUrl: "https://fag06zqnve-vpce-02837b184c6538fce.execute-api.eu-west-2.amazonaws.com/build/"
+      authenticationFrontendUrl: "https://signin-sp.build.account.gov.uk/"
+      redisUrl: "{{resolve:secretsmanager:build-orchestration-stub-redis-url::::c8c021d9-f981-4ddf-9e1d-eab8234e4807}}"
+      hostedZoneId: "Z099220113UW2JSCXBNRI"
+      rpClientId: "P5OQvWV21U0OW7U5g27d6MU2LLznYYaM"
 
 Resources:
   ApiGateway:
@@ -121,8 +151,14 @@ Resources:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, redisUrl]
           PRIVATE_KEY:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, privateKey]
-          DOMAIN:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+          COOKIE_DOMAIN:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              cookieDomain,
+            ]
+          STUB_DOMAIN:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, stubDomain]
           AUTH_PUB_KEY:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authPubKey]
           AUTHENTICATION_FRONTEND_URL:
@@ -177,8 +213,6 @@ Resources:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, redisUrl]
           PRIVATE_KEY:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, privateKey]
-          DOMAIN:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
           AUTH_PUB_KEY:
             !FindInMap [EnvironmentConfiguration, !Ref Environment, authPubKey]
           AUTHENTICATION_BACKEND_URL:
@@ -231,10 +265,8 @@ Resources:
   GatewayDomain:
     Type: AWS::ApiGateway::DomainName
     Properties:
-      DomainName: !Sub
-        - "orchstub${domain}"
-        - domain:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      DomainName:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, stubDomain]
       SecurityPolicy: TLS_1_2
       RegionalCertificateArn: !Ref Certificate
       EndpointConfiguration:
@@ -244,16 +276,12 @@ Resources:
   Certificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
-      DomainName: !Sub
-        - "orchstub${domain}"
-        - domain:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      DomainName:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, stubDomain]
       ValidationMethod: DNS
       DomainValidationOptions:
-        - DomainName: !Sub
-            - "orchstub${domain}"
-            - domain:
-                !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+        - DomainName:
+            !FindInMap [EnvironmentConfiguration, !Ref Environment, stubDomain]
           HostedZoneId:
             !FindInMap [
               EnvironmentConfiguration,
@@ -267,10 +295,7 @@ Resources:
       HostedZoneId:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, hostedZoneId]
       Type: A
-      Name: !Sub
-        - "orchstub${domain}"
-        - domain:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      Name: !FindInMap [EnvironmentConfiguration, !Ref Environment, stubDomain]
       AliasTarget:
         DNSName: !GetAtt GatewayDomain.RegionalDomainName
         HostedZoneId: !GetAtt GatewayDomain.RegionalHostedZoneId
@@ -278,9 +303,8 @@ Resources:
   BasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
-      DomainName: !Sub
-        - "orchstub${domain}"
-        - domain:
-            !FindInMap [EnvironmentConfiguration, !Ref Environment, domain]
+      DomainName:
+        !FindInMap [EnvironmentConfiguration, !Ref Environment, stubDomain]
       RestApiId: !Ref ApiGateway
       Stage: Prod
+    DependsOn: GatewayDomain

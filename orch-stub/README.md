@@ -24,3 +24,9 @@ openssl ec -in private.pem -pubout -out public.pem
 
 Then the private key is in private.pem (this goes into secrets manager) and the public is in public.pem
 (configure the auth frontend and auth external API with this). Do not commit these files.
+
+## Deploying
+
+```bash
+sam build && sam deploy --config-env <env>
+```

@@ -18,3 +18,13 @@ confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Environment=\"authdev2\""
 image_repositories = []
+
+[buildsp.deploy.parameters]
+stack_name = "build-sp-orch-stub"
+resolve_s3 = true
+s3_prefix = "buildsp-orch-stub"
+region = "eu-west-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=\"buildsp\""
+image_repositories = []
