@@ -90,6 +90,7 @@ import java.util.stream.Collectors;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.SERVER_ERROR;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.UNAUTHORIZED_CLIENT_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.VALIDATION_FAILED;
 import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.VTR_PARAM;
@@ -320,6 +321,17 @@ public class AuthorisationHandler
                 LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
                 return generateBadRequestResponse(user, errorMsg, client.getClientID());
             }
+        }
+
+        if (!client.isActive()) {
+            LOG.error("Client configured as not active in Client Registry");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(UNAUTHORIZED_CLIENT_CODE, "client deactivated"),
+                    authRequest.getClientID().getValue(),
+                    user);
         }
 
         try {

@@ -22,6 +22,7 @@ public class ClientRegistry {
     private String serviceType;
     private String sectorIdentifierUri;
     private String subjectType;
+    private boolean isActive = true;
     private boolean cookieConsentShared = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
@@ -191,6 +192,20 @@ public class ClientRegistry {
 
     public ClientRegistry withSubjectType(String subjectType) {
         this.subjectType = subjectType;
+        return this;
+    }
+
+    @DynamoDbAttribute("IsActive")
+    public boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public ClientRegistry withIsActive(boolean isActive) {
+        this.isActive = isActive;
         return this;
     }
 
