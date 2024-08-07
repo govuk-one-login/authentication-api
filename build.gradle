@@ -106,6 +106,7 @@ subprojects {
         resolutionStrategy {
             force 'org.apache.logging.log4j:log4j-api:2.23.1',
                     'org.apache.logging.log4j:log4j-core:2.23.1'
+            force 'io.netty:netty-codec-http:4.1.108.Final'
 
             eachDependency { DependencyResolveDetails details ->
                 if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-compress') {
