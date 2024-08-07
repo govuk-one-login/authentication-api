@@ -56,7 +56,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         var redirectURI = authRequest.getRedirectionURI();
 
         if (authRequest.getState() == null) {
-            LOG.error("State is missing from authRequest");
+            LOG.warn("State is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -68,14 +68,13 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         var state = authRequest.getState();
 
         if (authRequest.getRequestURI() != null) {
-            LOG.error("Request URI is not supported");
+            LOG.warn("Request URI is not supported");
             return Optional.of(
                     new AuthRequestError(
                             OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI, state));
         }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
-            LOG.error(
-                    "Unsupported responseType included in request. Expected responseType of code");
+            LOG.warn("Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(
                     new AuthRequestError(
                             OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI, state));
@@ -93,7 +92,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             state));
         }
         if (authRequest.getNonce() == null) {
-            LOG.error("Nonce is missing from authRequest");
+            LOG.warn("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -107,7 +106,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
             var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             var levelOfConfidenceValues = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
             if (!client.getClientLoCs().containsAll(levelOfConfidenceValues)) {
-                LOG.error(
+                LOG.warn(
                         "Level of confidence values have been requested which this client is not permitted to request. Level of confidence values in request: {}",
                         levelOfConfidenceValues);
                 return Optional.of(
@@ -126,7 +125,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                 OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI, state));
             }
         } catch (IllegalArgumentException e) {
-            LOG.error(
+            LOG.warn(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
@@ -143,14 +142,14 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
-                LOG.error(
+                LOG.warn(
                         "Scopes have been requested which are not yet supported. Scopes in request: {}",
                         scopes);
                 return false;
             }
         }
         if (!clientRegistry.getScopes().containsAll(scopes)) {
-            LOG.error(
+            LOG.warn(
                     "Scopes have been requested which this client is not supported to request. Scopes in request: {}",
                     scopes);
             return false;
@@ -175,7 +174,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                         ValidClaims.getAllValidClaims().stream()
                                                 .noneMatch(t -> t.equals(claim)));
         if (containsUnsupportedClaims) {
-            LOG.error(
+            LOG.warn(
                     () ->
                             "Claims have been requested which are not yet supported. Claims in request: "
                                     + claimsRequest.toJSONString());
@@ -184,7 +183,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
 
         boolean hasUnsupportedClaims = !clientRegistry.getClaims().containsAll(claimNames);
         if (hasUnsupportedClaims) {
-            LOG.error(
+            LOG.warn(
                     () ->
                             "Claims have been requested which this client is not supported to request. Claims in request: {}"
                                     + claimsRequest.toJSONString());
