@@ -74,6 +74,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("INCORRECT_PASSWORD_LOCKOUT_COUNT_TTL", "900"));
     }
 
+    public long getMaxErrorsBeforeLambdaRestarts() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("MAX_ERRORS_BEFORE_LAMBDA_RESTARTS", "3"));
+    }
+
     public long getLockoutCountTTL() {
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_COUNT_TTL", "900"));
     }

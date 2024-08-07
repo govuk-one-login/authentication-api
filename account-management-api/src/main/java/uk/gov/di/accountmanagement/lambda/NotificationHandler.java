@@ -62,24 +62,21 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 () -> notificationRequestHandler(event));
     }
 
-    public Void notificationRequestHandler(SQSEvent event) throws NotificationClientException {
-
+    public Void notificationRequestHandler(SQSEvent event) {
         for (SQSMessage msg : event.getRecords()) {
             try {
                 LOG.info("Message received from SQS queue");
                 NotifyRequest notifyRequest =
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
-                processNotificationRequest(notifyRequest);
-            } catch (JsonException e) {
+                processNotificationRequest(notifyRequest, 0);
+            } catch (JsonException | NotificationClientException e) {
                 LOG.error("Error when mapping message from queue to a NotifyRequest", e);
-                throw new NotificationClientException(
-                        "Error when mapping message from queue to a NotifyRequest", e);
             }
         }
         return null;
     }
 
-    private void processNotificationRequest(NotifyRequest notifyRequest)
+    private void processNotificationRequest(NotifyRequest notifyRequest, int retryCount)
             throws NotificationClientException {
         try {
             switch (notifyRequest.getNotificationType()) {
@@ -148,12 +145,20 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     break;
             }
         } catch (NotificationClientException e) {
-            LOG.error("Error sending with Notify", e);
-            throw new NotificationClientException(
-                    String.format(
-                            "Error sending with Notify using NotificationType: %s",
-                            notifyRequest.getNotificationType()),
-                    e);
+            if (retryCount < configurationService.getMaxErrorsBeforeLambdaRestarts()) {
+                LOG.warn(
+                        "Temporary error sending with Notify, retrying... (attempt {} of {})",
+                        retryCount + 1,
+                        configurationService.getMaxErrorsBeforeLambdaRestarts(),
+                        e);
+                processNotificationRequest(notifyRequest, retryCount + 1);
+            } else {
+                throw new NotificationClientException(
+                        String.format(
+                                "Error sending with Notify using NotificationType: %s",
+                                notifyRequest.getNotificationType()),
+                        e);
+            }
         }
     }
 
