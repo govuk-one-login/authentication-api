@@ -386,7 +386,8 @@ class MfaHandlerTest {
 
         checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(journeyType, reauthEnabled);
 
-        checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(journeyType, reauthEnabled, codeRequestType);
+        checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(
+                journeyType, reauthEnabled, codeRequestType);
 
         checkUserIsBlockedWhenNotReAuthenticating(journeyType, codeRequestType);
 
@@ -398,7 +399,8 @@ class MfaHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
-    private void checkUserIsBlockedWhenNotReAuthenticating(JourneyType journeyType, CodeRequestType codeRequestType) {
+    private void checkUserIsBlockedWhenNotReAuthenticating(
+            JourneyType journeyType, CodeRequestType codeRequestType) {
         if (journeyType != JourneyType.REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
@@ -408,7 +410,8 @@ class MfaHandlerTest {
         }
     }
 
-    private void checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(JourneyType journeyType, boolean reauthEnabled, CodeRequestType codeRequestType) {
+    private void checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(
+            JourneyType journeyType, boolean reauthEnabled, CodeRequestType codeRequestType) {
         if (journeyType == JourneyType.REAUTHENTICATION && !reauthEnabled) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
@@ -418,9 +421,10 @@ class MfaHandlerTest {
         }
     }
 
-    private void checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(JourneyType journeyType, boolean reauthEnabled) {
+    private void checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(
+            JourneyType journeyType, boolean reauthEnabled) {
         if (journeyType == JourneyType.REAUTHENTICATION && reauthEnabled) {
-                verifyNoInteractions(codeStorageService);
+            verifyNoInteractions(codeStorageService);
         }
     }
 
