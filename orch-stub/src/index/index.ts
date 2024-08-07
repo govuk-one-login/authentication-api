@@ -41,62 +41,90 @@ export const handler = async (
 };
 
 const get = (event: APIGatewayProxyEvent): APIGatewayProxyResult => {
-  const form = `<form method='post'>
-    <label for="reauthenticate" class="govuk-label">Reauthenticate (RP pairwise ID)</label>
-    <input name="reauthenticate" id="reauthenticate" class="govuk-input">
-    <label for="level" class="govuk-label">Credential Trust Level</label>
-    <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
-        <div class="govuk-radios__item">
-            <input class="govuk-radios__input" id="level" name="level" type="radio" value="Cl.Cm" checked>
-            <label class="govuk-label govuk-radios__label" for="level">
-                Cl.Cm (2FA)
-            </label>
-        </div>
-        <div class="govuk-radios__item">
-            <input class="govuk-radios__input" id="level-2" name="level" type="radio" value="Cl">
-            <label class="govuk-label govuk-radios__label" for="level-2">
-                Cl (No 2FA)
-            </label>
-        </div>
+  const form = `<h1 class="govuk-heading-xl">Orchestration stub</h1>
+<form method='post'>
+    <div class="govuk-form-group">
+    <fieldset class="govuk-fieldset">
+        <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+            <h2 class="govuk-fieldset__heading">
+                Reauthentication
+            </h2>
+        </legend>
+        <label for="reauthenticate" class="govuk-label">RP pairwise ID</label>
+        <input name="reauthenticate" id="reauthenticate" class="govuk-input">
+    </fieldset>
     </div>
     <div class="govuk-form-group">
     <fieldset class="govuk-fieldset">
-      <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
-        <h1 class="govuk-fieldset__heading">
-          Seamless login and uplift
-        </h1>
-      </legend>
-      <div class="govuk-radios" data-module="govuk-radios">
-        <div class="govuk-radios__item">
-          <input class="govuk-radios__input" id="authenticated" name="authenticated" type="radio" value="no" checked>
-          <label class="govuk-label govuk-radios__label" for="authenticated">
-            Not authenticated
-          </label>
-        </div>
-        <div class="govuk-radios__item">
-          <input class="govuk-radios__input" id="authenticated-2" name="authenticated" type="radio" value="yes" data-aria-controls="conditional-authenticated-2">
-          <label class="govuk-label govuk-radios__label" for="authenticated-2">
-            Authenticated
-          </label>
-        </div>
-        <div class="govuk-radios__conditional govuk-radios__conditional--hidden" id="conditional-authenticated-2">
-          <div class="govuk-form-group govuk-radios" data-module="govuk-radios">
+        <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+            <h2 class="govuk-fieldset__heading">
+                MFA
+            </h2>
+        </legend>
+        <label for="level" class="govuk-label">Credential Trust Level</label>
+        <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
             <div class="govuk-radios__item">
-              <input class="govuk-radios__input govuk-!-width-one-third" id="authenticated-level" name="authenticatedLevel" type="radio" value="Cl">
-              <label class="govuk-label govuk-radios__label" for="authenticated-level">
-                Low level
-              </label>
+                <input class="govuk-radios__input" id="level" name="level" type="radio" value="Cl.Cm" checked>
+                <label class="govuk-label govuk-radios__label" for="level">
+                    Cl.Cm (2FA)
+                </label>
             </div>
             <div class="govuk-radios__item">
-              <input class="govuk-radios__input govuk-!-width-one-third" id="authenticated-level-2" name="authenticatedLevel" type="radio" value="Cl.Cm" checked>
-              <label class="govuk-label govuk-radios__label" for="authenticated-level-2">
-                Medium level
-              </label>
+                <input class="govuk-radios__input" id="level-2" name="level" type="radio" value="Cl">
+                <label class="govuk-label govuk-radios__label" for="level-2">
+                    Cl (No 2FA)
+                </label>
             </div>
-          </div>
         </div>
-      </div>
     </fieldset>
+    </div>
+    <div class="govuk-form-group">
+        <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                <h2 class="govuk-fieldset__heading">
+                    Seamless login and uplift
+                </h2>
+            </legend>
+            <div class="govuk-radios" data-module="govuk-radios">
+                <div class="govuk-radios__item">
+                    <input class="govuk-radios__input" id="authenticated" name="authenticated" type="radio" value="no"
+                           checked>
+                    <label class="govuk-label govuk-radios__label" for="authenticated">
+                        Not authenticated
+                    </label>
+                </div>
+                <div class="govuk-radios__item">
+                    <input class="govuk-radios__input" id="authenticated-2" name="authenticated" type="radio"
+                           value="yes" data-aria-controls="conditional-authenticated-2">
+                    <label class="govuk-label govuk-radios__label" for="authenticated-2">
+                        Authenticated
+                    </label>
+                    <div class="govuk-hint govuk-radios__hint">
+                        You need to sign in at least once before selecting this option so that the email and internal
+                        common subject identifier are set on the session
+                    </div>
+                </div>
+                <div class="govuk-radios__conditional govuk-radios__conditional--hidden"
+                     id="conditional-authenticated-2">
+                    <div class="govuk-form-group govuk-radios" data-module="govuk-radios">
+                        <div class="govuk-radios__item">
+                            <input class="govuk-radios__input govuk-!-width-one-third" id="authenticated-level"
+                                   name="authenticatedLevel" type="radio" value="Cl">
+                            <label class="govuk-label govuk-radios__label" for="authenticated-level">
+                                Low level
+                            </label>
+                        </div>
+                        <div class="govuk-radios__item">
+                            <input class="govuk-radios__input govuk-!-width-one-third" id="authenticated-level-2"
+                                   name="authenticatedLevel" type="radio" value="Cl.Cm" checked>
+                            <label class="govuk-label govuk-radios__label" for="authenticated-level-2">
+                                Medium level
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
     </div>
     <button class="govuk-button">Submit</button>
 </form>
