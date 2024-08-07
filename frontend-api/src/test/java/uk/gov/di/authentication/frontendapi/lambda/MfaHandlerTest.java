@@ -384,21 +384,11 @@ class MfaHandlerTest {
 
         var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
 
-        if (journeyType == JourneyType.REAUTHENTICATION) {
-            if (!reauthEnabled) {
-                verify(codeStorageService)
-                        .saveBlockedForEmail(
-                                EMAIL,
-                                CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
-                                LOCKOUT_DURATION);
-            }
-        } else {
-            verify(codeStorageService)
-                    .saveBlockedForEmail(
-                            EMAIL,
-                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
-                            LOCKOUT_DURATION);
-        }
+        checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(journeyType, reauthEnabled);
+
+        checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(journeyType, reauthEnabled, codeRequestType);
+
+        checkUserIsBlockedWhenNotReAuthenticating(journeyType, codeRequestType);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -406,6 +396,32 @@ class MfaHandlerTest {
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
+    private void checkUserIsBlockedWhenNotReAuthenticating(JourneyType journeyType, CodeRequestType codeRequestType) {
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL,
+                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
+                            LOCKOUT_DURATION);
+        }
+    }
+
+    private void checkReauthenticatingUserIsBlockedWhenReauthFeatureIsNotEnabled(JourneyType journeyType, boolean reauthEnabled, CodeRequestType codeRequestType) {
+        if (journeyType == JourneyType.REAUTHENTICATION && !reauthEnabled) {
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            EMAIL,
+                            CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
+                            LOCKOUT_DURATION);
+        }
+    }
+
+    private void checkReauthenticatingUserIsNotBlockedWhenReauthFeatureIsEnabled(JourneyType journeyType, boolean reauthEnabled) {
+        if (journeyType == JourneyType.REAUTHENTICATION && reauthEnabled) {
+                verifyNoInteractions(codeStorageService);
+        }
     }
 
     @ParameterizedTest
