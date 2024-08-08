@@ -230,8 +230,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         }
 
         @Override
-        public String getOrchestrationToAuthenticationSigningPublicKey() {
-            return EC_PUBLIC_KEY;
+        public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
+            return Collections.singletonList(EC_PUBLIC_KEY);
         }
     }
 }
