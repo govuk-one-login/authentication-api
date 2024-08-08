@@ -19,8 +19,7 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
         implements AfterEachCallback {
 
     public static final String AUTHENTICATION_ATTEMPTS_FIELD = "AttemptIdentifier";
-    public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE =
-            "local-authentication-attempts";
+    public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE = "local-authentication-attempt";
 
     private DynamoAuthenticationAttemptsService dynamoService;
     private final ConfigurationService configuration;
