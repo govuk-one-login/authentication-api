@@ -13,24 +13,30 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
     }
 
     public void addCode(
-            String attemptIdentifier, long ttlSeconds, String code, String authenticationMethod) {
+            String internalSubjectId,
+            long ttlSeconds,
+            String code,
+            String authenticationMethod,
+            String journeyType) {
         long ttlEpochSeconds =
                 NowHelper.nowPlus(ttlSeconds, ChronoUnit.SECONDS).toInstant().getEpochSecond();
 
         var authenticationAttempt =
-                get(attemptIdentifier)
+                get(internalSubjectId, buildSortKey(authenticationMethod, journeyType))
                         .orElse(new AuthenticationAttempts())
-                        .withAttemptIdentifier(attemptIdentifier)
+                        .withInternalSubjectId(internalSubjectId)
                         .withCode(code)
                         .withAuthenticationMethod(authenticationMethod)
-                        .withTimeToLive(ttlEpochSeconds);
+                        .withTimeToLive(ttlEpochSeconds)
+                        .withJourneyType(journeyType);
 
         update(authenticationAttempt);
     }
 
     public void createOrIncrementCount(
-            String attemptIdentifier, long ttl, String authenticationMethod) {
-        Optional<AuthenticationAttempts> authenticationAttempt = get(attemptIdentifier);
+            String internalSubjectId, long ttl, String authenticationMethod, String journeyType) {
+        Optional<AuthenticationAttempts> authenticationAttempt =
+                get(internalSubjectId, buildSortKey(authenticationMethod, journeyType));
         if (authenticationAttempt.isPresent()) {
             authenticationAttempt.get().setCount(authenticationAttempt.get().getCount() + 1);
             authenticationAttempt.get().setTimeToLive(ttl);
@@ -38,25 +44,32 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
             authenticationAttempt =
                     Optional.ofNullable(
                             new AuthenticationAttempts()
-                                    .withAttemptIdentifier(attemptIdentifier)
+                                    .withInternalSubjectId(internalSubjectId)
                                     .withCount(1)
                                     .withAuthenticationMethod(authenticationMethod)
+                                    .withJourneyType(journeyType)
                                     .withTimeToLive(ttl));
         }
         authenticationAttempt.ifPresent(this::update);
     }
 
-    public Optional<AuthenticationAttempts> getAuthenticationAttempts(String attemptIdentifier) {
+    public Optional<AuthenticationAttempts> getAuthenticationAttempt(
+            String internalSubjectId, String authenticationMethod, String journeyType) {
         long currentTimestamp = NowHelper.now().toInstant().getEpochSecond();
-        return get(attemptIdentifier).filter(t -> t.getTimeToLive() > currentTimestamp);
+        return get(internalSubjectId, buildSortKey(authenticationMethod, journeyType))
+                .filter(t -> t.getTimeToLive() > currentTimestamp);
     }
 
-    public Optional<String> getCode(String attemptIdentifier) {
-        return get(attemptIdentifier).map(AuthenticationAttempts::getCode);
+    public Optional<String> getCode(
+            String internalSubjectId, String authenticationMethod, String journeyType) {
+        return get(internalSubjectId, buildSortKey(authenticationMethod, journeyType))
+                .map(AuthenticationAttempts::getCode);
     }
 
-    public void deleteCount(String attemptIdentifier) {
-        Optional<AuthenticationAttempts> attempt = get(attemptIdentifier);
+    public void deleteCount(
+            String internalSubjectId, String authenticationMethod, String journeyType) {
+        Optional<AuthenticationAttempts> attempt =
+                get(internalSubjectId, buildSortKey(authenticationMethod, journeyType));
         attempt.ifPresent(
                 authAttempt -> {
                     authAttempt.setCount(0);
@@ -64,12 +77,18 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
                 });
     }
 
-    public void deleteCode(String attemptIdentifier) {
-        Optional<AuthenticationAttempts> attempt = get(attemptIdentifier);
+    public void deleteCode(
+            String internalSubjectId, String authenticationMethod, String journeyType) {
+        Optional<AuthenticationAttempts> attempt =
+                get(internalSubjectId, buildSortKey(authenticationMethod, journeyType));
         attempt.ifPresent(
                 authAttempt -> {
                     authAttempt.setCode(null);
                     update(authAttempt);
                 });
+    }
+
+    public static String buildSortKey(String authenticationMethod, String journeyType){
+        return authenticationMethod + "_" + journeyType;
     }
 }
