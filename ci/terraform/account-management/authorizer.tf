@@ -77,11 +77,6 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.authorizer_alias.name
 
   provisioned_concurrent_executions = local.authorizer_provisioned_concurrency
-
-  lifecycle {
-    ignore_changes = [provisioned_concurrent_executions] # Ignoring as this is targeted by aws_app_autoscaling_target.lambda_target resource
-  }
-
 }
 
 resource "aws_appautoscaling_target" "lambda_target" {
