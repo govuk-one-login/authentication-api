@@ -9,6 +9,7 @@ lambda_min_concurrency = 1
 endpoint_memory_size   = 1536
 scaling_trigger        = 0.6
 
-orch_client_id                  = "orchestrationAuth"
-orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA=="
-orch_api_vpc_endpoint_id        = "vpce-0867442e4d95fb43e"
+orch_client_id                       = "orchestrationAuth"
+orch_to_auth_public_signing_key      = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENRdvNXHwk1TvrgFUsWXAE5oDTcPrCBp6HxbvYDLsqwNHiDFEzCwvbXKY2QQR/Rtel0o156CtU9k1lCZJGAsSIA=="
+orch_stub_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmzWAucozlF6eykmgikXj2kI03O7VWwuA51+3Ak+stF2dddC60WXEKhrFumKBUnE5GhJNg4v0iN948Mwl+vz5Xw=="
+orch_api_vpc_endpoint_id             = "vpce-0867442e4d95fb43e"
