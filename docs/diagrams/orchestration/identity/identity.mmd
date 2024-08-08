@@ -21,7 +21,7 @@ sequenceDiagram
     ipv -->> orch_api : Return the user with an auth code query parameter
     orch_api ->> ipv : Token request with signed client assertion and auth code to /token
     ipv ->> orch_api : Token response containing access token
-    orch_api ->> ipv : User identity request containing access token to /useridentity
+    orch_api ->> ipv : User identity request containing access token to /user-identity
     ipv ->> orch_api : User identity response
     orch_api ->> orch_api : Store any additional identity claims
     orch_api -) spot : Send identity VCs to SPOT
