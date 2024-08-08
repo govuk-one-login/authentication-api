@@ -24,6 +24,8 @@ import uk.gov.di.authentication.sharedtest.helper.JwtHelper;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -172,6 +174,7 @@ class TokenRequestValidatorTest {
         private static ECKey VALID_KEY_PAIR;
         private static String VALID_PUBLIC_KEY_AS_X509_STRING;
         private static ECKey ALTERNATE_EC_KEY_PAIR;
+        private static String ALTERNATE_EC_KEY_AS_X509_STRING;
         private static RSAKey RSA_KEY_PAIR;
         private static String RSA_PUBLIC_KEY_AS_X509_STRING;
         private static String VALID_REQUEST_BODY_VALID_SIGNATURE;
@@ -210,6 +213,12 @@ class TokenRequestValidatorTest {
             ALTERNATE_EC_KEY_PAIR = new ECKeyGenerator(Curve.P_256).generate();
             String clientAssertionInvalidEcKeySignature =
                     JwtHelper.jsonToSignedJwt(validClientAssertionPayload, ALTERNATE_EC_KEY_PAIR);
+            X509EncodedKeySpec alternatex509EncodedKeySpec =
+                    new X509EncodedKeySpec(VALID_KEY_PAIR.toPublicKey().getEncoded());
+            byte[] alternatex509EncodedPublicKey = alternatex509EncodedKeySpec.getEncoded();
+
+            ALTERNATE_EC_KEY_AS_X509_STRING =
+                    Base64.getEncoder().encodeToString(alternatex509EncodedPublicKey);
             VALID_REQUEST_BODY_INVALID_SIGNATURE =
                     getValidRequestBodyWithClientAssertion(clientAssertionInvalidEcKeySignature);
 
@@ -263,7 +272,9 @@ class TokenRequestValidatorTest {
                             TokenAuthInvalidException.class,
                             () -> {
                                 validator.validatePrivateKeyJwtClientAuth(
-                                        requestBody, EXPECTED_AUDIENCE, clientRegistryPublicKey);
+                                        requestBody,
+                                        EXPECTED_AUDIENCE,
+                                        Collections.singletonList(clientRegistryPublicKey));
                             });
 
             assertEquals(expectedErrorCode, exception.getErrorObject().getCode());
@@ -278,7 +289,20 @@ class TokenRequestValidatorTest {
                             validator.validatePrivateKeyJwtClientAuth(
                                     VALID_REQUEST_BODY_VALID_SIGNATURE,
                                     EXPECTED_AUDIENCE,
-                                    VALID_PUBLIC_KEY_AS_X509_STRING));
+                                    Collections.singletonList(VALID_PUBLIC_KEY_AS_X509_STRING)));
+        }
+
+        @Test
+        void
+                shouldNotThrowAnyExceptionsIfValidPublicKeyIsUsedToSignValidClientAssertionAsPartOfValidRequestBodyWithStub() {
+            assertDoesNotThrow(
+                    () ->
+                            validator.validatePrivateKeyJwtClientAuth(
+                                    VALID_REQUEST_BODY_VALID_SIGNATURE,
+                                    EXPECTED_AUDIENCE,
+                                    List.of(
+                                            VALID_PUBLIC_KEY_AS_X509_STRING,
+                                            ALTERNATE_EC_KEY_AS_X509_STRING)));
         }
     }
 

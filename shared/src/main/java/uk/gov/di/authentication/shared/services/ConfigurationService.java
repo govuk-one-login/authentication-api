@@ -288,8 +288,25 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
-    public String getOrchestrationToAuthenticationSigningPublicKey() {
-        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
+    public List<String> getOrchestrationToAuthenticationSigningPublicKeys() {
+        var orchKey = getOrchestrationToAuthenticationSigningPublicKey();
+        var orchStubKey = getOrchestrationStubToAuthenticationSigningPublicKey();
+        return orchStubKey
+                .map(stubKey -> List.of(stubKey, orchKey))
+                .orElseGet(() -> List.of(orchKey));
+    }
+
+    private String getOrchestrationToAuthenticationSigningPublicKey() {
+        return systemService.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
+    }
+
+    private Optional<String> getOrchestrationStubToAuthenticationSigningPublicKey() {
+        var orchStubKey =
+                systemService.getOrDefault("ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY", "");
+        if (orchStubKey.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(orchStubKey);
     }
 
     public String getOrchestrationClientId() {

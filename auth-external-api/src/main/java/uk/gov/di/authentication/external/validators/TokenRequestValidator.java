@@ -72,14 +72,14 @@ public class TokenRequestValidator {
     }
 
     public void validatePrivateKeyJwtClientAuth(
-            String requestBody, Set<Audience> expectedAudience, String publicKey)
+            String requestBody, Set<Audience> expectedAudience, List<String> publicKeys)
             throws TokenAuthInvalidException {
         try {
             PrivateKeyJWT privateKeyJWT = PrivateKeyJWT.parse(requestBody);
 
             ClientAuthenticationVerifier<?> signatureVerifier =
                     new ClientAuthenticationVerifier<>(
-                            new PrivateKeyJwtAuthPublicKeySelector(List.of(publicKey), KeyType.EC),
+                            new PrivateKeyJwtAuthPublicKeySelector(publicKeys, KeyType.EC),
                             expectedAudience);
             signatureVerifier.verify(privateKeyJWT, null, null);
         } catch (ParseException e) {
