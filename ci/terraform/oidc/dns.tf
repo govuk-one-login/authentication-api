@@ -89,13 +89,11 @@ resource "aws_api_gateway_domain_name" "oidc_api" {
 }
 
 data "aws_cloudformation_export" "oidc_cloudfront_distribution_id" {
-  count = var.oidc_cloudfront_dns_enabled ? 1 : 0
-  name  = local.oidc_cloudfront_id_export_name
+  name = local.oidc_cloudfront_id_export_name
 }
 
 data "aws_cloudfront_distribution" "oidc_cloudfront_distribution" {
-  count = var.oidc_cloudfront_dns_enabled ? 1 : 0
-  id    = data.aws_cloudformation_export.oidc_cloudfront_distribution_id[0].value
+  id = data.aws_cloudformation_export.oidc_cloudfront_distribution_id.value
 }
 
 resource "aws_route53_record" "oidc_api" {
@@ -105,8 +103,8 @@ resource "aws_route53_record" "oidc_api" {
 
   alias {
     evaluate_target_health = true
-    name                   = var.oidc_cloudfront_dns_enabled ? data.aws_cloudfront_distribution.oidc_cloudfront_distribution[0].domain_name : aws_api_gateway_domain_name.oidc_api.regional_domain_name
-    zone_id                = var.oidc_cloudfront_dns_enabled ? data.aws_cloudfront_distribution.oidc_cloudfront_distribution[0].hosted_zone_id : aws_api_gateway_domain_name.oidc_api.regional_zone_id
+    name                   = data.aws_cloudfront_distribution.oidc_cloudfront_distribution.domain_name
+    zone_id                = data.aws_cloudfront_distribution.oidc_cloudfront_distribution.hosted_zone_id
   }
 }
 
@@ -115,7 +113,6 @@ output "oidc_api_name_servers" {
 }
 
 resource "aws_route53_record" "oidc_origin_api" {
-  count   = var.oidc_origin_domain_enabled ? 1 : 0
   name    = local.oidc_origin_api_fqdn
   type    = "A"
   zone_id = aws_route53_zone.oidc_api_zone.zone_id
