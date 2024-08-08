@@ -110,6 +110,12 @@ variable "orch_to_auth_public_signing_key" {
   description = "A hardcoded value for the public key corresponding to the KMS created in the OIDC module. It is used to validate the signature of a client_assertion JWT (orch<->auth token endpoint)"
 }
 
+variable "orch_stub_to_auth_public_signing_key" {
+  default     = ""
+  type        = string
+  description = "A hardcoded value for the public key corresponding to the public key of the Orchestration stub. It should only be set in non-production environments. It is used to validate the signature of a client_assertion JWT (orch<->auth token endpoint)"
+}
+
 variable "orch_api_vpc_endpoint_id" {
   default     = ""
   type        = string

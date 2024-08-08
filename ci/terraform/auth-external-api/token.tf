@@ -27,16 +27,17 @@ module "auth_token" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                               = var.environment
-    TXMA_AUDIT_QUEUE_URL                      = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                       = null
-    DYNAMO_ENDPOINT                           = null
-    AUTHENTICATION_AUTHORIZATION_CALLBACK_URI = var.authentication_auth_callback_uri
-    ORCH_CLIENT_ID                            = var.orch_client_id
-    AUTHENTICATION_BACKEND_URI                = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
-    ORCHESTRATION_BACKEND_URI                 = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${var.orch_api_vpc_endpoint_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
-    ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY     = var.orch_to_auth_public_signing_key
-    INTERNAl_SECTOR_URI                       = var.internal_sector_uri
+    ENVIRONMENT                                = var.environment
+    TXMA_AUDIT_QUEUE_URL                       = module.auth_ext_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                        = null
+    DYNAMO_ENDPOINT                            = null
+    AUTHENTICATION_AUTHORIZATION_CALLBACK_URI  = var.authentication_auth_callback_uri
+    ORCH_CLIENT_ID                             = var.orch_client_id
+    AUTHENTICATION_BACKEND_URI                 = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
+    ORCHESTRATION_BACKEND_URI                  = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${var.orch_api_vpc_endpoint_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
+    ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY      = var.orch_to_auth_public_signing_key
+    ORCH_STUB_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY = var.orch_stub_to_auth_public_signing_key
+    INTERNAl_SECTOR_URI                        = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest"
   handler_runtime       = "java17"
