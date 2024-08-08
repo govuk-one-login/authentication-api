@@ -164,7 +164,7 @@ public class DcmawUserInfoTest {
                         "^(?i)Bearer (.*)(?-i)",
                         tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
-                .status(403)
+                .status(401)
                 .body(ERROR_MESSAGE)
                 .toPact();
     }
@@ -187,11 +187,11 @@ public class DcmawUserInfoTest {
                         UnsuccessfulCredentialResponseException.class,
                         () -> docAppCriService.sendCriDataRequest(request, DOC_APP_SUBJECT_ID));
 
-        assertThat(exception.getHttpCode(), equalTo(403));
+        assertThat(exception.getHttpCode(), equalTo(401));
         assertThat(
                 exception.getMessage(),
                 equalTo(
-                        "Error 403 when attempting to call CRI data endpoint: "
+                        "Error 401 when attempting to call CRI data endpoint: "
                                 + ERROR_MESSAGE
                                 + "\n"));
     }
