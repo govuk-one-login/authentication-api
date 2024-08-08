@@ -102,9 +102,19 @@ subprojects {
         pact_provider
     }
 
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
-            force 'org.apache.logging.log4j:log4j-api:2.23.1', 'org.apache.logging.log4j:log4j-core:2.23.1'
+            force 'org.apache.logging.log4j:log4j-api:2.23.1',
+                    'org.apache.logging.log4j:log4j-core:2.23.1'
+            force 'io.netty:netty-codec-http:4.1.108.Final'
+            force 'com.google.guava:guava:32.0.0-android'
+
+
+            eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.apache.commons' && details.requested.name == 'commons-compress') {
+                    details.useVersion '1.26.0'
+                }
+            }
         }
     }
 
@@ -112,7 +122,8 @@ subprojects {
         apache "commons-codec:commons-codec:1.17.1",
                 "org.apache.httpcomponents:httpclient:4.5.14",
                 "org.apache.commons:commons-collections4:4.1",
-                "commons-net:commons-net:3.11.1"
+                "commons-net:commons-net:3.11.1",
+                "commons-io:commons-io:2.8.0"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.78.1"
 
