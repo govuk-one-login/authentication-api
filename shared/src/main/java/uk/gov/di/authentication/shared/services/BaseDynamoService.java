@@ -43,6 +43,12 @@ public class BaseDynamoService<T> {
                 dynamoTable.getItem(Key.builder().partitionValue(partition).build()));
     }
 
+    public Optional<T> get(String partition, String sortKey) {
+        return Optional.ofNullable(
+                dynamoTable.getItem(
+                        Key.builder().partitionValue(partition).sortValue(sortKey).build()));
+    }
+
     public void delete(String partition) {
         get(partition).ifPresent(dynamoTable::deleteItem);
     }
