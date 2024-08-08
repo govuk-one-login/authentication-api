@@ -102,9 +102,11 @@ subprojects {
         pact_provider
     }
 
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             force 'org.apache.logging.log4j:log4j-api:2.23.1', 'org.apache.logging.log4j:log4j-core:2.23.1'
+            force 'org.json:json:20231013'
+            force 'org.bitbucket.b_c:jose4j:0.9.4'
         }
     }
 
