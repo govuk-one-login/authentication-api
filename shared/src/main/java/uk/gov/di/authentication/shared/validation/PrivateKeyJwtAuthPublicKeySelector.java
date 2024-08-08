@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
 import com.nimbusds.oauth2.sdk.auth.verifier.Context;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import uk.gov.di.authentication.shared.exceptions.UncheckedInvalidKeySpecException;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -19,10 +20,10 @@ import java.util.Collections;
 import java.util.List;
 
 public class PrivateKeyJwtAuthPublicKeySelector implements ClientCredentialsSelector<String> {
-    private final String publicKey;
+    private final List<String> publicKey;
     private final KeyType keyType;
 
-    public PrivateKeyJwtAuthPublicKeySelector(String publicKey, KeyType keyType) {
+    public PrivateKeyJwtAuthPublicKeySelector(List<String> publicKey, KeyType keyType) {
         this.publicKey = publicKey;
         this.keyType = keyType;
     }
@@ -43,12 +44,28 @@ public class PrivateKeyJwtAuthPublicKeySelector implements ClientCredentialsSele
             boolean forceRefresh,
             Context<String> context)
             throws InvalidClientException {
-        byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
+        KeyFactory kf;
         try {
-            X509EncodedKeySpec ecPublicKeySpec = new X509EncodedKeySpec(decodedKey);
-            KeyFactory kf = KeyFactory.getInstance(keyType.getValue());
-            return Collections.singletonList(kf.generatePublic(ecPublicKeySpec));
-        } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+            kf = KeyFactory.getInstance(keyType.getValue());
+        } catch (NoSuchAlgorithmException e) {
+            throw new InvalidClientException(e.getMessage());
+        }
+
+        try {
+
+            return publicKey.stream()
+                    .map(key -> Base64.getMimeDecoder().decode(key))
+                    .map(X509EncodedKeySpec::new)
+                    .map(
+                            keySpec -> {
+                                try {
+                                    return kf.generatePublic(keySpec);
+                                } catch (InvalidKeySpecException e) {
+                                    throw new UncheckedInvalidKeySpecException(e.getMessage());
+                                }
+                            })
+                    .toList();
+        } catch (UncheckedInvalidKeySpecException e) {
             throw new InvalidClientException(e.getMessage());
         }
     }
