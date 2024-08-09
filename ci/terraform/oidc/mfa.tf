@@ -38,6 +38,7 @@ module "mfa" {
     DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
+    SUPPORT_REAUTH_SIGNOUT_ENABLED         = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.MfaHandler::handleRequest"
 

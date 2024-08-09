@@ -249,28 +249,58 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         if (codeRequestCount == configurationService.getCodeMaxRetries()) {
-            LOG.info(
-                    "User has requested too many OTP codes. Setting block with prefix: {}",
-                    newCodeRequestBlockPrefix);
-            codeStorageService.saveBlockedForEmail(
-                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
-            LOG.info("Resetting code request count");
-            sessionService.save(
-                    session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
+            LOG.warn("User has requested too many OTP codes.");
+
+            blockReauthenticatingUserWhenReauthenticationLogOffNotSupported(
+                    email, journeyType, newCodeRequestBlockPrefix);
+
+            blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
+                    email, journeyType, newCodeRequestBlockPrefix);
+
+            clearCountOfFailedCodeRequests(journeyType, session);
+
             return Optional.of(ErrorResponse.ERROR_1025);
         }
+
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
                     newCodeRequestBlockPrefix);
             return Optional.of(ErrorResponse.ERROR_1026);
         }
+
         if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
                     newCodeBlockPrefix);
             return Optional.of(ErrorResponse.ERROR_1027);
         }
+
         return Optional.empty();
+    }
+
+    private void blockReauthenticatingUserWhenReauthenticationLogOffNotSupported(
+            String email, JourneyType journeyType, String newCodeRequestBlockPrefix) {
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && !configurationService.supportReauthSignoutEnabled()) {
+            LOG.warn(
+                    "Blocking user as asked to re-authenticate when re-authentication is not supported.");
+            codeStorageService.saveBlockedForEmail(
+                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
+        }
+    }
+
+    private void blockUsersOnAllJourneysOtherThanReauthenticatingUsers(
+            String email, JourneyType journeyType, String newCodeRequestBlockPrefix) {
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            LOG.warn("Blocking user.");
+            codeStorageService.saveBlockedForEmail(
+                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
+        }
+    }
+
+    private void clearCountOfFailedCodeRequests(JourneyType journeyType, Session session) {
+        LOG.info("Resetting code request count");
+        sessionService.save(session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
     }
 }

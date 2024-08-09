@@ -182,7 +182,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                         }
 
                         @Override
-                        public boolean isReauthSignoutEnabled() {
+                        public boolean supportReauthSignoutEnabled() {
                             return true;
                         }
                     };

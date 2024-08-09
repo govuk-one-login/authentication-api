@@ -288,7 +288,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             case ERROR_1027:
             case ERROR_1039:
             case ERROR_1048:
-                if (!configurationService.isReauthSignoutEnabled()
+                if (!configurationService.supportReauthSignoutEnabled()
                         || journeyType != JourneyType.REAUTHENTICATION) {
                     blockCodeForSession(session, codeBlockedKeyPrefix);
                 }
