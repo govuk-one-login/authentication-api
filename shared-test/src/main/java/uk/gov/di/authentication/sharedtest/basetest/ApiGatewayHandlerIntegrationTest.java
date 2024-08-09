@@ -14,13 +14,16 @@ public abstract class ApiGatewayHandlerIntegrationTest
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
-        return makeRequest(
-                body,
-                headers,
-                queryString,
-                Collections.emptyMap(),
-                Collections.emptyMap(),
-                Optional.empty());
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
+                        headers,
+                        queryString,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Optional.empty());
+
+        return handler.handleRequest(request, context);
     }
 
     protected APIGatewayProxyResponseEvent makeRequest(
@@ -28,13 +31,16 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> headers,
             Map<String, String> queryString,
             Optional<String> httpMethod) {
-        return makeRequest(
-                body,
-                headers,
-                queryString,
-                Collections.emptyMap(),
-                Collections.emptyMap(),
-                httpMethod);
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
+                        headers,
+                        queryString,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        httpMethod);
+
+        return handler.handleRequest(request, context);
     }
 
     protected APIGatewayProxyResponseEvent makeRequest(
@@ -42,8 +48,16 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> headers,
             Map<String, String> queryString,
             Map<String, String> pathParams) {
-        return makeRequest(
-                body, headers, queryString, pathParams, Collections.emptyMap(), Optional.empty());
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
+                        headers,
+                        queryString,
+                        pathParams,
+                        Collections.emptyMap(),
+                        Optional.empty());
+
+        return handler.handleRequest(request, context);
     }
 
     protected APIGatewayProxyResponseEvent makeRequest(
@@ -52,11 +66,14 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> queryString,
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams) {
-        return makeRequest(
-                body, headers, queryString, pathParams, authorizerParams, Optional.empty());
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body, headers, queryString, pathParams, authorizerParams, Optional.empty());
+
+        return handler.handleRequest(request, context);
     }
 
-    protected APIGatewayProxyResponseEvent makeRequest(
+    protected APIGatewayProxyRequestEvent constructRequest(
             Optional<Object> body,
             Map<String, String> headers,
             Map<String, String> queryString,
@@ -85,7 +102,6 @@ public abstract class ApiGatewayHandlerIntegrationTest
                         }
                     }
                 });
-
-        return handler.handleRequest(request, context);
+        return request;
     }
 }
