@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.sharedtest.basetest;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.authentication.shared.serialization.Json;
 
@@ -39,14 +40,10 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> queryString,
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams) {
-        String requestId = UUID.randomUUID().toString();
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        APIGatewayProxyRequestEvent request = baseApiRequest();
         request.withHeaders(headers)
                 .withQueryStringParameters(queryString)
-                .withPathParameters(pathParams)
-                .withRequestContext(
-                        new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                                .withRequestId(requestId));
+                .withPathParameters(pathParams);
         request.getRequestContext().setAuthorizer(authorizerParams);
         body.ifPresent(
                 o -> {
@@ -61,5 +58,11 @@ public abstract class ApiGatewayHandlerIntegrationTest
                     }
                 });
         return request;
+    }
+
+    protected static APIGatewayProxyRequestEvent baseApiRequest() {
+        return new APIGatewayProxyRequestEvent()
+                .withRequestContext(
+                        new ProxyRequestContext().withRequestId(UUID.randomUUID().toString()));
     }
 }
