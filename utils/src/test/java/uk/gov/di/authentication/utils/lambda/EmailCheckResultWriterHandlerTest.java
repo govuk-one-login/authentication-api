@@ -6,16 +6,20 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import software.amazon.awssdk.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -23,6 +27,9 @@ class EmailCheckResultWriterHandlerTest {
     private static final String TEST_MSG_EMAIL = "test@test.com";
     private static final long TEST_MSG_TIME_TO_EXIST = 1706870420L;
     private static final String TEST_MSG_REF_NUMBER = "123456-abc1234def5678";
+    private static final long TEST_TIME_OF_INITIAL_REQUEST = Instant.now().toEpochMilli();
+    private static final long REQUEST_DURATION = 1000L;
+    private static final long TEST_TIME_NOW = TEST_TIME_OF_INITIAL_REQUEST + REQUEST_DURATION;
     private static DynamoEmailCheckResultService dbMock;
     private static CloudwatchMetricsService cloudWatchMock;
     private static ArgumentCaptor<String> emailCaptor;
@@ -50,18 +57,23 @@ class EmailCheckResultWriterHandlerTest {
     void shouldProcessValidSQSEventWithSingleMessageAndSaveToDatabase() {
         var emailCheckResultStatus = EmailCheckResultStatus.ALLOW;
         SQSEvent event = getSqsEventWithSingleMessage(true, emailCheckResultStatus);
-        handler.emailCheckResultWriterHandler(event);
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochMilli(TEST_TIME_NOW)));
+            handler.emailCheckResultWriterHandler(event);
 
-        verify(dbMock)
-                .saveEmailCheckResult(
-                        emailCaptor.capture(), statusCaptor.capture(),
-                        timeToExistCaptor.capture(), referenceNumberCaptor.capture());
+            verify(dbMock)
+                    .saveEmailCheckResult(
+                            emailCaptor.capture(), statusCaptor.capture(),
+                            timeToExistCaptor.capture(), referenceNumberCaptor.capture());
 
-        assertEquals(TEST_MSG_EMAIL, emailCaptor.getValue());
-        assertEquals(emailCheckResultStatus, statusCaptor.getValue());
-        assertEquals(TEST_MSG_TIME_TO_EXIST, timeToExistCaptor.getValue());
-        assertEquals(TEST_MSG_REF_NUMBER, referenceNumberCaptor.getValue());
-        verify(cloudWatchMock).logEmailCheckDuration(anyLong());
+            assertEquals(TEST_MSG_EMAIL, emailCaptor.getValue());
+            assertEquals(emailCheckResultStatus, statusCaptor.getValue());
+            assertEquals(TEST_MSG_TIME_TO_EXIST, timeToExistCaptor.getValue());
+            assertEquals(TEST_MSG_REF_NUMBER, referenceNumberCaptor.getValue());
+            verify(cloudWatchMock).logEmailCheckDuration(REQUEST_DURATION);
+        }
     }
 
     @Test
@@ -92,11 +104,12 @@ class EmailCheckResultWriterHandlerTest {
         if (doesMessageContainRequiredFields) {
             sqsMessage.setBody(
                     String.format(
-                            "{ \"EmailAddress\": \"%s\", \"Status\": \"%s\", \"TimeToExist\": \"%d\", \"RequestReference\": \"%s\", \"TimeOfInitialRequest\":1000 }",
+                            "{ \"EmailAddress\": \"%s\", \"Status\": \"%s\", \"TimeToExist\": \"%d\", \"RequestReference\": \"%s\", \"TimeOfInitialRequest\":%d }",
                             TEST_MSG_EMAIL,
                             status.toString(),
                             TEST_MSG_TIME_TO_EXIST,
-                            TEST_MSG_REF_NUMBER));
+                            TEST_MSG_REF_NUMBER,
+                            TEST_TIME_OF_INITIAL_REQUEST));
         } else {
             sqsMessage.setBody(("{}"));
         }
