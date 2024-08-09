@@ -16,12 +16,7 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
         APIGatewayProxyRequestEvent request =
                 constructRequest(
-                        body,
-                        headers,
-                        queryString,
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Optional.empty());
+                        body, headers, queryString, Collections.emptyMap(), Collections.emptyMap());
 
         return handler.handleRequest(request, context);
     }
@@ -33,8 +28,7 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams) {
         APIGatewayProxyRequestEvent request =
-                constructRequest(
-                        body, headers, queryString, pathParams, authorizerParams, Optional.empty());
+                constructRequest(body, headers, queryString, pathParams, authorizerParams);
 
         return handler.handleRequest(request, context);
     }
@@ -44,14 +38,12 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> headers,
             Map<String, String> queryString,
             Map<String, String> pathParams,
-            Map<String, Object> authorizerParams,
-            Optional<String> httpMethod) {
+            Map<String, Object> authorizerParams) {
         String requestId = UUID.randomUUID().toString();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.withHeaders(headers)
                 .withQueryStringParameters(queryString)
                 .withPathParameters(pathParams)
-                .withHttpMethod(httpMethod.orElse(null))
                 .withRequestContext(
                         new APIGatewayProxyRequestEvent.ProxyRequestContext()
                                 .withRequestId(requestId));

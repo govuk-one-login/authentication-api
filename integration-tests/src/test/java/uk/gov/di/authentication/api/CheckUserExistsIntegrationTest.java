@@ -192,8 +192,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructFrontendHeaders(sessionId),
                         headers,
                         Map.of(),
-                        Collections.emptyMap(),
-                        Optional.empty());
+                        Collections.emptyMap());
 
         var response = handler.handleRequest(request, context);
 
