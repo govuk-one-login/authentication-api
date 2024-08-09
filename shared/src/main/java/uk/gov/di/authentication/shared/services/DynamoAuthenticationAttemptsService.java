@@ -21,16 +21,22 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
         long ttlEpochSeconds =
                 NowHelper.nowPlus(ttlSeconds, ChronoUnit.SECONDS).toInstant().getEpochSecond();
 
-        var authenticationAttempt =
-                get(internalSubjectId, buildSortKey(authenticationMethod, journeyType))
-                        .orElse(new AuthenticationAttempts())
-                        .withInternalSubjectId(internalSubjectId)
-                        .withCode(code)
-                        .withAuthenticationMethod(authenticationMethod)
-                        .withTimeToLive(ttlEpochSeconds)
-                        .withJourneyType(journeyType);
-
-        update(authenticationAttempt);
+        Optional<AuthenticationAttempts> authenticationAttempt =
+                get(internalSubjectId, buildSortKey(authenticationMethod, journeyType));
+        if (authenticationAttempt.isPresent()) {
+            authenticationAttempt.get().setCount(authenticationAttempt.get().getCount() + 1);
+            authenticationAttempt.get().setTimeToLive(ttlEpochSeconds);
+        } else {
+            authenticationAttempt =
+                    Optional.ofNullable(
+                            new AuthenticationAttempts()
+                                    .withInternalSubjectId(internalSubjectId)
+                                    .withAuthenticationMethod(authenticationMethod)
+                                    .withJourneyType(journeyType)
+                                    .withCode(code)
+                                    .withTimeToLive(ttlEpochSeconds));
+        }
+        authenticationAttempt.ifPresent(this::update);
     }
 
     public void createOrIncrementCount(
@@ -88,7 +94,7 @@ public class DynamoAuthenticationAttemptsService extends BaseDynamoService<Authe
                 });
     }
 
-    public static String buildSortKey(String authenticationMethod, String journeyType){
+    public static String buildSortKey(String authenticationMethod, String journeyType) {
         return authenticationMethod + "_" + journeyType;
     }
 }
