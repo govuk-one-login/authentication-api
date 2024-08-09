@@ -54,3 +54,13 @@ module "storage_token_jwk" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_storage_token_jwk" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "storage-token-jwk.json"
+  environment          = var.environment
+  lambda_function_name = module.storage_token_jwk.lambda_function_name
+  lambda_version       = module.storage_token_jwk.lambda_version
+  lambda_alias_name    = module.storage_token_jwk.lambda_alias_name
+  lambda_alias_version = module.storage_token_jwk.lambda_alias_version
+}

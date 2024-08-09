@@ -78,3 +78,13 @@ module "doc-app-callback" {
     aws_api_gateway_rest_api.di_authentication_api,
   ]
 }
+
+module "codedeploy_doc_app_callback" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "doc-app-callback"
+  environment          = var.environment
+  lambda_function_name = module.doc-app-callback.lambda_function_name
+  lambda_version       = module.doc-app-callback.lambda_version
+  lambda_alias_name    = module.doc-app-callback.lambda_alias_name
+  lambda_alias_version = module.doc-app-callback.lambda_alias_version
+}

@@ -76,3 +76,13 @@ module "signup" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_signup" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "signup"
+  environment          = var.environment
+  lambda_function_name = module.signup.lambda_function_name
+  lambda_version       = module.signup.lambda_version
+  lambda_alias_name    = module.signup.lambda_alias_name
+  lambda_alias_version = module.signup.lambda_alias_version
+}

@@ -66,3 +66,13 @@ module "update_email" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
 }
+
+module "codedeploy_update_email" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update-email"
+  environment          = var.environment
+  lambda_function_name = module.update_email.lambda_function_name
+  lambda_version       = module.update_email.lambda_version
+  lambda_alias_name    = module.update_email.lambda_alias_name
+  lambda_alias_version = module.update_email.lambda_alias_version
+}

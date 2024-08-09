@@ -63,3 +63,13 @@ module "register" {
     aws_api_gateway_resource.register_resource,
   ]
 }
+
+module "codedeploy_register" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "register"
+  environment          = var.environment
+  lambda_function_name = module.register[0].lambda_function_name
+  lambda_version       = module.register[0].lambda_version
+  lambda_alias_name    = module.register[0].lambda_alias_name
+  lambda_alias_version = module.register[0].lambda_alias_version
+}

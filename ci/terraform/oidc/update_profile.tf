@@ -74,3 +74,13 @@ module "update_profile" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_update_profile" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update-profile"
+  environment          = var.environment
+  lambda_function_name = module.update_profile.lambda_function_name
+  lambda_version       = module.update_profile.lambda_version
+  lambda_alias_name    = module.update_profile.lambda_alias_name
+  lambda_alias_version = module.update_profile.lambda_alias_version
+}

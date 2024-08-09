@@ -55,3 +55,13 @@ module "notify_callback" {
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]
 }
+
+module "codedeploy_notify_callback" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "notify-callback"
+  environment          = var.environment
+  lambda_function_name = module.notify_callback.lambda_function_name
+  lambda_version       = module.notify_callback.lambda_version
+  lambda_alias_name    = module.notify_callback.lambda_alias_name
+  lambda_alias_version = module.notify_callback.lambda_alias_version
+}

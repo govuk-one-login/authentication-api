@@ -75,3 +75,13 @@ module "userinfo" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_userinfo" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "userinfo"
+  environment          = var.environment
+  lambda_function_name = module.userinfo.lambda_function_name
+  lambda_version       = module.userinfo.lambda_version
+  lambda_alias_name    = module.userinfo.lambda_alias_name
+  lambda_alias_version = module.userinfo.lambda_alias_version
+}
