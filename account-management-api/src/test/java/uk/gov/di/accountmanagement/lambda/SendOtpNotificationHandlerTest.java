@@ -245,7 +245,7 @@ class SendOtpNotificationHandlerTest {
                                             "some-persistent-session-id",
                                             "123.123.123.123",
                                             JourneyType.ACCOUNT_MANAGEMENT,
-                                            mockedDate.toInstant().getEpochSecond(),
+                                            mockedDate.toInstant().toEpochMilli(),
                                             false));
                 } else {
                     verifyNoInteractions(pendingEmailCheckSqsClient);

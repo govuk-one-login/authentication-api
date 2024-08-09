@@ -264,7 +264,7 @@ class SendNotificationHandlerTest {
                                             DI_PERSISTENT_SESSION_ID,
                                             IP_ADDRESS,
                                             JourneyType.REGISTRATION,
-                                            mockedDate.toInstant().getEpochSecond(),
+                                            mockedDate.toInstant().toEpochMilli(),
                                             false));
                 } else {
                     verifyNoInteractions(pendingEmailCheckSqsClient);
@@ -335,7 +335,7 @@ class SendNotificationHandlerTest {
                                         DI_PERSISTENT_SESSION_ID,
                                         IP_ADDRESS,
                                         JourneyType.REGISTRATION,
-                                        mockedDate.toInstant().getEpochSecond(),
+                                        mockedDate.toInstant().toEpochMilli(),
                                         false));
             } else {
                 verifyNoInteractions(pendingEmailCheckSqsClient);
