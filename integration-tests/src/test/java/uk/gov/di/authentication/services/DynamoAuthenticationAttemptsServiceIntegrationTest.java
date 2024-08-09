@@ -18,9 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DynamoAuthenticationAttemptsServiceIntegrationTest {
 
-    private static final String ATTEMPT_IDENTIFIER = "attempt-identifier-1234";
-    private static final String NON_EXISTENT_ATTEMPT_IDENTIFIER =
-            "non-existent-attempt-identifier-1234";
+    private static final String INTERNAL_SUBJECT_ID = "internal-sub-id";
+
+    private static final String JOURNEY_TYPE = "journey-type";
+    private static final String NON_EXISTENT_INTERNAL_SUBJECT_ID = "non-existent-internal-sub-id";
     private static final String CODE = "123456";
     private static final long MOCKEDTIMESTAMP = 1721979370L;
     private static final long TTLINSECONDS = 60L;
@@ -46,11 +47,11 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
                     .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
 
             dynamoAuthenticationAttemptsService.addCode(
-                    ATTEMPT_IDENTIFIER, TTLINSECONDS, CODE, AUTH_METHOD);
+                    INTERNAL_SUBJECT_ID, TTLINSECONDS, CODE, AUTH_METHOD, JOURNEY_TYPE);
 
             var authenticationAttempts =
-                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
-                            ATTEMPT_IDENTIFIER);
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                            INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
 
             assertTrue(authenticationAttempts.isPresent());
             assertEquals(EXPECTEDTTL, authenticationAttempts.get().getTimeToLive());
@@ -63,12 +64,12 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
 
         // Setup the count
         dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                ATTEMPT_IDENTIFIER, ttl, AUTH_METHOD);
+                INTERNAL_SUBJECT_ID, ttl, AUTH_METHOD, JOURNEY_TYPE);
 
         // Retrieve the count
         var incorrectEmailCount =
                 dynamoAuthenticationAttemptsService
-                        .getAuthenticationAttempts(ATTEMPT_IDENTIFIER)
+                        .getAuthenticationAttempt(INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE)
                         .get()
                         .getCount();
 
@@ -78,8 +79,8 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
     @Test
     void shouldNotRetrieveANonExistentCount() {
         var count =
-                dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
-                        NON_EXISTENT_ATTEMPT_IDENTIFIER);
+                dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                        NON_EXISTENT_INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
 
         assertTrue(count.isEmpty());
     }
@@ -90,11 +91,12 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
 
         // Setup the count with an expired TTL
         dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                ATTEMPT_IDENTIFIER, expiredTTL, AUTH_METHOD);
+                INTERNAL_SUBJECT_ID, expiredTTL, AUTH_METHOD, JOURNEY_TYPE);
 
         // Attempt to retrieve the count
         var count =
-                dynamoAuthenticationAttemptsService.getAuthenticationAttempts(ATTEMPT_IDENTIFIER);
+                dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                        INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
 
         assertTrue(count.isEmpty(), "Expired attempt should not be retrieved");
     }
@@ -104,12 +106,13 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
         var nonExpiredTTL = Instant.now().getEpochSecond() + 1000000L;
 
         dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                ATTEMPT_IDENTIFIER, nonExpiredTTL, AUTH_METHOD);
+                INTERNAL_SUBJECT_ID, nonExpiredTTL, AUTH_METHOD, JOURNEY_TYPE);
         dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                ATTEMPT_IDENTIFIER, nonExpiredTTL, AUTH_METHOD);
+                INTERNAL_SUBJECT_ID, nonExpiredTTL, AUTH_METHOD, JOURNEY_TYPE);
 
         var count =
-                dynamoAuthenticationAttemptsService.getAuthenticationAttempts(ATTEMPT_IDENTIFIER);
+                dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                        INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
         assertEquals(2, count.get().getCount());
     }
 
@@ -125,20 +128,21 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
                     .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
 
             dynamoAuthenticationAttemptsService.addCode(
-                    ATTEMPT_IDENTIFIER, TTLINSECONDS, CODE, AUTH_METHOD);
+                    INTERNAL_SUBJECT_ID, TTLINSECONDS, CODE, AUTH_METHOD, JOURNEY_TYPE);
 
             // Read the code
             var authenticationAttempts =
-                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
-                            ATTEMPT_IDENTIFIER);
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                            INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
             assertTrue(authenticationAttempts.isPresent());
             assertEquals(CODE, authenticationAttempts.get().getCode());
 
             // Delete the code
-            dynamoAuthenticationAttemptsService.deleteCode(ATTEMPT_IDENTIFIER);
+            dynamoAuthenticationAttemptsService.deleteCode(
+                    INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
             var deletedAttempts =
-                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
-                            ATTEMPT_IDENTIFIER);
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                            INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
             assertTrue(deletedAttempts.isEmpty() || deletedAttempts.get().getCode() == null);
         }
     }
@@ -156,22 +160,23 @@ class DynamoAuthenticationAttemptsServiceIntegrationTest {
 
             // Setup the count
             dynamoAuthenticationAttemptsService.createOrIncrementCount(
-                    ATTEMPT_IDENTIFIER, EXPECTEDTTL, AUTH_METHOD);
+                    INTERNAL_SUBJECT_ID, EXPECTEDTTL, AUTH_METHOD, JOURNEY_TYPE);
 
             // Read the count
             var authenticationAttempts =
-                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
-                            ATTEMPT_IDENTIFIER);
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                            INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
             assertTrue(authenticationAttempts.isPresent());
             assertEquals(1, authenticationAttempts.get().getCount());
 
             // Delete the count
-            dynamoAuthenticationAttemptsService.deleteCount(ATTEMPT_IDENTIFIER);
+            dynamoAuthenticationAttemptsService.deleteCount(
+                    INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
 
             // Verify the count is deleted
             authenticationAttempts =
-                    dynamoAuthenticationAttemptsService.getAuthenticationAttempts(
-                            ATTEMPT_IDENTIFIER);
+                    dynamoAuthenticationAttemptsService.getAuthenticationAttempt(
+                            INTERNAL_SUBJECT_ID, AUTH_METHOD, JOURNEY_TYPE);
             assertTrue(authenticationAttempts.isPresent());
             assertEquals(0, authenticationAttempts.get().getCount());
         }
