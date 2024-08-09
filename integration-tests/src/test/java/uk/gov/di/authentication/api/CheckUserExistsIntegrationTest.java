@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,18 +182,20 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 emailAddress,
                 CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET);
 
-        BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
-
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
 
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        var request =
+                constructRequest(
+                        Optional.of(new CheckUserExistsRequest(emailAddress)),
                         constructFrontendHeaders(sessionId),
                         headers,
-                        Map.of());
+                        Map.of(),
+                        Collections.emptyMap(),
+                        Optional.empty());
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));

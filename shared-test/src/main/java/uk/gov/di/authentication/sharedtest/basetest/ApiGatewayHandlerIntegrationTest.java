@@ -30,40 +30,6 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Optional<Object> body,
             Map<String, String> headers,
             Map<String, String> queryString,
-            Optional<String> httpMethod) {
-        APIGatewayProxyRequestEvent request =
-                constructRequest(
-                        body,
-                        headers,
-                        queryString,
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        httpMethod);
-
-        return handler.handleRequest(request, context);
-    }
-
-    protected APIGatewayProxyResponseEvent makeRequest(
-            Optional<Object> body,
-            Map<String, String> headers,
-            Map<String, String> queryString,
-            Map<String, String> pathParams) {
-        APIGatewayProxyRequestEvent request =
-                constructRequest(
-                        body,
-                        headers,
-                        queryString,
-                        pathParams,
-                        Collections.emptyMap(),
-                        Optional.empty());
-
-        return handler.handleRequest(request, context);
-    }
-
-    protected APIGatewayProxyResponseEvent makeRequest(
-            Optional<Object> body,
-            Map<String, String> headers,
-            Map<String, String> queryString,
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams) {
         APIGatewayProxyRequestEvent request =
