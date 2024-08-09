@@ -97,7 +97,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
 
         var response =
                 makeRequest(
-                        Optional.of(format("{\"email\":\"%s\"}", emailAddress)),
+                        format("{\"email\":\"%s\"}", emailAddress),
                         getHeadersForAuthenticatedSession(),
                         Map.of());
 

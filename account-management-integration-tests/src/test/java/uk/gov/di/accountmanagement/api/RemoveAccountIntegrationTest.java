@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,13 +46,15 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
         accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(new RemoveAccountRequest(EMAIL)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", internalCommonSubjectId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -65,13 +68,15 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldRemoveAccountAndReturn204WhenUserExists() {
         var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(new RemoveAccountRequest(EMAIL)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", internalCommonSubjectId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -93,13 +98,17 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         Exception ex =
                 assertThrows(
                         RuntimeException.class,
-                        () ->
-                                makeRequest(
-                                        Optional.of(new RemoveAccountRequest(user2Email)),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap(),
-                                        Map.of("principalId", subjectId1)));
+                        () -> {
+                            APIGatewayProxyRequestEvent request =
+                                    constructRequest(
+                                            Optional.of(new RemoveAccountRequest(user2Email)),
+                                            Collections.emptyMap(),
+                                            Collections.emptyMap(),
+                                            Collections.emptyMap(),
+                                            Map.of("principalId", subjectId1));
+
+                            handler.handleRequest(request, context);
+                        });
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }

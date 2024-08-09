@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,8 +53,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Test
     void shouldSendNotificationAndReturn204ForVerifyEmailRequest() {
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
@@ -61,6 +62,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -76,8 +79,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
         String password = "password-1";
         userStore.signUp(TEST_EMAIL, password);
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
@@ -85,6 +88,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
@@ -96,8 +101,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @Test
     void shouldSendNotificationAndReturn204ForVerifyPhoneNumberRequest() {
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
@@ -105,6 +110,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -121,8 +128,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     void shouldReturn204ForVerifyPhoneNumberRequestWhenUserDoesNotExist() {
         var nonExistentUserEmail = "i.do.not.exist@digital.cabinet-office.gov.uk";
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new SendNotificationRequest(
                                         nonExistentUserEmail,
@@ -132,6 +139,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -148,8 +157,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     void shouldReturn400WhenPhoneNumberIsInvalid() throws Json.JsonException {
         String badPhoneNumber = "This is not a valid phone number";
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_PHONE_NUMBER, badPhoneNumber)),
@@ -157,6 +166,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1012)));
@@ -171,8 +182,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
             throws Json.JsonException {
         userStore.signUp(TEST_EMAIL, "password");
         userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_PHONE_NUMBER, "07755551084")),
@@ -180,6 +191,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("clientId", TEST_TESTER_CLIENT_ID));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1044)));

@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,15 +64,17 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, Object> requestParams =
                 Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new UpdateEmailRequest(
-                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+        Optional<Object> body =
+                Optional.of(new UpdateEmailRequest(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp));
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         requestParams);
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
         assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
@@ -97,15 +100,17 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, Object> requestParams =
                 Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new UpdateEmailRequest(
-                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+        Optional<Object> body =
+                Optional.of(new UpdateEmailRequest(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp));
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         requestParams);
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
         assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
@@ -148,15 +153,18 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String validOtp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
         var badOtp = "012345";
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new UpdateEmailRequest(
-                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, badOtp)),
+        Optional<Object> body =
+                Optional.of(
+                        new UpdateEmailRequest(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, badOtp));
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", internalCommonSubId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
@@ -175,15 +183,17 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Map<String, Object> additionalParams =
                 Map.of("principalId", internalCommonSubId, "clientId", CLIENT_ID);
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new UpdateEmailRequest(
-                                        EXISTING_EMAIL_ADDRESS, badEmailAddress, otp)),
+        Optional<Object> body =
+                Optional.of(new UpdateEmailRequest(EXISTING_EMAIL_ADDRESS, badEmailAddress, otp));
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         additionalParams);
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
 
@@ -198,15 +208,17 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(NEW_EMAIL_ADDRESS, "password-2", new Subject());
         var otp = redis.generateAndSaveEmailCode(NEW_EMAIL_ADDRESS, 300);
 
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new UpdateEmailRequest(
-                                        EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp)),
+        Optional<Object> body =
+                Optional.of(new UpdateEmailRequest(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS, otp));
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        body,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", internalCommonSubId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
@@ -225,17 +237,23 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Exception ex =
                 assertThrows(
                         RuntimeException.class,
-                        () ->
-                                makeRequest(
-                                        Optional.of(
-                                                new UpdateEmailRequest(
-                                                        "other.user@digital.cabinet-office.gov.uk",
-                                                        NEW_EMAIL_ADDRESS,
-                                                        otp)),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap(),
-                                        Map.of("principalId", internalCommonSubId)));
+                        () -> {
+                            Optional<Object> body =
+                                    Optional.of(
+                                            new UpdateEmailRequest(
+                                                    "other.user@digital.cabinet-office.gov.uk",
+                                                    NEW_EMAIL_ADDRESS,
+                                                    otp));
+                            APIGatewayProxyRequestEvent request =
+                                    constructRequest(
+                                            body,
+                                            Collections.emptyMap(),
+                                            Collections.emptyMap(),
+                                            Collections.emptyMap(),
+                                            Map.of("principalId", internalCommonSubId));
+
+                            handler.handleRequest(request, context);
+                        });
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }

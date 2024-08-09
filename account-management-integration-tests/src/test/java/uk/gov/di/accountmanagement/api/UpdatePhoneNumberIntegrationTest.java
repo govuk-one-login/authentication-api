@@ -1,5 +1,6 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
@@ -69,13 +70,15 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var internalSubId = setupUserAndRetrieveInternalCommonSubId();
         var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(new UpdatePhoneNumberRequest(TEST_EMAIL, phoneNumber, otp)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", internalSubId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -105,14 +108,16 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
         var badOtp = "012345";
 
-        var response =
-                makeRequest(
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
                         Optional.of(
                                 new UpdatePhoneNumberRequest(TEST_EMAIL, NEW_PHONE_NUMBER, badOtp)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", internalSubId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
@@ -133,17 +138,21 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         Exception ex =
                 assertThrows(
                         RuntimeException.class,
-                        () ->
-                                makeRequest(
-                                        Optional.of(
-                                                new UpdatePhoneNumberRequest(
-                                                        "other.user@digital.cabinet-office.gov.uk",
-                                                        NEW_PHONE_NUMBER,
-                                                        otp)),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap(),
-                                        Map.of("principalId", internalSubId)));
+                        () -> {
+                            APIGatewayProxyRequestEvent request =
+                                    constructRequest(
+                                            Optional.of(
+                                                    new UpdatePhoneNumberRequest(
+                                                            "other.user@digital.cabinet-office.gov.uk",
+                                                            NEW_PHONE_NUMBER,
+                                                            otp)),
+                                            Collections.emptyMap(),
+                                            Collections.emptyMap(),
+                                            Collections.emptyMap(),
+                                            Map.of("principalId", internalSubId));
+
+                            handler.handleRequest(request, context);
+                        });
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }

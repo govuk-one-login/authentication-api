@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -69,28 +70,30 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
-        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        Optional.of(new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId)),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", expectedPairwiseId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(200));
     }
 
     @Test
     void shouldReturn404WhenUserNotFound() {
-        var request = new CheckReauthUserRequest(TEST_EMAIL, "random-pairwise-id");
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        Optional.of(new CheckReauthUserRequest(TEST_EMAIL, "random-pairwise-id")),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of());
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(404));
     }
@@ -103,14 +106,15 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
-        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        Optional.of(new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId)),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", expectedPairwiseId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(404));
     }
@@ -130,14 +134,15 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
-        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        Optional.of(new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId)),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", expectedPairwiseId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(400));
     }
@@ -158,14 +163,15 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
-        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        Optional.of(new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId)),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of("principalId", expectedPairwiseId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
@@ -184,15 +190,15 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         redis.incrementEmailCount(TEST_EMAIL);
         redis.incrementEmailCount(TEST_EMAIL);
 
-        var request = new CheckReauthUserRequest(randomEmail, "random-pairwise-id");
-
-        var response =
-                makeRequest(
-                        Optional.of(request),
+        APIGatewayProxyRequestEvent request =
+                constructRequest(
+                        Optional.of(new CheckReauthUserRequest(randomEmail, "random-pairwise-id")),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of());
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(400));
     }
