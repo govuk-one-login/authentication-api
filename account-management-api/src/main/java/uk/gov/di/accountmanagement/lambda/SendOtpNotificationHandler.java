@@ -211,7 +211,7 @@ public class SendOtpNotificationHandler
                                                     persistentSessionId,
                                                     IpAddressHelper.extractIpAddress(input),
                                                     JourneyType.ACCOUNT_MANAGEMENT,
-                                                    NowHelper.now().toInstant().getEpochSecond(),
+                                                    NowHelper.now().toInstant().toEpochMilli(),
                                                     isTestUserRequest)));
                             LOG.info("Email address check requested");
                         } else {

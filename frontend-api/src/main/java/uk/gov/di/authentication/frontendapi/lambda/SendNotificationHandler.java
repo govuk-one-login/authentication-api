@@ -320,7 +320,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                         persistentSessionId,
                                         IpAddressHelper.extractIpAddress(input),
                                         JourneyType.REGISTRATION,
-                                        NowHelper.now().toInstant().getEpochSecond(),
+                                        NowHelper.now().toInstant().toEpochMilli(),
                                         testClientWithAllowedEmail)));
                 LOG.info("Email address check requested");
             } else {
