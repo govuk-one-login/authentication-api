@@ -205,6 +205,11 @@ variable "email_acct_creation_otp_code_ttl_duration" {
   default = 7200
 }
 
+variable "max_errors_before_lambda_restarts" {
+  type    = number
+  default = 3
+}
+
 variable "test_client_verify_email_otp" {
   type = string
 }
