@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -106,8 +105,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
-        var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+        var request = baseApiRequest().withHeaders(standardHeadersWithSessionId(sessionId));
+
+        var response = handler.handleRequest(request, context);
+
         assertThat(response, hasStatus(200));
 
         var user =
@@ -170,7 +171,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
 
-        var response = makeRequest(Optional.empty(), headers, Map.of());
+        var request = baseApiRequest().withHeaders(headers);
+
+        var response = handler.handleRequest(request, context);
+
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -216,8 +220,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
-        var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+        var request = baseApiRequest().withHeaders(standardHeadersWithSessionId(sessionId));
+
+        var response = handler.handleRequest(request, context);
+
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -235,7 +241,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn400WhenClientSessionIdMissing() {
         var headers = Map.of("X-API-Key", FRONTEND_API_KEY);
 
-        var response = makeRequest(Optional.empty(), headers, Map.of());
+        var request = baseApiRequest().withHeaders(headers);
+
+        var response = handler.handleRequest(request, context);
+
         assertThat(response, hasStatus(400));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
@@ -263,8 +272,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         registerClient(keyPair, ClientType.APP);
 
-        var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+        var request = baseApiRequest().withHeaders(standardHeadersWithSessionId(sessionId));
+
+        var response = handler.handleRequest(request, context);
+
         assertThat(response, hasStatus(200));
 
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
@@ -300,8 +311,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
-        var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+        var request = baseApiRequest().withHeaders(standardHeadersWithSessionId(sessionId));
+
+        var response = handler.handleRequest(request, context);
 
         assertThat(response, hasStatus(200));
         assertThat(redis.getSession(sessionId).isAuthenticated(), equalTo(false));
