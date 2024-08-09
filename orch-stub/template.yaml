@@ -101,13 +101,13 @@ Mappings:
       stubDomain: orchstub.signin.build.account.gov.uk
       authPubKey: |
         -----BEGIN PUBLIC KEY-----
-        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsYhuDxeaV5pTFXZruNi7
-        rmQzN2Qm7Imih20l+Kh7VB5MFAZ0oYT0LqkJqCNafAcbfXd7jYB9PWHfTq4FRxM8
-        IOBztiYyCEvTVjHsnCZj1+HuMK4i4HLaiFwQvWTbAj6zAuaGdd4HjKUAD8oCP1Be
-        vFQr363CQ6ul/sbVDDndM1I1D7PqQmfqkWs1/Thw/NAPQoS1VJfxZzzqb7Nbdkkf
-        /rKNBf0tzLPWeYPj5iTWDNVtMru8zys8ITNXO7uMCV49agRe4mnTkSY2ZQb2jW7b
-        xxxOl/rQzaok9eyvIaptGO2JLmjMEXd3jfVXosGdzJr+7cA3scKQA6PT/lbhsrTh
-        9wIDAQAB
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6cBowodRVD3WQChXHxZR
+        TsYU4iZg75SfpNVt8VV56ex/tWNTIe+xYQmK8dm9VjIx/H6JQO1Z7KYWdaF2cZe9
+        ZpvdceuSkRm4z0/roJFfaW4YvXhG3AnxMLr3jFP9nzyscmkEMDD2uGtC6UKos3F8
+        1/M6CwMSOngRtpXKsGqCb0zwAVv21ymwRBEs461XJLsdBaBAMkJg8sjVu+iay1tu
+        4yykySKwwmy3TByL4cIrBT3aky1ekEKcMYc8MoJZJ6lkICONfTvike4LLZ2YA3V2
+        87ZYS+lwoRz/lux1aEmlD8rpDRRXGmlDdb9hQQSME4dFQG2//8NsPnoQC5WH5aUB
+        uwIDAQAB
         -----END PUBLIC KEY-----
       subnetAId: "subnet-06431beae9b136e15"
       subnetBId: "subnet-016db45a259212743"
