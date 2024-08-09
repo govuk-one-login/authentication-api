@@ -66,6 +66,7 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                 LOG.info(
                         "Message for email check reference {} written to database",
                         emailCheckResult.requestReference());
+                LOG.info("Time of initial request {}", emailCheckResult.timeOfInitialRequest());
                 var duration = now().getTime() - emailCheckResult.timeOfInitialRequest();
 
                 cloudwatchMetricsService.logEmailCheckDuration(duration);
