@@ -7,18 +7,19 @@ import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 public class AuthenticationAttemptsStoreExtension extends DynamoExtension
         implements AfterEachCallback {
 
-    public static final String AUTHENTICATION_ATTEMPTS_FIELD = "AttemptIdentifier";
+    public static final String AUTHENTICATION_INTERNAL_SUB_ID_FIELD = "InternalSubjectId";
+    public static final String AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE = "AuthMethodJourneyType";
     public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE =
             "local-authentication-attempts";
 
@@ -34,7 +35,10 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
         clearDynamoTable(
-                dynamoDB, AUTHENTICATION_ATTEMPTS_STORE_TABLE, AUTHENTICATION_ATTEMPTS_FIELD);
+                dynamoDB,
+                AUTHENTICATION_ATTEMPTS_STORE_TABLE,
+                AUTHENTICATION_INTERNAL_SUB_ID_FIELD,
+                Optional.of(AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE));
     }
 
     @Override
@@ -45,29 +49,47 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
     }
 
     public void createOrIncrementCount(
-            String attemptIdentifier, long ttl, String authenticationMethod) {
-        dynamoService.createOrIncrementCount(attemptIdentifier, ttl, authenticationMethod);
+            String attemptIdentifier, long ttl, String internalSubId, String journeyType) {
+        dynamoService.createOrIncrementCount(attemptIdentifier, ttl, internalSubId, journeyType);
     }
 
-    public Optional<AuthenticationAttempts> getAuthenticationAttempts(String attemptIdentifier) {
-        return dynamoService.getAuthenticationAttempts(attemptIdentifier);
+    public Optional<AuthenticationAttempts> getAuthenticationAttempt(
+            String internalSubId, String authenticationMethod, String journeyType) {
+        return dynamoService.getAuthenticationAttempt(
+                internalSubId, authenticationMethod, journeyType);
     }
 
     private void createAuthenticationAttemptsTable() {
+        ArrayList<AttributeDefinition> attributeDefinitions = new ArrayList<>();
+        attributeDefinitions.add(
+                AttributeDefinition.builder()
+                        .attributeName(AUTHENTICATION_INTERNAL_SUB_ID_FIELD)
+                        .attributeType("S")
+                        .build());
+        attributeDefinitions.add(
+                AttributeDefinition.builder()
+                        .attributeName(AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE)
+                        .attributeType("S")
+                        .build());
+
+        ArrayList<KeySchemaElement> tableKeySchema = new ArrayList<>();
+        tableKeySchema.add(
+                KeySchemaElement.builder()
+                        .attributeName(AUTHENTICATION_INTERNAL_SUB_ID_FIELD)
+                        .keyType(KeyType.HASH)
+                        .build());
+        tableKeySchema.add(
+                KeySchemaElement.builder()
+                        .attributeName(AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE)
+                        .keyType(KeyType.RANGE)
+                        .build());
+
         CreateTableRequest request =
                 CreateTableRequest.builder()
                         .tableName(AUTHENTICATION_ATTEMPTS_STORE_TABLE)
-                        .keySchema(
-                                KeySchemaElement.builder()
-                                        .keyType(KeyType.HASH)
-                                        .attributeName(AUTHENTICATION_ATTEMPTS_FIELD)
-                                        .build())
+                        .attributeDefinitions(attributeDefinitions)
+                        .keySchema(tableKeySchema)
                         .billingMode(BillingMode.PAY_PER_REQUEST)
-                        .attributeDefinitions(
-                                AttributeDefinition.builder()
-                                        .attributeName(AUTHENTICATION_ATTEMPTS_FIELD)
-                                        .attributeType(ScalarAttributeType.S)
-                                        .build())
                         .build();
 
         dynamoDB.createTable(request);

@@ -3,32 +3,35 @@ package uk.gov.di.authentication.shared.entity;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
 import uk.gov.di.authentication.shared.validation.Required;
 
 @DynamoDbBean
 public class AuthenticationAttempts {
 
-    @Required private String attemptIdentifier;
+    @Required private String internalSubjectId;
     @Required private String authenticationMethod;
     @Required private String code;
     @Required private Integer count;
+    @Required private String journeyType;
+
+    private String authMethodJourneyType;
     private String created;
     private String updated;
     private long timeToLive;
-    private String journeyType;
 
     @DynamoDbPartitionKey
-    @DynamoDbAttribute("AttemptIdentifier")
-    public String getAttemptIdentifier() {
-        return attemptIdentifier;
+    @DynamoDbAttribute("InternalSubjectId")
+    public String getInternalSubjectId() {
+        return internalSubjectId;
     }
 
-    public void setAttemptIdentifier(String attemptIdentifier) {
-        this.attemptIdentifier = attemptIdentifier;
+    public void setInternalSubjectId(String internalSubjectId) {
+        this.internalSubjectId = internalSubjectId;
     }
 
-    public AuthenticationAttempts withAttemptIdentifier(String attemptIdentifier) {
-        this.attemptIdentifier = attemptIdentifier;
+    public AuthenticationAttempts withInternalSubjectId(String internalSubjectId) {
+        this.internalSubjectId = internalSubjectId;
         return this;
     }
 
@@ -39,10 +42,11 @@ public class AuthenticationAttempts {
 
     public void setJourneyType(String journeyType) {
         this.journeyType = journeyType;
+        setAuthMethodJourneyType();
     }
 
     public AuthenticationAttempts withJourneyType(String journeyType) {
-        this.journeyType = journeyType;
+        setJourneyType(journeyType);
         return this;
     }
 
@@ -53,11 +57,26 @@ public class AuthenticationAttempts {
 
     public void setAuthenticationMethod(String authenticationMethod) {
         this.authenticationMethod = authenticationMethod;
+        setAuthMethodJourneyType();
     }
 
     public AuthenticationAttempts withAuthenticationMethod(String authenticationMethod) {
-        this.authenticationMethod = authenticationMethod;
+        setAuthenticationMethod(authenticationMethod);
         return this;
+    }
+
+    @DynamoDbSortKey
+    @DynamoDbAttribute("AuthMethodJourneyType")
+    public String getAuthMethodJourneyType() {
+        return authMethodJourneyType;
+    }
+
+    public void setAuthMethodJourneyType() {
+        this.authMethodJourneyType = authenticationMethod + "_" + journeyType;
+    }
+
+    public void setAuthMethodJourneyType(String authMethodJourneyType) {
+        this.authMethodJourneyType = authMethodJourneyType;
     }
 
     @DynamoDbAttribute("Code")
