@@ -111,51 +111,9 @@ public class DcmawUserInfoTest {
     }
 
     @Pact(consumer = "OrchUserInfoConsumer")
-    RequestResponsePact validRequestReturnsAccessDenied(PactDslWithProvider builder) {
-        return builder.given("accessToken is a valid access token")
-                .uponReceiving("Valid access token")
-                .path("/" + DOC_APP_USER_INFO_PATH)
-                .method("POST")
-                .matchHeader(
-                        "Authorization",
-                        "^(?i)Bearer (.*)(?-i)",
-                        tokens.getAccessToken().toAuthorizationHeader())
-                .willRespondWith()
-                .status(404)
-                .body(ERROR_MESSAGE)
-                .toPact();
-    }
-
-    @Test
-    @PactTestFor(
-            providerName = "DcmawUserInfoProvider",
-            pactMethod = "validRequestReturnsAccessDenied",
-            pactVersion = PactSpecVersion.V3)
-    void getDocAppUserInfoErrorDeniedResponse(MockServer mockServer) {
-
-        var request =
-                new HTTPRequest(
-                        POST,
-                        ConstructUriHelper.buildURI(mockServer.getUrl(), DOC_APP_USER_INFO_PATH));
-        request.setAuthorization(tokens.getAccessToken().toAuthorizationHeader());
-
-        UnsuccessfulCredentialResponseException exception =
-                assertThrows(
-                        UnsuccessfulCredentialResponseException.class,
-                        () -> docAppCriService.sendCriDataRequest(request, DOC_APP_SUBJECT_ID));
-
-        assertThat(exception.getHttpCode(), equalTo(404));
-        assertThat(
-                exception.getMessage(),
-                equalTo(
-                        "Error 404 when attempting to call CRI data endpoint: "
-                                + ERROR_MESSAGE
-                                + "\n"));
-    }
-
-    @Pact(consumer = "OrchUserInfoConsumer")
     RequestResponsePact invalidAccessTokenReturnsError(PactDslWithProvider builder) {
         return builder.given("accessToken is an invalid access token")
+                .given("dummy-doc-app-subject-id is a valid subject")
                 .uponReceiving("Invalid access token")
                 .path("/" + DOC_APP_USER_INFO_PATH)
                 .method("POST")
@@ -164,7 +122,7 @@ public class DcmawUserInfoTest {
                         "^(?i)Bearer (.*)(?-i)",
                         tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
-                .status(403)
+                .status(401)
                 .body(ERROR_MESSAGE)
                 .toPact();
     }
@@ -187,11 +145,11 @@ public class DcmawUserInfoTest {
                         UnsuccessfulCredentialResponseException.class,
                         () -> docAppCriService.sendCriDataRequest(request, DOC_APP_SUBJECT_ID));
 
-        assertThat(exception.getHttpCode(), equalTo(403));
+        assertThat(exception.getHttpCode(), equalTo(401));
         assertThat(
                 exception.getMessage(),
                 equalTo(
-                        "Error 403 when attempting to call CRI data endpoint: "
+                        "Error 401 when attempting to call CRI data endpoint: "
                                 + ERROR_MESSAGE
                                 + "\n"));
     }
