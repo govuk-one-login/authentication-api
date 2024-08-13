@@ -85,7 +85,7 @@ public class VectorOfTrust {
 
     public boolean isValid() {
         return nonNull(getCredentialTrustLevel())
-                && !(Objects.equals(getLevelOfConfidence(), LevelOfConfidence.MEDIUM_LEVEL)
+                && !(containsLevelOfConfidence()
                         && Objects.equals(
                                 getCredentialTrustLevel(), CredentialTrustLevel.LOW_LEVEL));
     }

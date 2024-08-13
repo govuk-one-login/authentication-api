@@ -50,24 +50,27 @@ class LevelOfConfidenceTest {
         List<String> allLevelOfConfidenceValues =
                 LevelOfConfidence.getAllSupportedLevelOfConfidenceValues();
 
-        assertThat(allLevelOfConfidenceValues.size(), equalTo(2));
+        assertThat(allLevelOfConfidenceValues.size(), equalTo(3));
 
         assertThat(allLevelOfConfidenceValues.get(0), equalTo(LevelOfConfidence.NONE.getValue()));
 
         assertThat(
-                allLevelOfConfidenceValues.get(1),
+                allLevelOfConfidenceValues.get(1), equalTo(LevelOfConfidence.LOW_LEVEL.getValue()));
+
+        assertThat(
+                allLevelOfConfidenceValues.get(2),
                 equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
     }
 
     private static Stream<Arguments> supportedLevelOfConfidence() {
         return Stream.of(
                 Arguments.of("P0", LevelOfConfidence.NONE),
+                Arguments.of("P1", LevelOfConfidence.LOW_LEVEL),
                 Arguments.of("P2", LevelOfConfidence.MEDIUM_LEVEL));
     }
 
     private static Stream<Arguments> unsupportedLevelOfConfidence() {
         return Stream.of(
-                Arguments.of("P1", LevelOfConfidence.LOW_LEVEL),
                 Arguments.of("P3", LevelOfConfidence.HIGH_LEVEL),
                 Arguments.of("P4", LevelOfConfidence.VERY_HIGH_LEVEL));
     }

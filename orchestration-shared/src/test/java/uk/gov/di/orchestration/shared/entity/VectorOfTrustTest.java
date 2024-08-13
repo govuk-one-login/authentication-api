@@ -57,6 +57,11 @@ class VectorOfTrustTest {
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
                 Arguments.of(
+                        jsonArrayOf("P1.Cl.Cm", "P2.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
+                Arguments.of(
                         jsonArrayOf("PCL250.Cl.Cm", "Cl.P2.Cm", "Cm.Cl.PCL200"),
                         List.of(
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250),
@@ -194,8 +199,11 @@ class VectorOfTrustTest {
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")),
                 Arguments.of(
-                        "P2 identity confidence must require at least Cl.Cm credential trust",
-                        jsonArrayOf("P2.Cl")));
+                        "Non-zero identity confidence must require at least Cl.Cm credential trust",
+                        jsonArrayOf("P2.Cl")),
+                Arguments.of(
+                        "Non-zero identity confidence must require at least Cl.Cm credential trust",
+                        jsonArrayOf("P1.Cl")));
     }
 
     @ParameterizedTest
@@ -212,6 +220,7 @@ class VectorOfTrustTest {
                 Arguments.of(LOW_LEVEL, null),
                 Arguments.of(MEDIUM_LEVEL, null),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.NONE),
+                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
     }
 
@@ -226,7 +235,9 @@ class VectorOfTrustTest {
 
     public static Stream<Arguments> invalidCombinations() {
         return Stream.of(
+                Arguments.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(null, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL));
     }
 
@@ -306,8 +317,10 @@ class VectorOfTrustTest {
         return Stream.of(
                 Arguments.of("[\"P2.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", true),
                 Arguments.of("[\"P2.Cm.Cl\"]", "[\"Cl.Cm.P2\"]", true),
+                Arguments.of("[\"P1.Cm.Cl\"]", "[\"Cl.Cm.P1\"]", true),
                 Arguments.of("[\"Cm.Cl\"]", "[\"Cl.Cm\"]", true),
                 Arguments.of("[\"Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
+                Arguments.of("[\"Cl.Cm.P1\"]", "[\"Cl.Cm.P2\"]", false),
                 Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl.Cm\"]", false));
     }
 }

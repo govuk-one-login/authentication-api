@@ -86,12 +86,12 @@ class LevelOfConfidenceTest {
     private static Stream<Arguments> supportedLevelOfConfidence() {
         return Stream.of(
                 Arguments.of("P0", LevelOfConfidence.NONE),
+                Arguments.of("P1", LevelOfConfidence.LOW_LEVEL),
                 Arguments.of("P2", LevelOfConfidence.MEDIUM_LEVEL));
     }
 
     private static Stream<Arguments> unsupportedLevelOfConfidence() {
         return Stream.of(
-                Arguments.of("P1", LevelOfConfidence.LOW_LEVEL),
                 Arguments.of("P3", LevelOfConfidence.HIGH_LEVEL),
                 Arguments.of("P4", LevelOfConfidence.VERY_HIGH_LEVEL));
     }

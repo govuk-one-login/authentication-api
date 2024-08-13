@@ -111,6 +111,7 @@ class VectorOfTrustTest {
                 Arguments.of(LOW_LEVEL, null),
                 Arguments.of(MEDIUM_LEVEL, null),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.NONE),
+                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
     }
 
@@ -125,6 +126,7 @@ class VectorOfTrustTest {
 
     public static Stream<Arguments> invalidCombinations() {
         return Stream.of(
+                Arguments.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
                 Arguments.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                 Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL));
     }
@@ -149,8 +151,17 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent() {
+    void shouldReturnTrueWhenMediumIdentityLevelOfConfidenceIsPresent() {
         String vectorString = "P2.Cl.Cm";
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf(vectorString)));
+        assertTrue(vectorOfTrust.containsLevelOfConfidence());
+    }
+
+    @Test
+    void shouldReturnTrueWhenLowIdentityLevelOfConfidenceIsPresent() {
+        String vectorString = "P1.Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf(vectorString)));
@@ -190,6 +201,8 @@ class VectorOfTrustTest {
                 Arguments.of("[\"P2.Cm.Cl\"]", "[\"Cl.Cm.P2\"]", true),
                 Arguments.of("[\"Cm.Cl\"]", "[\"Cl.Cm\"]", true),
                 Arguments.of("[\"Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
+                Arguments.of("[\"P1.Cl.Cm\"]", "[\"Cl.Cm.P1\"]", true),
+                Arguments.of("[\"P1.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
                 Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl.Cm\"]", false));
     }
 }
