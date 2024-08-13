@@ -17,6 +17,7 @@ public class CookieHelper {
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";
     public static final String SESSION_COOKIE_NAME = "gs";
+    public static final String BROWSER_SESSION_COOKIE_NAME = "browser-session-id";
 
     public static final String LANGUAGE_COOKIE_NAME = "lng";
 
@@ -169,6 +170,11 @@ public class CookieHelper {
         return format(
                 "%s=%s; Max-Age=%d; Domain=%s; %s",
                 cookieName, cookieValue, maxAge, domain, attributes);
+    }
+
+    public static String buildCookieString(
+            String cookieName, String cookieValue, String attributes, String domain) {
+        return format("%s=%s; Domain=%s; %s", cookieName, cookieValue, domain, attributes);
     }
 
     public static String appendTimestampToCookieValue(String cookieValue) {

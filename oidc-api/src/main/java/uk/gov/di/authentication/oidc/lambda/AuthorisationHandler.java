@@ -854,6 +854,15 @@ public class AuthorisationHandler
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
 
+        if (configurationService.isBrowserSessionCookieEnabled()) {
+            cookies.add(
+                    CookieHelper.buildCookieString(
+                            CookieHelper.BROWSER_SESSION_COOKIE_NAME,
+                            session.getBrowserSessionId(),
+                            configurationService.getSessionCookieAttributes(),
+                            configurationService.getDomainName()));
+        }
+
         getPrimaryLanguageFromUILocales(authRequest, configurationService)
                 .ifPresent(
                         primaryLanguage -> {
