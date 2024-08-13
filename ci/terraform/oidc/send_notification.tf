@@ -43,6 +43,7 @@ module "send_notification" {
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
+    SUPPORT_REAUTH_SIGNOUT_ENABLED         = var.support_reauth_signout_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest"
 
