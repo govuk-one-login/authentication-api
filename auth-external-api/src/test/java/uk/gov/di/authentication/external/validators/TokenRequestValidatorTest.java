@@ -39,7 +39,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 class TokenRequestValidatorTest {
     private static final String VALID_REDIRECT_URI = "https://redirect-uri.co.uk";
     private static final String VALID_CLIENT_ID = "client-id";
-    private TokenRequestValidator validator =
+    private final TokenRequestValidator validator =
             new TokenRequestValidator(VALID_REDIRECT_URI, VALID_CLIENT_ID);
 
     @Nested
@@ -171,16 +171,13 @@ class TokenRequestValidatorTest {
         private static final Audience AUDIENCE = new Audience("https://example.com/resource");
         private static final Set<Audience> EXPECTED_AUDIENCE =
                 Set.of(AUDIENCE, new Audience("https://test.com/resource"));
-        private static ECKey VALID_KEY_PAIR;
-        private static String VALID_PUBLIC_KEY_AS_X509_STRING;
-        private static ECKey ALTERNATE_EC_KEY_PAIR;
-        private static String ALTERNATE_EC_KEY_AS_X509_STRING;
-        private static RSAKey RSA_KEY_PAIR;
-        private static String RSA_PUBLIC_KEY_AS_X509_STRING;
-        private static String VALID_REQUEST_BODY_VALID_SIGNATURE;
-        private static String VALID_REQUEST_BODY_INVALID_SIGNATURE;
-        private static String VALID_REQUEST_BODY_RSA_SIGNATURE;
-        private static String INCOMPLETE_REQUEST_BODY_VALID_SIGNATURE;
+        private static String validPublicKeyAsX509String;
+        private static String alternateEcKeyAsX509String;
+        private static String rsaPublicKeyAsX509String;
+        private static String validRequestBodyValidSignature;
+        private static String validRequestBodyInvalidSignature;
+        private static String validRequestBodyRsaSignature;
+        private static String incompleteRequestBodyValidSignature;
 
         @BeforeAll
         static void init() throws JOSEException, ParseException {
@@ -193,46 +190,44 @@ class TokenRequestValidatorTest {
                             "jti",
                             0L);
 
-            VALID_KEY_PAIR = new ECKeyGenerator(Curve.P_256).generate();
+            ECKey validKeyPair = new ECKeyGenerator(Curve.P_256).generate();
             X509EncodedKeySpec x509EncodedKeySpec =
-                    new X509EncodedKeySpec(VALID_KEY_PAIR.toPublicKey().getEncoded());
+                    new X509EncodedKeySpec(validKeyPair.toPublicKey().getEncoded());
             byte[] x509EncodedPublicKey = x509EncodedKeySpec.getEncoded();
-            VALID_PUBLIC_KEY_AS_X509_STRING =
-                    Base64.getEncoder().encodeToString(x509EncodedPublicKey);
+            validPublicKeyAsX509String = Base64.getEncoder().encodeToString(x509EncodedPublicKey);
             String clientAssertionValidKeySignature =
-                    JwtHelper.jsonToSignedJwt(validClientAssertionPayload, VALID_KEY_PAIR);
-            VALID_REQUEST_BODY_VALID_SIGNATURE =
+                    JwtHelper.jsonToSignedJwt(validClientAssertionPayload, validKeyPair);
+            validRequestBodyValidSignature =
                     getValidRequestBodyWithClientAssertion(clientAssertionValidKeySignature);
-            INCOMPLETE_REQUEST_BODY_VALID_SIGNATURE =
+            incompleteRequestBodyValidSignature =
                     "code=vC-WxcXDLoOHaJN0YvPB0IwG2LiT1ekSVRSccwubwlI"
                             + "&grant_type=authorization_code"
                             + "&redirect_uri=https://redirect.uri.com/redirect"
                             + "&client_assertion="
                             + clientAssertionValidKeySignature;
 
-            ALTERNATE_EC_KEY_PAIR = new ECKeyGenerator(Curve.P_256).generate();
+            ECKey alternateEcKeyPair = new ECKeyGenerator(Curve.P_256).generate();
             String clientAssertionInvalidEcKeySignature =
-                    JwtHelper.jsonToSignedJwt(validClientAssertionPayload, ALTERNATE_EC_KEY_PAIR);
+                    JwtHelper.jsonToSignedJwt(validClientAssertionPayload, alternateEcKeyPair);
             X509EncodedKeySpec alternatex509EncodedKeySpec =
-                    new X509EncodedKeySpec(VALID_KEY_PAIR.toPublicKey().getEncoded());
+                    new X509EncodedKeySpec(validKeyPair.toPublicKey().getEncoded());
             byte[] alternatex509EncodedPublicKey = alternatex509EncodedKeySpec.getEncoded();
 
-            ALTERNATE_EC_KEY_AS_X509_STRING =
+            alternateEcKeyAsX509String =
                     Base64.getEncoder().encodeToString(alternatex509EncodedPublicKey);
-            VALID_REQUEST_BODY_INVALID_SIGNATURE =
+            validRequestBodyInvalidSignature =
                     getValidRequestBodyWithClientAssertion(clientAssertionInvalidEcKeySignature);
 
-            RSA_KEY_PAIR = new RSAKeyGenerator(2048).generate();
+            RSAKey rsaKeyPair = new RSAKeyGenerator(2048).generate();
             X509EncodedKeySpec x509EncodedKeySpecRsa =
-                    new X509EncodedKeySpec(RSA_KEY_PAIR.toPublicKey().getEncoded());
+                    new X509EncodedKeySpec(rsaKeyPair.toPublicKey().getEncoded());
             byte[] x509EncodedPublicKeyRsa = x509EncodedKeySpecRsa.getEncoded();
-            RSA_PUBLIC_KEY_AS_X509_STRING =
-                    Base64.getEncoder().encodeToString(x509EncodedPublicKeyRsa);
-            JWSSigner rsaSigner = new RSASSASigner(RSA_KEY_PAIR.toRSAPrivateKey());
+            rsaPublicKeyAsX509String = Base64.getEncoder().encodeToString(x509EncodedPublicKeyRsa);
+            JWSSigner rsaSigner = new RSASSASigner(rsaKeyPair.toRSAPrivateKey());
             String clientAssertionRsaKeySignature =
                     JwtHelper.jsonToSignedJwt(
                             validClientAssertionPayload, rsaSigner, JWSAlgorithm.PS256);
-            VALID_REQUEST_BODY_RSA_SIGNATURE =
+            validRequestBodyRsaSignature =
                     getValidRequestBodyWithClientAssertion(clientAssertionRsaKeySignature);
         }
 
@@ -242,22 +237,22 @@ class TokenRequestValidatorTest {
                             "string-not-jwt",
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid private_key_jwt",
-                            VALID_PUBLIC_KEY_AS_X509_STRING),
+                            validPublicKeyAsX509String),
                     arguments(
-                            INCOMPLETE_REQUEST_BODY_VALID_SIGNATURE,
+                            incompleteRequestBodyValidSignature,
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid private_key_jwt",
-                            VALID_PUBLIC_KEY_AS_X509_STRING),
+                            validPublicKeyAsX509String),
                     arguments(
-                            VALID_REQUEST_BODY_RSA_SIGNATURE,
+                            validRequestBodyRsaSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
-                            RSA_PUBLIC_KEY_AS_X509_STRING),
+                            rsaPublicKeyAsX509String),
                     arguments(
-                            VALID_REQUEST_BODY_INVALID_SIGNATURE,
+                            validRequestBodyInvalidSignature,
                             OAuth2Error.INVALID_CLIENT_CODE,
                             "Client authentication failed",
-                            VALID_PUBLIC_KEY_AS_X509_STRING));
+                            validPublicKeyAsX509String));
         }
 
         @ParameterizedTest
@@ -270,12 +265,11 @@ class TokenRequestValidatorTest {
             TokenAuthInvalidException exception =
                     assertThrows(
                             TokenAuthInvalidException.class,
-                            () -> {
-                                validator.validatePrivateKeyJwtClientAuth(
-                                        requestBody,
-                                        EXPECTED_AUDIENCE,
-                                        Collections.singletonList(clientRegistryPublicKey));
-                            });
+                            () ->
+                                    validator.validatePrivateKeyJwtClientAuth(
+                                            requestBody,
+                                            EXPECTED_AUDIENCE,
+                                            Collections.singletonList(clientRegistryPublicKey)));
 
             assertEquals(expectedErrorCode, exception.getErrorObject().getCode());
             assertEquals(expectedErrorDescription, exception.getErrorObject().getDescription());
@@ -287,9 +281,9 @@ class TokenRequestValidatorTest {
             assertDoesNotThrow(
                     () ->
                             validator.validatePrivateKeyJwtClientAuth(
-                                    VALID_REQUEST_BODY_VALID_SIGNATURE,
+                                    validRequestBodyValidSignature,
                                     EXPECTED_AUDIENCE,
-                                    Collections.singletonList(VALID_PUBLIC_KEY_AS_X509_STRING)));
+                                    Collections.singletonList(validPublicKeyAsX509String)));
         }
 
         @Test
@@ -298,11 +292,11 @@ class TokenRequestValidatorTest {
             assertDoesNotThrow(
                     () ->
                             validator.validatePrivateKeyJwtClientAuth(
-                                    VALID_REQUEST_BODY_VALID_SIGNATURE,
+                                    validRequestBodyValidSignature,
                                     EXPECTED_AUDIENCE,
                                     List.of(
-                                            VALID_PUBLIC_KEY_AS_X509_STRING,
-                                            ALTERNATE_EC_KEY_AS_X509_STRING)));
+                                            validPublicKeyAsX509String,
+                                            alternateEcKeyAsX509String)));
         }
     }
 
