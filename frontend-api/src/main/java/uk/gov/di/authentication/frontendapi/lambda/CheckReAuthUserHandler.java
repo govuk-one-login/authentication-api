@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -42,6 +43,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
+    private final DynamoAuthenticationAttemptsService dynamoAuthenticationAttemptsService;
 
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
@@ -50,7 +52,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            DynamoAuthenticationAttemptsService dynamoAuthenticationAttemptsService) {
         super(
                 CheckReauthUserRequest.class,
                 configurationService,
@@ -60,12 +63,15 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
+        this.dynamoAuthenticationAttemptsService = dynamoAuthenticationAttemptsService;
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
         super(CheckReauthUserRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.dynamoAuthenticationAttemptsService =
+                new DynamoAuthenticationAttemptsService(configurationService);
     }
 
     public CheckReAuthUserHandler(
@@ -73,6 +79,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         super(CheckReauthUserRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
+        this.dynamoAuthenticationAttemptsService =
+                new DynamoAuthenticationAttemptsService(configurationService);
     }
 
     public CheckReAuthUserHandler() {

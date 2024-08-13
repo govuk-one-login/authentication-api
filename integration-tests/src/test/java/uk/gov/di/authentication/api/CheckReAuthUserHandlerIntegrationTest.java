@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
@@ -47,6 +49,11 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final URI REDIRECT_URI =
             URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
     private Map<String, String> headers;
+
+    @RegisterExtension
+    protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
+            new AuthenticationAttemptsStoreExtension();
+
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
