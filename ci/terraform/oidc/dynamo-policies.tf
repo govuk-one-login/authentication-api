@@ -42,6 +42,10 @@ data "aws_dynamodb_table" "email_check_results_table" {
   name = "${var.environment}-email-check-result"
 }
 
+data "aws_dynamodb_table" "authentication_attempt_table" {
+  name = "${var.environment}-authentication-attempt"
+}
+
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -558,6 +562,58 @@ data "aws_iam_policy_document" "check_email_fraud_block_read_dynamo_read_access_
   }
 }
 
+data "aws_iam_policy_document" "dynamo_authentication_attempt_write_policy_document" {
+  statement {
+    sid    = "AllowWrite"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.authentication_attempt_table.arn,
+      "${data.aws_dynamodb_table.authentication_attempt_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowEncryption"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:GenerateDataKey",
+    ]
+    resources = [local.authentication_attempt_kms_key_arn]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_authentication_attempt_read_policy_document" {
+  statement {
+    sid    = "AllowRead"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      data.aws_dynamodb_table.authentication_attempt_table.arn,
+      "${data.aws_dynamodb_table.authentication_attempt_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowDecryption"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+    ]
+    resources = [local.authentication_attempt_kms_key_arn]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -724,4 +780,20 @@ resource "aws_iam_policy" "check_email_fraud_block_read_dynamo_read_access_polic
   description = "IAM policy for managing read permissions to the Dynamo Email Check Results table"
 
   policy = data.aws_iam_policy_document.check_email_fraud_block_read_dynamo_read_access_policy.json
+}
+
+resource "aws_iam_policy" "dynamo_authentication_attempt_write_policy" {
+  name_prefix = "dynamo-authentication-attempt-write-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing write permissions to the authentication attempts table"
+
+  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_write_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_authentication_attempt_read_policy" {
+  name_prefix = "dynamo-authentication-attempt-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the authentication attempts table"
+
+  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_read_policy_document.json
 }
