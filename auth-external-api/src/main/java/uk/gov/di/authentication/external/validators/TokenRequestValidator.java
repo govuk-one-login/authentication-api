@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -71,14 +72,14 @@ public class TokenRequestValidator {
     }
 
     public void validatePrivateKeyJwtClientAuth(
-            String requestBody, Set<Audience> expectedAudience, String publicKey)
+            String requestBody, Set<Audience> expectedAudience, List<String> publicKeys)
             throws TokenAuthInvalidException {
         try {
             PrivateKeyJWT privateKeyJWT = PrivateKeyJWT.parse(requestBody);
 
             ClientAuthenticationVerifier<?> signatureVerifier =
                     new ClientAuthenticationVerifier<>(
-                            new PrivateKeyJwtAuthPublicKeySelector(publicKey, KeyType.EC),
+                            new PrivateKeyJwtAuthPublicKeySelector(publicKeys, KeyType.EC),
                             expectedAudience);
             signatureVerifier.verify(privateKeyJWT, null, null);
         } catch (ParseException e) {

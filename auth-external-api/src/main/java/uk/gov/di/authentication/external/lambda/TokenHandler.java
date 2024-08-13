@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -69,6 +70,7 @@ public class TokenHandler
 
     public TokenHandler() {
         this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
     }
 
     public TokenHandler(ConfigurationService configurationService) {
@@ -128,10 +130,10 @@ public class TokenHandler
                     Set.of(
                             new Audience(authExternalApiTokenEndpoint),
                             new Audience(orchAuthExternalApiTokenEndpoint));
+            var validPublicKeys =
+                    configurationService.getOrchestrationToAuthenticationSigningPublicKeys();
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
-                    input.getBody(),
-                    expectedAudience,
-                    configurationService.getOrchestrationToAuthenticationSigningPublicKey());
+                    input.getBody(), expectedAudience, validPublicKeys);
 
             String suppliedAuthCode = requestBody.get("code");
 
