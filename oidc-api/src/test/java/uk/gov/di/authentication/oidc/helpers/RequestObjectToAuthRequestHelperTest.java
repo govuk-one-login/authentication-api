@@ -316,7 +316,7 @@ class RequestObjectToAuthRequestHelperTest {
                 .claim("redirect_uri", REDIRECT_URI.toString())
                 .claim("response_type", ResponseType.CODE.toString())
                 .claim("scope", scope.toString())
-                .claim("nonce", NONCE)
+                .claim("nonce", NONCE.getValue())
                 .claim("state", STATE)
                 .claim("client_id", CLIENT_ID.getValue())
                 .claim("claims", CLAIMS)

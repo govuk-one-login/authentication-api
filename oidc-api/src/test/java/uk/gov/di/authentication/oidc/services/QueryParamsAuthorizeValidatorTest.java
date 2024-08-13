@@ -378,7 +378,27 @@ class QueryParamsAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorWhenNonceIsNotIncludedInAuthRequest() {
+    void shouldSuccessfullyValidateWhenNonceNotExpectedAndMissing() {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        var clientRegitry =
+                generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
+                        .withPermitMissingNonce(true);
+
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(Optional.of(clientRegitry));
+
+        AuthenticationRequest authenticationRequest =
+                new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(STATE)
+                        .build();
+        var errorObject = queryParamsAuthorizeValidator.validate(authenticationRequest);
+
+        assertTrue(errorObject.isEmpty());
+    }
+
+    @Test
+    void shouldReturnErrorWhenNonceIsExpectedAndMissing() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);

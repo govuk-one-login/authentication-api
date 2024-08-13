@@ -159,7 +159,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 LOG.error("Invalid scopes in request JWT");
                 return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE, state);
             }
-            if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
+            if (Objects.isNull(jwtClaimsSet.getClaim("nonce")) && !client.getPermitMissingNonce()) {
                 LOG.error("Nonce is missing from authRequest");
                 return errorResponse(
                         redirectURI,

@@ -1197,6 +1197,66 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldRedirectToLoginWhenMissingNonce()
+                throws JOSEException, JwksException, ClientSignatureValidationException {
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
+                    .thenReturn(Optional.empty());
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience("https://localhost/authorize")
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .claim("claims", CLAIMS)
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+            event.setHttpMethod("GET");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            var uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            assertEquals(FRONT_END_BASE_URI.getAuthority(), uri.getAuthority());
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_SESSION_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(
+                            diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
+            verify(sessionService).save(session);
+
+            verify(requestObjectAuthorizeValidator).validate(any());
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_ID.getValue(),
+                            BASE_AUDIT_USER.withSessionId(SESSION_ID),
+                            pair("client-name", RP_CLIENT_NAME));
+        }
+
+        @Test
         void shouldReturnServerErrorOnJwksException()
                 throws JOSEException, JwksException, ClientSignatureValidationException {
             when(requestObjectAuthorizeValidator.validate(any())).thenThrow(JwksException.class);
@@ -2117,7 +2177,7 @@ class AuthorisationHandlerTest {
                 .claim("response_type", ResponseType.CODE.toString())
                 .claim("scope", SCOPE)
                 .claim("state", STATE.getValue())
-                .claim("nonce", NONCE.getValue())
+                .claim("nonce", null)
                 .claim("client_id", CLIENT_ID.getValue())
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())

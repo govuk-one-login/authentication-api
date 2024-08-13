@@ -47,6 +47,8 @@ public class ClientRegistry {
     private static final Set<String> RS256_MAPPINGS =
             Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
 
+    private boolean permitMissingNonce = false;
+
     public ClientRegistry() {}
 
     @DynamoDbPartitionKey
@@ -449,6 +451,20 @@ public class ClientRegistry {
 
     public ClientRegistry withClientLoCs(List<String> clientLoCs) {
         this.clientLoCs = clientLoCs;
+        return this;
+    }
+
+    @DynamoDbAttribute("PermitMissingNonce")
+    public boolean getPermitMissingNonce() {
+        return !identityVerificationSupported && permitMissingNonce;
+    }
+
+    public void setPermitMissingNonce(boolean permitMissingNonce) {
+        this.permitMissingNonce = permitMissingNonce;
+    }
+
+    public ClientRegistry withPermitMissingNonce(boolean permitMissingNonce) {
+        this.permitMissingNonce = permitMissingNonce;
         return this;
     }
 }

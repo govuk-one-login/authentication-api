@@ -47,7 +47,6 @@ public class RequestObjectToAuthRequestHelper {
                                     new ClientID(jwtClaimsSet.getClaim("client_id").toString()),
                                     URI.create((String) jwtClaimsSet.getClaim("redirect_uri")))
                             .state(new State(jwtClaimsSet.getClaim("state").toString()))
-                            .nonce(new Nonce(jwtClaimsSet.getClaim("nonce").toString()))
                             .requestObject(authRequest.getRequestObject());
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("claims"))) {
@@ -76,6 +75,9 @@ public class RequestObjectToAuthRequestHelper {
             if (Objects.nonNull(jwtClaimsSet.getClaim("id_token_hint"))) {
                 builder.customParameter(
                         "id_token_hint", jwtClaimsSet.getStringClaim("id_token_hint"));
+            }
+            if (Objects.nonNull(jwtClaimsSet.getClaim("nonce"))) {
+                builder.nonce(Nonce.parse(jwtClaimsSet.getStringClaim("nonce")));
             }
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
