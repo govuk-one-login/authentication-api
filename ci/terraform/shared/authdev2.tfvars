@@ -34,5 +34,3 @@ logging_endpoint_enabled = false
 enforce_code_signing     = false
 
 orchestration_account_id = "816047645251"
-
-support_reauth_signout_enabled = true

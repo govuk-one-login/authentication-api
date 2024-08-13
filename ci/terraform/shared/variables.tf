@@ -190,9 +190,3 @@ variable "orch_protectedsub_cidr_blocks" {
   description = "Orchestration protected subnet cidr blocks"
   default     = []
 }
-
-variable "support_reauth_signout_enabled" {
-  default     = false
-  type        = bool
-  description = "Feature flag which toggles sign-out instead of lockout for reauth journeys"
-}

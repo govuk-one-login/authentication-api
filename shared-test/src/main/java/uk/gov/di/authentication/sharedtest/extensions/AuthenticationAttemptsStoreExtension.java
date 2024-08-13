@@ -20,7 +20,8 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
 
     public static final String AUTHENTICATION_INTERNAL_SUB_ID_FIELD = "InternalSubjectId";
     public static final String AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE = "AuthMethodJourneyType";
-    public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE = "local-authentication-attempt";
+    public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE =
+            "local-authentication-attempts";
 
     private DynamoAuthenticationAttemptsService dynamoService;
     private final ConfigurationService configuration;
