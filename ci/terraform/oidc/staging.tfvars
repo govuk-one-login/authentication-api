@@ -16,6 +16,7 @@ incorrect_password_lockout_count_ttl = 7200
 support_account_creation_count_ttl   = true
 call_ticf_cri                        = true
 ticf_cri_service_call_timeout        = 10000
+support_reauth_signout_enabled       = true
 
 orch_account_id                     = "590183975515"
 cmk_for_back_channel_logout_enabled = true
