@@ -3,7 +3,6 @@ package uk.gov.di.orchestration.shared.entity;
 import com.google.gson.annotations.Expose;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -49,7 +48,6 @@ public class Session {
 
     public Session(String sessionId) {
         this.sessionId = sessionId;
-        this.browserSessionId = IdGenerator.generate();
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
@@ -67,6 +65,11 @@ public class Session {
 
     public String getBrowserSessionId() {
         return browserSessionId;
+    }
+
+    public Session withBrowserSessionId(String browserSessionId) {
+        this.browserSessionId = browserSessionId;
+        return this;
     }
 
     public List<String> getClientSessions() {

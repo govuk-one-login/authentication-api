@@ -43,7 +43,7 @@ public class SessionService {
     }
 
     public Session createSession() {
-        return new Session(IdGenerator.generate());
+        return new Session(IdGenerator.generate()).withBrowserSessionId(IdGenerator.generate());
     }
 
     public void save(Session session) {
