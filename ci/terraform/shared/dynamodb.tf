@@ -561,6 +561,44 @@ resource "aws_dynamodb_table" "email-check-result" {
   tags = local.default_tags
 }
 
+resource "aws_dynamodb_table" "authentication_attempt_table" {
+  name         = "${var.environment}-authentication-attempt"
+  billing_mode = "PAY_PER_REQUEST"
+
+  hash_key  = "InternalSubjectId"
+  range_key = "AuthMethodJourneyType"
+
+  attribute {
+    name = "InternalSubjectId"
+    type = "S"
+  }
+
+  attribute {
+    name = "AuthMethodJourneyType"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToLive"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.authentication_attempt_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = local.default_tags
+}
+
 resource "aws_dynamodb_resource_policy" "authentication_callback_userinfo_table_policy" {
   resource_arn = aws_dynamodb_table.authentication_callback_userinfo.arn
   policy       = data.aws_iam_policy_document.cross_account_table_resource_policy_document.json
