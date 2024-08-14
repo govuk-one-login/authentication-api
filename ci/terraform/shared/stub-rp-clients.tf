@@ -50,7 +50,7 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
       L = [for scope in each.value.scopes : {
         S = scope
       }]
-    },
+    }
     Claims = {
       L = [
         {
@@ -107,6 +107,19 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
     }
     OneLoginService = {
       BOOL = each.value.one_login_service
+    }
+    ClientLoCs = {
+      L = [
+        {
+          S = "P0"
+        },
+        {
+          S = "P1"
+        },
+        {
+          S = "P2"
+        }
+      ]
     }
   })
 }

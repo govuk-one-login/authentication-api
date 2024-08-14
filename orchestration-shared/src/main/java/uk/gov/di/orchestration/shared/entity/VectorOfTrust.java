@@ -105,7 +105,7 @@ public class VectorOfTrust {
 
     public boolean isValid() {
         return nonNull(getCredentialTrustLevel())
-                && !(Objects.equals(getLevelOfConfidence(), LevelOfConfidence.MEDIUM_LEVEL)
+                && !(containsLevelOfConfidence()
                         && Objects.equals(
                                 getCredentialTrustLevel(), CredentialTrustLevel.LOW_LEVEL));
     }
@@ -142,7 +142,7 @@ public class VectorOfTrust {
             var vot = new VectorOfTrust(credentialTrustLevel, levelOfConfidence);
             if (!vot.isValid()) {
                 throw new IllegalArgumentException(
-                        "P2 identity confidence must require at least Cl.Cm credential trust");
+                        "Non-zero identity confidence must require at least Cl.Cm credential trust");
             }
             vtrList.add(vot);
         }
