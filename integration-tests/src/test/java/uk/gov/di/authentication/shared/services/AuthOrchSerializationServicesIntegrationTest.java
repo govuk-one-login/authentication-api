@@ -18,9 +18,13 @@ class AuthOrchSerializationServicesIntegrationTest {
     void sessionsSerializedByAuthCanBeDeserializedByOrch()
             throws Json.JsonException,
                     uk.gov.di.orchestration.shared.serialization.Json.JsonException {
-        var authSession = new Session("session-id").addClientSession("client-session-id");
+        var authSession =
+                new Session("session-id")
+                        .withBrowserSessionId("browser-session-id")
+                        .addClientSession("client-session-id");
         var orchSession =
                 new uk.gov.di.orchestration.shared.entity.Session("session-id")
+                        .withBrowserSessionId("browser-session-id")
                         .addClientSession("client-session-id");
 
         var authSerializedSession = authObjectMapper.writeValueAsString(authSession);

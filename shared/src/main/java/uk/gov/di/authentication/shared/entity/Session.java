@@ -22,6 +22,8 @@ public class Session {
 
     @Expose private String sessionId;
 
+    @Expose private String browserSessionId;
+
     @Expose private List<String> clientSessions;
 
     @Expose private String emailAddress;
@@ -55,6 +57,15 @@ public class Session {
 
     public String getSessionId() {
         return sessionId;
+    }
+
+    public String getBrowserSessionId() {
+        return browserSessionId;
+    }
+
+    public Session withBrowserSessionId(String browserSessionId) {
+        this.browserSessionId = browserSessionId;
+        return this;
     }
 
     public Session setSessionId(String sessionId) {
