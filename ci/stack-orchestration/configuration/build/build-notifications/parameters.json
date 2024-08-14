@@ -10,5 +10,9 @@
   {
     "ParameterKey": "SlackChannelId",
     "ParameterValue": "C072WHLJRRP"
+  },
+  {
+    "ParameterKey": "EnrichedNotifications",
+    "ParameterValue": "True"
   }
 ]
