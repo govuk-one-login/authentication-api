@@ -64,7 +64,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
         if (configurationService.useAuthenticatonService()) {
-            this.authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+            this.authenticationAttemptsService =
+                    new AuthenticationAttemptsService(configurationService);
         } else {
             this.authenticationAttemptsService = null;
         }
@@ -75,7 +76,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
         if (configurationService.useAuthenticatonService()) {
-            this.authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+            this.authenticationAttemptsService =
+                    new AuthenticationAttemptsService(configurationService);
         } else {
             this.authenticationAttemptsService = null;
         }
@@ -87,7 +89,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
         if (configurationService.useAuthenticatonService()) {
-            this.authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+            this.authenticationAttemptsService =
+                    new AuthenticationAttemptsService(configurationService);
         } else {
             this.authenticationAttemptsService = null;
         }
