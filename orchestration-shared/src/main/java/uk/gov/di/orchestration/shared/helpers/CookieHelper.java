@@ -103,6 +103,18 @@ public class CookieHelper {
                 });
     }
 
+    public static Optional<String> parseBrowserSessionCookie(Map<String, String> headers) {
+        Optional<HttpCookie> httpCookie =
+                getHttpCookieFromRequestHeaders(headers, BROWSER_SESSION_COOKIE_NAME);
+        if (httpCookie.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String cookieValues = httpCookie.get().getValue();
+
+        return Optional.of(cookieValues);
+    }
+
     public static Optional<String> parsePersistentCookie(Map<String, String> headers) {
         Optional<HttpCookie> httpCookie =
                 getHttpCookieFromRequestHeaders(headers, PERSISTENT_COOKIE_NAME);

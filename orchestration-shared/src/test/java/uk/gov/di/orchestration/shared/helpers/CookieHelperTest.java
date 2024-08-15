@@ -20,6 +20,7 @@ import static uk.gov.di.orchestration.shared.helpers.CookieHelper.REQUEST_COOKIE
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
+import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parseBrowserSessionCookie;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parsePersistentCookie;
 
 class CookieHelperTest {
@@ -36,6 +37,7 @@ class CookieHelperTest {
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
     private static final String PERSISTENT_SESSION_ID_COOKIE_VALUE =
             IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
+    private static final String BROWSER_SESSION_ID_COOKIE_VALUE = IdGenerator.generate();
 
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
@@ -86,6 +88,17 @@ class CookieHelperTest {
         String id = parsePersistentCookie(headers).orElseThrow();
 
         assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, id);
+    }
+
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("inputs")
+    void shouldReturnIdFromBrowserSessionCookie(String header) {
+        HttpCookie cookie = new HttpCookie("browser-session-id", BROWSER_SESSION_ID_COOKIE_VALUE);
+        Map<String, String> headers = Map.ofEntries(Map.entry(header, cookie.toString()));
+
+        String id = parseBrowserSessionCookie(headers).orElseThrow();
+
+        assertEquals(BROWSER_SESSION_ID_COOKIE_VALUE, id);
     }
 
     @Test
