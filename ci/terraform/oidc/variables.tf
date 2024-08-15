@@ -705,6 +705,13 @@ variable "call_ticf_cri" {
   description = "Feature flag to switch on invoking TICF CRI lambda."
 }
 
+variable "use_authentication_service" {
+  type        = bool
+  default     = false
+  description = "Feature flag to switch on use of Authentication Service."
+}
+
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

@@ -16,6 +16,7 @@ account_intervention_service_abort_on_error = true
 send_storage_token_to_ipv_enabled           = true
 call_ticf_cri                               = true
 support_reauth_signout_enabled              = true
+use_authentication_service                  = true
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----

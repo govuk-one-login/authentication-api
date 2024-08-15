@@ -36,6 +36,7 @@ module "check_reauth_user" {
     LOCKOUT_DURATION               = var.lockout_duration
     LOCKOUT_COUNT_TTL              = var.lockout_count_ttl
     SUPPORT_REAUTH_SIGNOUT_ENABLED = var.support_reauth_signout_enabled
+    USE_AUTHENTICATION_SERVICE     = var.use_authentication_service
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest"
