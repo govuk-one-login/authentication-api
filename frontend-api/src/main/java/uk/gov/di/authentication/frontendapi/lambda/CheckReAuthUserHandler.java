@@ -11,12 +11,14 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.exceptions.AccountLockedException;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -42,6 +44,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
@@ -60,12 +63,22 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
+        if (configurationService.useAuthenticatonService()) {
+            this.authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+        } else {
+            this.authenticationAttemptsService = null;
+        }
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
         super(CheckReauthUserRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
+        if (configurationService.useAuthenticatonService()) {
+            this.authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+        } else {
+            this.authenticationAttemptsService = null;
+        }
     }
 
     public CheckReAuthUserHandler(
@@ -73,6 +86,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         super(CheckReauthUserRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
+        if (configurationService.useAuthenticatonService()) {
+            this.authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
+        } else {
+            this.authenticationAttemptsService = null;
+        }
     }
 
     public CheckReAuthUserHandler() {
@@ -91,6 +109,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             Context context,
             CheckReauthUserRequest request,
             UserContext userContext) {
+
         LOG.info("Processing CheckReAuthUser request");
 
         var emailUserIsSignedInWith = userContext.getSession().getEmailAddress();
@@ -109,7 +128,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .getUserProfileByEmailMaybe(request.email())
                     .flatMap(
                             userProfile -> {
-                                if (hasEnteredIncorrectEmailTooManyTimes(userProfile.getEmail())) {
+                                if (hasEnteredIncorrectEmailTooManyTimes(
+                                        userProfile.getEmail(), userContext)) {
                                     if (configurationService.supportReauthSignoutEnabled()) {
                                         removeEmailCountLock(userProfile.getEmail());
                                     }
@@ -132,7 +152,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         auditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(() -> generateErrorResponse(emailUserIsSignedInWith, auditContext));
+                    .orElseGet(
+                            () ->
+                                    generateErrorResponse(
+                                            emailUserIsSignedInWith, auditContext, userContext));
         } catch (AccountLockedException e) {
 
             auditService.submitAuditEvent(
@@ -184,8 +207,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String email, AuditContext auditContext) {
-        if (hasEnteredIncorrectEmailTooManyTimes(email)) {
+            String email, AuditContext auditContext, UserContext userContext) {
+        if (hasEnteredIncorrectEmailTooManyTimes(email, userContext)) {
             if (configurationService.supportReauthSignoutEnabled()) {
                 removeEmailCountLock(email);
             }
@@ -198,8 +221,18 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
 
-    private boolean hasEnteredIncorrectEmailTooManyTimes(String email) {
-        var incorrectEmailCount = codeStorageService.getIncorrectEmailCount(email);
+    private boolean hasEnteredIncorrectEmailTooManyTimes(String email, UserContext userContext) {
+        int incorrectEmailCount;
+        if (configurationService.useAuthenticatonService()) {
+            var authAttempts =
+                    authenticationAttemptsService.getAuthenticationAttempt(
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            userContext.getSession().getVerifiedMfaMethodType().getValue(),
+                            JourneyType.REAUTHENTICATION.getValue());
+            incorrectEmailCount = authAttempts.get().getCount();
+        } else {
+            incorrectEmailCount = codeStorageService.getIncorrectEmailCount(email);
+        }
         return incorrectEmailCount >= configurationService.getMaxEmailReAuthRetries();
     }
 
