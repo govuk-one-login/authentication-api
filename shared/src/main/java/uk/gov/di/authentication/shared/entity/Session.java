@@ -63,6 +63,10 @@ public class Session {
         return browserSessionId;
     }
 
+    public void setBrowserSessionId(String browserSessionId) {
+        this.browserSessionId = browserSessionId;
+    }
+
     public Session withBrowserSessionId(String browserSessionId) {
         this.browserSessionId = browserSessionId;
         return this;
