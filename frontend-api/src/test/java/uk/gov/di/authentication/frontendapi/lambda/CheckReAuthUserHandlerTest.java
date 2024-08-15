@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -51,6 +52,8 @@ class CheckReAuthUserHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final DynamoAuthenticationAttemptsService dynamoAuthenticationAttemptsService =
+            mock(DynamoAuthenticationAttemptsService.class);
     private final ClientService clientService = mock(ClientService.class);
 
     private static final String CLIENT_ID = "test-client-id";
@@ -114,7 +117,8 @@ class CheckReAuthUserHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        codeStorageService);
+                        codeStorageService,
+                        dynamoAuthenticationAttemptsService);
     }
 
     @Test
