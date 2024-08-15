@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -214,6 +215,16 @@ public class IPVCallbackHelper {
                         session, clientSession, clientSessionId, false, false);
 
         var subjectId = authCodeResponseService.getSubjectId(session);
+
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        metadataPairs.add(pair("internalSubjectId", subjectId));
+        metadataPairs.add(pair("isNewAccount", session.isNewAccount()));
+        metadataPairs.add(pair("rpPairwiseId", rpPairwiseSubject.getValue()));
+        metadataPairs.add(pair("authCode", authCode));
+        if (authRequest.getNonce() != null) {
+            metadataPairs.add(pair("nonce", authRequest.getNonce().getValue()));
+        }
+
         auditService.submitAuditEvent(
                 IPVAuditableEvent.AUTH_CODE_ISSUED,
                 authRequest.getClientID().getValue(),
@@ -226,11 +237,7 @@ public class IPVCallbackHelper {
                                         .orElse(AuditService.UNKNOWN))
                         .withIpAddress(ipAddress)
                         .withPersistentSessionId(persistentSessionId),
-                pair("internalSubjectId", subjectId),
-                pair("isNewAccount", session.isNewAccount()),
-                pair("rpPairwiseId", rpPairwiseSubject.getValue()),
-                pair("nonce", authRequest.getNonce()),
-                pair("authCode", authCode));
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
         var isTestJourney =
                 dynamoClientService.isTestJourney(clientSessionId, session.getEmailAddress());

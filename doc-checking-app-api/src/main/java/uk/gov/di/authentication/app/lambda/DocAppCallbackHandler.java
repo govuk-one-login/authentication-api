@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -315,15 +316,20 @@ public class DocAppCallbackHandler
                                 null,
                                 authenticationRequest.getResponseMode());
 
+                var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+                metadataPairs.add(pair("internalSubjectId", AuditService.UNKNOWN));
+                metadataPairs.add(pair("isNewAccount", session.isNewAccount()));
+                metadataPairs.add(pair("rpPairwiseId", AuditService.UNKNOWN));
+                metadataPairs.add(pair("authCode", authCode));
+                if (authenticationRequest.getNonce() != null) {
+                    metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
+                }
+
                 auditService.submitAuditEvent(
                         AUTH_CODE_ISSUED,
                         clientId,
                         user.withIpAddress(IpAddressHelper.extractIpAddress(input)),
-                        pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", session.isNewAccount()),
-                        pair("rpPairwiseId", AuditService.UNKNOWN),
-                        pair("nonce", authenticationRequest.getNonce()),
-                        pair("authCode", authCode));
+                        metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
                 return generateApiGatewayProxyResponse(
                         302,

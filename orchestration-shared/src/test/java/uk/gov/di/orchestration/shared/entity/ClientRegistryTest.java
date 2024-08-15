@@ -145,9 +145,9 @@ class ClientRegistryTest {
         clientRegistry.setIdentityVerificationSupported(identityVerificationSupported);
         clientRegistry.setPermitMissingNonce(permitMissingNonce);
         if (identityVerificationSupported == false && permitMissingNonce == true) {
-            assertThat(clientRegistry.getPermitMissingNonce(), equalTo(true));
+            assertThat(clientRegistry.permitMissingNonce(), equalTo(true));
         } else {
-            assertThat(clientRegistry.getPermitMissingNonce(), equalTo(false));
+            assertThat(clientRegistry.permitMissingNonce(), equalTo(false));
         }
     }
 }

@@ -456,11 +456,15 @@ public class ClientRegistry {
 
     @DynamoDbAttribute("PermitMissingNonce")
     public boolean getPermitMissingNonce() {
-        return !identityVerificationSupported && permitMissingNonce;
+        return permitMissingNonce;
     }
 
     public void setPermitMissingNonce(boolean permitMissingNonce) {
         this.permitMissingNonce = permitMissingNonce;
+    }
+
+    public boolean permitMissingNonce() {
+        return !identityVerificationSupported && getPermitMissingNonce();
     }
 
     public ClientRegistry withPermitMissingNonce(boolean permitMissingNonce) {
