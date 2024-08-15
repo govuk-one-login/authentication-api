@@ -8,8 +8,8 @@ import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.ArrayList;
@@ -22,13 +22,13 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
     public static final String AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE = "AuthMethodJourneyType";
     public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE = "local-authentication-attempt";
 
-    private DynamoAuthenticationAttemptsService dynamoService;
+    private AuthenticationAttemptsService dynamoService;
     private final ConfigurationService configuration;
 
     public AuthenticationAttemptsStoreExtension() {
         createInstance();
         this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
-        dynamoService = new DynamoAuthenticationAttemptsService(configuration);
+        dynamoService = new AuthenticationAttemptsService(configuration);
     }
 
     @Override

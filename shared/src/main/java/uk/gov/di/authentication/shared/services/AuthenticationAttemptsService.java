@@ -6,9 +6,9 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
-public class DynamoAuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
+public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
 
-    public DynamoAuthenticationAttemptsService(ConfigurationService configurationService) {
+    public AuthenticationAttemptsService(ConfigurationService configurationService) {
         super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
     }
 
