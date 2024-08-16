@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
@@ -10,6 +11,28 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
 
     public AuthenticationAttemptsService(ConfigurationService configurationService) {
         super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
+    }
+
+    public void incrementCount(String internalSubjectId, JourneyType journey, String credentialType) {
+        // creates new record or increments an existing one
+        // Use the updateItem method with an update expression such as:
+        // SET count = if_not_exists(count, :start) + :inc, ...
+        // this will either update an existing record or it will create a new record with the count set to :start
+    }
+
+    public int getAttemptCount(String internalSubjectId, JourneyType journey, String credentialType) {
+        String pk = internalSubjectId;
+        String sortKey = journey + "#" + credentialType + "#Count";
+
+        return get(pk, sortKey).get().getCount();
+    }
+
+    public void setLastEnteredCredential(String internalSubjectId, JourneyType journey, String credentialType, String credentialValue) {
+        // creates new record or updates an existing one
+    }
+
+    public String getLastEnteredCredential(String internalSubjectId, JourneyType journey, String credentialType) {
+        return "";
     }
 
     public void addCode(

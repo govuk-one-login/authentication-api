@@ -657,7 +657,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IPV_AUTHORISATION_CLIENT_ID", "");
     }
 
-    public boolean useAuthenticatonService() {
+    public boolean useAuthenticatonAttemptService() {
         return System.getenv()
                 .getOrDefault("USE_AUTHENTICATION_SERVICE", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);

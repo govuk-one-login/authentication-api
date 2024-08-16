@@ -63,7 +63,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationService);
         this.auditService = auditService;
         this.codeStorageService = codeStorageService;
-        if (configurationService.useAuthenticatonService()) {
+        if (configurationService.useAuthenticatonAttemptService()) {
             this.authenticationAttemptsService =
                     new AuthenticationAttemptsService(configurationService);
         } else {
@@ -75,7 +75,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         super(CheckReauthUserRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
-        if (configurationService.useAuthenticatonService()) {
+        if (configurationService.useAuthenticatonAttemptService()) {
             this.authenticationAttemptsService =
                     new AuthenticationAttemptsService(configurationService);
         } else {
@@ -88,7 +88,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         super(CheckReauthUserRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
         this.codeStorageService = new CodeStorageService(configurationService, redis);
-        if (configurationService.useAuthenticatonService()) {
+        if (configurationService.useAuthenticatonAttemptService()) {
             this.authenticationAttemptsService =
                     new AuthenticationAttemptsService(configurationService);
         } else {
@@ -220,19 +220,26 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         }
         auditService.submitAuditEvent(REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
-        codeStorageService.increaseIncorrectEmailCount(email);
+
+        if (configurationService.useAuthenticatonAttemptService()) {
+            authenticationAttemptsService.incrementCount(
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
+                    JourneyType.REAUTHENTICATION,
+                    "email-entry");
+        } else {
+            codeStorageService.increaseIncorrectEmailCount(email);
+        }
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
 
     private boolean hasEnteredIncorrectEmailTooManyTimes(String email, UserContext userContext) {
         int incorrectEmailCount;
-        if (configurationService.useAuthenticatonService()) {
-            var authAttempts =
-                    authenticationAttemptsService.getAuthenticationAttempt(
+        if (configurationService.useAuthenticatonAttemptService()) {
+            incorrectEmailCount =
+                    authenticationAttemptsService.getAttemptCount(
                             userContext.getSession().getInternalCommonSubjectIdentifier(),
-                            userContext.getSession().getVerifiedMfaMethodType().getValue(),
-                            JourneyType.REAUTHENTICATION.getValue());
-            incorrectEmailCount = authAttempts.get().getCount();
+                            JourneyType.REAUTHENTICATION,
+                            "email-entry");
         } else {
             incorrectEmailCount = codeStorageService.getIncorrectEmailCount(email);
         }
