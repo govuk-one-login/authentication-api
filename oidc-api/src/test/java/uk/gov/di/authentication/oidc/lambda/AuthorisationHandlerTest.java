@@ -1496,6 +1496,38 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldSetTheRelevantCookiesInTheHeader() {
+            when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
+            Session sessionWithBrowserSessionId =
+                    new Session("a-session-id").withBrowserSessionId("a-browser-session-id");
+            when(sessionService.createSession()).thenReturn(sessionWithBrowserSessionId);
+
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .get(0)
+                            .contains(EXPECTED_SESSION_COOKIE_STRING));
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .get(1)
+                            .contains(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP));
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .get(2)
+                            .contains(
+                                    "browser-session-id=a-browser-session-id; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;"));
+        }
+
+        @Test
         void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
 
