@@ -168,6 +168,14 @@ class CookieHelperTest {
 
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
+    void shouldReturnEmptyIfBrowserSessionCookieMalformed(String header) {
+        assertEmpty(parseBrowserSessionCookie(null));
+        assertEmpty(parseBrowserSessionCookie(Map.of(header, "")));
+        assertEmpty(parseBrowserSessionCookie(Map.of(header, "invalid value")));
+    }
+
+    @ParameterizedTest(name = "with header {0}")
+    @MethodSource("inputs")
     void shouldReturnCookiePrefsFromValidSessionCookieStringWithMultipleCookies(String header) {
         String cookieString =
                 "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":false};name=ts";
