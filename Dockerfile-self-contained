@@ -1,0 +1,21 @@
+FROM docker:dind
+# TODO PID 1?
+
+# Initial setup
+WORKDIR /root
+
+# Install terraform https://devcoops.com/install-terraform-on-alpine-linux/
+RUN wget https://releases.hashicorp.com/terraform/1.9.4/terraform_1.9.4_linux_arm64.zip
+RUN unzip terraform_1.9.4_linux_arm64
+RUN mv terraform /usr/bin/terraform
+RUN rm terraform_1.9.4_linux_arm64.zip
+
+## TODO pre-pull docker images in docker compose
+
+# Bring in the auth API
+COPY ci/terraform authentication-api/ci/terraform
+COPY self-contained authentication-api/self-contained
+COPY docker-compose.yml authentication-api/docker-compose.yml
+WORKDIR /root/authentication-api
+
+ENTRYPOINT ["sh", "self-contained/startup.sh"]
