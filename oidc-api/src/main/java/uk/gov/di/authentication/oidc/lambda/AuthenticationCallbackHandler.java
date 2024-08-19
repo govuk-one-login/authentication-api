@@ -17,6 +17,9 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.bouncycastle.jcajce.provider.digest.SHA256;
+import org.bouncycastle.util.encoders.Hex;
+import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
@@ -62,6 +65,7 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -441,7 +445,11 @@ public class AuthenticationCallbackHandler
                 State state = authenticationRequest.getState();
                 ResponseMode responseMode = authenticationRequest.getResponseMode();
 
-                LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
+                var stateHash = getStateHash(state);
+                LOG.info(
+                        "Redirecting to: {} with SHA-256 of state: {}",
+                        clientRedirectURI,
+                        stateHash);
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
                         VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
@@ -612,5 +620,11 @@ public class AuthenticationCallbackHandler
             passwordResetTimeLong = 0L;
         }
         return passwordResetTimeLong;
+    }
+
+    private static @NotNull String getStateHash(State state) {
+        var stateDigest =
+                new SHA256.Digest().digest(state.toString().getBytes(StandardCharsets.UTF_8));
+        return new String(Hex.encode(stateDigest), StandardCharsets.UTF_8);
     }
 }
