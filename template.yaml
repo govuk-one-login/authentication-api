@@ -22,6 +22,9 @@ Parameters:
     Type: String
     Description: The ARN of the subscription endpoint to send logs to splunk
     Default: "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython-2"
+  LambdaDeploymentPreference:
+    Type: String
+    Description: Specifies the configuration to enable gradual Lambda deployments
 
 Conditions:
   UsePermissionsBoundary: !Not [!Equals [none, !Ref PermissionsBoundary]]
@@ -97,6 +100,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
+      canaryDeploymentEnabled: true
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -128,6 +132,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
+      canaryDeploymentEnabled: false
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -159,6 +164,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       defaultProvisionedConcurrency: 3
       aisUriSecretId: daea90b7-b7a9-45b1-98fb-7d9ce8da5a72
+      canaryDeploymentEnabled: false
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -190,6 +196,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
+      canaryDeploymentEnabled: false
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -221,6 +228,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
+      canaryDeploymentEnabled: false
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
@@ -229,6 +237,15 @@ Mappings:
 
 Globals:
   Function:
+    DeploymentPreference:
+      Enabled:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          canaryDeploymentEnabled,
+        ]
+      Type: !Ref LambdaDeploymentPreference
+      Role: !GetAtt CodeDeployServiceRole.Arn
     Environment:
       Variables:
         AWS_LAMBDA_EXEC_WRAPPER: /opt/dynatrace
@@ -298,6 +315,27 @@ Globals:
             ]
 
 Resources:
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
+      PermissionsBoundary:
+        !If [
+          UsePermissionsBoundary,
+          !Ref PermissionsBoundary,
+          !Ref AWS::NoValue,
+        ]
+
   MainKmskeyAlias:
     Type: "AWS::KMS::Alias"
     Properties:
