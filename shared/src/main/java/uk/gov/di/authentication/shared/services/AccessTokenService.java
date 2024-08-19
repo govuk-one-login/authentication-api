@@ -5,6 +5,8 @@ import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -80,5 +82,23 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
                             update(ts);
                             return ts;
                         });
+    }
+
+    @Override
+    public Optional<AccessTokenStore> get(String partition) {
+        Key partitionKey = Key.builder().partitionValue(partition).build();
+        Optional<AccessTokenStore> accessTokenStore =
+                Optional.ofNullable(dynamoTable.getItem(partitionKey));
+
+        if (accessTokenStore.isPresent()) {
+            return accessTokenStore;
+        } else {
+            GetItemEnhancedRequest getItemEnhancedRequest =
+                    GetItemEnhancedRequest.builder()
+                            .key(k -> k.partitionValue(partition))
+                            .consistentRead(true)
+                            .build();
+            return Optional.ofNullable(dynamoTable.getItem(getItemEnhancedRequest));
+        }
     }
 }
