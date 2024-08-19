@@ -42,10 +42,6 @@ public class SessionService {
                         configurationService.getRedisPassword()));
     }
 
-    public Session createSession() {
-        return new Session(IdGenerator.generate());
-    }
-
     public void save(Session session) {
         try {
             redisConnectionService.saveWithExpiry(
