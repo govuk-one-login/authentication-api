@@ -90,5 +90,9 @@
   {
     "ParameterKey": "SlackNotificationType",
     "ParameterValue": "Failures"
+  },
+  {
+    "ParameterKey": "LambdaCanaryDeployment",
+    "ParameterValue": "AllAtOnce"
   }
 ]
