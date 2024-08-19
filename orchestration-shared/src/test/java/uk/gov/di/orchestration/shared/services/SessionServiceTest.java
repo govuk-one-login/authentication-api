@@ -2,8 +2,10 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
 import java.util.Collections;
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,6 +33,18 @@ class SessionServiceTest {
     private final Json objectMapper = SerializationService.getInstance();
 
     private final SessionService sessionService = new SessionService(configuration, redis);
+
+    @Test
+    void shouldCreateSessionWithNewSessionIdAndBrowserSessionId() {
+        try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
+            when(configuration.isBrowserSessionCookieEnabled()).thenReturn(true);
+            idGenerator.when(IdGenerator::generate).thenReturn("id-1", "id-2");
+            Session session = sessionService.createSession();
+
+            assertEquals("id-1", session.getSessionId());
+            assertEquals("id-2", session.getBrowserSessionId());
+        }
+    }
 
     @Test
     void shouldPersistSessionToRedisWithExpiry() throws Json.JsonException {
