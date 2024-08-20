@@ -73,6 +73,8 @@ jobs:
     needs:
       - build
       - check-changed-files
+    env:
+      RATCHET_FROM: ${{ github.event.action == 'checks_requested' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
