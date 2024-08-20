@@ -78,5 +78,9 @@
   {
     "ParameterKey": "VpcStackName",
     "ParameterValue": "vpc"
+  },
+  {
+    "ParameterKey": "LambdaCanaryDeployment",
+    "ParameterValue": "AllAtOnce"
   }
 ]
