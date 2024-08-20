@@ -200,6 +200,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED");
     }
 
+    public boolean isBrowserSessionCookieEnabled() {
+        return getFlagOrFalse("IS_BROWSER_SESSION_COOKIE_ENABLED");
+    }
+
     public String getSpotQueueURI() {
         return System.getenv("SPOT_QUEUE_URL");
     }

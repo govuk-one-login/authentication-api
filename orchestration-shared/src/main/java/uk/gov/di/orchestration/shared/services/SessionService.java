@@ -44,7 +44,12 @@ public class SessionService {
     }
 
     public Session createSession() {
-        return new Session(IdGenerator.generate());
+        Session session = new Session(IdGenerator.generate());
+        if (configurationService.isBrowserSessionCookieEnabled()) {
+            session.setBrowserSessionId(IdGenerator.generate());
+        }
+
+        return session;
     }
 
     public void save(Session session) {

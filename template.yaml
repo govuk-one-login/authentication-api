@@ -67,6 +67,7 @@ Conditions:
       !Equals [integration, !Ref Environment],
     ]
   IsIntegration: !Equals [!Ref Environment, integration]
+  EnableBrowserSessionCookie: !Equals [dev, !Ref Environment]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2154,6 +2155,10 @@ Resources:
           TXMA_AUDIT_ENCODED_ENABLED: true
           FETCH_RP_PUBLIC_KEY_FROM_JWKS_ENABLED: !If
             - EnableFetchJwks
+            - true
+            - false
+          IS_BROWSER_SESSION_COOKIE_ENABLED: !If
+            - EnableBrowserSessionCookie
             - true
             - false
 
