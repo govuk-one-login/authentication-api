@@ -208,8 +208,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("SPOT_QUEUE_URL");
     }
 
-    public URI getFrontendBaseURL() {
-        return getURIOrThrow("FRONTEND_BASE_URL");
+    public URI getAuthFrontendBaseURL() {
+        return getURIOrThrow("AUTH_FRONTEND_BASE_URL");
+    }
+
+    public URI getOrchFrontendBaseURL() {
+        return getURIOrThrow("ORCH_FRONTEND_BASE_URL");
+    }
+
+    public boolean getOrchFrontendEnabled() {
+        return getFlagOrFalse("ORCH_FRONTEND_ENABLED");
     }
 
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {

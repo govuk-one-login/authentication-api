@@ -41,7 +41,7 @@ module "processing-identity" {
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
-    FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
+    AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"

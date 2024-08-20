@@ -39,7 +39,7 @@ module "doc-app-callback" {
     ENVIRONMENT                        = var.environment
     INTERNAl_SECTOR_URI                = var.internal_sector_uri
     LOCALSTACK_ENDPOINT                = var.use_localstack ? var.localstack_endpoint : null
-    FRONTEND_BASE_URL                  = "https://${local.frontend_fqdn}/"
+    AUTH_FRONTEND_BASE_URL             = "https://${local.frontend_fqdn}/"
     REDIS_KEY                          = local.redis_key
     TXMA_AUDIT_QUEUE_URL               = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                  = local.api_base_url

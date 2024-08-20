@@ -201,7 +201,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -226,7 +226,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(response, hasStatus(302));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getFrontendBaseURL().toString()));
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertTxmaAuditEventsReceived(
@@ -686,7 +686,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(
                 redirectLocationHeader.toString(),
                 containsString(
-                        buildURI(configurationService.getFrontendBaseURL(), SUSPENDED_ENDPOINT)
+                        buildURI(configurationService.getAuthFrontendBaseURL(), SUSPENDED_ENDPOINT)
                                 .toString()));
 
         assertTxmaAuditEventsReceived(
@@ -712,7 +712,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(
                 redirectLocationHeader.toString(),
                 containsString(
-                        buildURI(configurationService.getFrontendBaseURL(), BLOCKED_ENDPOINT)
+                        buildURI(configurationService.getAuthFrontendBaseURL(), BLOCKED_ENDPOINT)
                                 .toString()));
 
         assertTxmaAuditEventsReceived(
