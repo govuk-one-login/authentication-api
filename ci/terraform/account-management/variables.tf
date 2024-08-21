@@ -238,3 +238,15 @@ locals {
     scaling_trigger = var.scaling_trigger
   }
 }
+
+variable "use_openapi_gateway" {
+  type        = bool
+  default     = false
+  description = "Whether to use the OpenAPI Gateway or not"
+}
+
+variable "openapi_spec_filename" {
+  type        = string
+  default     = "openapi.yaml"
+  description = "The name of the OpenAPI spec file"
+}

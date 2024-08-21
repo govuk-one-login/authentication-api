@@ -13,3 +13,6 @@ scaling_trigger        = 0.6
 lockout_duration                          = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
+
+use_openapi_gateway   = false
+openapi_spec_filename = "openapi.yaml"

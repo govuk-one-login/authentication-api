@@ -1,0 +1,78 @@
+openapi: "3.0.1"
+info:
+  title: "auth-account-management-method-management-api"
+  version: 0.1.0
+  description: Auth Account Management API
+paths:
+  /authenticate:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.authenticate.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-password:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-password.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-email:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-email.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /delete-account:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.delete-account.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /send-otp-notification:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.send-otp-notification.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-phone-number:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-phone-number.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+components:
+  securitySchemes:
+    authorise-access-token:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        type: "token"
+        authorizerUri: "${authorizer_uri}"
+        authorizerCredentials: "${authorizer_credentials}"
+        authorizerResultTtlInSeconds: 0

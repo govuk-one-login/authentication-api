@@ -15,7 +15,7 @@ module "account_management_api_update_phone_number_role" {
 }
 
 module "update_phone_number" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "update-phone-number"
   path_part       = "update-phone-number"
@@ -54,10 +54,15 @@ module "update_phone_number" {
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_update_phone_number_role.arn
-  use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
+
+  account_alias         = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret      = local.dynatrace_secret
+
+  depends_on = [module.account_management_api_update_phone_number_role]
 }
