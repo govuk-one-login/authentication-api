@@ -3302,13 +3302,13 @@ Resources:
       KmsKeyId: !GetAtt MainKmsKey.Arn
       RetentionInDays: 30
 
-  SpotResponseFunctionSubscriptionFilter:
-    Condition: IpvExists
-    Type: AWS::Logs::SubscriptionFilter
-    Properties:
-      DestinationArn: !Ref LoggingSubscriptionEndpointArn
-      FilterPattern: ""
-      LogGroupName: !Ref SpotResponseFunctionLogGroup
+#  SpotResponseFunctionSubscriptionFilter:
+#    Condition: IpvExists!
+#    Type: AWS::Logs::SubscriptionFilter
+#    Properties:
+#      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+#      FilterPattern: ""
+#      LogGroupName: !Ref SpotResponseFunctionLogGroup
 
   SpotResponseFunctionErrorMetricFilter:
     Type: AWS::Logs::MetricFilter
