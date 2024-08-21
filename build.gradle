@@ -260,6 +260,13 @@ dockerCompose {
     buildBeforeUp = true
     forceRecreate = false
 
+    if (System.getProperty("os.arch") == "aarch64") {
+        useComposeFiles = [
+            "docker-compose.yml",
+            "docker-compose.arm64.yml"
+        ]
+    }
+
     startedServices = [
         'aws',
         'dynamodb',
