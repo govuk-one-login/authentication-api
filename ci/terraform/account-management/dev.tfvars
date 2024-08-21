@@ -14,4 +14,4 @@ lockout_duration                          = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
-openapi_spec_filename = "openapi.yaml"
+openapi_spec_filename = "openapi_v2.yaml"
