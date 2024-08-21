@@ -11,8 +11,7 @@ import static java.util.Objects.nonNull;
 public class InstrumentationHelper {
     private static final Logger LOG = LogManager.getLogger(InstrumentationHelper.class);
 
-    private static final boolean TRACING_ENABLED =
-            Boolean.parseBoolean(System.getenv().getOrDefault("TRACING_ENABLED", "true"));
+    private static final boolean TRACING_ENABLED = false;
 
     public static <T> T segmentedFunctionCall(String segmentName, Callable<T> callable) {
         if (TRACING_ENABLED) {
