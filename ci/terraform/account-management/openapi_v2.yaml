@@ -1,0 +1,492 @@
+openapi: "3.0.1"
+info:
+  title: "auth-account-management-method-management-api"
+  version: 0.1.0
+  description: Auth Account Management API
+paths:
+  /authenticate:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.authenticate.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-password:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-password.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-email:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-email.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /delete-account:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.delete-account.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /send-otp-notification:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.send-otp-notification.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /update-phone-number:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-phone-number.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+  /mfa-methods/retrieve:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-phone-number.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      description: "Retrieve mfaMethods that match criteria in the MFASearchRequest in the request body"
+      tags:
+        - 2FAManagement
+      summary: Retrieves the list of MFA Methods for a user
+      operationId: "mfa-methods-retrieve"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaSearchRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation.  The retrieve query was accepted and the response contains all matching MFAMethods.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                user-with-single-mfa-type-app:
+                  summary: a user with a single MFA
+                  value:
+                    - mfaIdentifier: 1
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        endPoint: "n/a"
+                      methodVerified: true
+                user-with-multiple-mfa-types-primary-sms:
+                  summary: a user with a single MFA
+                  value:
+                    - mfaIdentifier: 1
+                      priorityIdentifier: DEFAULT
+                      method:
+                        mfaMethodType: SMS
+                        endPoint: "070"
+                      methodVerified: true
+                    - mfaIdentifier: 2
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        endPoint: "n/a"
+                      methodVerified: true
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationProblem"
+              example:
+                default:
+                  value:
+                    type: "https://account.gov.uk/validation-error"
+                    title: "email is malformed"
+                    error:
+                      "len": "Too short"
+                      "pointer": "#/email"
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: Search not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+      x-code-samples:
+        - lang: shell
+          label: cURL request example
+          source: |
+            curl -X POST "http://localhost/mfa-methods -H "Content-Type: application/json" -H "Prefer:{example=an-example -d '{"email": "user@gov.uk"}'
+
+  /mfa-methods:
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-phone-number.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - 2FAManagement
+      description: Creates an mfa method. A new MFA Method cannot be created as PRIMARY, it must be SECONDARY and promoted at a later stage
+      operationId: "mfa-method-create"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaMethodCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: MFA Method Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaMethod"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: MFA Method could not be created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+  /mfa-methods/{mfaIdentifier}:
+    put:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-phone-number.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - 2FAManagement
+      description: Updates an mfa method. If the MFA method is updated to 'PRIMARY', the current 'PRIMARY' gets relegated to secondary.
+      operationId: "mfa-methods-update"
+      parameters:
+        - name: mfaIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MfaMethodUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: MFA Method Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MfaMethod"
+        "404":
+          description: MFA Method not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: MFA Method could not be updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+    delete:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.update-phone-number.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - 2FAManagement
+      description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'PRIMARY'.
+      operationId: "mfa-method-delete"
+      parameters:
+        - name: mfaIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: MFA Method Deleted
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/MfaMethod"
+              examples:
+                user-with-backup-mfa-type-app:
+                  summary: a user with a single MFA
+                  value:
+                    - mfaIdentifier: 1
+                      priorityIdentifier: BACKUP
+                      method:
+                        mfaMethodType: AUTH_APP
+                        endPoint: "n/a"
+                      methodVerified: true
+        "404":
+          description: MFA Method Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "409":
+          description: Cannot delete a Primary MFA Method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+        "500":
+          description: MFA Method could not be deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetail"
+components:
+  schemas:
+    PriorityEnum:
+      type: string
+      enum:
+        - DEFAULT
+        - BACKUP
+    MethodTypeEnum:
+      type: string
+      enum:
+        - SMS
+        - AUTH_APP
+    MfaMethod:
+      required:
+        - priorityIdentifier
+        - method
+      type: object
+      properties:
+        mfaIdentifier:
+          type: integer
+        priorityIdentifier:
+          $ref: "#/components/schemas/PriorityEnum"
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/SmsMethod"
+            - $ref: "#/components/schemas/AuthAppMethod"
+        methodVerified:
+          type: boolean
+        smsPhoneNumber:
+          type: string
+    SmsMethod:
+      type: object
+      properties:
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+        endPoint:
+          type: string
+    AuthAppMethod:
+      type: object
+      properties:
+        mfaMethodType:
+          type: string
+          enum:
+            - AUTH_APP
+        credential:
+          type: string
+
+    MfaMethodCreate:
+      required:
+        - priorityIdentifier
+        - mfaMethodType
+      type: object
+      properties:
+        priorityIdentifier:
+          $ref: "#/components/schemas/PriorityEnum"
+        mfaMethodType:
+          $ref: "#/components/schemas/MethodTypeEnum"
+        endPoint:
+          type: string
+        credential:
+          type: string
+      example:
+        priorityIdentifier: DEFAULT
+        mfaMethodType: AUTH_APP
+        endPoint: "n/a"
+    MfaMethodUpdate:
+      required:
+        - mfaIdentifier
+        - priorityIdentifier
+        - mfaMethodType
+      type: object
+      properties:
+        mfaIdentifier:
+          type: integer
+        priorityIdentifier:
+          $ref: "#/components/schemas/PriorityEnum"
+        mfaMethodType:
+          $ref: "#/components/schemas/MethodTypeEnum"
+        credential:
+          type: string
+        endPoint:
+          type: string
+      example:
+        mfaIdentifier: 1
+        priorityIdentifier: DEFAULT
+        mfaMethodType: SMS
+        endPoint: "070"
+    MfaSearchRequest:
+      required:
+        - email
+      type: object
+      properties:
+        email:
+          type: string
+      example:
+        email: "testusersearching@searchersexampledomain.co.uk"
+    MfaMethodCreateRequest:
+      required:
+        - email
+        - credential
+        - otp
+        - mfaMethod
+      type: object
+      properties:
+        email:
+          type: string
+        credential:
+          type: string
+        otp:
+          type: string
+        mfaMethod:
+          $ref: "#/components/schemas/MfaMethodCreate"
+      example:
+        email: "testuser@testexampledomain.co.uk"
+        credential: "???"
+        otp: "123456"
+        mfaMethod:
+          priorityIdentifier: DEFAULT
+          mfaMethodType: AUTH_APP
+          endPoint: "n/a"
+        methodVerified: true
+
+    MfaMethodUpdateRequest:
+      required:
+        - email
+        - otp
+        - mfaMethod
+      type: object
+      properties:
+        email:
+          type: string
+        otp:
+          type: string
+        mfaMethod:
+          $ref: "#/components/schemas/MfaMethodUpdate"
+      example:
+        email: "testuser@testexampledomain.co.uk"
+        otp: "123456"
+        mfaMethod:
+          mfaIdentifier: 1
+          priorityIdentifier: DEFAULT
+          mfaMethodType: AUTH_APP
+          endPoint: "n/a"
+    ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          example: "https://account.gov.uk/problems/mfa-method-not-updated"
+        title:
+          type: string
+          example: "MFA Method could not be updated."
+        status:
+          type: string
+        detail:
+          example: "Database error"
+          type: string
+        resource:
+          example: "/mfa-methods/{mfaIdentifier}"
+          type: string
+        extension:
+          type: object
+          properties:
+            error:
+              type: object
+              properties:
+                code:
+                  enum: [1056, 1057, 1058]
+    ValidationProblem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Error"
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+        pointer:
+          type: string
+  securitySchemes:
+    authorise-access-token:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        type: "token"
+        authorizerUri: "${authorizer_uri}"
+        authorizerCredentials: "${authorizer_credentials}"
+        authorizerResultTtlInSeconds: 0
