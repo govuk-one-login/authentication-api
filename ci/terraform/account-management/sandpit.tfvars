@@ -1,9 +1,6 @@
 environment         = "sandpit"
 use_localstack      = false
 common_state_bucket = "digital-identity-dev-tfstate"
-dns_state_bucket    = null
-dns_state_key       = null
-dns_state_role      = null
 
 logging_endpoint_enabled = false
 logging_endpoint_arns    = []
@@ -15,3 +12,6 @@ lambda_min_concurrency = 0
 lockout_duration                          = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
+support_email_check_enabled               = true
+
+openapi_spec_filename = "openapi.yaml"

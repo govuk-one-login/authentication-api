@@ -4,11 +4,12 @@ locals {
   otherenv       = var.environment != "production" && var.environment != "authdev1" && var.environment != "authdev2" ? "${var.environment}.account.gov.uk" : ""
   service_domain = coalesce(local.prod, local.sandpitdevs, local.otherenv)
 
-  account_management_fqdn     = local.service_domain
-  account_management_api_fqdn = "manage.${local.service_domain}"
-  frontend_fqdn               = "signin.${local.service_domain}"
-  frontend_api_fqdn           = "auth.${local.service_domain}"
-  oidc_api_fqdn               = "oidc.${local.service_domain}"
+  account_management_fqdn        = local.service_domain
+  account_management_api_fqdn    = "manage.${local.service_domain}"
+  account_management_api_v2_fqdn = "manage-v2.${local.service_domain}"
+  frontend_fqdn                  = "signin.${local.service_domain}"
+  frontend_api_fqdn              = "auth.${local.service_domain}"
+  oidc_api_fqdn                  = "oidc.${local.service_domain}"
 }
 
 # TODO: delete
