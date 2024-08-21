@@ -68,19 +68,10 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
-variable "use_localstack" {
-  type = bool
-}
-
 variable "default_tags" {
   default     = {}
   type        = map(string)
   description = "Default tags to apply to all resources"
-}
-
-variable "authorizer_id" {
-  type    = string
-  default = null
 }
 
 variable "cloudwatch_key_arn" {
@@ -132,4 +123,29 @@ variable "max_provisioned_concurrency" {
 
 variable "scaling_trigger" {
   default = 0.7
+}
+
+variable "slack_event_topic_arn" {
+  description = "The ARN of the slack event topic"
+  type        = string
+}
+
+variable "account_alias" {
+  description = "The 'friendly-name' of the AWS account, eg. di-auth-development"
+  type        = string
+}
+
+variable "dynatrace_secret" {
+  description = "JSON decoded dynatrace secret"
+
+  type = object({
+    JAVA_LAYER = string
+
+    DT_CONNECTION_AUTH_TOKEN     = string
+    DT_CONNECTION_BASE_URL       = string
+    DT_CLUSTER_ID                = string
+    DT_TENANT                    = string
+    DT_LOG_COLLECTION_AUTH_TOKEN = string
+  })
+  sensitive = true
 }
