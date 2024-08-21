@@ -19,30 +19,18 @@ repos:
     rev: 0.0.1
     hooks:
       - id: gradle-spotless-apply
-      - id: terraform-format
-      - id: terraform-validate
 
-  - repo: https://github.com/pylint-dev/pylint
-    rev: "v3.2.2"
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.92.1
     hooks:
-      - id: pylint
+      - id: terraform_fmt
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: "7.0.0"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 1ee2e387938ec90ec10a64f85fc0b4be527ade6a # v0.5.5
     hooks:
-      - id: flake8
-        additional_dependencies:
-          - "Flake8-pyproject"
-
-  - repo: https://github.com/psf/black
-    rev: "24.4.2"
-    hooks:
-      - id: black
-
-  - repo: https://github.com/PyCQA/isort
-    rev: "5.13.2"
-    hooks:
-      - id: isort
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: a23f6b85d0fdd5bb9d564e2579e678033debbdff # v0.10.0.1 # pragma: allowlist secret
