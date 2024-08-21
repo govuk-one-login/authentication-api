@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -230,6 +231,15 @@ public class AuthCodeHandler
                                 session, clientID, dynamoClientService);
             }
 
+            var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+            metadataPairs.add(pair("internalSubjectId", subjectId));
+            metadataPairs.add(pair("isNewAccount", session.isNewAccount()));
+            metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
+            metadataPairs.add(pair("authCode", authCode));
+            if (authenticationRequest.getNonce() != null) {
+                metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
+            }
+
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTH_CODE_ISSUED,
                     clientID.getValue(),
@@ -244,11 +254,7 @@ public class AuthCodeHandler
                             .withPersistentSessionId(
                                     PersistentIdHelper.extractPersistentIdFromHeaders(
                                             input.getHeaders())),
-                    pair("internalSubjectId", subjectId),
-                    pair("isNewAccount", session.isNewAccount()),
-                    pair("rpPairwiseId", rpPairwiseId),
-                    pair("nonce", authenticationRequest.getNonce()),
-                    pair("authCode", authCode));
+                    metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
             cloudwatchMetricsService.incrementSignInByClient(

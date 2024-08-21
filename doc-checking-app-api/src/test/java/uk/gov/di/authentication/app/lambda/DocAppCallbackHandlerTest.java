@@ -199,8 +199,8 @@ class DocAppCallbackHandlerTest {
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", session.isNewAccount()),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
-                        pair("nonce", NONCE),
-                        pair("authCode", AUTH_CODE));
+                        pair("authCode", AUTH_CODE),
+                        pair("nonce", NONCE.getValue()));
 
         verifyNoMoreInteractions(auditService);
         verify(dynamoDocAppService)

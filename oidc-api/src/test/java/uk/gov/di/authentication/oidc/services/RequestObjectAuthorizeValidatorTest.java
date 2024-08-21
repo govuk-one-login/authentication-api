@@ -604,7 +604,51 @@ class RequestObjectAuthorizeValidatorTest {
     }
 
     @Test
-    void shouldReturnErrorIfNonceIsMissingFromRequestObject()
+    void shouldSuccessfullyProcessRequestWhenNonceNotExpectedAndMissing()
+            throws JOSEException, JwksException, ClientSignatureValidationException {
+        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+        var clientRegistry =
+                generateClientRegistry(
+                        ClientType.APP.getValue(),
+                        new Scope(
+                                OIDCScopeValue.OPENID.getValue(),
+                                CustomScopeValue.DOC_CHECKING_APP.getValue()));
+
+        clientRegistry.withPermitMissingNonce(true);
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(clientRegistry));
+
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        scopes.add("doc-checking-app");
+        var scope = Scope.parse(scopes);
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(OIDC_BASE_AUTHORIZE_URI.toString())
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", scope.toString())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("vtr", List.of("P2.Cl.Cm"))
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+        AuthenticationRequest authenticationRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, CLIENT_ID, URI.create(REDIRECT_URI))
+                        .state(STATE)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var requestObjectError = service.validate(authenticationRequest);
+
+        assertThat(requestObjectError, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorIfNonceIsExpectedAndMissingFromRequestObject()
             throws JOSEException, JwksException, ClientSignatureValidationException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()

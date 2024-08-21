@@ -2,8 +2,12 @@ package uk.gov.di.orchestration.shared.entity;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -123,5 +127,27 @@ class ClientRegistryTest {
         assertThat(clientRegistry.getPublicKey(), equalTo(null));
         assertThat(clientRegistry.getPublicKeySource(), equalTo(PublicKeySource.JWKS.getValue()));
         assertThat(clientRegistry.getJwksUrl(), equalTo(actualUrl));
+    }
+
+    private static Stream<Arguments> permutationsToCheck() {
+        return Stream.of(
+                Arguments.of(true, true),
+                Arguments.of(true, false),
+                Arguments.of(false, true),
+                Arguments.of(false, false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("permutationsToCheck")
+    void shouldOnlyReturnPermitMissingNonceTrueWhenIdentityVerificationSupportedIsAlsoFalse(
+            boolean identityVerificationSupported, boolean permitMissingNonce) {
+        var clientRegistry = new ClientRegistry();
+        clientRegistry.setIdentityVerificationSupported(identityVerificationSupported);
+        clientRegistry.setPermitMissingNonce(permitMissingNonce);
+        if (identityVerificationSupported == false && permitMissingNonce == true) {
+            assertThat(clientRegistry.permitMissingNonce(), equalTo(true));
+        } else {
+            assertThat(clientRegistry.permitMissingNonce(), equalTo(false));
+        }
     }
 }

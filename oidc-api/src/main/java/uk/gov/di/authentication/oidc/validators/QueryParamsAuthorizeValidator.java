@@ -92,7 +92,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                             redirectURI,
                             state));
         }
-        if (authRequest.getNonce() == null) {
+        if (authRequest.getNonce() == null && !client.permitMissingNonce()) {
             LOG.error("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(

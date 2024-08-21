@@ -66,6 +66,7 @@ import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -476,15 +477,20 @@ public class AuthenticationCallbackHandler
 
                 LOG.info("Successfully processed request");
 
+                var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+                metadataPairs.add(pair("internalSubjectId", UNKNOWN));
+                metadataPairs.add(pair("isNewAccount", newAccount));
+                metadataPairs.add(pair("rpPairwiseId", userInfo.getClaim("rp_client_id")));
+                metadataPairs.add(pair("authCode", authCode.getValue()));
+                if (authenticationRequest.getNonce() != null) {
+                    metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));
+                }
+
                 auditService.submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
                         clientId,
                         user,
-                        pair("internalSubjectId", UNKNOWN),
-                        pair("isNewAccount", newAccount),
-                        pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
-                        pair("nonce", authenticationRequest.getNonce()),
-                        pair("authCode", authCode.getValue()));
+                        metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
                 return generateApiGatewayProxyResponse(
                         302,
