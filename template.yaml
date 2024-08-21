@@ -198,7 +198,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
-      canaryDeploymentEnabled: false
+      canaryDeploymentEnabled: true
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
