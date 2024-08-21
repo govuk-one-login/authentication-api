@@ -60,6 +60,8 @@ repositories {
 
 subprojects {
     apply plugin: "com.github.spotbugs"
+    apply plugin: "java"
+
     repositories {
         maven {
             url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
@@ -102,17 +104,56 @@ subprojects {
         pact_provider
     }
 
-    configurations.all {
-        resolutionStrategy {
-            force 'org.apache.logging.log4j:log4j-api:2.23.1', 'org.apache.logging.log4j:log4j-core:2.23.1'
-        }
-    }
-
+    // Check dependencies using:
+    //
+    // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration testRuntimeClasspath
+    // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration runtimeClasspath
+    //
     dependencies {
+        constraints {
+            implementation('org.apache.logging.log4j:log4j-api:2.23.1')
+            testRuntimeOnly('org.apache.logging.log4j:log4j-api:2.23.1')
+            implementation('org.apache.logging.log4j:log4j-core:2.23.1')
+            testRuntimeOnly('org.apache.logging.log4j:log4j-core:2.23.1')
+
+            implementation('io.netty:netty-codec-http2:4.1.100.Final') {
+                because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
+            }
+
+            testRuntimeOnly('io.netty:netty-codec-http2:4.1.100.Final') {
+                because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
+            }
+
+            implementation('io.netty:netty-codec-http:4.1.108.Final') {
+                because 'dependabot alert is fixed in 4.1.108.Final and above'
+            }
+
+            testRuntimeOnly('io.netty:netty-codec-http:4.1.108.Final') {
+                because 'dependabot alert is fixed in 4.1.108.Final and above'
+            }
+
+            implementation('org.apache.commons:commons-compress:1.26.0') {
+                because 'dependabot alert is fixed in 1.26.0 and above'
+            }
+
+            testRuntimeOnly('org.apache.commons:commons-compress:1.26.0') {
+                because 'dependabot alert is fixed in 1.26.0 and above'
+            }
+
+            implementation('com.google.guava:guava:32.0.0-android') {
+                because 'dependabot alert is fixed in 32.0.0-android and above'
+            }
+
+            testRuntimeOnly('com.google.guava:guava:32.0.0-android') {
+                because 'dependabot alert is fixed in 32.0.0-android and above'
+            }
+        }
+
         apache "commons-codec:commons-codec:1.17.1",
                 "org.apache.httpcomponents:httpclient:4.5.14",
                 "org.apache.commons:commons-collections4:4.1",
-                "commons-net:commons-net:3.11.1"
+                "commons-net:commons-net:3.11.1",
+                "commons-io:commons-io:2.8.0"
 
         bouncycastle "org.bouncycastle:bcpkix-jdk18on:1.78.1"
 
