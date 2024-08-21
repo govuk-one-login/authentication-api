@@ -23,15 +23,49 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
-  period              = "300"
+  period              = "60"
   statistic           = "Average"
   threshold           = var.dlq_alarm_threshold
 
   dimensions = {
     QueueName = aws_sqs_queue.spot_request_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/DYDMBgE"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_alarm" {
+  alarm_name          = replace("${var.environment}-spot-request-queue-alarm", ".", "")
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "ApproximateAgeOfOldestMessage"
+  namespace           = "AWS/SQS"
+  period              = "60"
+  statistic           = "Maximum"
+  threshold           = 10
+
+  dimensions = {
+    QueueName = aws_sqs_queue.spot_request_queue.name
+  }
+  alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 10 seconds. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
+  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_cloudwatch_p1_alarm" {
+  alarm_name          = replace("${var.environment}-P1-spot-request-queue-alarm", ".", "")
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "ApproximateAgeOfOldestMessage"
+  namespace           = "AWS/SQS"
+  period              = "60"
+  statistic           = "Maximum"
+  threshold           = 60
+
+  dimensions = {
+    QueueName = aws_sqs_queue.spot_request_queue.name
+  }
+  alarm_description = "Age of the oldest message on ${aws_sqs_queue.spot_request_queue.name} exceeds 60 seconds. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}. Runbook: https://govukverify.atlassian.net/wiki/x/VIFoCAE"
+  alarm_actions     = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : data.aws_sns_topic.slack_events.arn]
 }
 
 
