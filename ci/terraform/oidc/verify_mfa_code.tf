@@ -22,7 +22,7 @@ module "frontend_api_verify_mfa_code_role" {
 }
 
 module "verify_mfa_code" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "verify-mfa-code"
   path_part       = "verify-mfa-code"

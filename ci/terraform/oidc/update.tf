@@ -16,7 +16,7 @@ module "client_update_role" {
 
 module "update" {
   count  = var.client_registry_api_enabled ? 1 : 0
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   path_part                      = "{clientId}"
   endpoint_name                  = "update-client-info"

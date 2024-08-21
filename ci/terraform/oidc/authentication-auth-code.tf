@@ -23,7 +23,7 @@ module "frontend_api_orch_auth_code_role" {
 }
 
 module "orch_auth_code" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "orch-auth-code"
   path_part       = "orch-auth-code"

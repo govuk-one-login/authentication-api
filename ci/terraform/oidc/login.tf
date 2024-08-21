@@ -23,7 +23,7 @@ module "frontend_api_login_role" {
 
 
 module "login" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "login"
   path_part       = "login"

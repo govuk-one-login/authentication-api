@@ -17,7 +17,7 @@ module "auth_userinfo_role" {
 }
 
 module "auth_userinfo" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "auth-userinfo"
   path_part       = "userinfo"

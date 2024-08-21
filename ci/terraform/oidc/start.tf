@@ -18,7 +18,7 @@ module "frontend_api_start_role" {
 }
 
 module "start" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "start"
   path_part       = "start"

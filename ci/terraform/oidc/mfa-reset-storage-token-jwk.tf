@@ -10,7 +10,7 @@ module "mfa_reset_storage_token_jwk_role" {
 }
 
 module "mfa_reset_storage_token_jwk" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "mfa-reset-jwk.json"
   path_part       = "mfa-reset-jwk.json"

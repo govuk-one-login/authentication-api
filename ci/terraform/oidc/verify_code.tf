@@ -21,7 +21,7 @@ module "frontend_api_verify_code_role" {
 }
 
 module "verify_code" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "verify-code"
   path_part       = "verify-code"

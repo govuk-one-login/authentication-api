@@ -23,7 +23,7 @@ module "oidc_userinfo_role" {
 }
 
 module "userinfo" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "userinfo"
   path_part       = var.orch_userinfo_enabled ? "userinfo-auth" : "userinfo"

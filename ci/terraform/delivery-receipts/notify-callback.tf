@@ -12,7 +12,7 @@ module "delivery_receipts_api_notify_callback_role" {
 }
 
 module "notify_callback" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "notify-callback"
   path_part       = "notify-callback"

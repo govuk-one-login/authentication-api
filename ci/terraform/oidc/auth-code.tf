@@ -18,7 +18,7 @@ module "oidc_auth_code_role" {
 }
 
 module "auth-code" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "auth-code"
   path_part       = var.orch_auth_code_enabled ? "auth-code-auth" : "auth-code"

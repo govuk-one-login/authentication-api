@@ -43,7 +43,7 @@ resource "aws_iam_policy" "oidc_token_kms_signing_policy" {
 }
 
 module "token" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "token"
   path_part       = var.orch_token_enabled ? "token-auth" : "token"

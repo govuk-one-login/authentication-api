@@ -17,7 +17,7 @@ module "mfa_reset_authorize_role" {
 
 
 module "mfa_reset_authorize" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "mfa-reset-authorize"
   path_part       = "mfa-reset-authorize"

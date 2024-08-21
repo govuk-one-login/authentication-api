@@ -19,7 +19,7 @@ module "auth_token_role" {
 }
 
 module "auth_token" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "auth-token"
   path_part       = "token"

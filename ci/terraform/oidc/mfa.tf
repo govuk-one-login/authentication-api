@@ -18,7 +18,7 @@ module "frontend_api_mfa_role" {
 }
 
 module "mfa" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "mfa"
   path_part       = "mfa"

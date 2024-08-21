@@ -19,7 +19,7 @@ module "frontend_api_update_profile_role" {
 }
 
 module "update_profile" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "update-profile"
   path_part       = "update-profile"

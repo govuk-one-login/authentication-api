@@ -19,7 +19,7 @@ module "frontend_api_check_reauth_user_role" {
 
 module "check_reauth_user" {
   count  = local.deploy_reauth_user_count
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "check-reauth-user"
   path_part       = "check-reauth-user"

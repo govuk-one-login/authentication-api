@@ -17,7 +17,7 @@ module "frontend_api_reset_password_request_role" {
 }
 
 module "reset-password-request" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "reset-password-request"
   path_part       = "reset-password-request"

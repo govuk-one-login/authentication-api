@@ -21,7 +21,7 @@ module "ipv_processing_identity_role" {
 }
 
 module "processing-identity" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "processing-identity"
   path_part       = "processing-identity"

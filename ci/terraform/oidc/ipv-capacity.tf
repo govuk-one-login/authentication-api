@@ -13,7 +13,7 @@ module "ipv_capacity_role" {
 }
 
 module "ipv-capacity" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "ipv-capacity"
   path_part       = "ipv-capacity"

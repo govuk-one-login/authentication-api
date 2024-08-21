@@ -19,7 +19,7 @@ module "frontend_api_user_exists_role" {
 }
 
 module "userexists" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "user-exists"
   path_part       = "user-exists"

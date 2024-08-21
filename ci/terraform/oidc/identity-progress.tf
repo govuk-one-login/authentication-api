@@ -15,7 +15,7 @@ module "identity_progress_role" {
 }
 
 module "identity_progress" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "identity-progress"
   path_part       = "identity-progress"

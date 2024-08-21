@@ -26,7 +26,7 @@ module "send_otp_notification" {
   endpoint_method = ["POST"]
   environment     = var.environment
 
-  handler_environment_variables = {
+  handler_environment_variables = merge({
     ENVIRONMENT                            = var.environment
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
@@ -42,7 +42,7 @@ module "send_otp_notification" {
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP    = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
-  }
+  }, local.extra_dt_envars)
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
@@ -75,7 +75,7 @@ module "send_otp_notification" {
 
   account_alias         = data.aws_iam_account_alias.current.account_alias
   slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
-  dynatrace_secret      = local.dynatrace_secret
+  dynatrace_secret      = local.dynatrace_secret_new_dynatrace
 
   depends_on = [
     module.account_management_api_send_notification_role,

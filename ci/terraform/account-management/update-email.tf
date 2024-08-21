@@ -23,7 +23,7 @@ module "update_email" {
   endpoint_name   = "update-email"
   path_part       = "update-email"
   endpoint_method = ["POST"]
-  handler_environment_variables = {
+  handler_environment_variables = merge({
     ENVIRONMENT                 = var.environment
     DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EMAIL_QUEUE_URL             = aws_sqs_queue.email_queue.id
@@ -32,7 +32,7 @@ module "update_email" {
     TXMA_AUDIT_QUEUE_URL        = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI         = var.internal_sector_uri
     SUPPORT_EMAIL_CHECK_ENABLED = var.support_email_check_enabled
-  }
+  }, local.extra_dt_envars)
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest"
 
   authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
@@ -66,7 +66,7 @@ module "update_email" {
 
   account_alias         = data.aws_iam_account_alias.current.account_alias
   slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
-  dynatrace_secret      = local.dynatrace_secret
+  dynatrace_secret      = local.dynatrace_secret_new_dynatrace
 
   depends_on = [module.account_management_api_update_email_role]
 }

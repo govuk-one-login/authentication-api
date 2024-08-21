@@ -21,7 +21,7 @@ module "frontend_api_account_recovery_role" {
 
 
 module "account_recovery" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "account-recovery"
   path_part       = "account-recovery"

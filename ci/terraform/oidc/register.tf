@@ -16,7 +16,7 @@ module "client_registry_role" {
 
 module "register" {
   count  = var.client_registry_api_enabled ? 1 : 0
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "register"
   path_part       = var.orch_register_enabled ? "register-auth" : "register"

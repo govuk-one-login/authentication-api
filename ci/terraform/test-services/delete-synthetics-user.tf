@@ -12,7 +12,7 @@ module "test_services_api_delete-synthetics-user_role" {
 }
 
 module "delete-synthetics-user" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "synthetics-user"
   path_part       = "synthetics-user"

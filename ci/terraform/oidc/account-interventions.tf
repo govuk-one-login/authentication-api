@@ -21,7 +21,7 @@ module "frontend_api_account_interventions_role" {
 module "account_interventions" {
   count = local.deploy_account_interventions_count
 
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "account-interventions"
   path_part       = "account-interventions"

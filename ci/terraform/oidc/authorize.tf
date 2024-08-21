@@ -23,7 +23,7 @@ module "oidc_authorize_role" {
 }
 
 module "authorize" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "authorize"
   path_part       = var.orch_authorisation_enabled ? "authorize-auth" : "authorize"

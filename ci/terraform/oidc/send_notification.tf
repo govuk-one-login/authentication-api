@@ -22,7 +22,7 @@ module "frontend_api_send_notification_role" {
 }
 
 module "send_notification" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "send-notification"
   path_part       = "send-notification"

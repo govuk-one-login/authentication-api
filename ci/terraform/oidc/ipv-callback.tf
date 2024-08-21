@@ -25,7 +25,7 @@ module "ipv_callback_role" {
 }
 
 module "ipv-callback" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "ipv-callback"
   path_part       = var.orch_ipv_callback_enabled ? "ipv-callback-auth" : "ipv-callback"

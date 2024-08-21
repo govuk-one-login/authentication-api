@@ -22,7 +22,7 @@ module "oidc_api_authentication_callback_role" {
 
 
 module "authentication_callback" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "orchestration-redirect"
   path_part       = var.orch_authentication_callback_enabled ? "orchestration-redirect-auth" : "orchestration-redirect"

@@ -12,7 +12,7 @@ module "oidc_jwks_role" {
 }
 
 module "jwks" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "jwks.json"
   path_part       = var.orch_jwks_enabled ? "jwks-auth.json" : "jwks.json"

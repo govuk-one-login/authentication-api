@@ -19,7 +19,7 @@ module "oidc_logout_role" {
 }
 
 module "logout" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "logout"
   path_part       = var.orch_logout_enabled ? "logout-auth" : "logout"

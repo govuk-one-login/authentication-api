@@ -10,7 +10,7 @@ module "mfa_reset_jar_signing_jwk_role" {
 }
 
 module "mfa_reset_jar_signing_jwk" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "reverification-jwk.json"
   path_part       = "reverification-jwk.json"

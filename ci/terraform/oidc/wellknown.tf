@@ -7,7 +7,7 @@ module "openid_configuration_role" {
 }
 
 module "openid_configuration_discovery" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "openid-configuration"
   path_part       = var.orch_openid_configuration_enabled ? "openid-configuration-auth" : "openid-configuration"

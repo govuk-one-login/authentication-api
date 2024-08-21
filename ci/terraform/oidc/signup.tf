@@ -21,7 +21,7 @@ module "frontend_api_signup_role" {
 }
 
 module "signup" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "signup"
   path_part       = "signup"

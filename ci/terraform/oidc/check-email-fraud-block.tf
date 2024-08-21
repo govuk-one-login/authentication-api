@@ -19,7 +19,7 @@ module "frontend_api_check_email_fraud_block_role" {
 
 module "check_email_fraud_block" {
   count  = local.deploy_check_email_fraud_block_count
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "check-email-fraud-block"
   path_part       = "check-email-fraud-block"

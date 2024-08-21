@@ -15,7 +15,7 @@ module "reverification_result_role" {
 }
 
 module "reverification_result" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-new-dynatrace"
 
   endpoint_name   = "reverification-result"
   path_part       = "reverification-result"
