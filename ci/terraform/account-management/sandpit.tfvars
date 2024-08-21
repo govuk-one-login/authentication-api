@@ -14,5 +14,5 @@ otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 support_email_check_enabled               = true
 
-use_openapi_gateway   = false
-openapi_spec_filename = "openapi.yaml"
+use_openapi_gateway   = true
+openapi_spec_filename = "openapi_v2.yaml"

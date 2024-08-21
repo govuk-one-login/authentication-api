@@ -9,5 +9,5 @@ endpoint_memory_size   = 1536
 lambda_max_concurrency = 0
 lambda_min_concurrency = 0
 
-use_openapi_gateway   = false
-openapi_spec_filename = "openapi.yaml"
+use_openapi_gateway   = true
+openapi_spec_filename = "openapi_v2.yaml"
