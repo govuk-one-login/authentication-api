@@ -36,6 +36,7 @@ Conditions:
     ]
   IpvExists:
     !Or [
+      !Equals [dev, !Ref Environment],
       !Equals [staging, !Ref Environment],
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
@@ -1626,14 +1627,7 @@ Resources:
                   serviceDomain,
                 ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
-          IPV_AUTHORISATION_URI: !Sub
-            - https://identity.${ServiceDomain}/oauth2/authorize
-            - ServiceDomain:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  serviceDomain,
-                ]
+          IPV_AUTHORISATION_URI: https://j4qblwdt9l.execute-api.eu-west-2.amazonaws.com/Live
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -3074,28 +3068,8 @@ Resources:
             - IpvExists
             - authOrchestrator
             - !Ref AWS::NoValue
-          IPV_AUTHORISATION_URI: !If
-            - IpvExists
-            - !Sub
-              - https://identity.${ServiceDomain}/oauth2/authorize
-              - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
-                  ]
-            - !Ref AWS::NoValue
-          IPV_BACKEND_URI: !If
-            - IpvExists
-            - !Sub
-              - https://api.identity.${ServiceDomain}
-              - ServiceDomain:
-                  !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    serviceDomain,
-                  ]
-            - !Ref AWS::NoValue
+          IPV_AUTHORISATION_URI: https://j4qblwdt9l.execute-api.eu-west-2.amazonaws.com/Live
+          IPV_BACKEND_URI: https://j4qblwdt9l.execute-api.eu-west-2.amazonaws.com/Live
           IPV_NO_SESSION_RESPONSE_ENABLED: true
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
