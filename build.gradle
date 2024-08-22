@@ -116,11 +116,11 @@ subprojects {
             implementation('org.apache.logging.log4j:log4j-core:2.23.1')
             testRuntimeOnly('org.apache.logging.log4j:log4j-core:2.23.1')
 
-            implementation('io.netty:netty-codec-http2:4.1.100.Final') {
+            implementation('io.netty:netty-codec-http2:4.1.112.Final') {
                 because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
             }
 
-            testRuntimeOnly('io.netty:netty-codec-http2:4.1.100.Final') {
+            testRuntimeOnly('io.netty:netty-codec-http2:4.1.112.Final') {
                 because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
             }
 
