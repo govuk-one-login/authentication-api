@@ -124,11 +124,11 @@ subprojects {
                 because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
             }
 
-            implementation('io.netty:netty-codec-http:4.1.108.Final') {
+            implementation('io.netty:netty-codec-http:4.1.112.Final') {
                 because 'dependabot alert is fixed in 4.1.108.Final and above'
             }
 
-            testRuntimeOnly('io.netty:netty-codec-http:4.1.108.Final') {
+            testRuntimeOnly('io.netty:netty-codec-http:4.1.112.Final') {
                 because 'dependabot alert is fixed in 4.1.108.Final and above'
             }
 
