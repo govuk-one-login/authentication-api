@@ -130,6 +130,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -191,6 +192,10 @@ class AuthorisationHandlerTest {
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String SESSION_ID = "a-session-id";
+    private static final String NEW_SESSION_ID = "a-new-session-id";
+    private static final String BROWSER_SESSION_ID = "a-browser-session-id";
+    private static final String DIFFERENT_BROWSER_SESSION_ID = "a--different-browser-session-id";
+    private static final String NEW_BROWSER_SESSION_ID = "a-new-browser-session-id";
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final String DOC_APP_REDIRECT_URI = "/doc-app-authorisation";
     private static final String SCOPE = "email openid profile";
@@ -1693,6 +1698,107 @@ class AuthorisationHandlerTest {
                             BASE_AUDIT_USER.withSessionId(SESSION_ID),
                             pair("description", expectedErrorObject.getDescription()));
         }
+
+        @Test
+        void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
+            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+            APIGatewayProxyResponseEvent response =
+                    setupExistingSessionAndCookieInHeader(null, null);
+
+            verify(sessionService).createSession();
+            verify(sessionService).save(sessionCaptor.capture());
+            assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+            assertEquals(
+                    format(
+                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+        }
+
+        @Test
+        void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
+            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+            APIGatewayProxyResponseEvent response =
+                    setupExistingSessionAndCookieInHeader(null, BROWSER_SESSION_ID);
+
+            verify(sessionService).createSession();
+            verify(sessionService).save(sessionCaptor.capture());
+            assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+            assertEquals(
+                    format(
+                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            NEW_BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+        }
+
+        @Test
+        void shouldUseExistingSessionEvenWhenBSIDCookieAbsent() {
+            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+            APIGatewayProxyResponseEvent response =
+                    setupExistingSessionAndCookieInHeader(
+                            new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID), null);
+
+            verify(sessionService, never()).createSession();
+            verify(sessionService).save(sessionCaptor.capture());
+            assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+            assertEquals(
+                    format(
+                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+        }
+
+        @Test
+        void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
+            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+            APIGatewayProxyResponseEvent response =
+                    setupExistingSessionAndCookieInHeader(
+                            new Session(SESSION_ID).withBrowserSessionId(null), BROWSER_SESSION_ID);
+
+            verify(sessionService, never()).createSession();
+            verify(sessionService).save(sessionCaptor.capture());
+            assertNull(sessionCaptor.getValue().getBrowserSessionId());
+            assertEquals(2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
+            assertTrue(
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
+                            .noneMatch(it -> it.startsWith("browser-session-id=")));
+        }
+
+        @Test
+        void shouldUseExistingSessionWhenBSIDsMatch() {
+            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+            APIGatewayProxyResponseEvent response =
+                    setupExistingSessionAndCookieInHeader(
+                            new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
+                            BROWSER_SESSION_ID);
+
+            verify(sessionService, never()).createSession();
+            verify(sessionService).save(sessionCaptor.capture());
+            assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+            assertEquals(
+                    format(
+                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+        }
+
+        @Test
+        void shouldUseExistingSessionEvenWhenBSIDDoNotMatch() {
+            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+            APIGatewayProxyResponseEvent response =
+                    setupExistingSessionAndCookieInHeader(
+                            new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
+                            DIFFERENT_BROWSER_SESSION_ID);
+
+            verify(sessionService, never()).createSession();
+            verify(sessionService).save(sessionCaptor.capture());
+            assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+            assertEquals(
+                    format(
+                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID),
+                    browserSessionIdCookieFromResponse(response));
+        }
     }
 
     @Nested
@@ -2250,5 +2356,33 @@ class AuthorisationHandlerTest {
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private APIGatewayProxyResponseEvent setupExistingSessionAndCookieInHeader(
+            Session existingSession, String browserSessionIdFromCookie) {
+        when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
+        when(sessionService.getSessionFromSessionCookie(any()))
+                .thenReturn(Optional.ofNullable(existingSession));
+        when(sessionService.createSession())
+                .thenReturn(
+                        new Session(NEW_SESSION_ID).withBrowserSessionId(NEW_BROWSER_SESSION_ID));
+
+        Map<String, String> requestParams = buildRequestParams(null);
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+        if (browserSessionIdFromCookie != null) {
+            event.setHeaders(Map.of("browser-session-id", browserSessionIdFromCookie));
+        }
+
+        return makeHandlerRequest(event);
+    }
+
+    private String browserSessionIdCookieFromResponse(APIGatewayProxyResponseEvent response) {
+        return response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
+                .filter(it -> it.startsWith("browser-session-id="))
+                .findAny()
+                .orElseThrow();
     }
 }
