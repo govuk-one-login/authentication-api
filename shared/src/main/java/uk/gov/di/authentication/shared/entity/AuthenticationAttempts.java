@@ -10,12 +10,11 @@ import uk.gov.di.authentication.shared.validation.Required;
 public class AuthenticationAttempts {
 
     @Required private String internalSubjectId;
-    @Required private String authenticationMethod;
-    @Required private String code;
+    @Required private String countType;
     @Required private Integer count;
     @Required private String journeyType;
 
-    private String authMethodJourneyType;
+    private String sortKey;
     private String created;
     private String updated;
     private long timeToLive;
@@ -35,62 +34,40 @@ public class AuthenticationAttempts {
         return this;
     }
 
-    @DynamoDbAttribute("JourneyType")
-    public String getJourneyType() {
-        return journeyType;
+    public void setJourneyType(JourneyType journeyType) {
+        this.journeyType = journeyType.getValue();
+        sortKey = null;
     }
 
-    public void setJourneyType(String journeyType) {
-        this.journeyType = journeyType;
-        setAuthMethodJourneyType();
-    }
-
-    public AuthenticationAttempts withJourneyType(String journeyType) {
+    public AuthenticationAttempts withJourneyType(JourneyType journeyType) {
         setJourneyType(journeyType);
         return this;
     }
 
-    @DynamoDbAttribute("AuthenticationMethod")
-    public String getAuthenticationMethod() {
-        return authenticationMethod;
+    public void setCountType(CountType countType) {
+        this.countType = countType.getValue();
+        sortKey = null;
     }
 
-    public void setAuthenticationMethod(String authenticationMethod) {
-        this.authenticationMethod = authenticationMethod;
-        setAuthMethodJourneyType();
-    }
-
-    public AuthenticationAttempts withAuthenticationMethod(String authenticationMethod) {
-        setAuthenticationMethod(authenticationMethod);
+    public AuthenticationAttempts withCountType(CountType countType) {
+        setCountType(countType);
         return this;
     }
 
     @DynamoDbSortKey
-    @DynamoDbAttribute("AuthMethodJourneyType")
-    public String getAuthMethodJourneyType() {
-        return authMethodJourneyType;
+    @DynamoDbAttribute("SK")
+    public String getSortKey() {
+        return sortKey != null ? sortKey : buildSortKey();
     }
 
-    public void setAuthMethodJourneyType() {
-        this.authMethodJourneyType = authenticationMethod + "_" + journeyType;
+    private String buildSortKey() {
+        return journeyType + "#" + countType + "#" + "Count";
     }
 
-    public void setAuthMethodJourneyType(String authMethodJourneyType) {
-        this.authMethodJourneyType = authMethodJourneyType;
-    }
-
-    @DynamoDbAttribute("Code")
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public AuthenticationAttempts withCode(String code) {
-        this.code = code;
-        return this;
+    public void setSortKey(String sortKey) {
+        this.sortKey = sortKey;
+        countType = null;
+        journeyType = null;
     }
 
     @DynamoDbAttribute("Count")
