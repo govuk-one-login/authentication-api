@@ -64,6 +64,67 @@ paths:
         uri: "${endpoint_modules.update-phone-number.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
+  /mm-sample/{param}:
+    get:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.mm-sample.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+    post:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.mm-sample.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.mm-sample.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
+    delete:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri: "${endpoint_modules.mm-sample.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      parameters:
+        - name: param
+          in: path
+          required: true
+          schema:
+            type: string
   /mfa-methods/{publicSubjectId}:
     parameters:
       - name: publicSubjectId

@@ -8,6 +8,7 @@ locals {
     delete-account        = module.delete_account
     send-otp-notification = module.send_otp_notification
     update-phone-number   = module.update_phone_number
+    mm-sample             = module.mm-sample
   }
   openapi_spec = templatefile(
     "${path.module}/${var.openapi_spec_filename}",
