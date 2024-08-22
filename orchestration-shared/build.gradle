@@ -22,7 +22,6 @@ dependencies {
             configurations.s3,
             configurations.sqs,
             configurations.ssm,
-            configurations.xray,
             configurations.cloudwatch,
             configurations.gson,
             configurations.apache,
