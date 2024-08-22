@@ -77,7 +77,7 @@ public class IPVTokenService {
                 generatePrivateKeyJwt(claimsSet),
                 codeGrant,
                 null,
-                null,
+                singletonList(ipvTokenURI),
                 Map.of(
                         "client_id",
                         singletonList(configurationService.getIPVAuthorisationClientId())));

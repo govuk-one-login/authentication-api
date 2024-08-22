@@ -88,6 +88,9 @@ public class IpvTokenTest {
                         "client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&"
                                 + "code=dummyAuthCode&"
                                 + "grant_type=authorization_code&"
+                                + "resource="
+                                + "http://localhost:1234/token"
+                                + "&"
                                 + "client_assertion="
                                 + CLIENT_ASSERTION_HEADER
                                 + "."
@@ -155,6 +158,9 @@ public class IpvTokenTest {
                         "client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&"
                                 + "code=dummyInvalidAuthCode&"
                                 + "grant_type=authorization_code&"
+                                + "resource="
+                                + "http://localhost:1234/token"
+                                + "&"
                                 + "client_assertion="
                                 + CLIENT_ASSERTION_HEADER
                                 + "."

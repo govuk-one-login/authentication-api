@@ -112,8 +112,6 @@ class IPVTokenServiceTest {
         assertThat(
                 tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
-        assertThat(
-                tokenRequest.toHTTPRequest().getQueryParameters().get("resource"), equalTo(null));
     }
 
     @Test
