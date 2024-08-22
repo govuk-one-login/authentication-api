@@ -391,6 +391,13 @@ public class AuthorisationHandler
                 pair("reauthRequested", reauthRequested));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
+
+        // TODO: ATO-989: delete these logs once feature metrics are complete
+        logBrowserSessionIdMetrics(
+                session.map(Session::getBrowserSessionId),
+                CookieHelper.parseBrowserSessionCookie(input.getHeaders()));
+        //
+
         var vtrList = getVtrList(reauthRequested, authRequest);
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
@@ -920,5 +927,30 @@ public class AuthorisationHandler
         }
 
         return sub;
+    }
+
+    private void logBrowserSessionIdMetrics(
+            Optional<String> browserSessionIdFromSession,
+            Optional<String> browserSessionIdFromCookie) {
+        if (!configurationService.isBrowserSessionCookieEnabled()) {
+            return;
+        }
+
+        if (browserSessionIdFromSession.isEmpty()) {
+            LOG.info("browser session id: session has no browser session id");
+            return;
+        }
+
+        if (Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
+            LOG.info(
+                    "browser session id: cookie matches session. session={}, cookie={}",
+                    browserSessionIdFromSession,
+                    browserSessionIdFromCookie);
+        } else {
+            LOG.info(
+                    "browser session id: cookie does not match session. session={}, cookie={}",
+                    browserSessionIdFromSession,
+                    browserSessionIdFromCookie);
+        }
     }
 }
