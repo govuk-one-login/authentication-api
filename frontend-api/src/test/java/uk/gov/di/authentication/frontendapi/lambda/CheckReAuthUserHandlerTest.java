@@ -3,23 +3,26 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -30,6 +33,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -52,8 +56,8 @@ class CheckReAuthUserHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final DynamoAuthenticationAttemptsService dynamoAuthenticationAttemptsService =
-            mock(DynamoAuthenticationAttemptsService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
     private final ClientService clientService = mock(ClientService.class);
 
     private static final String CLIENT_ID = "test-client-id";
@@ -64,7 +68,10 @@ class CheckReAuthUserHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "http://www.example.com";
     private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
 
-    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL_USED_TO_SIGN_IN);
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(EMAIL_USED_TO_SIGN_IN)
+                    .setInternalCommonSubjectIdentifier(TEST_SUBJECT_ID);
 
     private final AuditContext testAuditContextWithoutAuditEncoded =
             new AuditContext(
@@ -93,9 +100,10 @@ class CheckReAuthUserHandlerTest {
     @BeforeEach
     public void setUp() {
         var userProfile = generateUserProfile();
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
+                .thenReturn(userProfile);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
 
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
@@ -118,11 +126,14 @@ class CheckReAuthUserHandlerTest {
                         authenticationService,
                         auditService,
                         codeStorageService,
-                        dynamoAuthenticationAttemptsService);
+                        authenticationAttemptsService);
     }
 
-    @Test
-    void shouldReturn200ForSuccessfulReAuthRequest() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldReturn200ForSuccessfulReAuthRequest(boolean supportAuthenticationAttempts) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(supportAuthenticationAttempts);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -151,7 +162,8 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
                         testAuditContextWithAuditEncoded);
 
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
+        verify(authenticationService, atLeastOnce())
+                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
         verify(authenticationService, times(2)).getOrGenerateSalt(any(UserProfile.class));
 
         verify(userContext).getClient();
@@ -165,8 +177,12 @@ class CheckReAuthUserHandlerTest {
         verify(clientRegistry, times(4)).getRedirectUrls();
     }
 
-    @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
+            boolean supportAuthenticationAttempts) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(supportAuthenticationAttempts);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
@@ -206,8 +222,11 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService).getMaxPasswordRetries();
     }
 
-    @Test
-    void shouldReturn404ForWhenUserNotFound() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldReturn404ForWhenUserNotFound(boolean supportAuthenticationAttempts) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(supportAuthenticationAttempts);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -224,30 +243,38 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
+        verify(authenticationService, atLeastOnce())
+                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
 
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
                         testAuditContextWithAuditEncoded);
 
-        verify(userContext, times(2)).getSession();
+        verify(userContext, atLeastOnce()).getSession();
         verify(userContext).getClientSessionId();
         verify(userContext).getTxmaAuditEncoded();
 
         verify(configurationService).getMaxEmailReAuthRetries();
     }
 
-    @Test
-    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes(boolean supportAuthenticationAttempts) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(supportAuthenticationAttempts);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
+                .thenReturn(userProfile);
         when(codeStorageService.getIncorrectEmailCount(any())).thenReturn(5);
-
+        when(authenticationAttemptsService.getCount(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
+                .thenReturn(5);
         var result =
                 handler.handleRequestWithUserContext(
                         event,
@@ -258,8 +285,9 @@ class CheckReAuthUserHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
-        verify(codeStorageService, times(2)).getIncorrectEmailCount(any());
+        verify(authenticationService, atLeastOnce())
+                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
+        verify(codeStorageService, atLeastOnce()).getIncorrectEmailCount(any());
 
         verify(auditService)
                 .submitAuditEvent(
@@ -275,8 +303,12 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService, times(2)).getMaxEmailReAuthRetries();
     }
 
-    @Test
-    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries(
+            boolean supportAuthenticationAttempts) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(supportAuthenticationAttempts);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
@@ -305,7 +337,8 @@ class CheckReAuthUserHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
 
-        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
+        verify(authenticationService, atLeastOnce())
+                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
         verify(codeStorageService).getIncorrectPasswordCountReauthJourney(any());
         verify(clientRegistry, times(2)).getRedirectUrls();
 
@@ -317,8 +350,11 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService, times(2)).getMaxPasswordRetries();
     }
 
-    @Test
-    void shouldReturn404ForWhenUserDoesNotMatch() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldReturn404ForWhenUserDoesNotMatch(boolean supportAuthenticationAttempts) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled())
+                .thenReturn(supportAuthenticationAttempts);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
         var result =
@@ -337,7 +373,7 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.REAUTHENTICATION_INVALID,
                         testAuditContextWithAuditEncoded);
 
-        verify(userContext, times(2)).getSession();
+        verify(userContext, atLeastOnce()).getSession();
         verify(userContext).getClientSessionId();
         verify(userContext).getTxmaAuditEncoded();
 
