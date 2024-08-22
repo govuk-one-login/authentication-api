@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -70,6 +72,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -81,7 +84,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserMigrationService userMigrationService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            CommonPasswordsService commonPasswordsService) {
+            CommonPasswordsService commonPasswordsService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -95,6 +99,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -106,6 +111,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -117,6 +124,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public LoginHandler() {
@@ -168,8 +177,20 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
-        int incorrectPasswordCount =
-                retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
+        int incorrectPasswordCount = 0;
+
+        if (configurationService.supportReauthSignoutEnabled()
+                && isReauthJourney
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            incorrectPasswordCount =
+                    authenticationAttemptsService.getCount(
+                            userProfile.getSubjectID(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_PASSWORD);
+        } else {
+            incorrectPasswordCount =
+                    retrieveIncorrectPasswordCount(request.getEmail(), isReauthJourney);
+        }
 
         if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
             auditService.submitAuditEvent(
@@ -281,7 +302,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
             if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-                codeStorageService.deleteIncorrectPasswordCountReauthJourney(request.getEmail());
+                // Note: AUT-3613 will remove this logic and preserve the counts when the User is
+                // logged out.
+                if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                    authenticationAttemptsService.deleteCount(
+                            userProfile.getSubjectID(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_PASSWORD);
+                } else {
+                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
+                            request.getEmail());
+                }
             } else {
                 blockUser(
                         userProfile.getSubjectID(),
@@ -292,17 +323,26 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
         }
 
-        incrementCountOfFailedAttemptsToProvidePassword(request, isReauthJourney);
+        incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
 
         return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
     }
 
     private void incrementCountOfFailedAttemptsToProvidePassword(
-            LoginRequest request, boolean isReauthJourney) {
+            UserProfile userProfile, boolean isReauthJourney) {
         if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-            codeStorageService.increaseIncorrectPasswordCountReauthJourney(request.getEmail());
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                authenticationAttemptsService.createOrIncrementCount(
+                        userProfile.getSubjectID(),
+                        configurationService.getLockoutCountTTL(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_PASSWORD);
+            } else {
+                codeStorageService.increaseIncorrectPasswordCountReauthJourney(
+                        userProfile.getEmail());
+            }
         } else {
-            codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
+            codeStorageService.increaseIncorrectPasswordCount(userProfile.getEmail());
         }
     }
 
