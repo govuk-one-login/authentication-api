@@ -132,11 +132,11 @@ subprojects {
                 because 'dependabot alert is fixed in 4.1.108.Final and above'
             }
 
-            implementation('org.apache.commons:commons-compress:1.26.0') {
+            implementation('org.apache.commons:commons-compress:1.27.1') {
                 because 'dependabot alert is fixed in 1.26.0 and above'
             }
 
-            testRuntimeOnly('org.apache.commons:commons-compress:1.26.0') {
+            testRuntimeOnly('org.apache.commons:commons-compress:1.27.1') {
                 because 'dependabot alert is fixed in 1.26.0 and above'
             }
 
