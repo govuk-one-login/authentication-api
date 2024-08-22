@@ -52,6 +52,8 @@ resource "aws_lambda_function" "authorizer" {
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
   tags = local.default_tags
+
+  depends_on = [module.account_management_api_authorizer_role]
 }
 
 resource "aws_api_gateway_authorizer" "di_account_management_api" {
@@ -114,7 +116,7 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
 resource "aws_cloudwatch_log_metric_filter" "lambda_authorizer_error_metric_filter" {
   name           = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name = aws_cloudwatch_log_group.lambda_log_group.name
 
   metric_transformation {
     name      = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-error-count", ".", "")

@@ -13,7 +13,7 @@ module "account_management_api_authenticate_role" {
 }
 
 module "authenticate" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "authenticate"
   path_part       = "authenticate"
@@ -57,5 +57,9 @@ module "authenticate" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
-  use_localstack = var.use_localstack
+  account_alias         = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret      = local.dynatrace_secret
+
+  depends_on = [module.account_management_api_authenticate_role]
 }

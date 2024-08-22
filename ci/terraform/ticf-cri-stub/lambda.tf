@@ -7,7 +7,7 @@ module "ticf_cri_stub_role" {
 }
 
 module "ticf_cri_stub_lambda" {
-  source = "../modules/stub-endpoint-module"
+  source = "../modules/endpoint-lambda"
 
   endpoint_name = "ticf-cri-stub"
 
@@ -40,6 +40,7 @@ module "ticf_cri_stub_lambda" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = false
+  account_alias                          = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn                  = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret                       = local.dynatrace_secret
 }

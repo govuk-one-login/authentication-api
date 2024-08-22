@@ -19,7 +19,7 @@ module "account_management_api_send_notification_role" {
 }
 
 module "send_otp_notification" {
-  source = "../modules/endpoint-module"
+  source = "../modules/endpoint-module-v2"
 
   endpoint_name   = "send-otp-notification"
   path_part       = "send-otp-notification"
@@ -72,9 +72,13 @@ module "send_otp_notification" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
-  use_localstack                         = var.use_localstack
+
+  account_alias         = data.aws_iam_account_alias.current.account_alias
+  slack_event_topic_arn = data.aws_sns_topic.slack_events.arn
+  dynatrace_secret      = local.dynatrace_secret
 
   depends_on = [
+    module.account_management_api_send_notification_role,
     aws_api_gateway_rest_api.di_account_management_api,
     aws_sqs_queue.email_queue,
     aws_elasticache_replication_group.account_management_sessions_store,

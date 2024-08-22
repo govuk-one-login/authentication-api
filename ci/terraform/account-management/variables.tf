@@ -238,3 +238,9 @@ locals {
     scaling_trigger = var.scaling_trigger
   }
 }
+
+variable "openapi_spec_filename" {
+  type        = string
+  default     = "openapi.yaml"
+  description = "The name of the OpenAPI spec file, located within this module."
+}
