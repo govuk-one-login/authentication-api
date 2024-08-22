@@ -67,6 +67,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getReauthEnterEmailCountTTLShouldDefault() {
+        assertEquals(3600, configurationService.getReauthEnterEmailCountTTL());
+    }
+
+    @Test
     void getLockoutDurationShouldDefault() {
         assertEquals(900, configurationService.getLockoutDuration());
     }
@@ -630,6 +635,11 @@ class ConfigurationServiceTest {
     @Test
     void supportReauthSignoutEnabledShouldEqualDefaultWhenEnvVarUnset() {
         assertFalse(configurationService.supportReauthSignoutEnabled());
+    }
+
+    @Test
+    void isAuthenticationAttemptsServiceEnabledShouldEqualDefaultWhenEnvVarUnset() {
+        assertFalse(configurationService.isAuthenticationAttemptsServiceEnabled());
     }
 
     private static Stream<Arguments> commaSeparatedStringContains() {

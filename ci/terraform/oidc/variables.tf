@@ -212,6 +212,10 @@ variable "account_creation_lockout_count_ttl" {
   type    = number
   default = 3600
 }
+variable "reauth_enter_email_count_ttl" {
+  type    = number
+  default = 3600
+}
 
 variable "support_account_creation_count_ttl" {
   default     = false
@@ -703,6 +707,12 @@ variable "enforce_cloudfront" {
   type        = bool
   default     = false
   description = "Feature flag to switch the WAF on the OIDC API Gateway to the Origin Cloaking WAF to mandate CloudFront"
+}
+
+variable "authentication_attempts_service_enabled" {
+  type        = bool
+  default     = false
+  description = "Feature flag to use dynamoDb AuthenticationAttempts table to store OTP code information"
 }
 
 variable "call_ticf_cri" {
