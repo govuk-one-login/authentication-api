@@ -854,7 +854,8 @@ public class AuthorisationHandler
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
 
-        if (configurationService.isBrowserSessionCookieEnabled()) {
+        if (configurationService.isBrowserSessionCookieEnabled()
+                && session.getBrowserSessionId() != null) {
             cookies.add(
                     CookieHelper.buildCookieString(
                             CookieHelper.BROWSER_SESSION_COOKIE_NAME,
