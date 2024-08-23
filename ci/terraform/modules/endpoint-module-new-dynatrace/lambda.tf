@@ -27,7 +27,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
       var.handler_environment_variables,
       local.deploy_dynatrace ? local.dynatrace_environment_variables : {},
       {
-        JAVA_TOOL_OPTIONS      = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+        JAVA_TOOL_OPTIONS      = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 --add-reads jdk.jfr=ALL-UNNAMED"
         DT_LOGGING_DESTINATION = "stdout"
         DT_LOGGING_JAVA_FLAGS  = "log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true"
     })
