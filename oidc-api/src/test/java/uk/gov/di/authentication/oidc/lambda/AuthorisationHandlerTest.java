@@ -1564,7 +1564,7 @@ class AuthorisationHandlerTest {
         void shouldSetTheRelevantCookiesInTheHeader() {
             when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
             Session sessionWithBrowserSessionId =
-                    new Session("a-session-id").withBrowserSessionId("a-browser-session-id");
+                    new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID);
             when(sessionService.createSession()).thenReturn(sessionWithBrowserSessionId);
 
             Map<String, String> requestParams = buildRequestParams(null);
@@ -1589,7 +1589,9 @@ class AuthorisationHandlerTest {
                             .get(ResponseHeaders.SET_COOKIE)
                             .get(2)
                             .contains(
-                                    "browser-session-id=a-browser-session-id; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;"));
+                                    format(
+                                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                            BROWSER_SESSION_ID)));
         }
 
         @Test
