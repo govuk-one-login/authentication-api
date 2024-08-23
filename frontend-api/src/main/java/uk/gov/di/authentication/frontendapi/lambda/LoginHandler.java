@@ -272,6 +272,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             boolean isReauthJourney) {
         var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
 
+        System.out.println("this class needs a System.out!!!");
+
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.INVALID_CREDENTIALS,
                 auditContext,
