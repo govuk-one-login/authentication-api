@@ -232,7 +232,7 @@ subprojects {
 allprojects {
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xlint:deprecation" << "-Werror"
+            options.compilerArgs << "-Xlint:deprecation" << "-Werror" << "--add-reads" << "jdk.jfr=ALL-UNNAMED"
         }
         tasks.withType(AbstractArchiveTask) {
             // Ensure that the jar / zip files are reproducible
