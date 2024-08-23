@@ -193,6 +193,7 @@ class AuthorisationHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String SESSION_ID = "a-session-id";
     private static final String NEW_SESSION_ID = "a-new-session-id";
+    private static final String BROWSER_SESSION_ID_COOKIE_NAME = "bsid";
     private static final String BROWSER_SESSION_ID = "a-browser-session-id";
     private static final String DIFFERENT_BROWSER_SESSION_ID = "a--different-browser-session-id";
     private static final String NEW_BROWSER_SESSION_ID = "a-new-browser-session-id";
@@ -1590,8 +1591,8 @@ class AuthorisationHandlerTest {
                             .get(2)
                             .contains(
                                     format(
-                                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                                            BROWSER_SESSION_ID)));
+                                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID)));
         }
 
         @Test
@@ -1712,8 +1713,8 @@ class AuthorisationHandlerTest {
             assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            NEW_BROWSER_SESSION_ID),
+                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
 
@@ -1728,8 +1729,8 @@ class AuthorisationHandlerTest {
             assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            NEW_BROWSER_SESSION_ID),
+                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
 
@@ -1745,8 +1746,8 @@ class AuthorisationHandlerTest {
             assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID),
+                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
 
@@ -1763,7 +1764,12 @@ class AuthorisationHandlerTest {
             assertEquals(2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
             assertTrue(
                     response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
-                            .noneMatch(it -> it.startsWith("browser-session-id=")));
+                            .noneMatch(
+                                    it ->
+                                            it.startsWith(
+                                                    format(
+                                                            "%s=",
+                                                            BROWSER_SESSION_ID_COOKIE_NAME))));
         }
 
         @Test
@@ -1779,8 +1785,8 @@ class AuthorisationHandlerTest {
             assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID),
+                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
 
@@ -1797,8 +1803,8 @@ class AuthorisationHandlerTest {
             assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "browser-session-id=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID),
+                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
     }
@@ -2375,7 +2381,7 @@ class AuthorisationHandlerTest {
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
         if (browserSessionIdFromCookie != null) {
-            event.setHeaders(Map.of("browser-session-id", browserSessionIdFromCookie));
+            event.setHeaders(Map.of(BROWSER_SESSION_ID_COOKIE_NAME, browserSessionIdFromCookie));
         }
 
         return makeHandlerRequest(event);
@@ -2383,7 +2389,7 @@ class AuthorisationHandlerTest {
 
     private String browserSessionIdCookieFromResponse(APIGatewayProxyResponseEvent response) {
         return response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
-                .filter(it -> it.startsWith("browser-session-id="))
+                .filter(it -> it.startsWith(format("%s", BROWSER_SESSION_ID_COOKIE_NAME)))
                 .findAny()
                 .orElseThrow();
     }
