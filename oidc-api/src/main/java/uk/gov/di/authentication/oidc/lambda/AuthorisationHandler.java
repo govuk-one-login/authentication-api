@@ -861,7 +861,7 @@ public class AuthorisationHandler
                             CookieHelper.BROWSER_SESSION_COOKIE_NAME,
                             session.getBrowserSessionId(),
                             configurationService.getSessionCookieAttributes(),
-                            configurationService.getDomainName()));
+                            configurationService.getOidcDomainName()));
         }
 
         getPrimaryLanguageFromUILocales(authRequest, configurationService)

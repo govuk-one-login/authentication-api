@@ -188,6 +188,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("DOMAIN_NAME");
     }
 
+    public String getOidcDomainName() {
+        return System.getenv("OIDC_SERVICE_DOMAIN");
+    }
+
     public Optional<String> getDynamoArnPrefix() {
         return Optional.ofNullable(System.getenv("DYNAMO_ARN_PREFIX"));
     }
