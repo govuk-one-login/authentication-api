@@ -30,10 +30,7 @@ public class AuditAssertionsHelper {
     public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
         var expectedTxmaEvents =
-                events.stream()
-                        .map(Objects::toString)
-                        .map("AUTH_"::concat)
-                        .collect(Collectors.toList());
+                events.stream().map(Objects::toString).collect(Collectors.toList());
 
         if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
@@ -70,10 +67,7 @@ public class AuditAssertionsHelper {
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
         var expectedTxmaEvents =
-                events.stream()
-                        .map(Objects::toString)
-                        .map("AUTH_"::concat)
-                        .collect(Collectors.toList());
+                events.stream().map(Objects::toString).collect(Collectors.toList());
 
         if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
