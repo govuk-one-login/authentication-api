@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION;
+import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -192,7 +192,7 @@ public class TokenHandler
                                     Optional.ofNullable(internalPairwiseId)
                                             .orElse(AuditService.UNKNOWN));
 
-            auditService.submitAuditEvent(TOKEN_SENT_TO_ORCHESTRATION, auditContext);
+            auditService.submitAuditEvent(AUTH_TOKEN_SENT_TO_ORCHESTRATION, auditContext);
 
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");

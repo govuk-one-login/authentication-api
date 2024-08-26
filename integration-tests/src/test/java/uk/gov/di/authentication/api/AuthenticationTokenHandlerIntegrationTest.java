@@ -34,7 +34,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION;
+import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
@@ -122,7 +122,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         assertTrue(authCodeStorePostHanderExecution.get().isHasBeenUsed());
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, List.of(TOKEN_SENT_TO_ORCHESTRATION));
+                txmaAuditQueue, List.of(AUTH_TOKEN_SENT_TO_ORCHESTRATION));
     }
 
     @Test

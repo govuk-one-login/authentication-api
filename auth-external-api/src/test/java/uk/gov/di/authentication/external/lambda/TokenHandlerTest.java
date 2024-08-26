@@ -234,7 +234,7 @@ class TokenHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
+                        AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION,
                         new AuditContext(
                                 CLIENT_ID,
                                 AuditService.UNKNOWN,
