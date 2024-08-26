@@ -36,7 +36,7 @@ import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PASSWORD;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PASSWORD;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -184,7 +184,7 @@ public class UpdatePasswordHandler
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
-            auditService.submitAuditEvent(UPDATE_PASSWORD, auditContext);
+            auditService.submitAuditEvent(AUTH_UPDATE_PASSWORD, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
 

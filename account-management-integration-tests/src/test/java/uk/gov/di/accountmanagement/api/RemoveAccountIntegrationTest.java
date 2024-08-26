@@ -21,7 +21,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -58,7 +58,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertFalse(userStore.userExists(EMAIL));
         assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(DELETE_ACCOUNT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
     }
 
     @Test
@@ -78,7 +78,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertFalse(userStore.userExists(EMAIL));
         assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(DELETE_ACCOUNT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
     }
 
     @Test

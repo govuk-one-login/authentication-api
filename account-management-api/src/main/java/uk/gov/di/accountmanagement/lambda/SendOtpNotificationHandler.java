@@ -314,7 +314,7 @@ public class SendOtpNotificationHandler
                         AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
         auditService.submitAuditEvent(
-                AccountManagementAuditableEvent.SEND_OTP,
+                AccountManagementAuditableEvent.AUTH_SEND_OTP,
                 auditContext,
                 pair("notification-type", sendNotificationRequest.getNotificationType()),
                 pair("test-user", isTestUserRequest));

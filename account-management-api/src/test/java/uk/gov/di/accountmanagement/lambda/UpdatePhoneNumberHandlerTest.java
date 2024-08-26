@@ -108,7 +108,7 @@ class UpdatePhoneNumberHandlerTest {
                                         SupportedLanguage.EN)));
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
+                        AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER,
                         new AuditContext(
                                 AuditService.UNKNOWN,
                                 CLIENT_SESSION_ID,

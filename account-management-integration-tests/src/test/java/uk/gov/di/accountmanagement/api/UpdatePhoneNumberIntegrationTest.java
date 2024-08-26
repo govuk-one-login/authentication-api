@@ -27,7 +27,7 @@ import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBIL
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
@@ -96,7 +96,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, List.of(UPDATE_PHONE_NUMBER));
+                txmaAuditQueue, List.of(AUTH_UPDATE_PHONE_NUMBER));
     }
 
     @Test

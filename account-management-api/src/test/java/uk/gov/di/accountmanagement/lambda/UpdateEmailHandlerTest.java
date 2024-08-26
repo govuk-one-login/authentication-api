@@ -143,7 +143,7 @@ class UpdateEmailHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_EMAIL,
+                        AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                         auditContext,
                         AuditService.MetadataPair.pair(
                                 "replacedEmail", EXISTING_EMAIL_ADDRESS, true));
@@ -180,7 +180,7 @@ class UpdateEmailHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                            AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                             auditContext.withSubjectId(INTERNAL_SUBJECT.getValue()),
                             AuditService.MetadataPair.pair(
                                     "journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
