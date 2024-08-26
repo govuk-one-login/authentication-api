@@ -152,7 +152,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
         verify(auditService)
                 .submitAuditEvent(
-                        UtilsAuditableEvent.BULK_EMAIL_SENT,
+                        UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT,
                         AUDIT_CONTEXT,
                         pair("internalSubjectId", SUBJECT_ID),
                         pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
@@ -188,7 +188,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
         verify(auditService, never())
                 .submitAuditEvent(
-                        eq(UtilsAuditableEvent.BULK_EMAIL_SENT),
+                        eq(UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT),
                         any(),
                         eq(pair("internalSubjectId", SUBJECT_ID)),
                         eq(pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL")));
@@ -229,7 +229,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
         verify(auditService, never())
                 .submitAuditEvent(
-                        eq(UtilsAuditableEvent.BULK_EMAIL_SENT),
+                        eq(UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT),
                         any(),
                         eq(pair("internalSubjectId", SUBJECT_ID)),
                         eq(pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL")));
@@ -272,7 +272,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                     .updateUserStatus(TEST_SUBJECT_IDS[j], BulkEmailStatus.EMAIL_SENT);
             verify(auditService)
                     .submitAuditEvent(
-                            UtilsAuditableEvent.BULK_EMAIL_SENT,
+                            UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT,
                             AUDIT_CONTEXT
                                     .withEmail(TEST_EMAILS[j])
                                     .withSubjectId(expectedInternalPairwiseId),

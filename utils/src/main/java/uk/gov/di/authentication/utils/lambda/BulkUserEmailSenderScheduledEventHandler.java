@@ -105,8 +105,8 @@ public class BulkUserEmailSenderScheduledEventHandler
         final UtilsAuditableEvent auditableEvent =
                 BulkEmailUserSendMode.DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES.equals(
                                 bulkEmailUserSendMode)
-                        ? UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT
-                        : UtilsAuditableEvent.BULK_EMAIL_SENT;
+                        ? UtilsAuditableEvent.AUTH_BULK_RETRY_EMAIL_SENT
+                        : UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT;
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
