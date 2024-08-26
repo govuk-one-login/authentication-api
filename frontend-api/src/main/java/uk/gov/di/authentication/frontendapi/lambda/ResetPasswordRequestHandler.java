@@ -37,8 +37,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.getLastDigitsOfPhoneNumber;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -155,8 +155,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             var eventName =
                     isTestClient
-                            ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
-                            : PASSWORD_RESET_REQUESTED;
+                            ? AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
+                            : AUTH_PASSWORD_RESET_REQUESTED;
 
             auditService.submitAuditEvent(
                     eventName, auditContext, passwordResetCounterPair, passwordResetTypePair);

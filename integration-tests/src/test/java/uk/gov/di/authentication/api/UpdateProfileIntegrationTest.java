@@ -22,8 +22,8 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -61,7 +61,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
-                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE));
+                List.of(
+                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
+                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE));
     }
 
     private AuthenticationRequest setUpTest(String sessionId, String clientSessionId)

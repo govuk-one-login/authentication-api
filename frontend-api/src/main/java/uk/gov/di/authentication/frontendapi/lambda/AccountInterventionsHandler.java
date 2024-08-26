@@ -62,22 +62,22 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     Map.ofEntries(
                             Map.entry(
                                     new State(false, false, false, false),
-                                    FrontendAuditableEvent.NO_INTERVENTION),
+                                    FrontendAuditableEvent.AUTH_NO_INTERVENTION),
                             Map.entry(
                                     new State(false, true, true, false),
-                                    FrontendAuditableEvent.NO_INTERVENTION),
+                                    FrontendAuditableEvent.AUTH_NO_INTERVENTION),
                             Map.entry(
                                     new State(false, true, false, true),
-                                    FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION),
+                                    FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION),
                             Map.entry(
                                     new State(false, true, true, true),
-                                    FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION),
+                                    FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION),
                             Map.entry(
                                     new State(false, true, false, false),
-                                    FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION),
+                                    FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION),
                             Map.entry(
                                     new State(true, false, false, false),
-                                    FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION));
+                                    FrontendAuditableEvent.AUTH_PERMANENTLY_BLOCKED_INTERVENTION));
 
     public AccountInterventionsHandler() {
         this(ConfigurationService.getInstance());

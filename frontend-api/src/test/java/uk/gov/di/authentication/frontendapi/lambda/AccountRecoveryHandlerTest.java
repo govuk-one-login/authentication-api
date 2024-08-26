@@ -26,8 +26,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_NOT_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -104,7 +104,7 @@ class AccountRecoveryHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody("{\"accountRecoveryPermitted\":false}"));
-        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_NOT_PERMITTED, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_NOT_PERMITTED, auditContext);
     }
 
     @Test
@@ -120,7 +120,7 @@ class AccountRecoveryHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody("{\"accountRecoveryPermitted\":true}"));
-        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_PERMITTED, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_PERMITTED, auditContext);
     }
 
     @Test
@@ -137,7 +137,7 @@ class AccountRecoveryHandlerTest {
         assertThat(result, hasStatus(200));
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_RECOVERY_PERMITTED,
+                        AUTH_ACCOUNT_RECOVERY_PERMITTED,
                         auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 

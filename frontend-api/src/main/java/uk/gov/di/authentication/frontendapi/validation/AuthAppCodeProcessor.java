@@ -114,7 +114,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 dynamoService.setAuthAppAndAccountVerified(
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         AUTH_APP,
                         AuditService.UNKNOWN,
                         ipAddress,
@@ -125,7 +125,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 dynamoService.setVerifiedAuthAppAndRemoveExistingMfaMethod(
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         AUTH_APP,
                         AuditService.UNKNOWN,
                         ipAddress,

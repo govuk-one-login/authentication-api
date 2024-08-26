@@ -30,8 +30,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_INVALID;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -144,7 +144,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         } catch (AccountLockedException e) {
 
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                    FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
                     e.getErrorResponse() == ErrorResponse.ERROR_1045
                             ? AuditService.MetadataPair.pair(
@@ -174,7 +174,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         .getValue();
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
-            auditService.submitAuditEvent(REAUTHENTICATION_SUCCESSFUL, auditContext);
+            auditService.submitAuditEvent(AUTH_REAUTHENTICATION_SUCCESSFUL, auditContext);
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
             return Optional.of(rpPairwiseId);
@@ -200,7 +200,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
-        auditService.submitAuditEvent(REAUTHENTICATION_INVALID, auditContext);
+        auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
         codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);

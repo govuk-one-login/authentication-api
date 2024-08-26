@@ -177,7 +177,7 @@ class CheckEmailFraudBlockHandlerTest {
 
             verify(auditServiceMock)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                            FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                             new AuditContext(
                                     CLIENT_ID,
                                     CLIENT_SESSION_ID,

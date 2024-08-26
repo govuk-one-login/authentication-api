@@ -250,7 +250,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.CODE_VERIFIED, auditContext, metadataPairArray);
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
     }
 
     private AuditService.MetadataPair[] metadataPairs(
@@ -294,14 +294,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 }
 
                 resetIncorrectMfaCodeAttemptsCount(session);
-                auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+                auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
                 break;
             case ERROR_1033:
                 resetIncorrectMfaCodeAttemptsCount(session);
-                auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+                auditableEvent = FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
                 break;
             default:
-                auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
+                auditableEvent = FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
                 break;
         }
         var loginFailureCount =
@@ -335,7 +335,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
                     session.getInternalCommonSubjectIdentifier());
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                    FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                     auditContext,
                     pair("mfa-type", MFAMethodType.SMS.getValue()));
         }

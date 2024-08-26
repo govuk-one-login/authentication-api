@@ -38,7 +38,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class MfaResetIPVAuthorizationService {
@@ -108,7 +108,7 @@ public class MfaResetIPVAuthorizationService {
         String ipvAuthorisationRequestURI = ipvAuthorisationRequest.toURI().toString();
 
         storeState(session.getSessionId(), state);
-        auditService.submitAuditEvent(REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+        auditService.submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
         cloudwatchMetricsService.incrementMfaResetHandoffCount();
 
         LOG.info("MFA reset JAR created, redirect URI {}", ipvAuthorisationRequestURI);

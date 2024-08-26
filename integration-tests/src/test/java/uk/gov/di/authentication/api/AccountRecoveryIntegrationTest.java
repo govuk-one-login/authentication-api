@@ -27,8 +27,8 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_NOT_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -73,7 +73,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
         assertThat(response, hasStatus(200));
         assertThat(response, hasJsonBody(new AccountRecoveryResponse(false)));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(ACCOUNT_RECOVERY_NOT_PERMITTED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_ACCOUNT_RECOVERY_NOT_PERMITTED));
     }
 
     @Test
@@ -93,7 +93,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
         assertThat(response, hasStatus(200));
         assertThat(response, hasJsonBody(new AccountRecoveryResponse(true)));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(ACCOUNT_RECOVERY_PERMITTED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_ACCOUNT_RECOVERY_PERMITTED));
     }
 
     private ClientSession createClientSession() {

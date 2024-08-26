@@ -29,9 +29,9 @@ import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.audit.AuditContext.emptyAuditContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -78,14 +78,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     @Override
     public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {
         auditService.submitAuditEvent(
-                UPDATE_PROFILE_REQUEST_RECEIVED,
+                AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
                 auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
     }
 
     @Override
     public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {
         auditService.submitAuditEvent(
-                UPDATE_PROFILE_REQUEST_ERROR,
+                AUTH_UPDATE_PROFILE_REQUEST_ERROR,
                 auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
     }
 
@@ -139,7 +139,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         if (request.getUpdateProfileType().equals(UPDATE_TERMS_CONDS)) {
             authenticationService.updateTermsAndConditions(
                     request.getEmail(), configurationService.getTermsAndConditionsVersion());
-            auditableEvent = UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+            auditableEvent = AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
             LOG.info(
                     "Updated terms and conditions for Version: {}",
                     configurationService.getTermsAndConditionsVersion());
@@ -156,7 +156,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
             ErrorResponse errorResponse, AuditContext auditContext) {
-        auditService.submitAuditEvent(UPDATE_PROFILE_REQUEST_ERROR, auditContext);
+        auditService.submitAuditEvent(AUTH_UPDATE_PROFILE_REQUEST_ERROR, auditContext);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 

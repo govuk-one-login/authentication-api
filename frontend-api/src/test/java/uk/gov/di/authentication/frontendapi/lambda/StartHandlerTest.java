@@ -176,7 +176,7 @@ class StartHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.START_INFO_FOUND,
+                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -228,7 +228,7 @@ class StartHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.START_INFO_FOUND,
+                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -261,7 +261,7 @@ class StartHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.START_INFO_FOUND,
+                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }
@@ -289,7 +289,7 @@ class StartHandlerTest {
         assertThat(result, hasStatus(200));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.START_INFO_FOUND,
+                        FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", AuditService.UNKNOWN));
     }

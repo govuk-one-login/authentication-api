@@ -18,8 +18,8 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -55,7 +55,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
@@ -73,7 +73,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
@@ -91,7 +91,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
@@ -112,7 +112,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_CODE_SENT));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
@@ -143,7 +143,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_INVALID_CODE_REQUEST));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(0));

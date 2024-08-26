@@ -62,8 +62,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -178,7 +178,7 @@ class ResetPasswordHandlerTest {
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
+                        FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
                         auditContext);
     }
 
@@ -198,7 +198,7 @@ class ResetPasswordHandlerTest {
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
+                        FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
                         auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
@@ -220,7 +220,7 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
-        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -242,8 +242,8 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
-        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
-        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -265,7 +265,7 @@ class ResetPasswordHandlerTest {
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
 
-        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -284,7 +284,7 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(accountModifiersService);
-        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -348,7 +348,7 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     @Test
@@ -385,8 +385,8 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
-        verify(auditService).submitAuditEvent(ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
-        verify(auditService).submitAuditEvent(PASSWORD_RESET_SUCCESSFUL, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PASSWORD_RESET_SUCCESSFUL, auditContext);
     }
 
     private APIGatewayProxyRequestEvent generateRequest(

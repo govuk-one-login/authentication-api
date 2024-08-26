@@ -123,7 +123,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             if (errorResponse.isPresent()) {
 
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL, auditContext);
+                        FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -138,7 +138,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 sessionService.save(userContext.getSession());
 
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         auditContext,
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
@@ -151,7 +151,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var rpPairwiseId = AuditService.UNKNOWN;
             var userMfaDetail = new UserMfaDetail();
             if (userExists) {
-                auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
+                auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
@@ -181,7 +181,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 auditContext = auditContext.withSubjectId(internalPairwiseId);
             } else {
                 userContext.getSession().setInternalCommonSubjectIdentifier(null);
-                auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
+                auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
             auditService.submitAuditEvent(

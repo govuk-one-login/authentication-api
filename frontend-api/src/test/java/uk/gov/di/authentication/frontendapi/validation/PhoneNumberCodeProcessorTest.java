@@ -268,7 +268,7 @@ class PhoneNumberCodeProcessorTest {
                 .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(anyString(), anyString());
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
                         AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false));
@@ -294,7 +294,7 @@ class PhoneNumberCodeProcessorTest {
                         anyString(), anyString(), anyBoolean(), anyBoolean());
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
                         AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", true));

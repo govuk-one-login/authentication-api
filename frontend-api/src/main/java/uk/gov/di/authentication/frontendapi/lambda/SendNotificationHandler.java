@@ -46,15 +46,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT_FOR_TEST_CLIENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT_FOR_TEST_CLIENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
@@ -454,13 +454,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType, boolean isTestClient) {
         switch (notificationType) {
             case VERIFY_EMAIL:
-                return isTestClient ? EMAIL_CODE_SENT_FOR_TEST_CLIENT : EMAIL_CODE_SENT;
+                return isTestClient ? AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT : AUTH_EMAIL_CODE_SENT;
             case VERIFY_PHONE_NUMBER:
-                return isTestClient ? PHONE_CODE_SENT_FOR_TEST_CLIENT : PHONE_CODE_SENT;
+                return isTestClient ? AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT : AUTH_PHONE_CODE_SENT;
             case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                 return isTestClient
-                        ? ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
-                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+                        ? AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                        : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
             default:
                 LOG.error(
                         "No successful Audit event configured for NotificationType: {}",
@@ -474,11 +474,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType) {
         switch (notificationType) {
             case VERIFY_EMAIL:
-                return EMAIL_INVALID_CODE_REQUEST;
+                return AUTH_EMAIL_INVALID_CODE_REQUEST;
             case VERIFY_PHONE_NUMBER:
-                return PHONE_INVALID_CODE_REQUEST;
+                return AUTH_PHONE_INVALID_CODE_REQUEST;
             case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+                return AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
             default:
                 LOG.error(
                         "No invalid code request Audit event configured for NotificationType: {}",

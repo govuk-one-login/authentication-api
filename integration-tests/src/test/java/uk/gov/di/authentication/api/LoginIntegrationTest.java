@@ -34,9 +34,9 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CREDENTIALS;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
@@ -139,7 +139,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(loginResponse.mfaMethodVerified(), equalTo(mfaMethodVerified));
         assertTrue(
                 Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_IN_SUCCESS));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_LOG_IN_SUCCESS));
     }
 
     private static Stream<Arguments> vectorOfTrust() {
@@ -188,7 +188,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         headers,
                         Map.of());
         assertThat(response, hasStatus(401));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CREDENTIALS));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CREDENTIALS));
     }
 
     @Test
@@ -215,13 +215,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
-                        ACCOUNT_TEMPORARILY_LOCKED,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS));
+                        AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS));
     }
 
     @Test
@@ -249,12 +249,12 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
-                        ACCOUNT_TEMPORARILY_LOCKED,
-                        ACCOUNT_TEMPORARILY_LOCKED,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS,
-                        INVALID_CREDENTIALS));
+                        AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                        AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS));
     }
 }

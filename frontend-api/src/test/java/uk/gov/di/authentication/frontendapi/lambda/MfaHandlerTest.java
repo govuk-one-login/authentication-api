@@ -189,7 +189,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
                         AUDIT_CONTEXT,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -212,7 +212,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -247,7 +247,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        FrontendAuditableEvent.AUTH_MFA_CODE_SENT,
                         AUDIT_CONTEXT,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -295,7 +295,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
+                        FrontendAuditableEvent.AUTH_MFA_MISMATCHED_EMAIL,
                         AUDIT_CONTEXT
                                 .withEmail("wrong.email@gov.uk")
                                 .withPhoneNumber(AuditService.UNKNOWN),
@@ -317,7 +317,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
+                        FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER,
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
@@ -402,7 +402,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -458,7 +458,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -484,7 +484,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
+                        FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST,
                         AUDIT_CONTEXT.withPhoneNumber(AuditService.UNKNOWN),
                         pair("journey-type", journeyType),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
@@ -507,7 +507,7 @@ class MfaHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
+                        FrontendAuditableEvent.AUTH_MFA_CODE_SENT_FOR_TEST_CLIENT,
                         AUDIT_CONTEXT,
                         pair("journey-type", JourneyType.SIGN_IN),
                         pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));

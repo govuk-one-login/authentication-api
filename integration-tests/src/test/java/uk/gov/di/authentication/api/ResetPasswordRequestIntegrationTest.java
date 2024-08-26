@@ -69,6 +69,6 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(requests.get(0).getCode(), hasLength(6));
 
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
+                txmaAuditQueue, Collections.singletonList(AUTH_PASSWORD_RESET_REQUESTED));
     }
 }

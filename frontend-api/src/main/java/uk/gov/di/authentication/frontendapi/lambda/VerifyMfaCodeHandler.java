@@ -41,9 +41,9 @@ import java.util.stream.Stream;
 
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -218,12 +218,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         Map<ErrorResponse, FrontendAuditableEvent> map =
                 Map.ofEntries(
-                        entry(ErrorResponse.ERROR_1042, CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.ERROR_1043, INVALID_CODE_SENT),
-                        entry(ErrorResponse.ERROR_1034, CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.ERROR_1037, INVALID_CODE_SENT));
+                        entry(ErrorResponse.ERROR_1042, AUTH_CODE_MAX_RETRIES_REACHED),
+                        entry(ErrorResponse.ERROR_1043, AUTH_INVALID_CODE_SENT),
+                        entry(ErrorResponse.ERROR_1034, AUTH_CODE_MAX_RETRIES_REACHED),
+                        entry(ErrorResponse.ERROR_1037, AUTH_INVALID_CODE_SENT));
 
-        return map.getOrDefault(errorResponse, FrontendAuditableEvent.INVALID_CODE_SENT);
+        return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
     }
 
     private void processCodeSession(
@@ -238,7 +238,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var auditableEvent =
                 errorResponse
                         .map(this::errorResponseAsFrontendAuditableEvent)
-                        .orElse(CODE_VERIFIED);
+                        .orElse(AUTH_CODE_VERIFIED);
 
         var auditContext =
                 auditContextFromUserContext(
@@ -309,9 +309,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         pair("journey-type", codeRequest.getJourneyType()));
         var additionalPairs =
                 switch (auditableEvent) {
-                    case CODE_MAX_RETRIES_REACHED -> List.of(
+                    case AUTH_CODE_MAX_RETRIES_REACHED -> List.of(
                             pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
-                    case INVALID_CODE_SENT -> {
+                    case AUTH_INVALID_CODE_SENT -> {
                         var failureCount =
                                 methodType.equals(MFAMethodType.AUTH_APP)
                                         ? codeStorageService.getIncorrectMfaCodeAttemptsCount(
@@ -322,7 +322,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 pair("loginFailureCount", failureCount),
                                 pair("MFACodeEntered", codeRequest.getCode()));
                     }
-                    case CODE_VERIFIED -> List.of(pair("MFACodeEntered", codeRequest.getCode()));
+                    case AUTH_CODE_VERIFIED -> List.of(
+                            pair("MFACodeEntered", codeRequest.getCode()));
                     default -> List.<AuditService.MetadataPair>of();
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())

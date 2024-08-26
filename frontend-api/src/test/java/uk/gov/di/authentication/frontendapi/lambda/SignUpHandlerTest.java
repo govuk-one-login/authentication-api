@@ -55,7 +55,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -176,7 +176,7 @@ class SignUpHandlerTest {
                         INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT,
+                        FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
                         AUDIT_CONTEXT.withSubjectId(expectedCommonSubject),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
@@ -211,7 +211,7 @@ class SignUpHandlerTest {
                         INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CREATE_ACCOUNT,
+                        FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
                         AUDIT_CONTEXT
                                 .withSubjectId(expectedCommonSubject)
                                 .withTxmaAuditEncoded(Optional.empty()),
@@ -279,7 +279,8 @@ class SignUpHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1009));
 
-        verify(auditService).submitAuditEvent(CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, AUDIT_CONTEXT);
+        verify(auditService)
+                .submitAuditEvent(AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, AUDIT_CONTEXT);
     }
 
     @Test
@@ -298,7 +299,7 @@ class SignUpHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
+                        AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 

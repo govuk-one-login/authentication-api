@@ -51,7 +51,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_START_INFO_FOUND;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -144,7 +144,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(JsonParser.parseString(response.getBody()), is(equalTo(expectedJson)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
 
     @Test
@@ -178,7 +179,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
 
     private static Stream<MFAMethodType> mfaMethodTypes() {
@@ -228,7 +230,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         verifyStandardUserInformationSetOnResponse(startResponse.user());
         assertThat(startResponse.user().isAuthenticated(), equalTo(true));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
 
     @Test
@@ -279,7 +282,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNotNull(clientSession.getDocAppSubjectId());
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
 
     @Test
@@ -311,7 +315,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         verifyStandardUserInformationSetOnResponse(startResponse.user());
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
 
     private void registerClient(KeyPair keyPair, ClientType clientType) {

@@ -45,6 +45,7 @@ class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT));
+                txmaAuditQueue,
+                List.of(FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT));
     }
 }

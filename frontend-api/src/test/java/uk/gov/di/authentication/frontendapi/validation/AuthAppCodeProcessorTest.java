@@ -210,7 +210,7 @@ class AuthAppCodeProcessorTest {
                 .setAuthAppAndAccountVerified(CommonTestVariables.EMAIL, AUTH_APP_SECRET);
         verify(mockAuditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         auditContext,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false));
@@ -233,7 +233,7 @@ class AuthAppCodeProcessorTest {
                         CommonTestVariables.EMAIL, AUTH_APP_SECRET);
         verify(mockAuditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        FrontendAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP,
                         auditContext,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", true));
@@ -252,7 +252,7 @@ class AuthAppCodeProcessorTest {
         verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
         verify(mockAuditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                        FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                         auditContext,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
     }

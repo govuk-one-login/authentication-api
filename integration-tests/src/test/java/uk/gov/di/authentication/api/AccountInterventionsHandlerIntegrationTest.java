@@ -36,7 +36,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PERMANENTLY_BLOCKED_INTERVENTION;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -82,11 +82,12 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
 
     static Stream<Arguments> accountInterventionResponseParameters() {
         return Stream.of(
-                Arguments.of(TEST_EMAIL_ADDRESS, false, FrontendAuditableEvent.NO_INTERVENTION),
+                Arguments.of(
+                        TEST_EMAIL_ADDRESS, false, FrontendAuditableEvent.AUTH_NO_INTERVENTION),
                 Arguments.of(
                         TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER,
                         true,
-                        PERMANENTLY_BLOCKED_INTERVENTION));
+                        AUTH_PERMANENTLY_BLOCKED_INTERVENTION));
     }
 
     @ParameterizedTest

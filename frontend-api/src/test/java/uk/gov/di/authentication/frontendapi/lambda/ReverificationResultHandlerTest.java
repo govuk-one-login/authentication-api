@@ -32,9 +32,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
@@ -109,7 +109,8 @@ class ReverificationResultHandlerTest {
 
             handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
 
-            verify(auditService).submitAuditEvent(eq(REVERIFY_SUCCESSFUL_TOKEN_RECEIVED), any());
+            verify(auditService)
+                    .submitAuditEvent(eq(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED), any());
         }
 
         @Test
@@ -126,7 +127,8 @@ class ReverificationResultHandlerTest {
             handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
 
             verify(auditService)
-                    .submitAuditEvent(eq(REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED), any());
+                    .submitAuditEvent(
+                            eq(AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED), any());
         }
     }
 
@@ -160,7 +162,8 @@ class ReverificationResultHandlerTest {
 
             handler.handleRequest(apiRequestEventWithEmail("1234", EMAIL), context);
 
-            verify(auditService).submitAuditEvent(eq(REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED), any());
+            verify(auditService)
+                    .submitAuditEvent(eq(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED), any());
         }
     }
 
