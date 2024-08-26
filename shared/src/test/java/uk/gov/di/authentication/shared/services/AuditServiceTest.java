@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
+import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.AUTH_TEST_EVENT_ONE;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasField;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
@@ -50,7 +50,7 @@ class AuditServiceTest {
                     Optional.empty());
 
     enum TestEvents implements AuditableEvent {
-        TEST_EVENT_ONE;
+        AUTH_TEST_EVENT_ONE;
 
         public AuditableEvent parseFromName(String name) {
             return valueOf(name);
@@ -78,7 +78,7 @@ class AuditServiceTest {
                         "persistent-session-id",
                         Optional.empty());
 
-        auditService.submitAuditEvent(TEST_EVENT_ONE, myContext);
+        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, myContext);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -113,7 +113,7 @@ class AuditServiceTest {
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
+                AUTH_TEST_EVENT_ONE,
                 AUDIT_CONTEXT,
                 pair("key", "value"),
                 pair("key2", "value2"),
@@ -141,7 +141,7 @@ class AuditServiceTest {
     void shouldAddCountryCodeExtensionToPhoneNumberEvents() {
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
+                AUTH_TEST_EVENT_ONE,
                 AUDIT_CONTEXT.withPhoneNumber("07700900000"),
                 pair("key", "value"),
                 pair("key2", "value2"));
@@ -163,7 +163,7 @@ class AuditServiceTest {
                 "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
+                AUTH_TEST_EVENT_ONE,
                 AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.of(auditEncodedHeaderValue)),
                 pair("restrictedKey1", "restrictedValue1", true));
 
@@ -175,7 +175,7 @@ class AuditServiceTest {
     @Test
     void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenNoOtherRestrictedData() {
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+                AUTH_TEST_EVENT_ONE, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         assertThatTheRestrictedSectionDoesNotExist();
@@ -184,7 +184,7 @@ class AuditServiceTest {
     @Test
     void anEmptyTXMAHeaderShouldNotBeAddedToAuditEventWhenOtherRestrictedDataHasBeenWritten() {
         auditService.submitAuditEvent(
-                TEST_EVENT_ONE,
+                AUTH_TEST_EVENT_ONE,
                 AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                 pair("restrictedKey1", "restrictedValue1", true));
 
