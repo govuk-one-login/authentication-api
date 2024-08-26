@@ -16,8 +16,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent.SYNTHETICS_USER_DELETED;
-import static uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent.SYNTHETICS_USER_NOT_FOUND_FOR_DELETION;
+import static uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent.AUTH_SYNTHETICS_USER_DELETED;
+import static uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent.AUTH_SYNTHETICS_USER_NOT_FOUND_FOR_DELETION;
 
 public class DeleteSyntheticsUserHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -71,7 +71,7 @@ public class DeleteSyntheticsUserHandler
                             authenticationService.removeAccount(userProfile.getEmail());
                             LOG.info("Synthetics user account removed.");
 
-                            auditService.submitAuditEvent(SYNTHETICS_USER_DELETED, auditContext);
+                            auditService.submitAuditEvent(AUTH_SYNTHETICS_USER_DELETED, auditContext);
 
                             return generateApiGatewayProxyResponse(204, "");
                         })
@@ -80,7 +80,7 @@ public class DeleteSyntheticsUserHandler
                             LOG.info("Synthetics user account not found.");
 
                             auditService.submitAuditEvent(
-                                    SYNTHETICS_USER_NOT_FOUND_FOR_DELETION, auditContext);
+                                    AUTH_SYNTHETICS_USER_NOT_FOUND_FOR_DELETION, auditContext);
 
                             return generateApiGatewayProxyErrorResponse(
                                     404, ErrorResponse.ERROR_1010);
