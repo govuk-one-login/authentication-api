@@ -13,7 +13,8 @@ module "frontend_api_check_reauth_user_role" {
     local.client_registry_encryption_policy_arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn
+    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn
   ]
 }
 
@@ -27,15 +28,17 @@ module "check_reauth_user" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
-    ENVIRONMENT                    = var.environment
-    TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI            = var.internal_sector_uri
-    REDIS_KEY                      = local.redis_key
-    LOCKOUT_DURATION               = var.lockout_duration
-    LOCKOUT_COUNT_TTL              = var.lockout_count_ttl
-    SUPPORT_REAUTH_SIGNOUT_ENABLED = var.support_reauth_signout_enabled
+    DYNAMO_ENDPOINT                         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT                     = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT                             = var.environment
+    TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI                     = var.internal_sector_uri
+    REDIS_KEY                               = local.redis_key
+    LOCKOUT_DURATION                        = var.lockout_duration
+    LOCKOUT_COUNT_TTL                       = var.lockout_count_ttl
+    SUPPORT_REAUTH_SIGNOUT_ENABLED          = var.support_reauth_signout_enabled
+    AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
+    REAUTH_ENTER_EMAIL_COUNT_TTL            = var.reauth_enter_email_count_ttl
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest"

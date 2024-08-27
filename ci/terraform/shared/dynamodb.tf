@@ -566,7 +566,7 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key  = "InternalSubjectId"
-  range_key = "AuthMethodJourneyType"
+  range_key = "SK"
 
   attribute {
     name = "InternalSubjectId"
@@ -574,7 +574,7 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
   }
 
   attribute {
-    name = "AuthMethodJourneyType"
+    name = "SK"
     type = "S"
   }
 
@@ -593,7 +593,7 @@ resource "aws_dynamodb_table" "authentication_attempt_table" {
   }
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 
   tags = local.default_tags

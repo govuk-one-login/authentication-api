@@ -7,9 +7,10 @@ import software.amazon.awssdk.services.dynamodb.model.BillingMode;
 import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
-import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
+import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoAuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.ArrayList;
@@ -19,16 +20,16 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
         implements AfterEachCallback {
 
     public static final String AUTHENTICATION_INTERNAL_SUB_ID_FIELD = "InternalSubjectId";
-    public static final String AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE = "AuthMethodJourneyType";
+    public static final String AUTHENTICATION_JOURNEY_TYPE_COUNT_TYPE_FIELD = "SK";
     public static final String AUTHENTICATION_ATTEMPTS_STORE_TABLE = "local-authentication-attempt";
 
-    private DynamoAuthenticationAttemptsService dynamoService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final ConfigurationService configuration;
 
     public AuthenticationAttemptsStoreExtension() {
         createInstance();
         this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
-        dynamoService = new DynamoAuthenticationAttemptsService(configuration);
+        authenticationAttemptsService = new AuthenticationAttemptsService(configuration);
     }
 
     @Override
@@ -37,7 +38,7 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
                 dynamoDB,
                 AUTHENTICATION_ATTEMPTS_STORE_TABLE,
                 AUTHENTICATION_INTERNAL_SUB_ID_FIELD,
-                Optional.of(AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE));
+                Optional.of(AUTHENTICATION_JOURNEY_TYPE_COUNT_TYPE_FIELD));
     }
 
     @Override
@@ -48,14 +49,14 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
     }
 
     public void createOrIncrementCount(
-            String attemptIdentifier, long ttl, String internalSubId, String journeyType) {
-        dynamoService.createOrIncrementCount(attemptIdentifier, ttl, internalSubId, journeyType);
+            String internalSubId, long ttl, JourneyType journeyType, CountType countType) {
+        authenticationAttemptsService.createOrIncrementCount(
+                internalSubId, ttl, journeyType, countType);
     }
 
-    public Optional<AuthenticationAttempts> getAuthenticationAttempt(
-            String internalSubId, String authenticationMethod, String journeyType) {
-        return dynamoService.getAuthenticationAttempt(
-                internalSubId, authenticationMethod, journeyType);
+    public int getAuthenticationAttempt(
+            String internalSubId, JourneyType journeyType, CountType countType) {
+        return authenticationAttemptsService.getCount(internalSubId, journeyType, countType);
     }
 
     private void createAuthenticationAttemptsTable() {
@@ -67,7 +68,7 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
                         .build());
         attributeDefinitions.add(
                 AttributeDefinition.builder()
-                        .attributeName(AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE)
+                        .attributeName(AUTHENTICATION_JOURNEY_TYPE_COUNT_TYPE_FIELD)
                         .attributeType("S")
                         .build());
 
@@ -79,7 +80,7 @@ public class AuthenticationAttemptsStoreExtension extends DynamoExtension
                         .build());
         tableKeySchema.add(
                 KeySchemaElement.builder()
-                        .attributeName(AUTHENTICATION_AUTH_METHOD_JOURNEY_TYPE)
+                        .attributeName(AUTHENTICATION_JOURNEY_TYPE_COUNT_TYPE_FIELD)
                         .keyType(KeyType.RANGE)
                         .build());
 

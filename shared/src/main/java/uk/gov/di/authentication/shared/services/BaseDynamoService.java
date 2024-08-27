@@ -53,6 +53,10 @@ public class BaseDynamoService<T> {
         get(partition).ifPresent(dynamoTable::deleteItem);
     }
 
+    public void delete(String partition, String sortKey) {
+        get(partition, sortKey).ifPresent(dynamoTable::deleteItem);
+    }
+
     private void warmUp() {
         dynamoTable.describeTable();
     }

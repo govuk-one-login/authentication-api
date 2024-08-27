@@ -83,6 +83,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("ACCOUNT_CREATION_LOCKOUT_COUNT_TTL", "3600"));
     }
 
+    public long getReauthEnterEmailCountTTL() {
+        return Long.parseLong(System.getenv().getOrDefault("REAUTH_ENTER_EMAIL_COUNT_TTL", "3600"));
+    }
+
     public boolean supportAccountCreationTTL() {
         return System.getenv()
                 .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))
@@ -92,6 +96,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean supportReauthSignoutEnabled() {
         return System.getenv()
                 .getOrDefault("SUPPORT_REAUTH_SIGNOUT_ENABLED", String.valueOf(false))
+                .equals("true");
+    }
+
+    public boolean isAuthenticationAttemptsServiceEnabled() {
+        return System.getenv()
+                .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", String.valueOf(false))
                 .equals("true");
     }
 

@@ -14,9 +14,13 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -25,6 +29,7 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 import java.net.URI;
 import java.security.KeyPair;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +42,8 @@ import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AU
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+public class CheckReauthUserHandlerAuthenticationAttemptsIntegrationTest
+        extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
@@ -57,14 +63,34 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
+    private static final IntegrationTestConfigurationService CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    notificationsQueue,
+                    tokenSigner,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public boolean isAuthenticationAttemptsServiceEnabled() {
+                    return true;
+                }
+            };
+
+    private final AuthenticationAttemptsService authenticationService =
+            new AuthenticationAttemptsService(CONFIGURATION_SERVICE);
+
     @BeforeEach
     void setup() throws Json.JsonException {
+
         var sessionId = redis.createAuthenticatedSessionWithEmail(TEST_EMAIL);
         requestHeaders = createHeaders(sessionId);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
-        handler =
-                new CheckReAuthUserHandler(
-                        TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
+        handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
     }
 
@@ -126,12 +152,14 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimes() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
-
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
+        int count = 5;
+        while (count-- > 0) {
+            authenticationService.createOrIncrementCount(
+                    SUBJECT.getValue(),
+                    NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond(),
+                    JourneyType.REAUTHENTICATION,
+                    CountType.ENTER_EMAIL);
+        }
 
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
@@ -176,32 +204,6 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
-    }
-
-    @Test
-    void shouldReturn400WhenUserProfileNotFoundAndHasEnteredInvalidEmailTooManyTimes() {
-        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        registerClient("https://" + INTERNAL_SECTOR_HOST);
-
-        var randomEmail = "random_email@email.com";
-
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-        redis.incrementEmailCount(TEST_EMAIL);
-
-        var request = new CheckReauthUserRequest(randomEmail, "random-pairwise-id");
-
-        var response =
-                makeRequest(
-                        Optional.of(request),
-                        requestHeaders,
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
     }
 
     private ClientSession createClientSession() {
