@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -273,8 +274,7 @@ class AuthCodeHandlerTest {
                         any(URI.class),
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
-        when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
+        when(clientSession.getVtrList()).thenReturn(VtrList.of(new VectorOfTrust(requestedLevel)));
 
         var response = generateApiRequest();
 
@@ -354,7 +354,7 @@ class AuthCodeHandlerTest {
                         authRequest.getResponseMode());
 
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
+        when(clientSession.getVtrList()).thenReturn(VtrList.of(new VectorOfTrust(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(

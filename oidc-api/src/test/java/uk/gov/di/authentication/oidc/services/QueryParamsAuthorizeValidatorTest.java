@@ -121,11 +121,17 @@ class QueryParamsAuthorizeValidatorTest {
 
     private static Stream<Arguments> invalidVtrAttributes() {
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cm")),
-                Arguments.of(jsonArrayOf("Cl.Cm.P3")),
-                Arguments.of(jsonArrayOf("Cl.P0", "Cl.Cm.P2")),
-                Arguments.of(jsonArrayOf("Cm.Cl.P1", "P1.Cl")),
-                Arguments.of(jsonArrayOf("Cl.PCL250.Cm", "Cl.PCL200.Cm")));
+                Arguments.of(jsonArrayOf("Cm")), // Unsupported Credential Trust Level
+                Arguments.of(jsonArrayOf("Cl.Cm.P3")), // Unsupported Level of Confidence
+                Arguments.of(
+                        jsonArrayOf(
+                                "Cl.P0",
+                                "Cl.Cm.P2")), // Invalid identity / non-identity combination
+                Arguments.of(jsonArrayOf("Cm.Cl.P1", "P1.Cl")), // Unsupported Level Of Confidence
+                Arguments.of(
+                        jsonArrayOf(
+                                "Cl.PCL250.Cm",
+                                "Cl.PCL200.Cm"))); // Level of Confidence not permitted for client
     }
 
     @ParameterizedTest

@@ -18,7 +18,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -27,6 +27,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,11 +91,12 @@ class RequestObjectToAuthRequestHelperTest {
         var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
         var vtr =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                transformedAuthRequest.getCustomParameter("vtr"))
-                        .get(0);
+                VtrList.parseFromAuthRequestAttribute(
+                        transformedAuthRequest.getCustomParameter("vtr"));
         assertThat(vtr.getCredentialTrustLevel(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        assertThat(vtr.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+        assertThat(
+                vtr.getLevelsOfConfidence(),
+                containsInAnyOrder(LevelOfConfidence.MEDIUM_LEVEL, LevelOfConfidence.HMRC250));
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
         assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));

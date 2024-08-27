@@ -23,7 +23,7 @@ public class ClientSession {
     @Expose
     private VectorOfTrust effectiveVectorOfTrust;
 
-    @Expose private List<VectorOfTrust> vtrList;
+    @Expose private VtrList vtrList;
 
     @Expose private Subject docAppSubjectId;
 
@@ -32,14 +32,12 @@ public class ClientSession {
     public ClientSession(
             Map<String, List<String>> authRequestParams,
             LocalDateTime creationDate,
-            List<VectorOfTrust> vtrList,
+            VtrList vtrList,
             String clientName) {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
-        if (!vtrList.isEmpty()) {
-            this.effectiveVectorOfTrust = VectorOfTrust.orderVtrList(vtrList).get(0);
-        }
+        this.effectiveVectorOfTrust = vtrList.getEffectiveVectorOfTrust();
         this.clientName = clientName;
     }
 
@@ -60,7 +58,7 @@ public class ClientSession {
         return creationDate;
     }
 
-    public List<VectorOfTrust> getVtrList() {
+    public VtrList getVtrList() {
         return vtrList;
     }
 
@@ -75,22 +73,5 @@ public class ClientSession {
 
     public String getClientName() {
         return clientName;
-    }
-
-    public String getVtrLocsAsCommaSeparatedString() {
-        List<VectorOfTrust> orderedVtrList = VectorOfTrust.orderVtrList(this.vtrList);
-        StringBuilder strBuilder = new StringBuilder();
-        for (VectorOfTrust vtr : orderedVtrList) {
-            String loc =
-                    vtr.containsLevelOfConfidence()
-                            ? vtr.getLevelOfConfidence().getValue()
-                            : LevelOfConfidence.NONE.getValue();
-            strBuilder.append(loc).append(",");
-        }
-        if (!strBuilder.isEmpty()) {
-            strBuilder.setLength(strBuilder.length() - 1);
-            return strBuilder.toString();
-        }
-        return "";
     }
 }

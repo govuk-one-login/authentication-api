@@ -37,7 +37,7 @@ import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -77,7 +77,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -980,8 +979,9 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         + "."
                         + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
 
-        List<VectorOfTrust> vtrList =
-                parseFromAuthRequestAttribute(List.of("[\"" + vtrStr1 + "\",\"" + vtrStr2 + "\"]"));
+        VtrList vtrList =
+                VtrList.parseFromAuthRequestAttribute(
+                        List.of("[\"" + vtrStr1 + "\",\"" + vtrStr2 + "\"]"));
 
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -1050,7 +1050,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
                 equalTo(CLIENT_SESSION_ID));
-        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "PCL200")));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("PCL200", "P2")));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("scope"), equalTo("openid"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(ES256));
     }

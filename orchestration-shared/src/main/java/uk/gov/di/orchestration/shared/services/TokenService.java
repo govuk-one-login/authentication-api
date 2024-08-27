@@ -35,6 +35,7 @@ import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
@@ -92,7 +93,7 @@ public class TokenService {
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
-            String vot) {
+            CredentialTrustLevel vot) {
         List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
@@ -222,7 +223,7 @@ public class TokenService {
             Subject subject,
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
-            String vot,
+            CredentialTrustLevel vot,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId) {
@@ -243,7 +244,7 @@ public class TokenService {
 
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
-            idTokenClaims.setClaim("vot", vot);
+            idTokenClaims.setClaim("vot", vot.getValue());
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 
