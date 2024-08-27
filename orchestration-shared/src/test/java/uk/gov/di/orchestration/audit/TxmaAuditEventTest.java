@@ -10,7 +10,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.orchestration.audit.TxmaAuditEvent.auditEvent;
 import static uk.gov.di.orchestration.audit.TxmaAuditEvent.auditEventWithTime;
-import static uk.gov.di.orchestration.audit.TxmaAuditEventTest.TestAuditableEvent.AUTH_TEST_EVENT;
+import static uk.gov.di.orchestration.audit.TxmaAuditEventTest.TestAuditableEvent.TEST_EVENT;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.asJson;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
@@ -18,11 +18,11 @@ import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasNumeric
 class TxmaAuditEventTest {
 
     enum TestAuditableEvent implements AuditableEvent {
-        AUTH_TEST_EVENT;
+        TEST_EVENT;
 
         @Override
         public AuditableEvent parseFromName(String name) {
-            return AUTH_TEST_EVENT;
+            return TEST_EVENT;
         }
     }
 
@@ -30,7 +30,7 @@ class TxmaAuditEventTest {
     void shouldSerializeEventWithMandatoryFields() {
         var now = NowHelper.now();
 
-        var payload = asJson(auditEventWithTime(AUTH_TEST_EVENT, () -> now).serialize());
+        var payload = asJson(auditEventWithTime(TEST_EVENT, () -> now).serialize());
 
         assertThat(payload, hasFieldWithValue("event_name", is("AUTH_TEST_EVENT")));
         assertThat(
@@ -44,9 +44,7 @@ class TxmaAuditEventTest {
     @Test
     void shouldSerializeEventWithNonMandatoryFields() {
         var event =
-                auditEvent(AUTH_TEST_EVENT)
-                        .withClientId("client-id")
-                        .withComponentId("component-id");
+                auditEvent(TEST_EVENT).withClientId("client-id").withComponentId("component-id");
 
         var payload = asJson(event.serialize());
 
@@ -67,7 +65,7 @@ class TxmaAuditEventTest {
                         .withTransactionId("transaction-id")
                         .withGovukSigninJourneyId("journey-id");
 
-        var event = auditEvent(AUTH_TEST_EVENT).withUser(user);
+        var event = auditEvent(TEST_EVENT).withUser(user);
 
         var payload = asJson(event.serialize()).getAsJsonObject().get("user");
 
@@ -84,7 +82,7 @@ class TxmaAuditEventTest {
     @Test
     void shouldSerializeRestrictedSubObject() {
         var event =
-                auditEvent(AUTH_TEST_EVENT)
+                auditEvent(TEST_EVENT)
                         .addRestricted("key1", "value1")
                         .addRestricted("key2", 2)
                         .addRestricted("sub-object", Map.of("key3", "value3"));
@@ -102,7 +100,7 @@ class TxmaAuditEventTest {
     @Test
     void shouldSerializePlatformSubObject() {
         var event =
-                auditEvent(AUTH_TEST_EVENT)
+                auditEvent(TEST_EVENT)
                         .addPlatform("key1", "value1")
                         .addPlatform("key2", 2)
                         .addPlatform("sub-object", Map.of("key3", "value3"));
@@ -120,7 +118,7 @@ class TxmaAuditEventTest {
     @Test
     void shouldSerializeExtensionsSubObject() {
         var event =
-                auditEvent(AUTH_TEST_EVENT)
+                auditEvent(TEST_EVENT)
                         .addExtension("key1", "value1")
                         .addExtension("key2", 2)
                         .addExtension("sub-object", Map.of("key3", "value3"));

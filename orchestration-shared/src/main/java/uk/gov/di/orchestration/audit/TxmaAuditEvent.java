@@ -36,7 +36,7 @@ public class TxmaAuditEvent {
     public static TxmaAuditEvent auditEventWithTime(
             AuditableEvent eventName, Supplier<Date> dateSupplier) {
         return new TxmaAuditEvent(
-                eventName.toString(),
+                "AUTH_" + eventName.toString(),
                 dateSupplier.get().toInstant().getEpochSecond(),
                 dateSupplier.get().toInstant().toEpochMilli());
     }
