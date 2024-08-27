@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Optional;
 
@@ -334,7 +336,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
                         userProfile.getSubjectID(),
-                        configurationService.getLockoutCountTTL(),
+                        NowHelper.nowPlus(
+                                        configurationService.getReauthEnterPasswordCountTTL(),
+                                        ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond(),
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_PASSWORD);
             } else {

@@ -212,7 +212,13 @@ variable "account_creation_lockout_count_ttl" {
   type    = number
   default = 3600
 }
+
 variable "reauth_enter_email_count_ttl" {
+  type    = number
+  default = 3600
+}
+
+variable "reauth_enter_password_count_ttl" {
   type    = number
   default = 3600
 }

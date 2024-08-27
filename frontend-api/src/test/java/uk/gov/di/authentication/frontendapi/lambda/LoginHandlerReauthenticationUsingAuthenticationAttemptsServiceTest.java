@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +59,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -235,6 +238,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
         when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
 
@@ -247,12 +251,26 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         verify(authenticationAttemptsService)
                 .getCount(userProfile.getSubjectID(), REAUTHENTICATION, ENTER_PASSWORD);
+
         verify(authenticationAttemptsService)
                 .createOrIncrementCount(
-                        userProfile.getSubjectID(),
-                        configurationService.getLockoutCountTTL(),
-                        REAUTHENTICATION,
-                        ENTER_PASSWORD);
+                        eq(userProfile.getSubjectID()),
+                        longThat(
+                                ttl -> {
+                                    long expectedMin =
+                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
+                                                            .toInstant()
+                                                            .getEpochSecond()
+                                                    - 1;
+                                    long expectedMax =
+                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
+                                                            .toInstant()
+                                                            .getEpochSecond()
+                                                    + 1;
+                                    return ttl >= expectedMin && ttl <= expectedMax;
+                                }),
+                        eq(REAUTHENTICATION),
+                        eq(ENTER_PASSWORD));
     }
 
     private AuthenticationRequest generateAuthRequest() {
