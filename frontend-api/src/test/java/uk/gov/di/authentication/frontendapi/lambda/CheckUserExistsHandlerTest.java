@@ -273,7 +273,7 @@ class CheckUserExistsHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
-            verify(sessionService, times(1)).save(any());
+            verify(sessionService, times(1)).storeOrUpdateSession(any());
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,

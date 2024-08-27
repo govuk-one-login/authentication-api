@@ -233,7 +233,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     private static Stream<Arguments> reauthCountTypes() {

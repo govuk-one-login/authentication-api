@@ -203,7 +203,7 @@ public class DocAppCallbackHandler
             }
             var session =
                     sessionService
-                            .readSessionFromRedis(sessionCookiesIds.getSessionId())
+                            .getSession(sessionCookiesIds.getSessionId())
                             .orElseThrow(
                                     () -> {
                                         throw new DocAppCallbackException("Session not found");

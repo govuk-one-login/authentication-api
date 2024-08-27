@@ -43,7 +43,7 @@ public class SessionService {
                         configurationService.getRedisPassword()));
     }
 
-    public Session createSession() {
+    public Session generateSession() {
         Session session = new Session(IdGenerator.generate());
         if (configurationService.isBrowserSessionCookieEnabled()) {
             session.setBrowserSessionId(IdGenerator.generate());
@@ -52,7 +52,7 @@ public class SessionService {
         return session;
     }
 
-    public void save(Session session) {
+    public void storeOrUpdateSession(Session session) {
         try {
             redisConnectionService.saveWithExpiry(
                     session.getSessionId(),
@@ -63,12 +63,12 @@ public class SessionService {
         }
     }
 
-    public void updateSessionId(Session session) {
+    public void updateWithNewSessionId(Session session) {
         try {
             String oldSessionId = session.getSessionId();
             session.setSessionId(IdGenerator.generate());
             session.resetProcessingIdentityAttempts();
-            save(session);
+            storeOrUpdateSession(session);
             redisConnectionService.deleteValue(oldSessionId);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -95,7 +95,7 @@ public class SessionService {
                 .flatMap(
                         id -> {
                             try {
-                                return readSessionFromRedis(id);
+                                return getSession(id);
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
@@ -105,17 +105,17 @@ public class SessionService {
     public Optional<Session> getSessionFromSessionCookie(Map<String, String> headers) {
         try {
             Optional<CookieHelper.SessionCookieIds> ids = cookieHelper.parseSessionCookie(headers);
-            return ids.flatMap(s -> readSessionFromRedis(s.getSessionId()));
+            return ids.flatMap(s -> getSession(s.getSessionId()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void deleteSessionFromRedis(String sessionId) {
+    public void deleteStoredSession(String sessionId) {
         redisConnectionService.deleteValue(sessionId);
     }
 
-    public Optional<Session> readSessionFromRedis(String sessionId) {
+    public Optional<Session> getSession(String sessionId) {
         String serializedSession = redisConnectionService.getValue(sessionId);
         return Optional.ofNullable(serializedSession)
                 .map(s -> OBJECT_MAPPER.readValueUnchecked(s, Session.class));

@@ -191,7 +191,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -223,7 +223,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -255,7 +255,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -288,7 +288,7 @@ class LogoutServiceTest {
                         rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -331,7 +331,7 @@ class LogoutServiceTest {
                         session, event, CLIENT_ID, intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -360,7 +360,7 @@ class LogoutServiceTest {
                         session, event, CLIENT_ID, intervention);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -400,7 +400,7 @@ class LogoutServiceTest {
                 rpPairwiseId);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
@@ -468,7 +468,7 @@ class LogoutServiceTest {
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
         verify(clientSessionService).deleteStoredClientSession("client-session-id-2");
         verify(clientSessionService).deleteStoredClientSession("client-session-id-3");
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
                         LOG_OUT_SUCCESS,
@@ -514,7 +514,7 @@ class LogoutServiceTest {
                         session, event, CLIENT_ID, REAUTH_FAILURE_URI);
 
         verify(clientSessionService).deleteStoredClientSession(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
+        verify(sessionService).deleteStoredSession(session.getSessionId());
         verify(backChannelLogoutService)
                 .sendLogoutMessage(
                         argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));

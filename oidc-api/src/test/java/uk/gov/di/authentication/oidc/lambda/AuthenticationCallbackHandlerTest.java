@@ -198,7 +198,7 @@ class AuthenticationCallbackHandlerTest {
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
         var savedSession = ArgumentCaptor.forClass(Session.class);
         verifyUserInfoRequest();
-        verify(sessionService).save(savedSession.capture());
+        verify(sessionService).storeOrUpdateSession(savedSession.capture());
         assertTrue(savedSession.getValue().isAuthenticated());
         assertEquals(savedSession.getValue().isNewAccount(), Session.AccountState.EXISTING);
 
@@ -659,7 +659,7 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
     }
 
     private void usingValidClientSession() {

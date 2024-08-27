@@ -562,7 +562,7 @@ class DocAppCallbackHandlerTest {
     }
 
     private void usingValidSession() {
-        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
+        when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
     }
 
     private void usingValidClientSession() {

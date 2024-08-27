@@ -214,7 +214,7 @@ public class IPVCallbackHandler
             }
             var session =
                     sessionService
-                            .readSessionFromRedis(sessionCookiesIds.getSessionId())
+                            .getSession(sessionCookiesIds.getSessionId())
                             .orElseThrow(
                                     () -> new IPVCallbackNoSessionException("Session not found"));
 

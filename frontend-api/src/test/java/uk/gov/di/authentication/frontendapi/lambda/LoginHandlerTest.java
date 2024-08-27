@@ -445,7 +445,7 @@ class LoginHandlerTest {
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
 
         verify(codeStorageService).getIncorrectPasswordCount(EMAIL);
         verify(codeStorageService).deleteIncorrectPasswordCount(EMAIL);
@@ -502,7 +502,7 @@ class LoginHandlerTest {
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @ParameterizedTest
@@ -539,7 +539,7 @@ class LoginHandlerTest {
                                 configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @ParameterizedTest
@@ -594,7 +594,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @ParameterizedTest
@@ -645,7 +645,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @Test
@@ -660,7 +660,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @Test
@@ -675,7 +675,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @Test
@@ -697,7 +697,7 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any(Session.class));
+        verify(sessionService, never()).storeOrUpdateSession(any(Session.class));
     }
 
     @Test
@@ -832,7 +832,7 @@ class LoginHandlerTest {
 
     private void verifySessionIsSaved() {
         verify(sessionService, atLeastOnce())
-                .save(
+                .storeOrUpdateSession(
                         argThat(
                                 t ->
                                         t.getInternalCommonSubjectIdentifier()

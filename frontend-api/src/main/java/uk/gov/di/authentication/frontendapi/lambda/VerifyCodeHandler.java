@@ -186,7 +186,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
-            sessionService.save(session);
+            sessionService.storeOrUpdateSession(session);
 
             if (errorResponse.isPresent()) {
                 handleInvalidVerificationCode(
@@ -323,7 +323,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                     MFAMethodType.SMS.getValue(),
                     false);
-            sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
+            sessionService.storeOrUpdateSession(
+                    session.setVerifiedMfaMethodType(MFAMethodType.SMS));
             clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),

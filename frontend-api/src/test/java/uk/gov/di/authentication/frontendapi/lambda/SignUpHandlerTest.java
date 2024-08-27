@@ -162,7 +162,8 @@ class SignUpHandlerTest {
 
         verify(authenticationService)
                 .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
-        verify(sessionService).save(argThat((session) -> session.getEmailAddress().equals(EMAIL)));
+        verify(sessionService)
+                .storeOrUpdateSession(argThat(s -> s.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
         verify(authenticationService)
@@ -182,9 +183,9 @@ class SignUpHandlerTest {
                         pair("rpPairwiseId", expectedRpPairwiseId));
 
         verify(sessionService)
-                .save(argThat(session -> session.isNewAccount() == Session.AccountState.NEW));
+                .storeOrUpdateSession(argThat(s -> s.isNewAccount() == Session.AccountState.NEW));
         verify(sessionService, atLeastOnce())
-                .save(
+                .storeOrUpdateSession(
                         argThat(
                                 t ->
                                         t.getInternalCommonSubjectIdentifier()

@@ -223,7 +223,7 @@ class LoginHandlerReauthenticationRedisTest {
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(sessionService, never()).save(any());
+        verify(sessionService, never()).storeOrUpdateSession(any());
     }
 
     @ParameterizedTest

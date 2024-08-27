@@ -209,7 +209,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                     });
 
             LOG.info("Incrementing code request count");
-            sessionService.save(
+            sessionService.storeOrUpdateSession(
                     userContext
                             .getSession()
                             .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType));
@@ -302,6 +302,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
     private void clearCountOfFailedCodeRequests(JourneyType journeyType, Session session) {
         LOG.info("Resetting code request count");
-        sessionService.save(session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
+        sessionService.storeOrUpdateSession(
+                session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
     }
 }

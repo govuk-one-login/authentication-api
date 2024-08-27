@@ -393,7 +393,7 @@ class MfaHandlerTest {
         checkUserIsBlockedWhenNotReAuthenticating(journeyType, codeRequestType);
 
         verify(sessionService)
-                .save(
+                .storeOrUpdateSession(
                         argThat(
                                 sessionForTestUser ->
                                         sessionForTestUser.getCodeRequestCount(

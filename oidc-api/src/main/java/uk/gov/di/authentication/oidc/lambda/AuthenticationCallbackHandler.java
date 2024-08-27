@@ -248,7 +248,7 @@ public class AuthenticationCallbackHandler
 
             Session userSession =
                     sessionService
-                            .readSessionFromRedis(sessionCookiesIds.getSessionId())
+                            .getSession(sessionCookiesIds.getSessionId())
                             .orElseThrow(
                                     () ->
                                             new AuthenticationCallbackException(
@@ -470,7 +470,8 @@ public class AuthenticationCallbackHandler
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                sessionService.save(userSession.setAuthenticated(true).setNewAccount(EXISTING));
+                sessionService.storeOrUpdateSession(
+                        userSession.setAuthenticated(true).setNewAccount(EXISTING));
 
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
