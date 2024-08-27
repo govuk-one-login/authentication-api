@@ -2134,6 +2134,14 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          OIDC_SERVICE_DOMAIN: !Sub
+            - oidc.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
           ORCH_CLIENT_ID: orchestrationAuth
           ORCH_REDIRECT_URI: !Sub
             - https://oidc.${ServiceDomain}/orchestration-redirect

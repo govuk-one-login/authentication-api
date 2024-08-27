@@ -247,6 +247,8 @@ class AuthorisationHandlerTest {
     public void setUp() {
         when(configService.getEnvironment()).thenReturn("test-env");
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
+        when(configService.getOidcDomainName())
+                .thenReturn("oidc.auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getOrchestrationClientId()).thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
@@ -1591,7 +1593,7 @@ class AuthorisationHandlerTest {
                             .get(2)
                             .contains(
                                     format(
-                                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                             BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID)));
         }
 
@@ -1713,7 +1715,7 @@ class AuthorisationHandlerTest {
             assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
@@ -1729,7 +1731,7 @@ class AuthorisationHandlerTest {
             assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
@@ -1746,7 +1748,7 @@ class AuthorisationHandlerTest {
             assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
@@ -1785,7 +1787,7 @@ class AuthorisationHandlerTest {
             assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
@@ -1803,7 +1805,7 @@ class AuthorisationHandlerTest {
             assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
             assertEquals(
                     format(
-                            "%s=%s; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                             BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                     browserSessionIdCookieFromResponse(response));
         }
