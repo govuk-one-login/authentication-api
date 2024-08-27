@@ -660,3 +660,35 @@ data "aws_iam_policy_document" "cross_account_identity_credentials_table_resourc
     resources = ["*"]
   }
 }
+
+resource "aws_dynamodb_table" "auth_session_table" {
+  name         = "${var.environment}-auth-session"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key = "SessionId"
+
+  attribute {
+    name = "SessionId"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToLive"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.auth_session_table_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = local.default_tags
+}
