@@ -15,6 +15,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.shared.helpers.CookieHelper.BROWSER_SESSION_COOKIE_NAME;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.PERSISTENT_COOKIE_NAME;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
@@ -93,7 +94,8 @@ class CookieHelperTest {
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdFromBrowserSessionCookie(String header) {
-        HttpCookie cookie = new HttpCookie("browser-session-id", BROWSER_SESSION_ID_COOKIE_VALUE);
+        HttpCookie cookie =
+                new HttpCookie(BROWSER_SESSION_COOKIE_NAME, BROWSER_SESSION_ID_COOKIE_VALUE);
         Map<String, String> headers = Map.ofEntries(Map.entry(header, cookie.toString()));
 
         String id = parseBrowserSessionCookie(headers).orElseThrow();

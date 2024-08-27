@@ -17,7 +17,7 @@ public class CookieHelper {
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";
     public static final String SESSION_COOKIE_NAME = "gs";
-    public static final String BROWSER_SESSION_COOKIE_NAME = "browser-session-id";
+    public static final String BROWSER_SESSION_COOKIE_NAME = "bsid";
 
     public static final String LANGUAGE_COOKIE_NAME = "lng";
 
