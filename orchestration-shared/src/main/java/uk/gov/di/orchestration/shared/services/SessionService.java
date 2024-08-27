@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
 import java.util.Map;
@@ -53,11 +54,19 @@ public class SessionService {
     }
 
     public void storeOrUpdateSession(Session session) {
+        storeOrUpdateSession(session, session.getSessionId());
+    }
+
+    private void storeOrUpdateSession(Session session, String oldSessionId) {
         try {
+            var newSession = OBJECT_MAPPER.writeValueAsString(session);
+            if (redisConnectionService.keyExists(oldSessionId)) {
+                var oldSession = redisConnectionService.getValue(oldSessionId);
+                newSession = JsonUpdateHelper.updateJson(oldSession, newSession);
+            }
+
             redisConnectionService.saveWithExpiry(
-                    session.getSessionId(),
-                    OBJECT_MAPPER.writeValueAsString(session),
-                    configurationService.getSessionExpiry());
+                    session.getSessionId(), newSession, configurationService.getSessionExpiry());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -68,7 +77,7 @@ public class SessionService {
             String oldSessionId = session.getSessionId();
             session.setSessionId(IdGenerator.generate());
             session.resetProcessingIdentityAttempts();
-            storeOrUpdateSession(session);
+            storeOrUpdateSession(session, oldSessionId);
             redisConnectionService.deleteValue(oldSessionId);
         } catch (Exception e) {
             throw new RuntimeException(e);
