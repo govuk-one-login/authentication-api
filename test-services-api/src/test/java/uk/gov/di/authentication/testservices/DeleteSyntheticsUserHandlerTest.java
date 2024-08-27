@@ -75,7 +75,8 @@ class DeleteSyntheticsUserHandlerTest {
         assertThat(result, hasStatus(204));
         verify(authenticationService).removeAccount(EMAIL);
         verify(auditService)
-                .submitAuditEvent(TestServicesAuditableEvent.AUTH_SYNTHETICS_USER_DELETED, auditContext);
+                .submitAuditEvent(
+                        TestServicesAuditableEvent.AUTH_SYNTHETICS_USER_DELETED, auditContext);
     }
 
     @Test

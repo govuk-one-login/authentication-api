@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -29,8 +28,7 @@ public class AuditAssertionsHelper {
 
     public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
-        var expectedTxmaEvents =
-                events.stream().map(Objects::toString).collect(Collectors.toList());
+        var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
         if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
@@ -44,7 +42,7 @@ public class AuditAssertionsHelper {
                                         queue.getApproximateMessageCount(),
                                         equalTo(expectedTxmaEvents.size())));
 
-        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+        var sentEvents = queue.getRawMessages().stream().toList();
 
         var namesOfSentEvents =
                 sentEvents.stream()
@@ -66,8 +64,7 @@ public class AuditAssertionsHelper {
     public static void assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
-        var expectedTxmaEvents =
-                events.stream().map(Objects::toString).collect(Collectors.toList());
+        var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
         if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
@@ -81,7 +78,7 @@ public class AuditAssertionsHelper {
                                         queue.getApproximateMessageCount(),
                                         equalTo(expectedTxmaEvents.size())));
 
-        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+        var sentEvents = queue.getRawMessages().stream().toList();
 
         var namesOfSentEvents =
                 sentEvents.stream()
@@ -100,12 +97,11 @@ public class AuditAssertionsHelper {
                         && namesOfSentEvents.containsAll(expectedTxmaEvents));
 
         // Check all sent events applied business rules, i.e. include a device_information section.
-        sentEvents.stream()
-                .forEach(
-                        sentEvent -> {
-                            var event = asJson(sentEvent);
-                            assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
-                        });
+        sentEvents.forEach(
+                sentEvent -> {
+                    var event = asJson(sentEvent);
+                    assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
+                });
     }
 
     private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(

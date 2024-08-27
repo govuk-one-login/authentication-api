@@ -75,7 +75,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
         assertThat(request, hasFieldWithValue("email_address", equalTo("user.1@account.gov.uk")));
         assertThat(noOfStatusEmailSent, equalTo(1));
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_BULK_EMAIL_SENT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_BULK_EMAIL_SENT));
     }
 
     @Test
@@ -122,7 +123,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         assertThat(emailsSent.size(), equalTo(numberOfUsersWithErrorSendingEmailStatus));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
-                Collections.nCopies(numberOfUsersWithErrorSendingEmailStatus, AUTH_BULK_EMAIL_SENT));
+                Collections.nCopies(
+                        numberOfUsersWithErrorSendingEmailStatus, AUTH_BULK_EMAIL_SENT));
     }
 
     @Test

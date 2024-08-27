@@ -71,7 +71,8 @@ public class DeleteSyntheticsUserHandler
                             authenticationService.removeAccount(userProfile.getEmail());
                             LOG.info("Synthetics user account removed.");
 
-                            auditService.submitAuditEvent(AUTH_SYNTHETICS_USER_DELETED, auditContext);
+                            auditService.submitAuditEvent(
+                                    AUTH_SYNTHETICS_USER_DELETED, auditContext);
 
                             return generateApiGatewayProxyResponse(204, "");
                         })

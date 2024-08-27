@@ -106,7 +106,8 @@ public class AuthenticateHandler
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
-            auditService.submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

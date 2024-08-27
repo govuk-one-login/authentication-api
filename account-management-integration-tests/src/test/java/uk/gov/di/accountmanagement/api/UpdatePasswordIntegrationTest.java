@@ -66,7 +66,8 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                 notificationsQueue,
                 List.of(new NotifyRequest(TEST_EMAIL, PASSWORD_UPDATED, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_UPDATE_PASSWORD));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_UPDATE_PASSWORD));
     }
 
     @Test

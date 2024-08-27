@@ -44,7 +44,9 @@ class TxmaAuditEventTest {
     @Test
     void shouldSerializeEventWithNonMandatoryFields() {
         var event =
-                auditEvent(AUTH_TEST_EVENT).withClientId("client-id").withComponentId("component-id");
+                auditEvent(AUTH_TEST_EVENT)
+                        .withClientId("client-id")
+                        .withComponentId("component-id");
 
         var payload = asJson(event.serialize());
 

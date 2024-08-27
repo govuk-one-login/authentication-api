@@ -58,7 +58,8 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertFalse(userStore.userExists(EMAIL));
         assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
     }
 
     @Test
@@ -78,7 +79,8 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertFalse(userStore.userExists(EMAIL));
         assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
     }
 
     @Test
