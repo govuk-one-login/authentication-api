@@ -212,7 +212,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_VERIFIED,
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", JourneyType.REGISTRATION),
@@ -251,7 +251,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                         pair("account-recovery", false),
@@ -289,7 +289,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_VERIFIED,
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", JourneyType.PASSWORD_RESET_MFA),
@@ -326,7 +326,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_VERIFIED,
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", JourneyType.REGISTRATION),
@@ -363,7 +363,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_VERIFIED,
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", true),
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
@@ -400,7 +400,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_VERIFIED,
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", true),
                 pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
@@ -432,7 +432,7 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_VERIFIED,
+                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", false),
                 pair("journey-type", journeyType),
@@ -530,7 +530,7 @@ class VerifyMfaCodeHandlerTest {
                 .deleteIncorrectMfaCodeAttemptsCount(EMAIL, MFAMethodType.AUTH_APP);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
@@ -567,7 +567,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
@@ -608,7 +608,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.INVALID_CODE_SENT,
+                FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
                 pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
@@ -654,7 +654,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
@@ -683,7 +683,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
@@ -719,7 +719,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(cloudwatchMetricsService);
         assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.INVALID_CODE_SENT,
+                FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
                 pair("mfa-type", MFAMethodType.SMS.getValue()),
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),

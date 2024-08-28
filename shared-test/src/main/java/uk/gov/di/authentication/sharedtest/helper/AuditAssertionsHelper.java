@@ -8,7 +8,6 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -29,15 +28,16 @@ public class AuditAssertionsHelper {
 
     public static void assertTxmaAuditEventsSubmittedWithMatchingNames(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
-        var expectedTxmaEvents =
-                events.stream()
-                        .map(Objects::toString)
-                        .map("AUTH_"::concat)
-                        .collect(Collectors.toList());
+        var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
         if (expectedTxmaEvents.isEmpty()) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
+        }
+
+        if (!expectedTxmaEvents.stream().allMatch(item -> item.startsWith("AUTH_"))) {
+            throw new IllegalArgumentException(
+                    "assertTxmaAuditEventsReceived() should have authentication audit events starting with AUTH_");
         }
 
         await().atMost(TIMEOUT)
@@ -47,7 +47,7 @@ public class AuditAssertionsHelper {
                                         queue.getApproximateMessageCount(),
                                         equalTo(expectedTxmaEvents.size())));
 
-        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+        var sentEvents = queue.getRawMessages().stream().toList();
 
         var namesOfSentEvents =
                 sentEvents.stream()
@@ -69,11 +69,7 @@ public class AuditAssertionsHelper {
     public static void assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
-        var expectedTxmaEvents =
-                events.stream()
-                        .map(Objects::toString)
-                        .map("AUTH_"::concat)
-                        .collect(Collectors.toList());
+        var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
         if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
@@ -87,7 +83,7 @@ public class AuditAssertionsHelper {
                                         queue.getApproximateMessageCount(),
                                         equalTo(expectedTxmaEvents.size())));
 
-        var sentEvents = queue.getRawMessages().stream().collect(Collectors.toList());
+        var sentEvents = queue.getRawMessages().stream().toList();
 
         var namesOfSentEvents =
                 sentEvents.stream()
@@ -106,12 +102,11 @@ public class AuditAssertionsHelper {
                         && namesOfSentEvents.containsAll(expectedTxmaEvents));
 
         // Check all sent events applied business rules, i.e. include a device_information section.
-        sentEvents.stream()
-                .forEach(
-                        sentEvent -> {
-                            var event = asJson(sentEvent);
-                            assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
-                        });
+        sentEvents.forEach(
+                sentEvent -> {
+                    var event = asJson(sentEvent);
+                    assertValidAuditEventsHaveDeviceInformationInRestrictedSection(event);
+                });
     }
 
     private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(

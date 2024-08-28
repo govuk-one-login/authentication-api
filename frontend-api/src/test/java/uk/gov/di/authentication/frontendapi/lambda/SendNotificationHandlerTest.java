@@ -73,14 +73,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT_FOR_TEST_CLIENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
@@ -284,8 +284,8 @@ class SendNotificationHandlerTest {
                 verify(auditService)
                         .submitAuditEvent(
                                 notificationType.equals(VERIFY_EMAIL)
-                                        ? EMAIL_CODE_SENT
-                                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                                        ? AUTH_EMAIL_CODE_SENT
+                                        : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
                                 expectedAuditContext);
             }
         }
@@ -395,8 +395,8 @@ class SendNotificationHandlerTest {
                                         SupportedLanguage.EN)));
         var expectedEvent =
                 notificationType.equals(VERIFY_EMAIL)
-                        ? EMAIL_CODE_SENT
-                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+                        ? AUTH_EMAIL_CODE_SENT
+                        : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
         verify(auditService).submitAuditEvent(expectedEvent, auditContext);
     }
 
@@ -436,7 +436,8 @@ class SendNotificationHandlerTest {
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
         verify(auditService)
-                .submitAuditEvent(PHONE_CODE_SENT, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
+                .submitAuditEvent(
+                        AUTH_PHONE_CODE_SENT, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
     }
 
     @ParameterizedTest
@@ -472,8 +473,8 @@ class SendNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         notificationType.equals(VERIFY_EMAIL)
-                                ? EMAIL_CODE_SENT_FOR_TEST_CLIENT
-                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
+                                ? AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                                : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
                         testClientAuditContext);
     }
 
@@ -642,7 +643,7 @@ class SendNotificationHandlerTest {
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
         verify(auditService)
-                .submitAuditEvent(PHONE_CODE_SENT, auditContext.withPhoneNumber(phoneNumber));
+                .submitAuditEvent(AUTH_PHONE_CODE_SENT, auditContext.withPhoneNumber(phoneNumber));
     }
 
     @Test
@@ -770,7 +771,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService, never())
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verifyNoInteractions(emailSqsClient);
-        verify(auditService).submitAuditEvent(EMAIL_INVALID_CODE_REQUEST, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -790,7 +791,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         verify(auditService)
                 .submitAuditEvent(
-                        EMAIL_INVALID_CODE_REQUEST,
+                        AUTH_EMAIL_INVALID_CODE_REQUEST,
                         auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
@@ -823,7 +824,7 @@ class SendNotificationHandlerTest {
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
+                .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -855,7 +856,8 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        PHONE_INVALID_CODE_REQUEST, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
+                        AUTH_PHONE_INVALID_CODE_REQUEST,
+                        auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
     }
 
     @Test
@@ -878,7 +880,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
         verifyNoInteractions(emailSqsClient);
-        verify(auditService).submitAuditEvent(EMAIL_INVALID_CODE_REQUEST, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -902,7 +904,7 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
+                .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -930,7 +932,8 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        PHONE_INVALID_CODE_REQUEST, auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
+                        AUTH_PHONE_INVALID_CODE_REQUEST,
+                        auditContext.withPhoneNumber(UK_MOBILE_NUMBER));
     }
 
     @Test
@@ -952,7 +955,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
         verifyNoInteractions(emailSqsClient);
-        verify(auditService).submitAuditEvent(EMAIL_INVALID_CODE_REQUEST, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -975,7 +978,7 @@ class SendNotificationHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verifyNoInteractions(emailSqsClient);
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
+                .submitAuditEvent(AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST, auditContext);
     }
 
     @Test
@@ -997,7 +1000,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         verifyNoInteractions(emailSqsClient);
-        verify(auditService).submitAuditEvent(PHONE_INVALID_CODE_REQUEST, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_PHONE_INVALID_CODE_REQUEST, auditContext);
     }
 
     @ParameterizedTest

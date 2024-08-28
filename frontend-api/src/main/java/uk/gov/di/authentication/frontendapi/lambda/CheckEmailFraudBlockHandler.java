@@ -142,7 +142,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                         Optional.ofNullable(userContext.getTxmaAuditEncoded()));
 
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                FrontendAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                 auditContext,
                 AuditService.MetadataPair.pair("journey_type", JourneyType.REGISTRATION.getValue()),
                 AuditService.MetadataPair.pair(

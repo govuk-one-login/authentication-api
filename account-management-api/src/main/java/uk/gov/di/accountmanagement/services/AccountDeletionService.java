@@ -21,7 +21,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Optional;
 
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -119,7 +119,7 @@ public class AccountDeletionService {
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
                             txmaAuditEncoded);
-            auditService.submitAuditEvent(DELETE_ACCOUNT, auditContext);
+            auditService.submitAuditEvent(AUTH_DELETE_ACCOUNT, auditContext);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

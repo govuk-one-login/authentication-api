@@ -34,8 +34,8 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
-import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_EMAIL_SENT;
-import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT;
+import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.AUTH_BULK_EMAIL_SENT;
+import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.AUTH_BULK_RETRY_EMAIL_SENT;
 
 public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         extends HandlerIntegrationTest<ScheduledEvent, Void> {
@@ -75,7 +75,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
         assertThat(request, hasFieldWithValue("email_address", equalTo("user.1@account.gov.uk")));
         assertThat(noOfStatusEmailSent, equalTo(1));
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(BULK_EMAIL_SENT));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_BULK_EMAIL_SENT));
     }
 
     @Test
@@ -95,7 +96,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                 equalTo(2));
         assertThat(emailsSent.size(), equalTo(8));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
+                txmaAuditQueue, Collections.nCopies(8, AUTH_BULK_EMAIL_SENT));
         assertEmailNotSentTo(emailsSent, "user.email.sent.alreadt@account.gov.uk");
         assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
     }
@@ -122,7 +123,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         assertThat(emailsSent.size(), equalTo(numberOfUsersWithErrorSendingEmailStatus));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
-                Collections.nCopies(numberOfUsersWithErrorSendingEmailStatus, BULK_EMAIL_SENT));
+                Collections.nCopies(
+                        numberOfUsersWithErrorSendingEmailStatus, AUTH_BULK_EMAIL_SENT));
     }
 
     @Test
@@ -189,7 +191,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                                     .getDeliveryReceiptStatus());
                 });
         assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, Collections.nCopies(5, BULK_RETRY_EMAIL_SENT));
+                txmaAuditQueue, Collections.nCopies(5, AUTH_BULK_RETRY_EMAIL_SENT));
     }
 
     @Test
@@ -214,7 +216,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         assertEmailNotSentTo(emailsSent, "user.email.sent.already@account.gov.uk");
         assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
         assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
+                txmaAuditQueue, Collections.nCopies(8, AUTH_BULK_EMAIL_SENT));
     }
 
     void assertEmailNotSentTo(List<JsonElement> emailsSent, String email) {

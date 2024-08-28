@@ -112,7 +112,7 @@ class UpdatePasswordHandlerTest {
                                         SupportedLanguage.EN)));
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                        AccountManagementAuditableEvent.AUTH_UPDATE_PASSWORD,
                         new AuditContext(
                                 CLIENT_ID,
                                 SESSION_ID,

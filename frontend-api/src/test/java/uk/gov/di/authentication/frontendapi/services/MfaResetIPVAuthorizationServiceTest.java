@@ -60,7 +60,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.COMMON_SUBJECT_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -199,7 +199,8 @@ class MfaResetIPVAuthorizationServiceTest {
                                                     + "&client_id="
                                                     + TEST_IPV_AUTH_CLIENT_ID))));
             assertClaims(redirectURI);
-            verify(auditService).submitAuditEvent(REVERIFY_AUTHORISATION_REQUESTED, auditContext);
+            verify(auditService)
+                    .submitAuditEvent(AUTH_REVERIFY_AUTHORISATION_REQUESTED, auditContext);
         }
     }
 

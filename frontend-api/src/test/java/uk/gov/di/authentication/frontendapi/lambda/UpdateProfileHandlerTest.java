@@ -48,9 +48,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
@@ -174,10 +174,10 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(204));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
+                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContextWithAllUserInfo);
+                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContextWithAllUserInfo);
     }
 
     @Test
@@ -200,12 +200,12 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(204));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED,
+                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
                         auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
+                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(Optional.empty()));
     }
 
@@ -226,9 +226,10 @@ class UpdateProfileHandlerTest {
                 .updatePhoneNumber(eq(EMAIL), eq(CommonTestVariables.UK_MOBILE_NUMBER));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
+                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
         verify(auditService)
-                .submitAuditEvent(UPDATE_PROFILE_REQUEST_ERROR, auditContextWithOnlyClientSession);
+                .submitAuditEvent(
+                        AUTH_UPDATE_PROFILE_REQUEST_ERROR, auditContextWithOnlyClientSession);
     }
 
     @Test
@@ -245,11 +246,11 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(400));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED,
+                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
                         auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR,
+                        AUTH_UPDATE_PROFILE_REQUEST_ERROR,
                         auditContextWithOnlyClientSession.withTxmaAuditEncoded(Optional.empty()));
     }
 

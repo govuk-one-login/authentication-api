@@ -23,7 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PASSWORD;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PASSWORD;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSWORD_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
@@ -66,7 +66,8 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
                 notificationsQueue,
                 List.of(new NotifyRequest(TEST_EMAIL, PASSWORD_UPDATED, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(UPDATE_PASSWORD));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_UPDATE_PASSWORD));
     }
 
     @Test

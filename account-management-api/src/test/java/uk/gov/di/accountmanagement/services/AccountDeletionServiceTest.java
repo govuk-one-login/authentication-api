@@ -36,7 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AccountDeletionServiceTest {
@@ -171,7 +171,7 @@ class AccountDeletionServiceTest {
         // then
         verify(auditService)
                 .submitAuditEvent(
-                        eq(DELETE_ACCOUNT),
+                        eq(AUTH_DELETE_ACCOUNT),
                         argThat(
                                 auditContext ->
                                         Objects.equals(auditContext.clientId(), TEST_CLIENT_ID)

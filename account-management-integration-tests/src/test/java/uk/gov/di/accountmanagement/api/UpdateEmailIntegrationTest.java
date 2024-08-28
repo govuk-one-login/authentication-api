@@ -26,7 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_EMAIL;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
@@ -83,7 +83,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
                         new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(UPDATE_EMAIL));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_UPDATE_EMAIL));
     }
 
     @Test
@@ -139,7 +139,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
                         new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
-        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(UPDATE_EMAIL));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(txmaAuditQueue, List.of(AUTH_UPDATE_EMAIL));
     }
 
     @Test

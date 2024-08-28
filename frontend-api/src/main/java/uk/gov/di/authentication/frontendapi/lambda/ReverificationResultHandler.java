@@ -24,9 +24,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1058;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1059;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -97,11 +97,11 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             LOG.error(
                     "IPV TokenResponse was not successful: {}",
                     tokenResponse.toErrorResponse().toJSONObject());
-            auditService.submitAuditEvent(REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED, auditContext);
+            auditService.submitAuditEvent(AUTH_REVERIFY_UNSUCCESSFUL_TOKEN_RECEIVED, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ERROR_1058);
         }
         LOG.info("Successful IPV TokenResponse");
-        auditService.submitAuditEvent(REVERIFY_SUCCESSFUL_TOKEN_RECEIVED, auditContext);
+        auditService.submitAuditEvent(AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED, auditContext);
 
         try {
             var reverificationResult =
@@ -117,7 +117,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             LOG.info("Successful IPV ReverificationResult");
             auditService.submitAuditEvent(
-                    REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED, auditContext);
+                    AUTH_REVERIFY_SUCCESSFUL_VERIFICATION_INFO_RECEIVED, auditContext);
             return generateApiGatewayProxyResponse(200, reverificationResult.getContent());
         } catch (UnsuccessfulReverificationResponseException e) {
             LOG.error("Error getting reverification result", e);

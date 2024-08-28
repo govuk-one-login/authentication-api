@@ -20,8 +20,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -75,7 +75,7 @@ class AuthenticateHandlerTest {
 
         assertThat(result, hasStatus(204));
 
-        verify(auditService).submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
+        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
     }
 
     @Test
@@ -90,7 +90,7 @@ class AuthenticateHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
                         auditContext.withTxmaAuditEncoded(Optional.empty()));
     }
 
@@ -105,7 +105,7 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
 
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
     }
 
     @Test
@@ -119,7 +119,7 @@ class AuthenticateHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
                         auditContext.withEmail(AuditService.UNKNOWN));
     }
 
@@ -134,6 +134,6 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
 
         verify(auditService)
-                .submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
     }
 }

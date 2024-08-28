@@ -277,7 +277,7 @@ class ResetPasswordRequestHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                            FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED,
                             auditContext,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -299,7 +299,7 @@ class ResetPasswordRequestHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                            FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED,
                             auditContext.withTxmaAuditEncoded(Optional.empty()),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -345,7 +345,7 @@ class ResetPasswordRequestHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
+                            FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
                             auditContext,
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);
@@ -372,7 +372,7 @@ class ResetPasswordRequestHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
+                            FrontendAuditableEvent.AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT,
                             auditContext.withTxmaAuditEncoded(Optional.empty()),
                             PASSWORD_RESET_COUNTER,
                             PASSWORD_RESET_TYPE_FORGOTTEN_PASSWORD);

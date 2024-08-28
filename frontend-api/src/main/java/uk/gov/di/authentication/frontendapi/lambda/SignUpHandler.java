@@ -31,7 +31,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -119,7 +119,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             LOG.info("No password validation errors found");
             if (authenticationService.userExists(request.getEmail())) {
 
-                auditService.submitAuditEvent(CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS, auditContext);
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
@@ -156,7 +157,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             .orElse(AuditService.UNKNOWN);
 
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.CREATE_ACCOUNT,
+                    FrontendAuditableEvent.AUTH_CREATE_ACCOUNT,
                     auditContext,
                     pair("internalSubjectId", user.getUserProfile().getSubjectID()),
                     pair("rpPairwiseId", rpPairwiseId));

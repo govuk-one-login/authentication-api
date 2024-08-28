@@ -24,8 +24,8 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_NOT_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryRequest> {
@@ -99,8 +99,8 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
 
             var auditableEvent =
                     accountRecoveryPermitted
-                            ? ACCOUNT_RECOVERY_PERMITTED
-                            : ACCOUNT_RECOVERY_NOT_PERMITTED;
+                            ? AUTH_ACCOUNT_RECOVERY_PERMITTED
+                            : AUTH_ACCOUNT_RECOVERY_NOT_PERMITTED;
 
             var auditContext =
                     auditContextFromUserContext(

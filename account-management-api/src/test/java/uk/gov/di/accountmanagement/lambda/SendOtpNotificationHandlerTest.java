@@ -185,7 +185,7 @@ class SendOtpNotificationHandlerTest {
 
             verify(auditService)
                     .submitAuditEvent(
-                            AccountManagementAuditableEvent.SEND_OTP,
+                            AccountManagementAuditableEvent.AUTH_SEND_OTP,
                             auditContext.withPhoneNumber(null),
                             pair("notification-type", VERIFY_EMAIL),
                             pair("test-user", false));
@@ -330,7 +330,7 @@ class SendOtpNotificationHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.SEND_OTP,
+                        AccountManagementAuditableEvent.AUTH_SEND_OTP,
                         auditContext,
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
@@ -371,7 +371,7 @@ class SendOtpNotificationHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        AccountManagementAuditableEvent.SEND_OTP,
+                        AccountManagementAuditableEvent.AUTH_SEND_OTP,
                         auditContext.withPhoneNumber(null).withEmail(TEST_TEST_USER_EMAIL_ADDRESS),
                         pair("notification-type", VERIFY_EMAIL),
                         pair("test-user", true));

@@ -159,7 +159,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL,
                         testAuditContextWithAuditEncoded);
 
         verify(authenticationService, atLeastOnce())
@@ -210,7 +210,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_SUCCESSFUL,
+                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL,
                         testAuditContextWithoutAuditEncoded);
 
         verify(userContext).getClient();
@@ -248,7 +248,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
                         testAuditContextWithAuditEncoded);
 
         verify(userContext, atLeastOnce()).getSession();
@@ -291,7 +291,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         testAuditContextWithAuditEncoded,
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", 5));
@@ -370,7 +370,7 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.REAUTHENTICATION_INVALID,
+                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
                         testAuditContextWithAuditEncoded);
 
         verify(userContext, atLeastOnce()).getSession();

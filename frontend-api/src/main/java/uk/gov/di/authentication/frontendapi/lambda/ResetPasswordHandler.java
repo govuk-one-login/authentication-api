@@ -46,8 +46,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION_COMPLETE;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -202,14 +202,15 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
-                auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
+                auditableEvent =
+                        FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
             } else {
                 var emailNotifyRequest =
                         new NotifyRequest(
                                 userCredentials.getEmail(),
                                 NotificationType.PASSWORD_RESET_CONFIRMATION,
                                 userContext.getUserLanguage());
-                auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
+                auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
                 LOG.info("Placing message on queue to send password reset confirmation to Email");
                 sqsClient.send(serialiseRequest(emailNotifyRequest));
                 if (shouldSendConfirmationToSms(userProfile)) {
@@ -224,7 +225,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             }
 
             if (request.isForcedPasswordReset()) {
-                auditService.submitAuditEvent(PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
+                auditService.submitAuditEvent(
+                        AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, auditContext);
             }
             auditService.submitAuditEvent(auditableEvent, auditContext);
         } catch (ClientNotFoundException e) {
@@ -276,7 +278,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             dynamoAccountModifiersService.setAccountRecoveryBlock(
                     internalCommonSubjectId.getValue(), true);
 
-            auditService.submitAuditEvent(ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
+            auditService.submitAuditEvent(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, auditContext);
         }
     }
 }

@@ -31,9 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -97,7 +97,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         } else if (MFAMethodType.AUTH_APP.equals(mfaMethodType)) {
             assertNull(checkUserExistsResponse.phoneNumberLastThree());
         }
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CHECK_USER_KNOWN_EMAIL));
     }
 
     @Test
@@ -143,7 +143,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(lockoutInformation.get(0).journeyType(), is(JourneyType.SIGN_IN));
         assertThat(lockoutInformation.get(0).mfaMethodType(), is(MFAMethodType.AUTH_APP));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CHECK_USER_KNOWN_EMAIL));
     }
 
     @Test
@@ -169,7 +169,8 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(checkUserExistsResponse.mfaMethodType(), equalTo(MFAMethodType.NONE));
         assertFalse(checkUserExistsResponse.doesUserExist());
         assertNull(checkUserExistsResponse.phoneNumberLastThree());
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
     }
 
     @Test
@@ -197,6 +198,6 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(ACCOUNT_TEMPORARILY_LOCKED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_ACCOUNT_TEMPORARILY_LOCKED));
     }
 }

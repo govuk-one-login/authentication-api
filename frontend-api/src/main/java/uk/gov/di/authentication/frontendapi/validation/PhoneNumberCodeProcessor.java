@@ -161,7 +161,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             }
 
             submitAuditEvent(
-                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                    FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER,
                     MFAMethodType.SMS,
                     phoneNumber,
                     ipAddress,

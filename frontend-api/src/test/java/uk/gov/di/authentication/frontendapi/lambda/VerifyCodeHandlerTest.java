@@ -247,7 +247,7 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT,
                         pair("notification-type", emailNotificationType.name()),
                         pair(
@@ -292,7 +292,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("notification-type", emailNotificationType.name()),
                         pair(
@@ -328,7 +328,7 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
+                        FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
                         AUDIT_CONTEXT,
                         pair("notification-type", emailNotificationType.name()),
                         pair(
@@ -364,7 +364,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT_FOR_TEST_CLIENT.withEmail(email),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
@@ -398,7 +398,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT_FOR_TEST_CLIENT.withEmail(email),
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
@@ -421,7 +421,7 @@ class VerifyCodeHandlerTest {
                 .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, LOCKOUT_DURATION);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                         AUDIT_CONTEXT,
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
@@ -489,7 +489,7 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                         AUDIT_CONTEXT,
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
@@ -519,7 +519,7 @@ class VerifyCodeHandlerTest {
         verify(sessionService, times(saveSessionCount)).save(session);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
@@ -531,7 +531,7 @@ class VerifyCodeHandlerTest {
                         pair("MFACodeEntered", "123456"));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                        FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                         AUDIT_CONTEXT,
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
@@ -558,7 +558,7 @@ class VerifyCodeHandlerTest {
         verify(sessionService, times(2)).save(session);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
+                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
                         AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
@@ -584,7 +584,7 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
+                        FrontendAuditableEvent.AUTH_INVALID_CODE_SENT,
                         AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
@@ -618,7 +618,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                         AUDIT_CONTEXT,
                         pair("notification-type", MFA_SMS.name()),
                         pair("account-recovery", false),
@@ -652,7 +652,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                         AUDIT_CONTEXT,
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),

@@ -116,7 +116,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
-                singletonList(AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION));
+                singletonList(AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION));
     }
 
     @Test

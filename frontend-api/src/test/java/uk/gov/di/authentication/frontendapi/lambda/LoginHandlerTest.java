@@ -231,7 +231,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
@@ -273,7 +273,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
                         auditContextWithAllUserInfo,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
@@ -382,7 +382,7 @@ class LoginHandlerTest {
         assertThat(response.passwordChangeRequired(), equalTo(true));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
@@ -451,7 +451,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
@@ -490,7 +490,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
@@ -527,7 +527,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
@@ -582,7 +582,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
@@ -688,7 +688,7 @@ class LoginHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
+                        FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL,
                         auditContextWithoutUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)));
 

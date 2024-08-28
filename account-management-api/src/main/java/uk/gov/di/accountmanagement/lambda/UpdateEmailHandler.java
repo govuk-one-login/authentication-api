@@ -176,7 +176,7 @@ public class UpdateEmailHandler
             if (configurationService.isEmailCheckEnabled()
                     && resultStatus.get().equals(EmailCheckResultStatus.PENDING)) {
                 auditService.submitAuditEvent(
-                        AccountManagementAuditableEvent.EMAIL_FRAUD_CHECK_BYPASSED,
+                        AccountManagementAuditableEvent.AUTH_EMAIL_FRAUD_CHECK_BYPASSED,
                         auditContext.withSubjectId(userProfile.getSubjectID()),
                         pair("journey_type", JourneyType.ACCOUNT_MANAGEMENT.getValue()),
                         pair(
@@ -218,7 +218,7 @@ public class UpdateEmailHandler
                             dynamoService);
 
             auditService.submitAuditEvent(
-                    AccountManagementAuditableEvent.UPDATE_EMAIL,
+                    AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                     auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue()),
                     AuditService.MetadataPair.pair(
                             "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));

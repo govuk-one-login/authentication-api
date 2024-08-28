@@ -211,7 +211,7 @@ public class StartHandler
                             txmaAuditHeader);
 
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.START_INFO_FOUND,
+                    FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                     auditContext,
                     pair("internalSubjectId", internalSubjectId));
 

@@ -103,7 +103,7 @@ public abstract class MfaCodeProcessor {
                             AuditService.UNKNOWN,
                             persistentSessionId);
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                    FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
                     auditContext,
                     pair("mfa-type", mfaMethodType.getValue()));
         }

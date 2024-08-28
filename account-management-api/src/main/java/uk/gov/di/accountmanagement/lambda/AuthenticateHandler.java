@@ -22,8 +22,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -89,7 +89,7 @@ public class AuthenticateHandler
             boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
             if (!userHasAccount) {
                 auditService.submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
             boolean hasValidCredentials =
@@ -97,16 +97,17 @@ public class AuthenticateHandler
                             loginRequest.getEmail(), loginRequest.getPassword());
             if (!hasValidCredentials) {
                 auditService.submitAuditEvent(
-                        ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
 
-            auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
+            auditService.submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
-            auditService.submitAuditEvent(ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+            auditService.submitAuditEvent(
+                    AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }

@@ -68,7 +68,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -190,7 +190,7 @@ class CheckUserExistsHandlerTest {
             assertThat(result, hasStatus(200));
             verify(auditService)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                            FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL,
                             AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
                             AuditService.MetadataPair.pair(
                                     "rpPairwiseId", getExpectedRpPairwiseId()));
@@ -208,7 +208,7 @@ class CheckUserExistsHandlerTest {
             assertThat(result, hasStatus(200));
             verify(auditService)
                     .submitAuditEvent(
-                            FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                            FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL,
                             AUDIT_CONTEXT
                                     .withSubjectId(getExpectedInternalPairwiseId())
                                     .withTxmaAuditEncoded(Optional.empty()),
@@ -276,7 +276,7 @@ class CheckUserExistsHandlerTest {
             verify(sessionService, times(1)).save(any());
             verify(auditService)
                     .submitAuditEvent(
-                            ACCOUNT_TEMPORARILY_LOCKED,
+                            AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                             AUDIT_CONTEXT,
                             AuditService.MetadataPair.pair(
                                     "number_of_attempts_user_allowed_to_login", 5));
@@ -299,7 +299,7 @@ class CheckUserExistsHandlerTest {
         verify(session).setInternalCommonSubjectIdentifier(null);
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
+                        FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
                         AUDIT_CONTEXT,
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
     }
@@ -338,7 +338,7 @@ class CheckUserExistsHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1004));
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
+                        FrontendAuditableEvent.AUTH_CHECK_USER_INVALID_EMAIL,
                         AUDIT_CONTEXT.withEmail("joe.bloggs"));
     }
 

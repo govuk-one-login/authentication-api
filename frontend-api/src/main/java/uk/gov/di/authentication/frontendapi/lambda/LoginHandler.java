@@ -40,8 +40,8 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
@@ -155,7 +155,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
         if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
-            auditService.submitAuditEvent(NO_ACCOUNT_WITH_EMAIL, auditContext);
+            auditService.submitAuditEvent(AUTH_NO_ACCOUNT_WITH_EMAIL, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         }
 
@@ -173,7 +173,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (codeStorageService.isBlockedForEmail(userProfile.getEmail(), CODE_BLOCKED_KEY_PREFIX)) {
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                    FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
                     pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
                     pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()),
@@ -232,7 +232,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userMfaDetail.isMfaMethodVerified());
 
         auditService.submitAuditEvent(
-                LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
+                AUTH_LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
 
         if (!userMfaDetail.isMfaRequired()) {
             cloudwatchMetricsService.incrementAuthenticationSuccess(
@@ -273,7 +273,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
 
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.INVALID_CREDENTIALS,
+                FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                 auditContext,
                 pair(INTERNAL_SUBJECT_ID, userProfile.getSubjectID()),
                 pair(INCORRECT_PASSWORD_COUNT, updatedIncorrectPasswordCount),
@@ -346,7 +346,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         codeStorageService.deleteIncorrectPasswordCount(email);
 
         auditService.submitAuditEvent(
-                FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                 auditContext,
                 pair(INTERNAL_SUBJECT_ID, subjectID),
                 pair(ATTEMPT_NO_FAILED_AT, updatedIncorrectPasswordCount),

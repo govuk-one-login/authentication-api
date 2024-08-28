@@ -25,7 +25,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION;
+import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -144,7 +144,7 @@ public class UserInfoHandler
                         .withEmail(email)
                         .withPhoneNumber(phoneNumber);
 
-        auditService.submitAuditEvent(USERINFO_SENT_TO_ORCHESTRATION, auditContext);
+        auditService.submitAuditEvent(AUTH_USERINFO_SENT_TO_ORCHESTRATION, auditContext);
 
         Optional<AccessTokenStore> updatedTokenStore =
                 accessTokenService.setAccessTokenStoreUsed(accessToken.getValue(), true);

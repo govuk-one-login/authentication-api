@@ -37,10 +37,10 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -89,7 +89,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
         assertThat(response, hasStatus(204));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
     }
 
     @ParameterizedTest
@@ -115,7 +115,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
     }
 
     @ParameterizedTest
@@ -140,7 +140,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1036));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
     }
 
     @ParameterizedTest
@@ -169,7 +169,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response2, hasStatus(400));
         assertThat(response2, hasJsonBody(ErrorResponse.ERROR_1036));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_INVALID_CODE_SENT));
     }
 
     @Test
@@ -196,7 +197,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(false));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
     }
 
     @Test
@@ -246,7 +247,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
     }
 
     @Test
@@ -272,7 +273,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
     }
 
     private static Stream<JourneyType> journeyTypes() {
@@ -303,7 +304,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(
                 redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(journeyType != JourneyType.REAUTHENTICATION));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
     }
 
     @ParameterizedTest
@@ -330,7 +331,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(204));
 
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
     }
 
     @ParameterizedTest
@@ -359,7 +360,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(204));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(CODE_VERIFIED, ACCOUNT_RECOVERY_BLOCK_REMOVED));
+                txmaAuditQueue, List.of(AUTH_CODE_VERIFIED, AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED));
     }
 
     @Test
@@ -384,7 +385,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(204));
         Session session = redis.getSession(sessionId);
         assertThat(session.getInternalCommonSubjectIdentifier(), notNullValue());
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_VERIFIED));
     }
 
     @ParameterizedTest
@@ -411,7 +412,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {

@@ -85,7 +85,7 @@ class UserInfoHandlerTest {
         verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
         verify(auditService)
                 .submitAuditEvent(
-                        AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION,
+                        AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION,
                         new AuditContext(
                                 "",
                                 "",

@@ -69,10 +69,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.NO_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_NO_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PERMANENTLY_BLOCKED_INTERVENTION;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_TEMP_SUSPENDED_INTERVENTION;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_NAME;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
@@ -390,12 +390,12 @@ class AccountInterventionsHandlerTest {
 
     static Stream<Arguments> accountInterventionResponseParameters() {
         return Stream.of(
-                Arguments.of(false, false, false, false, NO_INTERVENTION),
-                Arguments.of(false, true, true, false, NO_INTERVENTION),
-                Arguments.of(true, false, false, false, PERMANENTLY_BLOCKED_INTERVENTION),
-                Arguments.of(false, true, false, false, TEMP_SUSPENDED_INTERVENTION),
-                Arguments.of(false, true, false, true, PASSWORD_RESET_INTERVENTION),
-                Arguments.of(false, true, true, true, PASSWORD_RESET_INTERVENTION));
+                Arguments.of(false, false, false, false, AUTH_NO_INTERVENTION),
+                Arguments.of(false, true, true, false, AUTH_NO_INTERVENTION),
+                Arguments.of(true, false, false, false, AUTH_PERMANENTLY_BLOCKED_INTERVENTION),
+                Arguments.of(false, true, false, false, AUTH_TEMP_SUSPENDED_INTERVENTION),
+                Arguments.of(false, true, false, true, AUTH_PASSWORD_RESET_INTERVENTION),
+                Arguments.of(false, true, true, true, AUTH_PASSWORD_RESET_INTERVENTION));
     }
 
     @ParameterizedTest
@@ -478,7 +478,7 @@ class AccountInterventionsHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        NO_INTERVENTION, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
+                        AUTH_NO_INTERVENTION, AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     private UserProfile generateUserProfile() {

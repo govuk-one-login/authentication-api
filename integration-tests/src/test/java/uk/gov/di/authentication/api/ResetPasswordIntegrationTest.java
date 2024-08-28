@@ -67,7 +67,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
     @Test
@@ -102,7 +102,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
 
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(ACCOUNT_RECOVERY_BLOCK_ADDED, PASSWORD_RESET_SUCCESSFUL));
+                txmaAuditQueue,
+                List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
     @Test
@@ -146,7 +147,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
-                List.of(PASSWORD_RESET_INTERVENTION_COMPLETE, PASSWORD_RESET_SUCCESSFUL));
+                List.of(AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE, AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
     private static Stream<Boolean> phoneNumberVerified() {
@@ -187,8 +188,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         List<AuditableEvent> expectedAuditableEvents =
                 phoneNumberVerified
-                        ? List.of(ACCOUNT_RECOVERY_BLOCK_ADDED, PASSWORD_RESET_SUCCESSFUL)
-                        : List.of(PASSWORD_RESET_SUCCESSFUL);
+                        ? List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL)
+                        : List.of(AUTH_PASSWORD_RESET_SUCCESSFUL);
         assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
 
         if (phoneNumberVerified) {
@@ -237,8 +238,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         List<AuditableEvent> expectedAuditableEvents =
                 authAppVerified
-                        ? List.of(ACCOUNT_RECOVERY_BLOCK_ADDED, PASSWORD_RESET_SUCCESSFUL)
-                        : List.of(PASSWORD_RESET_SUCCESSFUL);
+                        ? List.of(AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED, AUTH_PASSWORD_RESET_SUCCESSFUL)
+                        : List.of(AUTH_PASSWORD_RESET_SUCCESSFUL);
         assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
     }
 
