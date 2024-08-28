@@ -69,6 +69,14 @@ subprojects {
                 classpath('org.apache.commons:commons-compress:[1.26.0,)') {
                     because 'CVE-2024-26308 is fixed in 1.26.0 and above'
                 }
+
+                classpath('io.netty:netty-codec-http:[4.1.108.Final,)') {
+                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                }
+
+                classpath('io.netty:netty-codec-http2:[4.1.100.Final,)') {
+                    because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
+                }
             }
         }
     }
@@ -130,22 +138,6 @@ subprojects {
             implementation('org.apache.logging.log4j:log4j-core:2.23.1')
             testRuntimeOnly('org.apache.logging.log4j:log4j-core:2.23.1')
 
-            implementation('io.netty:netty-codec-http2:4.1.100.Final') {
-                because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
-            }
-
-            testRuntimeOnly('io.netty:netty-codec-http2:4.1.100.Final') {
-                because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
-            }
-
-            implementation('io.netty:netty-codec-http:4.1.108.Final') {
-                because 'dependabot alert is fixed in 4.1.108.Final and above'
-            }
-
-            testRuntimeOnly('io.netty:netty-codec-http:4.1.108.Final') {
-                because 'dependabot alert is fixed in 4.1.108.Final and above'
-            }
-
             configurations.configureEach { conf ->
                 add(conf.name, 'com.google.guava:guava:[32.0.0-jre,)') {
                     because 'CVE-2020-8908 is fixed in 32.0.0-jre and above'
@@ -153,6 +145,14 @@ subprojects {
 
                 add(conf.name, 'org.apache.commons:commons-compress:[1.26.0,)') {
                     because 'CVE-2024-26308 is fixed in 1.26.0 and above'
+                }
+
+                add(conf.name, 'io.netty:netty-codec-http:[4.1.108.Final,)') {
+                    because 'CVE-2024-29025 is fixed in io.netty:netty-codec-http:4.1.108.Final and higher'
+                }
+
+                add(conf.name, 'io.netty:netty-codec-http2:[4.1.100.Final,)') {
+                    because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
                 }
             }
         }
