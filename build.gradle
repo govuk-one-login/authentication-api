@@ -65,6 +65,10 @@ subprojects {
                 classpath('com.google.guava:guava:[32.0.0-jre,)') {
                     because 'CVE-2020-8908 is fixed in 32.0.0-jre and above'
                 }
+
+                classpath('org.apache.commons:commons-compress:[1.26.0,)') {
+                    because 'CVE-2024-26308 is fixed in 1.26.0 and above'
+                }
             }
         }
     }
@@ -142,17 +146,13 @@ subprojects {
                 because 'dependabot alert is fixed in 4.1.108.Final and above'
             }
 
-            implementation('org.apache.commons:commons-compress:1.26.0') {
-                because 'dependabot alert is fixed in 1.26.0 and above'
-            }
-
-            testRuntimeOnly('org.apache.commons:commons-compress:1.26.0') {
-                because 'dependabot alert is fixed in 1.26.0 and above'
-            }
-
             configurations.configureEach { conf ->
                 add(conf.name, 'com.google.guava:guava:[32.0.0-jre,)') {
                     because 'CVE-2020-8908 is fixed in 32.0.0-jre and above'
+                }
+
+                add(conf.name, 'org.apache.commons:commons-compress:[1.26.0,)') {
+                    because 'CVE-2024-26308 is fixed in 1.26.0 and above'
                 }
             }
         }
