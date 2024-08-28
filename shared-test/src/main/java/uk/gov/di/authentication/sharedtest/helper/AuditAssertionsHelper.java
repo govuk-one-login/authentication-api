@@ -31,12 +31,13 @@ public class AuditAssertionsHelper {
         var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
 
         if (expectedTxmaEvents.isEmpty()) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
 
         if (!expectedTxmaEvents.stream().allMatch(item -> item.startsWith("AUTH_"))) {
-            throw new RuntimeException("All authentication audit events must start with AUTH_");
+            throw new IllegalArgumentException(
+                    "assertTxmaAuditEventsReceived() should have authentication audit events starting with AUTH_");
         }
 
         await().atMost(TIMEOUT)
