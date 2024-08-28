@@ -140,12 +140,12 @@ subprojects {
                 because 'dependabot alert is fixed in 1.26.0 and above'
             }
 
-            implementation('com.google.guava:guava:32.0.0-android') {
-                because 'dependabot alert is fixed in 32.0.0-android and above'
+            implementation('com.google.guava:guava:[32.0.0-jre,)') {
+                because 'dependabot alert is fixed in 32.0.0-jre and above'
             }
 
-            testRuntimeOnly('com.google.guava:guava:32.0.0-android') {
-                because 'dependabot alert is fixed in 32.0.0-android and above'
+            testRuntimeOnly('com.google.guava:guava:[32.0.0-jre,)') {
+                because 'dependabot alert is fixed in 32.0.0-jre and above'
             }
         }
 
