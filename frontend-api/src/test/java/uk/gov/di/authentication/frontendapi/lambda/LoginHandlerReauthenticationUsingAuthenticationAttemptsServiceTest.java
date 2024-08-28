@@ -66,7 +66,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CREDENTIALS;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
@@ -217,7 +217,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        INVALID_CREDENTIALS,
+                        AUTH_INVALID_CREDENTIALS,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
