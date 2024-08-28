@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.AuditField.TXMA_ENCODED_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachAuditField;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.orchestration.shared.services.AuditServiceTest.TestEvents.AUTH_TEST_EVENT_ONE;
+import static uk.gov.di.orchestration.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.asJson;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
@@ -41,7 +41,7 @@ class AuditServiceTest {
     private final ArgumentCaptor<String> txmaMessageCaptor = ArgumentCaptor.forClass(String.class);
 
     enum TestEvents implements AuditableEvent {
-        AUTH_TEST_EVENT_ONE;
+        TEST_EVENT_ONE;
 
         public AuditableEvent parseFromName(String name) {
             return valueOf(name);
@@ -67,7 +67,7 @@ class AuditServiceTest {
                         .withPersistentSessionId("persistent-session-id")
                         .withGovukSigninJourneyId("request-id");
 
-        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, "client-id", user);
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", user);
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -105,11 +105,7 @@ class AuditServiceTest {
                         .withGovukSigninJourneyId("request-id");
 
         auditService.submitAuditEvent(
-                AUTH_TEST_EVENT_ONE,
-                "client-id",
-                user,
-                pair("key", "value"),
-                pair("key2", "value2"));
+                TEST_EVENT_ONE, "client-id", user, pair("key", "value"), pair("key2", "value2"));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         var txmaMessage = asJson(txmaMessageCaptor.getValue());
@@ -138,11 +134,7 @@ class AuditServiceTest {
                         .withGovukSigninJourneyId("request-id");
 
         auditService.submitAuditEvent(
-                AUTH_TEST_EVENT_ONE,
-                "client-id",
-                user,
-                pair("key", "value"),
-                pair("key2", "value2"));
+                TEST_EVENT_ONE, "client-id", user, pair("key", "value"), pair("key2", "value2"));
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -160,7 +152,7 @@ class AuditServiceTest {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);
 
         attachAuditField(TXMA_ENCODED_HEADER, TXMA_ENCODED_HEADER_VALUE);
-        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
 
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
 
@@ -181,7 +173,7 @@ class AuditServiceTest {
     void TxmaHeaderNotAddedWhenNotSet() {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);
 
-        auditService.submitAuditEvent(AUTH_TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
+        auditService.submitAuditEvent(TEST_EVENT_ONE, "client-id", TxmaAuditUser.user());
         verify(awsSqsClient).send(txmaMessageCaptor.capture());
         assertTrue(
                 asJson(txmaMessageCaptor.getValue())
