@@ -59,6 +59,16 @@ repositories {
 }
 
 subprojects {
+    buildscript {
+        dependencies {
+            constraints {
+                classpath('com.google.guava:guava:[32.0.0-jre,)') {
+                    because 'CVE-2020-8908 is fixed in 32.0.0-jre and above'
+                }
+            }
+        }
+    }
+
     apply plugin: "com.github.spotbugs"
     apply plugin: "java"
 
@@ -140,12 +150,10 @@ subprojects {
                 because 'dependabot alert is fixed in 1.26.0 and above'
             }
 
-            implementation('com.google.guava:guava:[32.0.0-jre,)') {
-                because 'dependabot alert is fixed in 32.0.0-jre and above'
-            }
-
-            testRuntimeOnly('com.google.guava:guava:[32.0.0-jre,)') {
-                because 'dependabot alert is fixed in 32.0.0-jre and above'
+            configurations.configureEach { conf ->
+                add(conf.name, 'com.google.guava:guava:[32.0.0-jre,)') {
+                    because 'CVE-2020-8908 is fixed in 32.0.0-jre and above'
+                }
             }
         }
 
