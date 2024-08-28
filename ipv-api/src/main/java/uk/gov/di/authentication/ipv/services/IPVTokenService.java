@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -31,6 +32,8 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -72,6 +75,13 @@ public class IPVTokenService {
                         NowHelper.now(),
                         NowHelper.now(),
                         new JWTID());
+        try {
+            String hostName = ipvTokenURI.getHost();
+            InetAddress inetAddress = InetAddress.getByName(hostName);
+            LOG.info("Resolved IP address for {}: {}", hostName, inetAddress.getHostAddress());
+        } catch (UnknownHostException e) {
+            LOG.info("unknown host: {}", e.toString());
+        }
         return new TokenRequest(
                 ipvTokenURI,
                 generatePrivateKeyJwt(claimsSet),
@@ -84,19 +94,25 @@ public class IPVTokenService {
     }
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
+        TokenResponse tokenResponse = null;
+        HTTPResponse httpResponse = null;
         try {
-            LOG.info("Sending IPV token request");
+            LOG.info("Sending IPV token request to {}", tokenRequest.getEndpointURI());
             int count = 0;
             int maxTries = 2;
-            TokenResponse tokenResponse;
             do {
                 if (count > 0) LOG.warn("Retrying IPV access token request");
                 count++;
-                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+                httpResponse = tokenRequest.toHTTPRequest().send();
+                LOG.info("send in do {}: ", httpResponse);
+                tokenResponse = TokenResponse.parse(httpResponse);
+                LOG.info("tokenResponse in do: {}", tokenResponse);
             } while (!tokenResponse.indicatesSuccess() && count < maxTries);
 
             return tokenResponse;
         } catch (IOException e) {
+            LOG.info("tokenResponse in catch: {}", tokenResponse);
+            LOG.info("send in catch {}: ", httpResponse);
             LOG.error("Error whilst sending TokenRequest", e);
             throw new RuntimeException(e);
         } catch (ParseException e) {
