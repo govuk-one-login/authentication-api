@@ -51,6 +51,8 @@ incorrect_password_lockout_count_ttl      = 600
 lockout_count_ttl                         = 600
 otp_code_ttl_duration                     = 600
 email_acct_creation_otp_code_ttl_duration = 600
+reauth_enter_email_count_ttl              = 120
+reauth_enter_password_count_ttl           = 120
 
 
 orch_client_id  = "orchestrationAuth"

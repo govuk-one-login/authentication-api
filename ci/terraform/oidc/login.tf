@@ -17,7 +17,10 @@ module "frontend_api_login_role" {
     local.account_modifiers_encryption_policy_arn,
     local.common_passwords_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.user_credentials_encryption_policy_arn
+    local.user_credentials_encryption_policy_arn,
+    aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn
   ]
 }
 
@@ -31,18 +34,20 @@ module "login" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                          = var.environment
-    TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                            = local.redis_key
-    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TERMS_CONDITIONS_VERSION             = var.terms_and_conditions
-    HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
-    INTERNAl_SECTOR_URI                  = var.internal_sector_uri
-    LOCKOUT_DURATION                     = var.lockout_duration
-    LOCKOUT_COUNT_TTL                    = var.lockout_count_ttl
-    INCORRECT_PASSWORD_LOCKOUT_COUNT_TTL = var.incorrect_password_lockout_count_ttl
-    SUPPORT_REAUTH_SIGNOUT_ENABLED       = var.support_reauth_signout_enabled
+    ENVIRONMENT                             = var.environment
+    TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                     = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                               = local.redis_key
+    DYNAMO_ENDPOINT                         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION                = var.terms_and_conditions
+    HEADERS_CASE_INSENSITIVE                = var.use_localstack ? "true" : "false"
+    INTERNAl_SECTOR_URI                     = var.internal_sector_uri
+    LOCKOUT_DURATION                        = var.lockout_duration
+    LOCKOUT_COUNT_TTL                       = var.lockout_count_ttl
+    INCORRECT_PASSWORD_LOCKOUT_COUNT_TTL    = var.incorrect_password_lockout_count_ttl
+    SUPPORT_REAUTH_SIGNOUT_ENABLED          = var.support_reauth_signout_enabled
+    AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
+    REAUTH_ENTER_PASSWORD_COUNT_TTL         = var.reauth_enter_password_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 

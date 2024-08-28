@@ -87,6 +87,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("REAUTH_ENTER_EMAIL_COUNT_TTL", "3600"));
     }
 
+    public long getReauthEnterPasswordCountTTL() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("REAUTH_ENTER_PASSWORD_COUNT_TTL", "3600"));
+    }
+
     public boolean supportAccountCreationTTL() {
         return System.getenv()
                 .getOrDefault("SUPPORT_ACCOUNT_CREATION_COUNT_TTL", String.valueOf(false))

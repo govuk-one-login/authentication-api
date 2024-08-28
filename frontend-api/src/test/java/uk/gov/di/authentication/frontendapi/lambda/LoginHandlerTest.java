@@ -193,7 +193,8 @@ class LoginHandlerTest {
                         userMigrationService,
                         auditService,
                         cloudwatchMetricsService,
-                        commonPasswordsService);
+                        commonPasswordsService,
+                        null);
     }
 
     @Test
