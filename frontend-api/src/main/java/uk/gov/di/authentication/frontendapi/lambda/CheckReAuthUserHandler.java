@@ -35,9 +35,11 @@ import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -143,17 +145,20 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         auditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
-                    .orElseGet(() -> generateErrorResponse(emailUserIsSignedInWith, auditContext));
+                    .orElseGet(
+                            () ->
+                                    generateErrorResponse(
+                                            emailUserIsSignedInWith, auditContext, userContext));
         } catch (AccountLockedException e) {
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
                     e.getErrorResponse() == ErrorResponse.ERROR_1045
-                            ? AuditService.MetadataPair.pair(
+                            ? pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxPasswordRetries())
-                            : AuditService.MetadataPair.pair(
+                            : pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxEmailReAuthRetries()));
 
@@ -167,14 +172,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext,
             String rpPairwiseId,
             AuditContext auditContext) {
-        var client = userContext.getClient().orElseThrow();
-        var calculatedPairwiseId =
-                ClientSubjectHelper.getSubject(
-                                userProfile,
-                                client,
-                                authenticationService,
-                                configurationService.getInternalSectorUri())
-                        .getValue();
+        String calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             auditService.submitAuditEvent(AUTH_REAUTHENTICATION_SUCCESSFUL, auditContext);
@@ -195,7 +193,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String email, AuditContext auditContext) {
+            String email, AuditContext auditContext, UserContext userContext) {
         var userProfile = authenticationService.getUserProfileByEmail(email);
         if (hasEnteredIncorrectEmailTooManyTimes(userProfile)) {
             if (configurationService.supportReauthSignoutEnabled()) {
@@ -205,6 +203,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
         LOG.info("User not found or no match");
+
+        int count;
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && userProfile != null) {
             authenticationAttemptsService.createOrIncrementCount(
@@ -216,9 +216,28 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                             .getEpochSecond(),
                     JourneyType.REAUTHENTICATION,
                     CountType.ENTER_EMAIL);
+            count =
+                    authenticationAttemptsService.getCount(
+                            userProfile.getSubjectID(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_EMAIL);
         } else {
             codeStorageService.increaseIncorrectEmailCount(email);
+            count = codeStorageService.getIncorrectEmailCount(email);
         }
+
+        String commonSubjectId =
+                userProfile != null
+                        ? calculatePairwiseId(userContext, userProfile)
+                        : AuditService.UNKNOWN;
+
+        auditService.submitAuditEvent(
+                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                auditContext,
+                pair("incorrect_email_attempt_count", count),
+                pair("user supplied email address", email),
+                pair("common subject identifier", commonSubjectId));
+
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
 
@@ -256,5 +275,15 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         if (incorrectEmailCount != 0) {
             codeStorageService.deleteIncorrectEmailCount(userProfile.getEmail());
         }
+    }
+
+    private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
+        var client = userContext.getClient().orElseThrow();
+        return ClientSubjectHelper.getSubject(
+                        userProfile,
+                        client,
+                        authenticationService,
+                        configurationService.getInternalSectorUri())
+                .getValue();
     }
 }

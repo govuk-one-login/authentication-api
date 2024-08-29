@@ -46,6 +46,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {
@@ -232,6 +233,7 @@ class CheckReAuthUserHandlerTest {
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
+        when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN)).thenReturn(null);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -249,8 +251,6 @@ class CheckReAuthUserHandlerTest {
         verify(userContext, atLeastOnce()).getSession();
         verify(userContext).getClientSessionId();
         verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService).getMaxEmailReAuthRetries();
     }
 
     @ParameterizedTest
@@ -288,8 +288,7 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         testAuditContextWithAuditEncoded,
-                        AuditService.MetadataPair.pair(
-                                "number_of_attempts_user_allowed_to_login", 5));
+                        pair("number_of_attempts_user_allowed_to_login", 5));
 
         verify(userContext, times(2)).getSession();
         verify(userContext).getClientSessionId();
@@ -350,6 +349,19 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn404ForWhenUserDoesNotMatch(boolean supportAuthenticationAttempts) {
         when(configurationService.isAuthenticationAttemptsServiceEnabled())
                 .thenReturn(supportAuthenticationAttempts);
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
+        when(userContext.getTxmaAuditEncoded()).thenReturn(null);
+
+        var userProfile = generateUserProfile();
+
+        var expectedRpPairwiseSub =
+                ClientSubjectHelper.getSubject(
+                                userProfile,
+                                clientRegistry,
+                                authenticationService,
+                                INTERNAL_SECTOR_URI)
+                        .getValue();
+
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
         var result =
@@ -357,12 +369,19 @@ class CheckReAuthUserHandlerTest {
                         event,
                         context,
                         new CheckReauthUserRequest(
-                                DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, TEST_RP_PAIRWISE_ID),
+                                DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, expectedRpPairwiseSub),
                         userContext);
 
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                        testAuditContextWithoutAuditEncoded,
+                        pair("incorrect_email_attempt_count", 1),
+                        pair("user supplied email address", EMAIL_USED_TO_SIGN_IN),
+                        pair("common subject identifier", expectedRpPairwiseSub));
 
         verify(userContext, atLeastOnce()).getSession();
         verify(userContext).getClientSessionId();
