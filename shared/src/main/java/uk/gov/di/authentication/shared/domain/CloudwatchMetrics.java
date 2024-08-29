@@ -9,7 +9,13 @@ public enum CloudwatchMetrics {
     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT("SignInExistingAccountByClient"),
     LOGOUT_SUCCESS("LogoutSuccess"),
     EMAIL_CHECK_DURATION("EmailCheckDuration"),
-    MFA_RESET_HANDOFF("MfaResetHandoff");
+    MFA_RESET_HANDOFF("MfaResetHandoff"),
+    ACCESS_TOKEN_SERVICE_INITIAL_QUERY_ATTEMPT("AccessTokenServiceInitialQueryAttempt"),
+    ACCESS_TOKEN_SERVICE_INITIAL_QUERY_SUCCESS("AccessTokenServiceInitialQuerySuccess"),
+    ACCESS_TOKEN_SERVICE_CONSISTENT_READ_QUERY_ATTEMPT(
+            "AccessTokenServiceConsistentReadQueryAttempt"),
+    ACCESS_TOKEN_SERVICE_CONSISTENT_READ_QUERY_SUCCESS(
+            "AccessTokenServiceConsistentReadQueryAttemptSuccess");
     private String value;
 
     CloudwatchMetrics(String value) {
