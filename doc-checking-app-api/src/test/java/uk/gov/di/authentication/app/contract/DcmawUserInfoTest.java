@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.app.contract;
 
 import au.com.dius.pact.consumer.MockServer;
+import au.com.dius.pact.consumer.dsl.PactDslJsonRootValue;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
 import au.com.dius.pact.consumer.junit5.PactConsumerTest;
 import au.com.dius.pact.consumer.junit5.PactTestFor;
@@ -78,12 +79,12 @@ public class DcmawUserInfoTest {
                         newJsonBody(
                                         (body) -> {
                                             body.stringType(SUB_FIELD, SUB_VALUE);
-                                            body.unorderedMinArray(
+                                            body.minArrayLike(
                                                     CREDENTIALS_JWT_FIELD,
                                                     1,
-                                                    (jwt) -> {
-                                                        jwt.stringType(CREDENTIALS_JWT_VALUE);
-                                                    });
+                                                    PactDslJsonRootValue.stringType(
+                                                            CREDENTIALS_JWT_VALUE),
+                                                    1);
                                         })
                                 .build())
                 .toPact();
