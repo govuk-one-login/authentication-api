@@ -393,9 +393,11 @@ public class AuthorisationHandler
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
 
         // TODO: ATO-989: delete these logs once feature metrics are complete
-        logBrowserSessionIdMetrics(
-                session.map(Session::getBrowserSessionId),
-                CookieHelper.parseBrowserSessionCookie(input.getHeaders()));
+        if (configurationService.isBrowserSessionCookieEnabled() && session.isPresent()) {
+            logBrowserSessionIdMetrics(
+                    session.map(Session::getBrowserSessionId),
+                    CookieHelper.parseBrowserSessionCookie(input.getHeaders()));
+        }
         //
 
         var vtrList = getVtrList(reauthRequested, authRequest);
@@ -932,10 +934,6 @@ public class AuthorisationHandler
     private void logBrowserSessionIdMetrics(
             Optional<String> browserSessionIdFromSession,
             Optional<String> browserSessionIdFromCookie) {
-        if (!configurationService.isBrowserSessionCookieEnabled()) {
-            return;
-        }
-
         if (browserSessionIdFromSession.isEmpty()) {
             LOG.info("browser session id: session has no browser session id");
             return;
