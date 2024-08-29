@@ -25,7 +25,6 @@ Parameters:
   LambdaDeploymentPreference:
     Type: String
     Description: Specifies the configuration to enable gradual Lambda deployments
-    Default: AllAtOnce
 
 Conditions:
   UsePermissionsBoundary: !Not [!Equals [none, !Ref PermissionsBoundary]]
