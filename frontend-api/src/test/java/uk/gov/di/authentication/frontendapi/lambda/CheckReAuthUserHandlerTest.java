@@ -291,10 +291,9 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                        FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
                         testAuditContextWithAuditEncoded,
-                        AuditService.MetadataPair.pair(
-                                "number_of_attempts_user_allowed_to_login", 5));
+                        AuditService.MetadataPair.pair("attemptNoFailedAt", 5));
 
         verify(userContext, times(2)).getSession();
         verify(userContext).getClientSessionId();

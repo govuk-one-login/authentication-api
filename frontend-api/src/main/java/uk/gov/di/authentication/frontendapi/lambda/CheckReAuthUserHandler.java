@@ -44,7 +44,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(CheckReAuthUserHandler.class);
-
+    private static final String ACCOUNTLOCK = "Account is locked due to too many failed attempts.";
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
@@ -125,9 +125,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                     if (configurationService.supportReauthSignoutEnabled()) {
                                         clearCountOfFailedEmailEntryAttempts(userProfile);
                                     }
+
                                     throw new AccountLockedException(
-                                            "Account is locked due to too many failed attempts.",
-                                            ErrorResponse.ERROR_1057);
+                                            ACCOUNTLOCK, ErrorResponse.ERROR_1057);
                                 }
 
                                 if (hasEnteredIncorrectPasswordTooManyTimes(
@@ -147,18 +147,29 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .orElseGet(() -> generateErrorResponse(emailUserIsSignedInWith, auditContext));
         } catch (AccountLockedException e) {
 
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                    auditContext,
-                    e.getErrorResponse() == ErrorResponse.ERROR_1045
-                            ? AuditService.MetadataPair.pair(
-                                    "number_of_attempts_user_allowed_to_login",
-                                    configurationService.getMaxPasswordRetries())
-                            : AuditService.MetadataPair.pair(
-                                    "number_of_attempts_user_allowed_to_login",
+            switch (e.getErrorResponse()) {
+                case ERROR_1057:
+                    auditService.submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
+                            auditContext,
+                            AuditService.MetadataPair.pair(
+                                    "attemptNoFailedAt",
                                     configurationService.getMaxEmailReAuthRetries()));
+                    break;
+                case ERROR_1045:
+                    auditService.submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
+                            auditContext,
+                            AuditService.MetadataPair.pair(
+                                    "number_of_attempts_user_allowed_to_login",
+                                    configurationService.getMaxPasswordRetries()));
+                    break;
+                default:
+                    LOG.info(
+                            "Something went wrong, have a look at the user that is trying to reauth");
+            }
 
-            LOG.error("Account is locked due to too many failed attempts.");
+            LOG.error(ACCOUNTLOCK);
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
     }
@@ -202,8 +213,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             if (configurationService.supportReauthSignoutEnabled()) {
                 clearCountOfFailedEmailEntryAttempts(userProfile);
             }
-            throw new AccountLockedException(
-                    "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
+            throw new AccountLockedException(ACCOUNTLOCK, ErrorResponse.ERROR_1057);
         }
         auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
