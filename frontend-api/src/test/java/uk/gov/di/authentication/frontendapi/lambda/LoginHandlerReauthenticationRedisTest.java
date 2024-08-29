@@ -213,7 +213,7 @@ class LoginHandlerReauthenticationRedisTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CREDENTIALS,
+                        FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                 Optional.of(ENCODED_DEVICE_DETAILS)),
                         pair("internalSubjectId", userProfile.getSubjectID()),
