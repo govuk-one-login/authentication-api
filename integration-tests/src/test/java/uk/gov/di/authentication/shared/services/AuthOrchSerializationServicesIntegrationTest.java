@@ -1,37 +1,148 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.serialization.Json;
 
-import static org.mockito.Mockito.mock;
+import java.util.Optional;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 
 class AuthOrchSerializationServicesIntegrationTest {
-    private final ConfigurationService configuration = mock(ConfigurationService.class);
-    private final Json authObjectMapper = SerializationService.getInstance();
-    private final uk.gov.di.orchestration.shared.serialization.Json OrchobjectMapper =
-            uk.gov.di.orchestration.shared.services.SerializationService.getInstance();
+
+    private static final String REDIS_HOST =
+            System.getenv().getOrDefault("REDIS_HOST", "localhost");
+    private static final Optional<String> REDIS_PASSWORD =
+            Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
+    private static final String BROWSER_SESSION_ID = "browser-session-id";
+    private static final String CLIENT_SESSION_ID = "client-session-id";
+
+    private uk.gov.di.orchestration.shared.services.SessionService orchSessionService;
+    private uk.gov.di.authentication.shared.services.SessionService authSessionService;
+
+    @BeforeEach
+    void setup() {
+        var orchConfigurationService =
+                uk.gov.di.orchestration.shared.services.ConfigurationService.getInstance();
+        var authConfigurationService =
+                uk.gov.di.authentication.shared.services.ConfigurationService.getInstance();
+        var orchRedisConnectionService =
+                new uk.gov.di.orchestration.shared.services.RedisConnectionService(
+                        REDIS_HOST, 6379, false, REDIS_PASSWORD, false);
+        var authRedisConnectionService =
+                new uk.gov.di.authentication.shared.services.RedisConnectionService(
+                        REDIS_HOST, 6379, false, REDIS_PASSWORD, false);
+
+        orchSessionService =
+                new uk.gov.di.orchestration.shared.services.SessionService(
+                        orchConfigurationService, orchRedisConnectionService);
+        authSessionService =
+                new uk.gov.di.authentication.shared.services.SessionService(
+                        authConfigurationService, authRedisConnectionService);
+    }
 
     @Test
-    void sessionsSerializedByAuthCanBeDeserializedByOrch()
-            throws Json.JsonException,
-                    uk.gov.di.orchestration.shared.serialization.Json.JsonException {
-        var authSession =
-                new Session("session-id")
-                        .withBrowserSessionId("browser-session-id")
-                        .addClientSession("client-session-id");
-        var orchSession =
-                new uk.gov.di.orchestration.shared.entity.Session("session-id")
-                        .withBrowserSessionId("browser-session-id")
-                        .addClientSession("client-session-id");
+    void authCanReadFromSessionCreatedByOrch() {
+        var orchSession = orchSessionService.generateSession();
+        var sessionId = orchSession.getSessionId();
+        orchSession.addClientSession(CLIENT_SESSION_ID);
+        orchSessionService.storeOrUpdateSession(orchSession);
+        var authSession = authSessionService.getSession(sessionId).get();
+        assertThat(authSession.getClientSessions(), contains(CLIENT_SESSION_ID));
+    }
 
-        var authSerializedSession = authObjectMapper.writeValueAsString(authSession);
-        var orchDeserialized =
-                OrchobjectMapper.readValue(
-                        authSerializedSession, uk.gov.di.orchestration.shared.entity.Session.class);
+    @Test
+    void orchCanReadFromSessionCreatedByAuth() {
+        var sessionId = "some-existing-session-id";
+        var authSession = new Session(sessionId);
+        authSession.addClientSession(CLIENT_SESSION_ID);
+        authSessionService.storeOrUpdateSession(authSession);
+        var orchSession = orchSessionService.getSession(sessionId).get();
+        assertThat(orchSession.getClientSessions(), contains(CLIENT_SESSION_ID));
+    }
 
-        Assertions.assertTrue(new ReflectionEquals(orchSession).matches(orchDeserialized));
+    @Test
+    void authCanUpdateSharedFieldInSessionCreatedByOrch() {
+        var orchSession = orchSessionService.generateSession();
+        var sessionId = orchSession.getSessionId();
+        orchSessionService.storeOrUpdateSession(orchSession);
+        var authSession = authSessionService.getSession(sessionId).get();
+        authSession.addClientSession(CLIENT_SESSION_ID);
+        authSessionService.storeOrUpdateSession(authSession);
+        orchSession = orchSessionService.getSession(sessionId).get();
+        assertThat(orchSession.getClientSessions(), contains(CLIENT_SESSION_ID));
+    }
+
+    @Test
+    void orchCanUpdateSharedFieldInSessionCreatedByAuth() {
+        var sessionId = "some-existing-session-id";
+        var authSession = new Session(sessionId);
+        authSessionService.storeOrUpdateSession(authSession);
+        var orchSession = orchSessionService.getSession(sessionId).get();
+        orchSession.addClientSession(CLIENT_SESSION_ID);
+        orchSessionService.storeOrUpdateSession(orchSession);
+        authSession = authSessionService.getSession(sessionId).get();
+        assertThat(authSession.getClientSessions(), contains(CLIENT_SESSION_ID));
+    }
+
+    @Test
+    void orchCanReadUnsharedFieldAfterAuthUpdatesSession() {
+        var orchSession = orchSessionService.generateSession();
+        var sessionId = orchSession.getSessionId();
+        orchSession.setBrowserSessionId(BROWSER_SESSION_ID);
+        orchSessionService.storeOrUpdateSession(orchSession);
+        var authSession = authSessionService.getSession(sessionId).get();
+        authSession.addClientSession(CLIENT_SESSION_ID);
+        authSessionService.storeOrUpdateSession(authSession);
+        orchSession = orchSessionService.getSession(sessionId).get();
+        assertThat(orchSession.getBrowserSessionId(), is(equalTo(BROWSER_SESSION_ID)));
+    }
+
+    @Test
+    void authCanReadUnsharedFieldAfterOrchUpdatesSession() {
+        var sessionId = "some-existing-session-id";
+        var authSession = new Session(sessionId);
+        authSession.incrementPasswordResetCount();
+        authSession.incrementPasswordResetCount();
+        authSession.incrementPasswordResetCount();
+        authSessionService.storeOrUpdateSession(authSession);
+        var orchSession = orchSessionService.getSession(sessionId).get();
+        orchSession.addClientSession(CLIENT_SESSION_ID);
+        orchSessionService.storeOrUpdateSession(orchSession);
+        authSession = authSessionService.getSession(sessionId).get();
+        assertThat(authSession.getPasswordResetCount(), is(equalTo(3)));
+    }
+
+    @Test
+    void authCanReadSessionAfterSessionIdIsUpdated() {
+        var orchSession = orchSessionService.generateSession();
+        var originalSessionId = orchSession.getSessionId();
+        orchSessionService.storeOrUpdateSession(orchSession);
+        var authSession = authSessionService.getSession(originalSessionId).get();
+        authSession.addClientSession(CLIENT_SESSION_ID);
+        authSessionService.storeOrUpdateSession(authSession);
+        orchSession = orchSessionService.getSession(originalSessionId).get();
+        orchSessionService.updateWithNewSessionId(orchSession);
+        var newSessionId = orchSession.getSessionId();
+        authSessionService.getSession(newSessionId).get();
+        assertThat(authSession.getClientSessions(), contains(CLIENT_SESSION_ID));
+    }
+
+    @Test
+    void authCanResetSharedFieldsWithoutOverridingUnsharedFields() {
+        var orchSession = orchSessionService.generateSession();
+        var sessionId = orchSession.getSessionId();
+        orchSession.addClientSession(CLIENT_SESSION_ID);
+        orchSession.setBrowserSessionId(BROWSER_SESSION_ID);
+        orchSessionService.storeOrUpdateSession(orchSession);
+        var authSession = new Session(sessionId);
+        authSessionService.storeOrUpdateSession(authSession);
+        orchSession = orchSessionService.getSession(sessionId).get();
+        assertThat(orchSession.getClientSessions(), is(empty()));
+        assertThat(orchSession.getBrowserSessionId(), is(equalTo(BROWSER_SESSION_ID)));
     }
 }

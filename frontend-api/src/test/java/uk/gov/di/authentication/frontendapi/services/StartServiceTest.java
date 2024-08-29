@@ -115,7 +115,6 @@ class StartServiceTest {
         SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        SESSION.setBrowserSessionId("some-browser-session-id");
         var session = startService.validateSession(SESSION, currentClientSessionId);
 
         assertFalse(session.isAuthenticated());
@@ -124,7 +123,6 @@ class StartServiceTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
-        assertThat(session.getBrowserSessionId(), equalTo("some-browser-session-id"));
         verify(sessionService).storeOrUpdateSession(session);
     }
 
@@ -143,7 +141,6 @@ class StartServiceTest {
         SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        SESSION.setBrowserSessionId("some-browser-session-id");
         var session = startService.validateSession(SESSION, currentClientSessionId);
 
         assertTrue(session.isAuthenticated());
@@ -151,7 +148,6 @@ class StartServiceTest {
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(session.isNewAccount(), equalTo(Session.AccountState.EXISTING));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
-        assertThat(session.getBrowserSessionId(), equalTo("some-browser-session-id"));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertTrue(session.getClientSessions().contains("previous-session-client-session-id"));
         verifyNoInteractions(sessionService);

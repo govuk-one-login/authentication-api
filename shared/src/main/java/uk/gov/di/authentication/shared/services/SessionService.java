@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.helpers.JsonUpdateHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -57,18 +56,6 @@ public class SessionService {
 
             redisConnectionService.saveWithExpiry(
                     session.getSessionId(), newSession, configurationService.getSessionExpiry());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void updateWithNewSessionId(Session session) {
-        try {
-            String oldSessionId = session.getSessionId();
-            session.setSessionId(IdGenerator.generate());
-            session.resetProcessingIdentityAttempts();
-            storeOrUpdateSession(session, oldSessionId);
-            redisConnectionService.deleteValue(oldSessionId);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

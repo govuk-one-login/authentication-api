@@ -30,10 +30,7 @@ public class Session {
 
     @Expose private int retryCount;
 
-    @Expose private int passwordResetCount;
-
     @Expose private Map<CodeRequestType, Integer> codeRequestCountMap;
-    @Expose private Map<CountType, Integer> preservedReauthCountsForAudit;
 
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
@@ -96,20 +93,6 @@ public class Session {
 
     public Session setEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
-        return this;
-    }
-
-    public int getPasswordResetCount() {
-        return passwordResetCount;
-    }
-
-    public Session incrementPasswordResetCount() {
-        this.passwordResetCount = passwordResetCount + 1;
-        return this;
-    }
-
-    public Session resetPasswordResetCount() {
-        this.passwordResetCount = 0;
         return this;
     }
 
