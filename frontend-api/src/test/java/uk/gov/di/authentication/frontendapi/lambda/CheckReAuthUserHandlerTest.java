@@ -246,11 +246,6 @@ class CheckReAuthUserHandlerTest {
         verify(authenticationService, atLeastOnce())
                 .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded);
-
         verify(userContext, atLeastOnce()).getSession();
         verify(userContext).getClientSessionId();
         verify(userContext).getTxmaAuditEncoded();
@@ -368,10 +363,6 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded);
 
         verify(userContext, atLeastOnce()).getSession();
         verify(userContext).getClientSessionId();

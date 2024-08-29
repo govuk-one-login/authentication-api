@@ -34,7 +34,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -205,7 +204,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
-        auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && userProfile != null) {
