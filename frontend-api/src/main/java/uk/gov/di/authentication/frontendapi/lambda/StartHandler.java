@@ -53,6 +53,7 @@ public class StartHandler
     private static final Logger LOG = LogManager.getLogger(StartHandler.class);
 
     protected static final String REAUTHENTICATE_HEADER = "Reauthenticate";
+    protected static final String OLD_SESSION_ID_HEADER = "Old-Session-Id";
     private final ClientSessionService clientSessionService;
     private final SessionService sessionService;
     private final AuditService auditService;
@@ -176,6 +177,13 @@ public class StartHandler
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
+
+            var oldSessionId =
+                    getOptionalHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            OLD_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            LOG.info("oldSessionId: {}", oldSessionId);
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
