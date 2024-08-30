@@ -314,19 +314,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
 
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-            if (configurationService.supportReauthSignoutEnabled() && isReauthJourney) {
-                // Note: AUT-3613 will remove this logic and preserve the counts when the User is
-                // logged out.
-                if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                    authenticationAttemptsService.deleteCount(
-                            userProfile.getSubjectID(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_PASSWORD);
-                } else {
-                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
-                            request.getEmail());
-                }
-            } else {
+            if (isJourneyWhereBlockingApplies(isReauthJourney)) {
                 blockUser(
                         userProfile.getSubjectID(),
                         request.getEmail(),
@@ -339,6 +327,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
 
         return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+    }
+
+    private boolean isJourneyWhereBlockingApplies(boolean isReauthJourney) {
+        return !(isReauthJourney && configurationService.supportReauthSignoutEnabled());
     }
 
     private void incrementCountOfFailedAttemptsToProvidePassword(

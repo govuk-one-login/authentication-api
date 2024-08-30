@@ -188,8 +188,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldReturnErrorAndNotLockUserAccountOutAfterMaxNumberOfIncorrectPasswordsPresented(
-            MFAMethodType mfaMethodType) {
+    void
+            shouldReturnErrorNotDeleteCountAndNotLockUserAccountOutAfterMaxNumberOfIncorrectPasswordsPresented(
+                    MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -213,7 +214,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
 
         verify(authenticationAttemptsService).getCount(any(), any(), any());
-        verify(authenticationAttemptsService).deleteCount(any(), any(), any());
+        verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
         verify(auditService)
                 .submitAuditEvent(

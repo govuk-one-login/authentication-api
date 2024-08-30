@@ -466,7 +466,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void
-            shouldReturnErrorAndNotLockUserAccountOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney(
+            shouldReturnErrorNotLockUserAccountAndRetainCountsOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney(
                     MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -489,7 +489,7 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
 
         verify(codeStorageService).getIncorrectPasswordCountReauthJourney(EMAIL);
-        verify(codeStorageService).deleteIncorrectPasswordCountReauthJourney(EMAIL);
+        verify(codeStorageService, never()).deleteIncorrectPasswordCountReauthJourney(EMAIL);
         verify(codeStorageService, never()).saveBlockedForEmail(any(), any(), anyLong());
 
         verify(auditService)

@@ -122,9 +122,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .flatMap(
                             userProfile -> {
                                 if (hasEnteredIncorrectEmailTooManyTimes(userProfile)) {
-                                    if (configurationService.supportReauthSignoutEnabled()) {
-                                        clearCountOfFailedEmailEntryAttempts(userProfile);
-                                    }
                                     throw new AccountLockedException(
                                             "Account is locked due to too many failed attempts.",
                                             ErrorResponse.ERROR_1057);
@@ -199,9 +196,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String email, AuditContext auditContext) {
         var userProfile = authenticationService.getUserProfileByEmail(email);
         if (hasEnteredIncorrectEmailTooManyTimes(userProfile)) {
-            if (configurationService.supportReauthSignoutEnabled()) {
-                clearCountOfFailedEmailEntryAttempts(userProfile);
-            }
             throw new AccountLockedException(
                     "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
         }
