@@ -188,7 +188,8 @@ public class StartService {
                 cookieConsent,
                 gaTrackingId,
                 docCheckingAppUser,
-                mfaMethodType);
+                mfaMethodType,
+                false);
     }
 
     private boolean authApp(UserContext userContext) {

@@ -187,7 +187,7 @@ class StartHandlerTest {
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null, false);
         when(startService.buildUserContext(session, docAppClientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenReturn(
@@ -243,7 +243,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true, true))
-                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null));
+                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
         usingValidSession();
         usingValidClientSession();
 
@@ -275,7 +275,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true, true))
-                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null));
+                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
         usingValidSession();
         usingValidClientSession();
 
@@ -304,7 +304,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true, false))
-                .thenReturn(new UserStartInfo(false, false, true, null, null, false, null));
+                .thenReturn(new UserStartInfo(false, false, true, null, null, false, null, false));
         usingValidSession();
         usingValidClientSession();
 
@@ -460,6 +460,6 @@ class StartHandlerTest {
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
-                false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null);
+                false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null, false);
     }
 }

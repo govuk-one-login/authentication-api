@@ -120,7 +120,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "cookieConsent":null,
                 "gaCrossDomainTrackingId":null,
                 "docCheckingAppUser":false,
-                "mfaMethodType":null}
+                "mfaMethodType":null,
+                "isBlockedForReauth":false}
                 """,
                         identityRequired, isAuthenticated);
 
