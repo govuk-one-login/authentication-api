@@ -45,3 +45,4 @@ orch_trustmark_enabled               = true
 
 reauth_enter_email_count_ttl    = 300
 reauth_enter_password_count_ttl = 300
+reauth_enter_sms_code_count_ttl = 300

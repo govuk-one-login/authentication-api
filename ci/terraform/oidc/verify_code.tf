@@ -13,6 +13,9 @@ module "frontend_api_verify_code_role" {
     aws_iam_policy.dynamo_account_modifiers_write_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
@@ -46,6 +49,8 @@ module "verify_code" {
     EMAIL_ACCOUNT_CREATION_LOCKOUT_COUNT_TTL = var.account_creation_lockout_count_ttl
     SUPPORT_ACCOUNT_CREATION_COUNT_TTL       = var.support_account_creation_count_ttl
     SUPPORT_REAUTH_SIGNOUT_ENABLED           = var.support_reauth_signout_enabled
+    REAUTH_ENTER_SMS_CODE_COUNT_TTL          = var.reauth_enter_sms_code_count_ttl
+    AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED  = var.authentication_attempts_service_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest"
 
