@@ -1420,6 +1420,26 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldAddOldSessionIdClaimIfThereIsAnExistingSession() throws ParseException {
+            when(sessionService.getSessionFromSessionCookie(any()))
+                    .thenReturn(Optional.of(new Session(SESSION_ID)));
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertThat(argument.getValue().getStringClaim("old_session_id"), equalTo(SESSION_ID));
+        }
+
+        @Test
         void shouldAddPublicSubjectIdClaimIfAmScopePresent() throws ParseException {
             Map<String, String> requestParams = buildRequestParams(Map.of("scope", "openid am"));
             APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
