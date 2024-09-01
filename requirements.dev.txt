@@ -1,6 +1,6 @@
 pylint==3.2.6
 pylint-actions==0.5.0
-black==24.4.2
+black==24.8.0
 isort==5.13.2
 flake8==7.1.0
 Flake8-pyproject==1.2.3
