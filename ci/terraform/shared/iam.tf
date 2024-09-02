@@ -21,19 +21,23 @@ resource "aws_iam_role" "cross_account_role" {
 }
 
 data "aws_dynamodb_table" "user_credentials_table" {
-  name = "${var.environment}-user-credentials"
+  count = var.environment == "build" ? 1 : 0
+  name  = "${var.environment}-user-credentials"
 }
 
 data "aws_dynamodb_table" "user_profile_table" {
-  name = "${var.environment}-user-profile"
+  count = var.environment == "build" ? 1 : 0
+  name  = "${var.environment}-user-profile"
 }
 
 data "aws_dynamodb_table" "stub_account_intevention_table" {
-  name = "${var.environment}-stub-account-interventions"
+  count = var.environment == "build" ? 1 : 0
+  name  = "${var.environment}-stub-account-interventions"
 }
 
 data "aws_dynamodb_table" "account_modifiers_table" {
-  name = "${var.environment}-account-modifiers"
+  count = var.environment == "build" ? 1 : 0
+  name  = "${var.environment}-account-modifiers"
 }
 
 
@@ -46,16 +50,18 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
 
     actions = [
       "dynamodb:UpdateItem",
+      "dynamodb:List*",
+      "dynamodb:Get*",
       "dynamodb:DescribeTable",
       "dynamodb:PutItem",
       "dynamodb:BatchWriteItem",
       "dynamodb:DeleteItem",
     ]
     resources = [
-      data.aws_dynamodb_table.user_credentials_table.arn,
-      data.aws_dynamodb_table.user_profile_table.arn,
-      data.aws_dynamodb_table.stub_account_intevention_table.arn,
-      data.aws_dynamodb_table.account_modifiers_table.arn,
+      data.aws_dynamodb_table.user_credentials_table[0].arn,
+      data.aws_dynamodb_table.user_profile_table[0].arn,
+      data.aws_dynamodb_table.stub_account_intevention_table[0].arn,
+      data.aws_dynamodb_table.account_modifiers_table[0].arn,
     ]
   }
 
