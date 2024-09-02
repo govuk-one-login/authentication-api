@@ -4665,6 +4665,13 @@ Resources:
 
   #endregion
 
+  #region Canary Alarms
+  "Fn::Transform":
+    Name: "AWS::Include"
+    Parameters:
+      Location: ./orchestration-canary-alarms.template.yaml
+  #endregion
+
 Outputs:
   SlackEventsArn:
     Description: "ARN of the SlackEvents SNS topic"
