@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -27,6 +29,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.NoSuchElementException;
@@ -53,12 +56,12 @@ public class StartHandler
     private static final Logger LOG = LogManager.getLogger(StartHandler.class);
 
     protected static final String REAUTHENTICATE_HEADER = "Reauthenticate";
-    protected static final String OLD_SESSION_ID_HEADER = "Old-Session-Id";
     private final ClientSessionService clientSessionService;
     private final SessionService sessionService;
     private final AuditService auditService;
     private final StartService startService;
     private final ConfigurationService configurationService;
+    private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
             ClientSessionService clientSessionService,
@@ -178,12 +181,10 @@ public class StartHandler
             Optional<String> maybeInternalCommonSubjectIdentifier =
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
-            var oldSessionId =
-                    getOptionalHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            OLD_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+            StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
+            Optional<String> oldSessionId = Optional.ofNullable(startRequest.oldSessionId());
             LOG.info("oldSessionId: {}", oldSessionId);
+
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
