@@ -58,10 +58,10 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
       "dynamodb:DeleteItem",
     ]
     resources = [
-      data.aws_dynamodb_table.user_credentials_table.arn,
-      data.aws_dynamodb_table.user_profile_table.arn,
-      data.aws_dynamodb_table.stub_account_intevention_table.arn,
-      data.aws_dynamodb_table.account_modifiers_table.arn,
+      data.aws_dynamodb_table.user_credentials_table[0].arn,
+      data.aws_dynamodb_table.user_profile_table[0].arn,
+      data.aws_dynamodb_table.stub_account_intevention_table[0].arn,
+      data.aws_dynamodb_table.account_modifiers_table[0].arn,
     ]
   }
 
