@@ -46,6 +46,8 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
 
     actions = [
       "dynamodb:UpdateItem",
+      "dynamodb:ListTables",
+      "dynamodb:GetItem",
       "dynamodb:DescribeTable",
       "dynamodb:PutItem",
       "dynamodb:BatchWriteItem",
