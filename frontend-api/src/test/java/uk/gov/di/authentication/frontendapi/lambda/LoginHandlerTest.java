@@ -27,6 +27,7 @@ import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -42,6 +43,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -72,6 +74,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -118,6 +121,8 @@ class LoginHandlerTest {
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -194,7 +199,7 @@ class LoginHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        null);
+                        authenticationAttemptsService);
     }
 
     @Test
@@ -722,6 +727,43 @@ class LoginHandlerTest {
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifySessionIsSaved();
+    }
+
+    @Test
+    void shouldDeleteEmailAndPasswordAuthenticationAttemptCountsWhenUserLogsInSuccessfully() {
+        // Arrange
+        UserProfile userProfile = generateUserProfile(null);
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        // Act
+        var result = handler.handleRequest(event, context);
+
+        // Assert
+        assertThat(result, hasStatus(200));
+
+        verify(authenticationAttemptsService, times(1))
+                .deleteCount(
+                        INTERNAL_SUBJECT_ID.getValue(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_EMAIL);
+        verify(authenticationAttemptsService, times(1))
+                .deleteCount(
+                        INTERNAL_SUBJECT_ID.getValue(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_PASSWORD);
     }
 
     private AuthenticationRequest generateAuthRequest() {
