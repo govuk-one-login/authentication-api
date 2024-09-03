@@ -287,7 +287,6 @@ class CheckReAuthUserHandlerTest {
 
         verify(authenticationService, atLeastOnce())
                 .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
-        verify(codeStorageService, atLeastOnce()).getIncorrectEmailCount(any());
 
         verify(auditService)
                 .submitAuditEvent(

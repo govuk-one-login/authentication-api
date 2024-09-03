@@ -10,6 +10,7 @@ module "frontend_api_start_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
@@ -26,16 +27,17 @@ module "start" {
   environment     = var.environment
 
   handler_environment_variables = {
-    TXMA_AUDIT_QUEUE_URL         = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT          = var.use_localstack ? var.localstack_endpoint : null
-    CUSTOM_DOC_APP_CLAIM_ENABLED = var.custom_doc_app_claim_enabled
-    DOC_APP_DOMAIN               = var.doc_app_domain
-    REDIS_KEY                    = local.redis_key
-    ENVIRONMENT                  = var.environment
-    DYNAMO_ENDPOINT              = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    HEADERS_CASE_INSENSITIVE     = var.use_localstack ? "true" : "false"
-    IDENTITY_ENABLED             = var.ipv_api_enabled
-    INTERNAl_SECTOR_URI          = var.internal_sector_uri
+    TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                     = var.use_localstack ? var.localstack_endpoint : null
+    CUSTOM_DOC_APP_CLAIM_ENABLED            = var.custom_doc_app_claim_enabled
+    DOC_APP_DOMAIN                          = var.doc_app_domain
+    REDIS_KEY                               = local.redis_key
+    ENVIRONMENT                             = var.environment
+    DYNAMO_ENDPOINT                         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    HEADERS_CASE_INSENSITIVE                = var.use_localstack ? "true" : "false"
+    IDENTITY_ENABLED                        = var.ipv_api_enabled
+    INTERNAl_SECTOR_URI                     = var.internal_sector_uri
+    AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.StartHandler::handleRequest"
 

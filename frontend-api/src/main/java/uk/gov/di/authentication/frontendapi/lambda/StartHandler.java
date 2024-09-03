@@ -18,8 +18,10 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -74,11 +76,20 @@ public class StartHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.sessionService = new SessionService(configurationService);
         this.auditService = new AuditService(configurationService);
+        ReauthAuthenticationAttemptsHelper reauthAttemptsHelper = null;
+        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            reauthAttemptsHelper =
+                    new ReauthAuthenticationAttemptsHelper(
+                            configurationService,
+                            new AuthenticationAttemptsService(configurationService));
+        }
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService),
-                        sessionService);
+                        sessionService,
+                        reauthAttemptsHelper,
+                        configurationService);
         this.configurationService = configurationService;
     }
 
@@ -86,11 +97,20 @@ public class StartHandler
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
+        ReauthAuthenticationAttemptsHelper reauthAttemptsHelper = null;
+        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            reauthAttemptsHelper =
+                    new ReauthAuthenticationAttemptsHelper(
+                            configurationService,
+                            new AuthenticationAttemptsService(configurationService));
+        }
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService),
-                        sessionService);
+                        sessionService,
+                        reauthAttemptsHelper,
+                        configurationService);
         this.configurationService = configurationService;
     }
 
@@ -152,13 +172,18 @@ public class StartHandler
                     "reauthenticateHeader: {} reauthenticate: {}",
                     reauthenticateHeader,
                     reauthenticate);
+            Optional<String> maybeInternalSubjectId =
+                    userContext.getUserProfile().map(UserProfile::getSubjectID);
+            Optional<String> maybeInternalCommonSubjectIdentifier =
+                    Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
                             cookieConsent,
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),
-                            reauthenticate);
+                            reauthenticate,
+                            maybeInternalSubjectId);
             var clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
@@ -177,19 +202,16 @@ public class StartHandler
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
-            String internalSubjectId = AuditService.UNKNOWN;
-            String internalCommonSubjectIdentifier = AuditService.UNKNOWN;
+            String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
+            String internalCommonSubjectIdentifierForAuditEvent = AuditService.UNKNOWN;
+
             if (userStartInfo.isAuthenticated()) {
                 LOG.info(
-                        "User is authenticated. Setting internalCommonSubjectId and internalSubjectId");
-                internalCommonSubjectIdentifier =
-                        Optional.ofNullable(session.getInternalCommonSubjectIdentifier())
-                                .orElse(AuditService.UNKNOWN);
-                internalSubjectId =
-                        userContext
-                                .getUserProfile()
-                                .map(UserProfile::getSubjectID)
-                                .orElse(AuditService.UNKNOWN);
+                        "User is authenticated. Setting internalCommonSubjectId and internalSubjectId for audit event");
+                internalCommonSubjectIdentifierForAuditEvent =
+                        maybeInternalCommonSubjectIdentifier.orElse(AuditService.UNKNOWN);
+                internalSubjectIdForAuditEvent =
+                        maybeInternalSubjectId.orElse(AuditService.UNKNOWN);
             }
 
             var txmaAuditHeader =
@@ -200,7 +222,7 @@ public class StartHandler
                             userContext.getClient().get().getClientID(),
                             clientSessionId,
                             session.getSessionId(),
-                            internalCommonSubjectIdentifier,
+                            internalCommonSubjectIdentifierForAuditEvent,
                             userContext
                                     .getUserProfile()
                                     .map(UserProfile::getEmail)
@@ -213,7 +235,7 @@ public class StartHandler
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                     auditContext,
-                    pair("internalSubjectId", internalSubjectId));
+                    pair("internalSubjectId", internalSubjectIdForAuditEvent));
 
             return generateApiGatewayProxyResponse(200, startResponse);
 
