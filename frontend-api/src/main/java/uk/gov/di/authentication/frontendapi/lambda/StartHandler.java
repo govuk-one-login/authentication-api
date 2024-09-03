@@ -182,8 +182,9 @@ public class StartHandler
                     Optional.ofNullable(session.getInternalCommonSubjectIdentifier());
 
             StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
-            Optional<String> oldSessionId = Optional.ofNullable(startRequest.oldSessionId());
-            LOG.info("oldSessionId: {}", oldSessionId);
+            Optional<String> previousSessionId =
+                    Optional.ofNullable(startRequest.previousSessionId());
+            LOG.info("previousSessionId: {}", previousSessionId);
 
             var userStartInfo =
                     startService.buildUserStartInfo(

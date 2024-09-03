@@ -1420,7 +1420,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldAddOldSessionIdClaimIfThereIsAnExistingSession() throws ParseException {
+        void shouldAddPreviousSessionIdClaimIfThereIsAnExistingSession() throws ParseException {
             when(sessionService.getSessionFromSessionCookie(any()))
                     .thenReturn(Optional.of(new Session(SESSION_ID)));
 
@@ -1436,7 +1436,8 @@ class AuthorisationHandlerTest {
 
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(argument.getValue().getStringClaim("old_session_id"), equalTo(SESSION_ID));
+            assertThat(
+                    argument.getValue().getStringClaim("previous_session_id"), equalTo(SESSION_ID));
         }
 
         @Test

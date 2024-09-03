@@ -67,7 +67,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     public static final String REQUEST_BODY =
-            "{\"old-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\"}";
+            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\"}";
 
     @BeforeEach
     void setup() {
