@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -54,6 +56,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -73,15 +76,35 @@ class StartServiceTest {
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
+    private static final String SUBJECT_ID = new Subject().getValue();
+
+    private final UserContext basicUserContext =
+            buildUserContext(
+                    jsonArrayOf("P2.Cl.Cm"),
+                    true,
+                    ClientType.WEB,
+                    null,
+                    true,
+                    false,
+                    Optional.empty(),
+                    Optional.empty(),
+                    false);
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final ReauthAuthenticationAttemptsHelper reauthAuthenticationAttemptsHelper =
+            mock(ReauthAuthenticationAttemptsHelper.class);
     private StartService startService;
 
     @BeforeEach
     void setup() {
-        startService = new StartService(dynamoClientService, dynamoService, sessionService);
+        startService =
+                new StartService(
+                        dynamoClientService,
+                        dynamoService,
+                        sessionService,
+                        reauthAuthenticationAttemptsHelper);
     }
 
     @Test
@@ -193,7 +216,7 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, cookieConsent, gaTrackingId, true, false);
+                        userContext, cookieConsent, gaTrackingId, true, false, Optional.empty());
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -237,13 +260,49 @@ class StartServiceTest {
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         identityEnabled,
-                        false);
+                        false,
+                        Optional.empty());
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldCreateUserStartInfoWithCorrectReauthBlockedValue(boolean isBlockedForReauth) {
+        when(reauthAuthenticationAttemptsHelper.isBlockedForReauth(SUBJECT_ID))
+                .thenReturn(isBlockedForReauth);
+
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        basicUserContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        true,
+                        false,
+                        Optional.of(SUBJECT_ID));
+
+        assertThat(userStartInfo.isBlockedForReauth(), equalTo(isBlockedForReauth));
+    }
+
+    @Test
+    void shouldDefaultReauthBlockedValueToFalseWhenNoSubjectId() {
+        when(reauthAuthenticationAttemptsHelper.isBlockedForReauth(any())).thenReturn(true);
+        Optional<String> subjectId = Optional.empty();
+
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        basicUserContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        true,
+                        false,
+                        subjectId);
+
+        assertFalse(userStartInfo.isBlockedForReauth());
     }
 
     private static Stream<Boolean> userStartDocAppInfo() {
@@ -268,7 +327,12 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, false);
+                        userContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        true,
+                        false,
+                        Optional.empty());
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -418,7 +482,12 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, true);
+                        userContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        true,
+                        true,
+                        Optional.empty());
 
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
     }
@@ -450,7 +519,12 @@ class StartServiceTest {
                 .setEmailAddress(EMAIL);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, false);
+                        userContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        true,
+                        false,
+                        Optional.empty());
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));

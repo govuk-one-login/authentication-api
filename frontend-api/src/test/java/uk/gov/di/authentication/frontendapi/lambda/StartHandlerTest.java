@@ -154,7 +154,12 @@ class StartHandlerTest {
         when(startService.getCookieConsentValue(anyMap(), anyString()))
                 .thenReturn(cookieConsentValue);
         when(startService.buildUserStartInfo(
-                        userContext, cookieConsentValue, gaTrackingId, true, false))
+                        userContext,
+                        cookieConsentValue,
+                        gaTrackingId,
+                        true,
+                        false,
+                        Optional.empty()))
                 .thenReturn(userStartInfo);
         usingValidClientSession();
         usingValidSession();
@@ -201,7 +206,8 @@ class StartHandlerTest {
                                 false));
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, false))
+        when(startService.buildUserStartInfo(
+                        userContext, null, null, true, false, Optional.empty()))
                 .thenReturn(userStartInfo);
         usingValidDocAppClientSession();
         usingValidSession();
@@ -242,7 +248,7 @@ class StartHandlerTest {
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, true))
+        when(startService.buildUserStartInfo(userContext, null, null, true, true, Optional.empty()))
                 .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
         usingValidSession();
         usingValidClientSession();
@@ -274,7 +280,7 @@ class StartHandlerTest {
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, true))
+        when(startService.buildUserStartInfo(userContext, null, null, true, true, Optional.empty()))
                 .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
         usingValidSession();
         usingValidClientSession();
@@ -303,7 +309,8 @@ class StartHandlerTest {
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, false))
+        when(startService.buildUserStartInfo(
+                        userContext, null, null, true, false, Optional.empty()))
                 .thenReturn(new UserStartInfo(false, false, true, null, null, false, null, false));
         usingValidSession();
         usingValidClientSession();

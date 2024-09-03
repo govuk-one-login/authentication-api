@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -41,6 +42,7 @@ public class StartService {
     private final ClientService clientService;
     private final DynamoService dynamoService;
     private final SessionService sessionService;
+    private final ReauthAuthenticationAttemptsHelper reauthentireauthAuthenticationAttemptsHelper;
     private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
@@ -50,10 +52,12 @@ public class StartService {
     public StartService(
             ClientService clientService,
             DynamoService dynamoService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            ReauthAuthenticationAttemptsHelper reauthAuthenticationAttemptsHelper) {
         this.clientService = clientService;
         this.dynamoService = dynamoService;
         this.sessionService = sessionService;
+        this.reauthentireauthAuthenticationAttemptsHelper = reauthAuthenticationAttemptsHelper;
     }
 
     public Session validateSession(Session session, String clientSessionId) {
@@ -147,7 +151,8 @@ public class StartService {
             String cookieConsent,
             String gaTrackingId,
             boolean identityEnabled,
-            boolean reauthenticate) {
+            boolean reauthenticate,
+            Optional<String> internalSubjectId) {
         var uplift = false;
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
@@ -172,14 +177,20 @@ public class StartService {
                         && userContext.getSession().isAuthenticated()
                         && !reauthenticate;
 
+        var isBlockedForReauth =
+                internalSubjectId
+                        .map(reauthentireauthAuthenticationAttemptsHelper::isBlockedForReauth)
+                        .orElse(false);
+
         LOG.info(
-                "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
+                "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",
                 userIsAuthenticated,
                 uplift,
                 identityRequired,
                 cookieConsent,
                 gaTrackingId,
-                docCheckingAppUser);
+                docCheckingAppUser,
+                isBlockedForReauth);
 
         return new UserStartInfo(
                 uplift,
@@ -189,7 +200,7 @@ public class StartService {
                 gaTrackingId,
                 docCheckingAppUser,
                 mfaMethodType,
-                false);
+                isBlockedForReauth);
     }
 
     private boolean authApp(UserContext userContext) {
