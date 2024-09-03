@@ -227,6 +227,7 @@ class StartServiceTest {
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(gaTrackingId));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
         assertThat(userStartInfo.isAuthenticated(), equalTo(isAuthenticated));
+        assertThat(userStartInfo.isBlockedForReauth(), equalTo(false));
     }
 
     private static Stream<Arguments> userStartIdentityInfo() {
@@ -266,11 +267,7 @@ class StartServiceTest {
                         false,
                         Optional.empty());
 
-        assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-        assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
-        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
-        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
     }
 
     @ParameterizedTest
@@ -358,11 +355,6 @@ class StartServiceTest {
                         false,
                         Optional.empty());
 
-        assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
-        assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
-        assertThat(userStartInfo.isAuthenticated(), equalTo(false));
-        assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
-        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
     }
 
@@ -483,8 +475,7 @@ class StartServiceTest {
     }
 
     @Test
-    void shouldCreateUserStartInfoWithAuthenticatedFalseWhenReauthenticationIsTrue()
-            throws NoSuchAlgorithmException, JOSEException {
+    void shouldCreateUserStartInfoWithAuthenticatedFalseWhenReauthenticationIsTrue() {
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(
                         Optional.of(
@@ -493,20 +484,9 @@ class StartServiceTest {
                                         .withSubjectID(new Subject().getValue())));
 
         SESSION.setAuthenticated(true);
-        var userContext =
-                buildUserContext(
-                        null,
-                        false,
-                        ClientType.WEB,
-                        generateSignedJWT(),
-                        true,
-                        true,
-                        Optional.empty(),
-                        Optional.empty(),
-                        false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        basicUserContext,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -551,11 +531,6 @@ class StartServiceTest {
                         Optional.empty());
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
-        assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-        assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
-        assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
-        assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
-        assertThat(userStartInfo.mfaMethodType(), equalTo(expectedMfaMethodType));
     }
 
     @ParameterizedTest
