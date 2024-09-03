@@ -6,7 +6,8 @@ permissions:
 
 on:
   push:
-    branches: -ATO-955-skip-canary-test
+    branches:
+      - ATO-955-skip-canary-test
 
 jobs:
   deploy:
