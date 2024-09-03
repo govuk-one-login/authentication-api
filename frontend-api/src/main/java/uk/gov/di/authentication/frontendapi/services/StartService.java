@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -42,6 +43,7 @@ public class StartService {
     private final ClientService clientService;
     private final DynamoService dynamoService;
     private final SessionService sessionService;
+    private final ConfigurationService configurationService;
     private final ReauthAuthenticationAttemptsHelper reauthentireauthAuthenticationAttemptsHelper;
     private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
@@ -53,11 +55,13 @@ public class StartService {
             ClientService clientService,
             DynamoService dynamoService,
             SessionService sessionService,
-            ReauthAuthenticationAttemptsHelper reauthAuthenticationAttemptsHelper) {
+            ReauthAuthenticationAttemptsHelper reauthAuthenticationAttemptsHelper,
+            ConfigurationService configurationService) {
         this.clientService = clientService;
         this.dynamoService = dynamoService;
         this.sessionService = sessionService;
         this.reauthentireauthAuthenticationAttemptsHelper = reauthAuthenticationAttemptsHelper;
+        this.configurationService = configurationService;
     }
 
     public Session validateSession(Session session, String clientSessionId) {
@@ -177,10 +181,13 @@ public class StartService {
                         && userContext.getSession().isAuthenticated()
                         && !reauthenticate;
 
-        var isBlockedForReauth =
-                internalSubjectId
-                        .map(reauthentireauthAuthenticationAttemptsHelper::isBlockedForReauth)
-                        .orElse(false);
+        boolean isBlockedForReauth = false;
+        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            isBlockedForReauth =
+                    internalSubjectId
+                            .map(reauthentireauthAuthenticationAttemptsHelper::isBlockedForReauth)
+                            .orElse(false);
+        }
 
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",

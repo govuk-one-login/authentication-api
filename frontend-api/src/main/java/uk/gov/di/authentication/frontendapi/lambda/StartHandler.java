@@ -88,7 +88,8 @@ public class StartHandler
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService),
                         sessionService,
-                        reauthAttemptsHelper);
+                        reauthAttemptsHelper,
+                        configurationService);
         this.configurationService = configurationService;
     }
 
@@ -108,7 +109,8 @@ public class StartHandler
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService),
                         sessionService,
-                        reauthAttemptsHelper);
+                        reauthAttemptsHelper,
+                        configurationService);
         this.configurationService = configurationService;
     }
 

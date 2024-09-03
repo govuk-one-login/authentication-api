@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -93,6 +94,7 @@ class StartServiceTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ReauthAuthenticationAttemptsHelper reauthAuthenticationAttemptsHelper =
             mock(ReauthAuthenticationAttemptsHelper.class);
     private StartService startService;
@@ -104,7 +106,8 @@ class StartServiceTest {
                         dynamoClientService,
                         dynamoService,
                         sessionService,
-                        reauthAuthenticationAttemptsHelper);
+                        reauthAuthenticationAttemptsHelper,
+                        configurationService);
     }
 
     @Test
@@ -273,6 +276,7 @@ class StartServiceTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void shouldCreateUserStartInfoWithCorrectReauthBlockedValue(boolean isBlockedForReauth) {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(reauthAuthenticationAttemptsHelper.isBlockedForReauth(SUBJECT_ID))
                 .thenReturn(isBlockedForReauth);
 
@@ -290,6 +294,7 @@ class StartServiceTest {
 
     @Test
     void shouldDefaultReauthBlockedValueToFalseWhenNoSubjectId() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(reauthAuthenticationAttemptsHelper.isBlockedForReauth(any())).thenReturn(true);
         Optional<String> subjectId = Optional.empty();
 
@@ -301,6 +306,25 @@ class StartServiceTest {
                         true,
                         false,
                         subjectId);
+
+        assertFalse(userStartInfo.isBlockedForReauth());
+    }
+
+    @Test
+    void shouldDefaultReauthBlockedValueToFalseWhenFeatureFlagIsOff() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
+        // This should not be called. Setup here is to ensure that the feature flag is determining
+        // this test's behaviour
+        when(reauthAuthenticationAttemptsHelper.isBlockedForReauth(any())).thenReturn(true);
+
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        basicUserContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        true,
+                        false,
+                        Optional.of(SUBJECT_ID));
 
         assertFalse(userStartInfo.isBlockedForReauth());
     }
