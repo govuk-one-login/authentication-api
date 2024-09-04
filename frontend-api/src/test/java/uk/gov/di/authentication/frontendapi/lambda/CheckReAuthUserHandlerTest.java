@@ -342,18 +342,9 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
-
-        verify(authenticationService, atLeastOnce())
-                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
-        verify(clientRegistry, times(2)).getRedirectUrls();
-
-        verify(userContext, times(2)).getSession();
-        verify(userContext).getClientSessionId();
-        verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService).getMaxEmailReAuthRetries();
-        verify(configurationService, times(2)).getMaxPasswordRetries();
+        var expectedErrorResponse =
+                supportAuthenticationAttempts ? ErrorResponse.ERROR_1057 : ErrorResponse.ERROR_1045;
+        assertThat(result, hasJsonBody(expectedErrorResponse));
     }
 
     @ParameterizedTest

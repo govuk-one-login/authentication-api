@@ -128,9 +128,16 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 }
 
                                 if (hasEnteredIncorrectPasswordTooManyTimes(userProfile)) {
-                                    throw new AccountLockedException(
-                                            "Account is locked due to too many failed incorrect password attempts.",
-                                            ErrorResponse.ERROR_1045);
+                                    if (configurationService
+                                            .isAuthenticationAttemptsServiceEnabled()) {
+                                        throw new AccountLockedException(
+                                                "Reauth user has entered incorrect password too many times",
+                                                ErrorResponse.ERROR_1057);
+                                    } else {
+                                        throw new AccountLockedException(
+                                                "Account is locked due to too many failed incorrect password attempts.",
+                                                ErrorResponse.ERROR_1045);
+                                    }
                                 }
 
                                 return verifyReAuthentication(
