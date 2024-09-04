@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -23,7 +24,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
-import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -180,7 +180,7 @@ public class CheckReauthUserHandlerAuthenticationAttemptsIntegrationTest
     }
 
     @Test
-    void shouldReturn400WhenUserHasBeenBlockedForMaxPasswordRetries() {
+    void shouldReturn400WhenUserHasExceededMaxPasswordRetries() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
 
@@ -208,7 +208,7 @@ public class CheckReauthUserHandlerAuthenticationAttemptsIntegrationTest
                         Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1061));
     }
 
     private ClientSession createClientSession() {
