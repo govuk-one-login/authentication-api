@@ -314,7 +314,15 @@ class CheckReAuthUserHandlerTest {
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
+        if (supportAuthenticationAttempts) {
+            when(authenticationAttemptsService.getCount(
+                            TEST_SUBJECT_ID,
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_PASSWORD))
+                    .thenReturn(6);
+        } else {
+            when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
+        }
 
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
@@ -338,7 +346,6 @@ class CheckReAuthUserHandlerTest {
 
         verify(authenticationService, atLeastOnce())
                 .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
-        verify(codeStorageService).getIncorrectPasswordCountReauthJourney(any());
         verify(clientRegistry, times(2)).getRedirectUrls();
 
         verify(userContext, times(2)).getSession();

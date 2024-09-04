@@ -28,6 +28,7 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -35,6 +36,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -182,12 +184,15 @@ public class CheckReauthUserHandlerAuthenticationAttemptsIntegrationTest
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
 
-        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
-        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
-        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
-        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
-        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
-        redis.incrementPasswordCountReauthJourney(TEST_EMAIL);
+        var ttl = Instant.now().getEpochSecond() + 60L;
+        IntStream.range(0, 6)
+                .forEach(
+                        i ->
+                                authCodeExtension.createOrIncrementCount(
+                                        SUBJECT.getValue(),
+                                        ttl,
+                                        JourneyType.REAUTHENTICATION,
+                                        CountType.ENTER_PASSWORD));
 
         byte[] salt = userStore.addSalt(TEST_EMAIL);
         var expectedPairwiseId =
