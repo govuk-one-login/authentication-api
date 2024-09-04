@@ -274,6 +274,50 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         eq(ENTER_PASSWORD));
     }
 
+    @Test
+    void shouldIncrementRelevantCountWhenLimitHasExceeded() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(SMS, false);
+
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
+
+        when(authenticationAttemptsService.getCount(any(), any(), any()))
+                .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES - 1);
+
+        usingValidSession();
+        usingDefaultVectorOfTrust();
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+        handler.handleRequest(event, context);
+
+        verify(authenticationAttemptsService)
+                .getCount(userProfile.getSubjectID(), REAUTHENTICATION, ENTER_PASSWORD);
+
+        verify(authenticationAttemptsService)
+                .createOrIncrementCount(
+                        eq(userProfile.getSubjectID()),
+                        longThat(
+                                ttl -> {
+                                    long expectedMin =
+                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
+                                                            .toInstant()
+                                                            .getEpochSecond()
+                                                    - 1;
+                                    long expectedMax =
+                                            NowHelper.nowPlus(120, ChronoUnit.SECONDS)
+                                                            .toInstant()
+                                                            .getEpochSecond()
+                                                    + 1;
+                                    return ttl >= expectedMin && ttl <= expectedMax;
+                                }),
+                        eq(REAUTHENTICATION),
+                        eq(ENTER_PASSWORD));
+    }
+
     private AuthenticationRequest generateAuthRequest() {
         return generateAuthRequest(null);
     }
