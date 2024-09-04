@@ -481,10 +481,10 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Created session");
         } else {
-            var oldSessionId = session.getSessionId();
+            var previousSessionId = session.getSessionId();
             sessionService.updateSessionId(session);
             updateAttachedSessionIdToLogs(session.getSessionId());
-            LOG.info("Updated session id from {} - new", oldSessionId);
+            LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
         Subject subjectId =
@@ -567,14 +567,15 @@ public class AuthorisationHandler
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
 
+        Optional<String> previousSessionId = existingSession.map(Session::getSessionId);
         if (existingSession.isEmpty()) {
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Created session");
         } else {
-            var oldSessionId = session.getSessionId();
+            previousSessionId = Optional.of(session.getSessionId());
             sessionService.updateSessionId(session);
             updateAttachedSessionIdToLogs(session.getSessionId());
-            LOG.info("Updated session id from {} - new", oldSessionId);
+            LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
         user = user.withSessionId(session.getSessionId());
@@ -600,7 +601,8 @@ public class AuthorisationHandler
                 client,
                 reauthRequested,
                 vtrList,
-                user);
+                user,
+                previousSessionId);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
@@ -611,7 +613,8 @@ public class AuthorisationHandler
             ClientRegistry client,
             boolean reauthRequested,
             List<VectorOfTrust> vtrList,
-            TxmaAuditUser user) {
+            TxmaAuditUser user,
+            Optional<String> previousSessionId) {
         LOG.info("Redirecting");
 
         Optional<Prompt.Type> prompt =
@@ -682,6 +685,7 @@ public class AuthorisationHandler
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthenticateClaim);
+        previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 
         var claimsSetRequest =
                 constructAdditionalAuthenticationClaims(client, authenticationRequest);
