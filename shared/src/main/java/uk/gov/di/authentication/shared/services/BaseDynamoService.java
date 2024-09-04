@@ -16,7 +16,7 @@ import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.create
 
 public class BaseDynamoService<T> {
 
-    private final DynamoDbTable<T> dynamoTable;
+    protected final DynamoDbTable<T> dynamoTable;
     private final DynamoDbClient client;
 
     public BaseDynamoService(
@@ -30,6 +30,11 @@ public class BaseDynamoService<T> {
         warmUp();
     }
 
+    public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
+        this.dynamoTable = dynamoTable;
+        this.client = client;
+    }
+
     public void update(T item) {
         dynamoTable.updateItem(item);
     }
@@ -39,6 +44,7 @@ public class BaseDynamoService<T> {
     }
 
     public Optional<T> get(String partition) {
+
         return Optional.ofNullable(
                 dynamoTable.getItem(Key.builder().partitionValue(partition).build()));
     }

@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -59,7 +60,9 @@ public class UserInfoHandler
         this.configurationService = configurationService;
         this.userInfoService =
                 new UserInfoService(new DynamoService(configurationService), configurationService);
-        this.accessTokenService = new AccessTokenService(configurationService);
+        this.accessTokenService =
+                new AccessTokenService(
+                        configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
     }
 
