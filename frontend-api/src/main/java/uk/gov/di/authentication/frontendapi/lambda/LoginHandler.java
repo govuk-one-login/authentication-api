@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -158,6 +159,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var journeyType =
                 request.getJourneyType() != null ? request.getJourneyType().getValue() : "missing";
+        var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
 
         attachSessionIdToLogs(userContext.getSession().getSessionId());
         attachLogFieldToLogs(JOURNEY_TYPE, journeyType);
@@ -177,13 +179,19 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var internalCommonSubjectIdentifier = getInternalCommonSubjectIdentifier(userProfile);
         auditContext = auditContext.withUserId(internalCommonSubjectIdentifier);
 
-        var isReauthJourney = journeyType.equalsIgnoreCase(JourneyType.REAUTHENTICATION.getValue());
+        if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
+            var helper =
+                    new ReauthAuthenticationAttemptsHelper(
+                            configurationService, authenticationAttemptsService);
+            if (helper.isBlockedForReauth(userProfile.getSubjectID())) {
+                LOG.info("User has existing reauth block");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+            }
+        }
 
         int incorrectPasswordCount = 0;
 
-        if (configurationService.supportReauthSignoutEnabled()
-                && isReauthJourney
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+        if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
             incorrectPasswordCount =
                     authenticationAttemptsService.getCount(
                             userProfile.getSubjectID(),
@@ -217,6 +225,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 userCredentials,
                 userProfile,
                 auditContext);
+    }
+
+    private boolean isReauthJourneyWithFlagsEnabled(boolean isReauthJourney) {
+        return isReauthJourney
+                && configurationService.supportReauthSignoutEnabled()
+                && configurationService.isAuthenticationAttemptsServiceEnabled();
     }
 
     private APIGatewayProxyResponseEvent handleValidCredentials(
