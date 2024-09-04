@@ -306,6 +306,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             boolean isReauthJourney) {
         var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
 
+        incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
+
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS,
                 auditContext,
@@ -323,8 +325,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
         }
-
-        incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
 
         return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
     }
