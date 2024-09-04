@@ -43,6 +43,7 @@ orch_userinfo_enabled                = true
 orch_storage_token_jwk_enabled       = true
 orch_trustmark_enabled               = true
 
-reauth_enter_email_count_ttl    = 300
-reauth_enter_password_count_ttl = 300
-reauth_enter_sms_code_count_ttl = 300
+reauth_enter_email_count_ttl         = 300
+reauth_enter_password_count_ttl      = 300
+reauth_enter_sms_code_count_ttl      = 300
+reauth_enter_auth_app_code_count_ttl = 300

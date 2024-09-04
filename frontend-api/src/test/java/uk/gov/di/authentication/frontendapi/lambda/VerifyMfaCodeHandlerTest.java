@@ -11,11 +11,13 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.MockedStatic;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
@@ -28,6 +30,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -36,9 +39,11 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -50,6 +55,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -61,7 +69,9 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -120,6 +130,8 @@ class VerifyMfaCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -165,7 +177,8 @@ class VerifyMfaCodeHandlerTest {
                         codeStorageService,
                         auditService,
                         mfaCodeProcessorFactory,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        authenticationAttemptsService);
     }
 
     @AfterEach
@@ -757,6 +770,55 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
         verifyNoInteractions(auditService);
         verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
+    void shouldIncrementAuthAppAuthenticationAttemptsCountIfIncorrectCodeEntered()
+            throws Json.JsonException {
+        long ttl = 3600L;
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
+        when(configurationService.getReauthEnterAuthAppCodeCountTTL()).thenReturn(ttl);
+        MockedStatic<NowHelper> mockedNowHelperClass = mockStatic(NowHelper.class);
+        mockedNowHelperClass
+                .when(() -> NowHelper.nowPlus(ttl, ChronoUnit.SECONDS))
+                .thenReturn(Date.from(Instant.parse("2024-01-01T00:00:00.00Z")));
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
+        makeCallWithCode(codeRequest);
+
+        verify(authenticationAttemptsService, times(1))
+                .createOrIncrementCount(
+                        TEST_SUBJECT_ID,
+                        1704067200L,
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_AUTH_APP_CODE);
+
+        mockedNowHelperClass.close();
+    }
+
+    @Test
+    void shouldDeleteAuthAppAuthenticationAttemptsCountIfCorrectCodeEntered()
+            throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
+        makeCallWithCode(codeRequest);
+
+        verify(authenticationAttemptsService, times(1))
+                .deleteCount(
+                        TEST_SUBJECT_ID,
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_AUTH_APP_CODE);
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)

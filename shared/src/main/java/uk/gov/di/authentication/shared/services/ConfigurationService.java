@@ -92,6 +92,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("REAUTH_ENTER_PASSWORD_COUNT_TTL", "3600"));
     }
 
+    public long getReauthEnterAuthAppCodeCountTTL() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("REAUTH_ENTER_AUTH_APP_CODE_COUNT_TTL", "3600"));
+    }
+
     public long getReauthEnterSMSCodeCountTTL() {
         return Long.parseLong(
                 System.getenv().getOrDefault("REAUTH_ENTER_SMS_CODE_COUNT_TTL", "3600"));

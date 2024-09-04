@@ -12,15 +12,19 @@ import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -33,6 +37,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,6 +64,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final AuditService auditService;
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -69,7 +75,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             CodeStorageService codeStorageService,
             AuditService auditService,
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -81,6 +88,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.auditService = auditService;
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -99,6 +107,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         auditService,
                         new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -114,6 +124,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         auditService,
                         new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     @Override
@@ -254,9 +266,32 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         if (errorResponse.isEmpty()) {
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()
+                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
+                Optional<UserProfile> userProfile = userContext.getUserProfile();
+                userProfile.ifPresent(
+                        this::clearReauthAttemptCountsForSuccessfullyReauthenticatedUser);
+            }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
                     extractPersistentIdFromHeaders(input.getHeaders()));
+        }
+
+        if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            Optional<UserProfile> userProfile = userContext.getUserProfile();
+            userProfile.ifPresent(
+                    profile ->
+                            authenticationAttemptsService.createOrIncrementCount(
+                                    profile.getSubjectID(),
+                                    NowHelper.nowPlus(
+                                                    configurationService
+                                                            .getReauthEnterAuthAppCodeCountTTL(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond(),
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_AUTH_APP_CODE));
         }
 
         if (errorResponse
@@ -265,6 +300,20 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             blockCodeForSessionAndResetCountIfBlockDoesNotExist(
                     emailAddress, codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
         }
+    }
+
+    private void clearReauthAttemptCountsForSuccessfullyReauthenticatedUser(UserProfile profile) {
+        authenticationAttemptsService.deleteCount(
+                profile.getSubjectID(),
+                JourneyType.REAUTHENTICATION,
+                CountType.ENTER_AUTH_APP_CODE);
+    }
+
+    private static boolean isInvalidReauthAuthAppAttempt(
+            Optional<ErrorResponse> errorResponse, VerifyMfaCodeRequest codeRequest) {
+        return errorResponse.isPresent()
+                && errorResponse.get() == ErrorResponse.ERROR_1043
+                && codeRequest.getJourneyType() == JourneyType.REAUTHENTICATION;
     }
 
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
