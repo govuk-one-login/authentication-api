@@ -127,8 +127,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             ErrorResponse.ERROR_1057);
                                 }
 
-                                if (hasEnteredIncorrectPasswordTooManyTimes(
-                                        userProfile.getEmail())) {
+                                if (hasEnteredIncorrectPasswordTooManyTimes(userProfile)) {
                                     throw new AccountLockedException(
                                             "Account is locked due to too many failed incorrect password attempts.",
                                             ErrorResponse.ERROR_1045);
@@ -235,9 +234,19 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         }
     }
 
-    private boolean hasEnteredIncorrectPasswordTooManyTimes(String email) {
-        var incorrectPasswordCount =
-                codeStorageService.getIncorrectPasswordCountReauthJourney(email);
+    private boolean hasEnteredIncorrectPasswordTooManyTimes(UserProfile userProfile) {
+        int incorrectPasswordCount;
+        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            incorrectPasswordCount =
+                    authenticationAttemptsService.getCount(
+                            userProfile.getSubjectID(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_PASSWORD);
+        } else {
+            incorrectPasswordCount =
+                    codeStorageService.getIncorrectPasswordCountReauthJourney(
+                            userProfile.getEmail());
+        }
         return incorrectPasswordCount >= configurationService.getMaxPasswordRetries();
     }
 
