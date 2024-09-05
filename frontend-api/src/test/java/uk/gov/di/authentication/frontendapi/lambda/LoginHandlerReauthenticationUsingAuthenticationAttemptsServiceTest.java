@@ -16,12 +16,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -48,9 +51,11 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
@@ -87,7 +92,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     private static final String EMAIL = CommonTestVariables.EMAIL;
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
-    public static final int MAX_ALLOWED_PASSWORD_RETRIES = 6;
+    public static final int MAX_ALLOWED_RETRIES = 6;
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
 
@@ -156,10 +161,12 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_ALLOWED_RETRIES);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_ALLOWED_RETRIES);
 
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -195,10 +202,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-        var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
 
         when(authenticationAttemptsService.getCount(any(), any(), any()))
-                .thenReturn(maxRetriesAllowed - 1);
+                .thenReturn(MAX_ALLOWED_RETRIES - 1);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -213,7 +219,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
 
-        verify(authenticationAttemptsService).getCount(any(), any(), any());
         verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
         verify(auditService)
@@ -231,6 +236,47 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         verify(sessionService, never()).save(any());
     }
 
+    private static Stream<Arguments> reauthCountTypes() {
+        return Arrays.stream(CountType.values())
+                .filter(c -> c != CountType.ENTER_EMAIL_CODE)
+                .map(Arguments::of);
+    }
+
+    @ParameterizedTest
+    @MethodSource("reauthCountTypes")
+    void shouldReturnErrorNotDeleteCountAndNotLockUserAccountOutIfUserHasAnyReauthLocks(
+            CountType countType) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+
+        setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
+        when(authenticationAttemptsService.getCount(any(), eq(REAUTHENTICATION), eq(countType)))
+                .thenReturn(MAX_ALLOWED_RETRIES);
+
+        if (countType != ENTER_PASSWORD) {
+            when(authenticationAttemptsService.getCount(
+                            any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
+                    .thenReturn(0);
+        }
+
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingDefaultVectorOfTrust();
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+
+        verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
+    }
+
     @Test
     void shouldIncrementRelevantCountWhenCredentialsAreInvalid() {
         UserProfile userProfile = generateUserProfile(null);
@@ -239,6 +285,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
         when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
         when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
@@ -249,9 +296,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
         handler.handleRequest(event, context);
-
-        verify(authenticationAttemptsService)
-                .getCount(userProfile.getSubjectID(), REAUTHENTICATION, ENTER_PASSWORD);
 
         verify(authenticationAttemptsService)
                 .createOrIncrementCount(
@@ -285,7 +329,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
 
         when(authenticationAttemptsService.getCount(any(), any(), any()))
-                .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES - 1);
+                .thenReturn(MAX_ALLOWED_RETRIES - 1);
 
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -293,9 +337,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
         handler.handleRequest(event, context);
-
-        verify(authenticationAttemptsService)
-                .getCount(userProfile.getSubjectID(), REAUTHENTICATION, ENTER_PASSWORD);
 
         verify(authenticationAttemptsService)
                 .createOrIncrementCount(
@@ -395,5 +436,18 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         event.setHeaders(headers);
         event.setBody(body);
         return event;
+    }
+
+    private void setupConfigurationServiceCountForCountType(
+            CountType countType, int retriesAllowed) {
+        switch (countType) {
+            case ENTER_EMAIL -> when(configurationService.getMaxEmailReAuthRetries())
+                    .thenReturn(retriesAllowed);
+            case ENTER_PASSWORD -> when(configurationService.getMaxPasswordRetries())
+                    .thenReturn(retriesAllowed);
+            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE, ENTER_EMAIL_CODE -> when(configurationService
+                            .getCodeMaxRetries())
+                    .thenReturn(retriesAllowed);
+        }
     }
 }
