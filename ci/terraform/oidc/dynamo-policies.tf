@@ -46,6 +46,10 @@ data "aws_dynamodb_table" "authentication_attempt_table" {
   name = "${var.environment}-authentication-attempt"
 }
 
+data "aws_dynamodb_table" "auth_session_table" {
+  name = "${var.environment}-auth-session"
+}
+
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -629,6 +633,73 @@ data "aws_iam_policy_document" "dynamo_authentication_attempt_read_policy_docume
   }
 }
 
+data "aws_iam_policy_document" "dynamo_auth_session_delete_policy_document" {
+  statement {
+    sid    = "AllowDelete"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.auth_session_table.arn,
+      "${data.aws_dynamodb_table.auth_session_table.arn}/index/*",
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_auth_session_write_policy_document" {
+  statement {
+    sid    = "AllowWrite"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.auth_session_table.arn,
+      "${data.aws_dynamodb_table.auth_session_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowEncryption"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:GenerateDataKey",
+    ]
+    resources = [local.auth_session_table_encryption_key_arn]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_auth_session_read_policy_document" {
+  statement {
+    sid    = "AllowRead"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+    ]
+    resources = [
+      data.aws_dynamodb_table.auth_session_table.arn,
+      "${data.aws_dynamodb_table.auth_session_table.arn}/index/*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowDecryption"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+    ]
+    resources = [local.auth_session_table_encryption_key_arn]
+  }
+}
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -819,4 +890,28 @@ resource "aws_iam_policy" "dynamo_authentication_attempt_delete_policy" {
   description = "IAM policy for managing delete permissions to the authentication attempts table"
 
   policy = data.aws_iam_policy_document.dynamo_authentication_attempt_delete_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_auth_session_write_policy" {
+  name_prefix = "dynamo-auth-session-write-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing write permissions to the auth session table"
+
+  policy = data.aws_iam_policy_document.dynamo_auth_session_write_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_auth_session_read_policy" {
+  name_prefix = "dynamo-auth-session-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the auth session table"
+
+  policy = data.aws_iam_policy_document.dynamo_auth_session_read_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_auth_session_delete_policy" {
+  name_prefix = "dynamo-auth-session-delete-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing delete permissions to the auth session table"
+
+  policy = data.aws_iam_policy_document.dynamo_auth_session_delete_policy_document.json
 }
