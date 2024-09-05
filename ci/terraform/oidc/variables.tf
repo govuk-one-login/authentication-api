@@ -223,6 +223,11 @@ variable "reauth_enter_password_count_ttl" {
   default = 3600
 }
 
+variable "reauth_enter_sms_code_count_ttl" {
+  type    = number
+  default = 3600
+}
+
 variable "support_account_creation_count_ttl" {
   default     = false
   type        = bool

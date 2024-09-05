@@ -17,11 +17,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -30,8 +33,10 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -43,6 +48,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -117,6 +125,8 @@ class VerifyCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
 
     private final ClientRegistry clientRegistry =
             new ClientRegistry()
@@ -179,7 +189,8 @@ class VerifyCodeHandlerTest {
                         codeStorageService,
                         auditService,
                         cloudwatchMetricsService,
-                        accountModifiersService);
+                        accountModifiersService,
+                        authenticationAttemptsService);
 
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -677,6 +688,46 @@ class VerifyCodeHandlerTest {
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE);
         assertThat(result, hasStatus(204));
+    }
+
+    @ParameterizedTest
+    @MethodSource("codeRequestTypes")
+    void shouldDeleteCountOnSuccessfulSMSCodeRequest(
+            CodeRequestType codeRequestType, JourneyType journeyType) {
+        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+
+        var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
+
+        verify(authenticationAttemptsService, times(1))
+                .deleteCount(
+                        expectedCommonSubject,
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_SMS_CODE);
+        assertThat(result, hasStatus(204));
+    }
+
+    @Test
+    void shouldIncrementEnterSMSAuthenticationAttemptCountOnFailedReauthenticationAttempt() {
+        long ttl = 120L;
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.getReauthEnterSMSCodeCountTTL()).thenReturn(ttl);
+        MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class);
+        mockedNowHelperClass
+                .when(() -> NowHelper.nowPlus(ttl, ChronoUnit.SECONDS))
+                .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
+
+        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.name(), JourneyType.REAUTHENTICATION);
+
+        verify(authenticationAttemptsService, times(1))
+                .createOrIncrementCount(
+                        expectedCommonSubject,
+                        4070908800L,
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_SMS_CODE);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+        mockedNowHelperClass.close();
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {

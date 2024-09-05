@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -19,9 +20,11 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -33,6 +36,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +65,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -71,7 +76,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             CodeStorageService codeStorageService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            DynamoAccountModifiersService accountModifiersService) {
+            DynamoAccountModifiersService accountModifiersService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -83,6 +89,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountModifiersService = accountModifiersService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public VerifyCodeHandler() {
@@ -95,6 +102,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -104,6 +113,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     @Override
@@ -166,6 +177,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             sessionService.save(session);
 
             if (errorResponse.isPresent()) {
+                if (journeyType == JourneyType.REAUTHENTICATION
+                        && notificationType == NotificationType.MFA_SMS
+                        && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                    authenticationAttemptsService.createOrIncrementCount(
+                            session.getInternalCommonSubjectIdentifier(),
+                            NowHelper.nowPlus(
+                                            configurationService.getReauthEnterSMSCodeCountTTL(),
+                                            ChronoUnit.SECONDS)
+                                    .toInstant()
+                                    .getEpochSecond(),
+                            JourneyType.REAUTHENTICATION,
+                            CountType.ENTER_SMS_CODE);
+                }
                 processBlockedCodeSession(
                         errorResponse.get(), session, codeRequest, journeyType, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -179,7 +203,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         session);
             }
             processSuccessfulCodeRequest(
-                    session, codeRequest, userContext, journeyType, auditContext);
+                    session,
+                    codeRequest,
+                    userContext,
+                    journeyType,
+                    auditContext,
+                    authenticationAttemptsService);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -219,7 +248,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             JourneyType journeyType,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
@@ -244,6 +274,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     levelOfConfidence.getValue(),
                     clientService.isTestJourney(clientId, session.getEmailAddress()),
                     true);
+
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                authenticationAttemptsService.deleteCount(
+                        session.getInternalCommonSubjectIdentifier(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_SMS_CODE);
+            }
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
 
