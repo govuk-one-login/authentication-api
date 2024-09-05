@@ -1718,7 +1718,7 @@ Resources:
                   serviceDomain,
                 ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
-          IPV_AUTHORISATION_URI: https://orar77m9m7.execute-api.eu-west-2.amazonaws.com/Live/authorize
+          IPV_AUTHORISATION_URI: https://ipvstub.oidc.sandpit.account.gov.uk/authorize
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -3226,8 +3226,8 @@ Resources:
             - IpvExistsOrIsDev
             - authOrchestrator
             - !Ref AWS::NoValue
-          IPV_AUTHORISATION_URI: https://orar77m9m7.execute-api.eu-west-2.amazonaws.com/Live/authorize
-          IPV_BACKEND_URI: https://orar77m9m7.execute-api.eu-west-2.amazonaws.com/Live
+          IPV_AUTHORISATION_URI: https://ipvstub.oidc.sandpit.account.gov.uk/authorize
+          IPV_BACKEND_URI: https://ipvstub.oidc.sandpit.account.gov.uk
           IPV_NO_SESSION_RESPONSE_ENABLED: true
           IPV_TOKEN_SIGNING_KEY_ALIAS:
             !FindInMap [
