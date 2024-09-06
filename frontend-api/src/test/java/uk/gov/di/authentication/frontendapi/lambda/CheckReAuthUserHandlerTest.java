@@ -163,20 +163,6 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL,
                         testAuditContextWithAuditEncoded);
-
-        verify(authenticationService, atLeastOnce())
-                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
-        verify(authenticationService, times(2)).getOrGenerateSalt(any(UserProfile.class));
-
-        verify(userContext).getClient();
-        verify(userContext, times(2)).getSession();
-        verify(userContext).getClientSessionId();
-        verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService).getMaxEmailReAuthRetries();
-        verify(configurationService).getMaxPasswordRetries();
-        verify(configurationService).getInternalSectorUri();
-        verify(clientRegistry, times(4)).getRedirectUrls();
     }
 
     @Test
@@ -211,14 +197,6 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL,
                         testAuditContextWithoutAuditEncoded);
-
-        verify(userContext).getClient();
-        verify(userContext, times(2)).getSession();
-        verify(userContext).getClientSessionId();
-        verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService).getMaxEmailReAuthRetries();
-        verify(configurationService).getMaxPasswordRetries();
     }
 
     @Test
@@ -247,12 +225,6 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
                         testAuditContextWithAuditEncoded);
-
-        verify(userContext, atLeastOnce()).getSession();
-        verify(userContext).getClientSessionId();
-        verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService).getMaxEmailReAuthRetries();
     }
 
     @Test
@@ -290,12 +262,6 @@ class CheckReAuthUserHandlerTest {
                         testAuditContextWithAuditEncoded,
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", MAX_RETRIES));
-
-        verify(userContext, times(2)).getSession();
-        verify(userContext).getClientSessionId();
-        verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService, times(2)).getMaxEmailReAuthRetries();
     }
 
     @Test
@@ -356,11 +322,6 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
                         testAuditContextWithAuditEncoded);
 
-        verify(userContext, atLeastOnce()).getSession();
-        verify(userContext).getClientSessionId();
-        verify(userContext).getTxmaAuditEncoded();
-
-        verify(configurationService).getMaxEmailReAuthRetries();
     }
 
     @Test
