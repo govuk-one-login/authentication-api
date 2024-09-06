@@ -232,7 +232,7 @@ class ConfigurationServiceTest {
 
     @Test
     void getMaxEmailReAuthRetriesShouldDefault() {
-        assertEquals(5, configurationService.getMaxEmailReAuthRetries());
+        assertEquals(6, configurationService.getMaxEmailReAuthRetries());
     }
 
     @Test
