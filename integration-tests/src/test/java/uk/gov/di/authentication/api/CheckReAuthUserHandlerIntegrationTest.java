@@ -40,6 +40,7 @@ import java.util.stream.IntStream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -159,7 +160,8 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimes() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
-        int count = 5;
+        var maxRetriesAllowed = 6;
+        int count = maxRetriesAllowed - 1;
         while (count-- > 0) {
             authenticationService.createOrIncrementCount(
                     SUBJECT.getValue(),
@@ -182,6 +184,10 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                         Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(400));
+        assertThat(
+                authCodeExtension.getAuthenticationAttempt(
+                        SUBJECT.getValue(), JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL),
+                equalTo(maxRetriesAllowed));
     }
 
     @Test
