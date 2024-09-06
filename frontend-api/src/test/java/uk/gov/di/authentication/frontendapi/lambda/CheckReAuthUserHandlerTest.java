@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
@@ -33,6 +34,8 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -97,6 +100,8 @@ class CheckReAuthUserHandlerTest {
 
     private CheckReAuthUserHandler handler;
 
+    private static final Integer MAX_RETRIES = 6;
+
     @BeforeEach
     public void setUp() {
         var userProfile = generateUserProfile();
@@ -112,8 +117,8 @@ class CheckReAuthUserHandlerTest {
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
-        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -258,11 +263,9 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService).getMaxEmailReAuthRetries();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
@@ -272,9 +275,10 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(userProfile);
         when(codeStorageService.getIncorrectEmailCount(any())).thenReturn(5);
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
         when(authenticationAttemptsService.getCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
-                .thenReturn(5);
+                .thenReturn(MAX_RETRIES);
         var result =
                 handler.handleRequestWithUserContext(
                         event,
@@ -293,7 +297,7 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         testAuditContextWithAuditEncoded,
                         AuditService.MetadataPair.pair(
-                                "number_of_attempts_user_allowed_to_login", 5));
+                                "number_of_attempts_user_allowed_to_login", MAX_RETRIES));
 
         verify(userContext, times(2)).getSession();
         verify(userContext).getClientSessionId();
@@ -319,7 +323,7 @@ class CheckReAuthUserHandlerTest {
                             TEST_SUBJECT_ID,
                             JourneyType.REAUTHENTICATION,
                             CountType.ENTER_PASSWORD))
-                    .thenReturn(6);
+                    .thenReturn(MAX_RETRIES);
         } else {
             when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
         }
@@ -375,6 +379,37 @@ class CheckReAuthUserHandlerTest {
         verify(userContext).getTxmaAuditEncoded();
 
         verify(configurationService).getMaxEmailReAuthRetries();
+    }
+
+    @Test
+    void shouldIncrementFailureCountRegardlessOfExistingLockout() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var userProfile = generateUserProfile();
+
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationAttemptsService.getCount(
+                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_PASSWORD)))
+                .thenReturn(MAX_RETRIES);
+
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event,
+                        context,
+                        new CheckReauthUserRequest(
+                                EMAIL_USED_TO_SIGN_IN, "Not the correct pairwise id"),
+                        userContext);
+        assertEquals(400, result.getStatusCode());
+        verify(authenticationAttemptsService)
+                .createOrIncrementCount(
+                        any(),
+                        anyLong(),
+                        eq(JourneyType.REAUTHENTICATION),
+                        eq(CountType.ENTER_EMAIL));
     }
 
     private UserProfile generateUserProfile() {

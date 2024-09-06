@@ -121,6 +121,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .getUserProfileByEmailMaybe(request.email())
                     .flatMap(
                             userProfile -> {
+                                var verificationResult =
+                                        verifyReAuthentication(
+                                                userProfile,
+                                                userContext,
+                                                request.rpPairwiseId(),
+                                                auditContext);
                                 if (hasEnteredIncorrectEmailTooManyTimes(userProfile)) {
                                     throw new AccountLockedException(
                                             "Account is locked due to too many failed attempts.",
@@ -140,11 +146,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                     }
                                 }
 
-                                return verifyReAuthentication(
-                                        userProfile,
-                                        userContext,
-                                        request.rpPairwiseId(),
-                                        auditContext);
+                                return verificationResult;
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
                     .orElseGet(() -> generateErrorResponse(emailUserIsSignedInWith, auditContext));
@@ -189,6 +191,16 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             LOG.info("Could not calculate rp pairwise ID");
         }
 
+        authenticationAttemptsService.createOrIncrementCount(
+                userProfile.getSubjectID(),
+                NowHelper.nowPlus(
+                                configurationService.getReauthEnterEmailCountTTL(),
+                                ChronoUnit.SECONDS)
+                        .toInstant()
+                        .getEpochSecond(),
+                JourneyType.REAUTHENTICATION,
+                CountType.ENTER_EMAIL);
+
         LOG.info("User re-authentication verification failed");
         return Optional.empty();
     }
@@ -208,19 +220,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
         LOG.info("User not found or no match");
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled() && userProfile != null) {
-            authenticationAttemptsService.createOrIncrementCount(
-                    userProfile.getSubjectID(),
-                    NowHelper.nowPlus(
-                                    configurationService.getReauthEnterEmailCountTTL(),
-                                    ChronoUnit.SECONDS)
-                            .toInstant()
-                            .getEpochSecond(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_EMAIL);
-        } else {
-            codeStorageService.increaseIncorrectEmailCount(email);
-        }
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
 
