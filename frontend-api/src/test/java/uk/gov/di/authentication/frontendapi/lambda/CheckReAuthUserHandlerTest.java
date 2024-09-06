@@ -3,8 +3,7 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
@@ -21,7 +20,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -54,7 +52,6 @@ class CheckReAuthUserHandlerTest {
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
@@ -125,15 +122,12 @@ class CheckReAuthUserHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        codeStorageService,
                         authenticationAttemptsService);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn200ForSuccessfulReAuthRequest(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn200ForSuccessfulReAuthRequest() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -177,12 +171,9 @@ class CheckReAuthUserHandlerTest {
         verify(clientRegistry, times(4)).getRedirectUrls();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
-            boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
@@ -222,11 +213,9 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService).getMaxPasswordRetries();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn404ForWhenUserNotFound(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn404ForWhenUserNotFound() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -258,11 +247,9 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService).getMaxEmailReAuthRetries();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
@@ -271,7 +258,6 @@ class CheckReAuthUserHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(userProfile);
-        when(codeStorageService.getIncorrectEmailCount(any())).thenReturn(5);
         when(authenticationAttemptsService.getCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
                 .thenReturn(5);
@@ -302,27 +288,18 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService, times(2)).getMaxEmailReAuthRetries();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries(
-            boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(userProfile));
-        if (supportAuthenticationAttempts) {
-            when(authenticationAttemptsService.getCount(
-                            TEST_SUBJECT_ID,
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_PASSWORD))
-                    .thenReturn(6);
-        } else {
-            when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
-        }
+        when(authenticationAttemptsService.getCount(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_PASSWORD))
+                .thenReturn(6);
 
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
@@ -342,16 +319,13 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        var expectedErrorResponse =
-                supportAuthenticationAttempts ? ErrorResponse.ERROR_1057 : ErrorResponse.ERROR_1045;
+        var expectedErrorResponse = ErrorResponse.ERROR_1057;
         assertThat(result, hasJsonBody(expectedErrorResponse));
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn404ForWhenUserDoesNotMatch(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn404ForWhenUserDoesNotMatch() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
         var result =
