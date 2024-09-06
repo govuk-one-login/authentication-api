@@ -130,15 +130,12 @@ class CheckReAuthUserHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        codeStorageService,
                         authenticationAttemptsService);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn200ForSuccessfulReAuthRequest(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn200ForSuccessfulReAuthRequest() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -182,12 +179,9 @@ class CheckReAuthUserHandlerTest {
         verify(clientRegistry, times(4)).getRedirectUrls();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
-            boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
@@ -227,11 +221,9 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService).getMaxPasswordRetries();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn404ForWhenUserNotFound(boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn404ForWhenUserNotFound() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -306,27 +298,18 @@ class CheckReAuthUserHandlerTest {
         verify(configurationService, times(2)).getMaxEmailReAuthRetries();
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries(
-            boolean supportAuthenticationAttempts) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(supportAuthenticationAttempts);
+    @Test
+    void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var userProfile = generateUserProfile();
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(userProfile));
-        if (supportAuthenticationAttempts) {
-            when(authenticationAttemptsService.getCount(
-                            TEST_SUBJECT_ID,
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_PASSWORD))
-                    .thenReturn(MAX_RETRIES);
-        } else {
-            when(codeStorageService.getIncorrectPasswordCountReauthJourney(any())).thenReturn(6);
-        }
+        when(authenticationAttemptsService.getCount(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_PASSWORD))
+                .thenReturn(MAX_RETRIES);
 
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
@@ -346,8 +329,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        var expectedErrorResponse =
-                supportAuthenticationAttempts ? ErrorResponse.ERROR_1057 : ErrorResponse.ERROR_1045;
+        var expectedErrorResponse = ErrorResponse.ERROR_1057;
         assertThat(result, hasJsonBody(expectedErrorResponse));
     }
 

@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -46,7 +45,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     private static final Logger LOG = LogManager.getLogger(CheckReAuthUserHandler.class);
 
     private final AuditService auditService;
-    private final CodeStorageService codeStorageService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
 
     public CheckReAuthUserHandler(
@@ -56,7 +54,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CodeStorageService codeStorageService,
             AuthenticationAttemptsService authenticationAttemptsService) {
         super(
                 CheckReauthUserRequest.class,
@@ -66,14 +63,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 clientService,
                 authenticationService);
         this.auditService = auditService;
-        this.codeStorageService = codeStorageService;
         this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
         super(CheckReauthUserRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
     }
@@ -82,7 +77,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             ConfigurationService configurationService, RedisConnectionService redis) {
         super(CheckReauthUserRequest.class, configurationService, redis);
         this.auditService = new AuditService(configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService, redis);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
     }
@@ -226,46 +220,25 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     private boolean hasEnteredIncorrectEmailTooManyTimes(UserProfile userProfile) {
         if (userProfile == null) return false;
         var maxRetries = configurationService.getMaxEmailReAuthRetries();
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            var incorrectEmailCount =
-                    authenticationAttemptsService.getCount(
-                            userProfile.getSubjectID(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_EMAIL);
-            return incorrectEmailCount >= maxRetries;
-        } else {
-            var incorrectEmailCount =
-                    codeStorageService.getIncorrectEmailCount(userProfile.getEmail());
-            return incorrectEmailCount >= maxRetries;
-        }
+        var incorrectEmailCount =
+                authenticationAttemptsService.getCount(
+                        userProfile.getSubjectID(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_EMAIL);
+        return incorrectEmailCount >= maxRetries;
     }
 
     private boolean hasEnteredIncorrectPasswordTooManyTimes(UserProfile userProfile) {
-        int incorrectPasswordCount;
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            incorrectPasswordCount =
-                    authenticationAttemptsService.getCount(
-                            userProfile.getSubjectID(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_PASSWORD);
-        } else {
-            incorrectPasswordCount =
-                    codeStorageService.getIncorrectPasswordCountReauthJourney(
-                            userProfile.getEmail());
-        }
+        var incorrectPasswordCount =
+                authenticationAttemptsService.getCount(
+                        userProfile.getSubjectID(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_PASSWORD);
         return incorrectPasswordCount >= configurationService.getMaxPasswordRetries();
     }
 
     private void clearCountOfFailedEmailEntryAttempts(UserProfile userProfile) {
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            authenticationAttemptsService.deleteCount(
-                    userProfile.getSubjectID(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_EMAIL);
-        }
-        var incorrectEmailCount = codeStorageService.getIncorrectEmailCount(userProfile.getEmail());
-        if (incorrectEmailCount != 0) {
-            codeStorageService.deleteIncorrectEmailCount(userProfile.getEmail());
-        }
+        authenticationAttemptsService.deleteCount(
+                userProfile.getSubjectID(), JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
     }
 }
