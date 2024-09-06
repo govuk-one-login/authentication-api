@@ -208,14 +208,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             uniqueUserIdentifier = rpPairwiseId;
         }
 
-        if (hasEnteredIncorrectEmailTooManyTimes(uniqueUserIdentifier)) {
-            throw new AccountLockedException(
-                    "Re-authentication is locked due to too many failed attempts.",
-                    ErrorResponse.ERROR_1057);
-        }
-
-        auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
-
         authenticationAttemptsService.createOrIncrementCount(
                 uniqueUserIdentifier,
                 NowHelper.nowPlus(
@@ -225,6 +217,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         .getEpochSecond(),
                 JourneyType.REAUTHENTICATION,
                 CountType.ENTER_EMAIL);
+
+        if (hasEnteredIncorrectEmailTooManyTimes(uniqueUserIdentifier)) {
+            throw new AccountLockedException(
+                    "Re-authentication is locked due to too many failed attempts.",
+                    ErrorResponse.ERROR_1057);
+        }
+
+        auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
 
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
