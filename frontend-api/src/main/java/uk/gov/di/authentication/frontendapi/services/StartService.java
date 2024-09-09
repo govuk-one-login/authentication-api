@@ -192,9 +192,9 @@ public class StartService {
                                             authenticationAttemptsService.getCountsByJourney(
                                                     subjectId, JourneyType.REAUTHENTICATION))
                             .orElse(Map.of());
-            var helper = new ReauthAuthenticationAttemptsHelper(configurationService);
             var blockedCountTypes =
-                    helper.countTypesWhereUserIsBlockedForReauth(reauthCountTypesToCounts);
+                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                            reauthCountTypesToCounts, configurationService);
             isBlockedForReauth = !blockedCountTypes.isEmpty();
         }
 

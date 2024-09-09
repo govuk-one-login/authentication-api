@@ -13,8 +13,6 @@ import static org.mockito.Mockito.when;
 
 class ReauthAuthenticationAttemptsHelperTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final ReauthAuthenticationAttemptsHelper helper =
-            new ReauthAuthenticationAttemptsHelper(configurationService);
 
     @Test
     void countTypesThatExceedMaxShouldReturnTheCountTypesThatHaveExceededTheirMaximums() {
@@ -36,7 +34,8 @@ class ReauthAuthenticationAttemptsHelperTest {
         var expectedReauthCountsExceeded =
                 List.of(CountType.ENTER_EMAIL, CountType.ENTER_AUTH_APP_CODE);
         var actualReauthCountsExceeded =
-                helper.countTypesWhereUserIsBlockedForReauth(retrievedCountTypesToCounts);
+                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                        retrievedCountTypesToCounts, configurationService);
 
         assertTrue(
                 expectedReauthCountsExceeded.containsAll(actualReauthCountsExceeded)

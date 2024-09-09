@@ -12,14 +12,12 @@ import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 
 public class ReauthAuthenticationAttemptsHelper {
-    private ConfigurationService configurationService;
 
-    public ReauthAuthenticationAttemptsHelper(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-    }
+    private ReauthAuthenticationAttemptsHelper() {}
 
-    public List<CountType> countTypesWhereUserIsBlockedForReauth(
-            Map<CountType, Integer> retrievedCountTypesToCounts) {
+    public static List<CountType> countTypesWhereUserIsBlockedForReauth(
+            Map<CountType, Integer> retrievedCountTypesToCounts,
+            ConfigurationService configurationService) {
         var reauthRelevantCountsToMaxRetries =
                 Map.ofEntries(
                         Map.entry(ENTER_EMAIL, configurationService.getMaxEmailReAuthRetries()),
