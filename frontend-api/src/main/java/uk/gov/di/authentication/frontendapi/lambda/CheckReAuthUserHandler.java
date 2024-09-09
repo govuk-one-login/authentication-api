@@ -181,7 +181,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             auditService.submitAuditEvent(AUTH_REAUTHENTICATION_SUCCESSFUL, auditContext);
-            clearCountOfFailedEmailEntryAttempts(userProfile);
             return Optional.of(rpPairwiseId);
         } else {
             LOG.warn("Could not calculate rp pairwise ID");
@@ -239,8 +238,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         return incorrectEmailCount >= maxRetries;
     }
 
-    private void clearCountOfFailedEmailEntryAttempts(UserProfile userProfile) {
-        authenticationAttemptsService.deleteCount(
-                userProfile.getSubjectID(), JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
+    private boolean hasEnteredIncorrectPasswordTooManyTimes(UserProfile userProfile) {
+        int incorrectPasswordCount;
+        incorrectPasswordCount =
+                authenticationAttemptsService.getCount(
+                        userProfile.getSubjectID(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_PASSWORD);
+        return incorrectPasswordCount >= configurationService.getMaxPasswordRetries();
     }
 }
