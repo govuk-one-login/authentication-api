@@ -291,17 +291,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         boolean termsAndConditionsAccepted = isTermsAndConditionsAccepted(userContext, userProfile);
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            authenticationAttemptsService.deleteCount(
-                    userProfile.getSubjectID(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_EMAIL);
-            authenticationAttemptsService.deleteCount(
-                    userProfile.getSubjectID(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_PASSWORD);
-        }
-
         try {
             return generateApiGatewayProxyResponse(
                     200,

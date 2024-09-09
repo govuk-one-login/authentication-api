@@ -237,14 +237,4 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         return incorrectEmailCount >= maxRetries;
     }
-
-    private boolean hasEnteredIncorrectPasswordTooManyTimes(UserProfile userProfile) {
-        int incorrectPasswordCount;
-        incorrectPasswordCount =
-                authenticationAttemptsService.getCount(
-                        userProfile.getSubjectID(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_PASSWORD);
-        return incorrectPasswordCount >= configurationService.getMaxPasswordRetries();
-    }
 }
