@@ -151,12 +151,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
 
+            Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+
+            if (userProfileMaybe.isEmpty()) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
+            }
+
+            UserProfile userProfile = userProfileMaybe.get();
+
             if (journeyType == JourneyType.REAUTHENTICATION
                     && configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 var countsByJourney =
                         authenticationAttemptsService.getCountsByJourney(
-                                userContext.getUserProfile().get().getSubjectID(),
-                                JourneyType.REAUTHENTICATION);
+                                userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
 
                 var countTypesWhereBlocked =
                         ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
@@ -198,13 +205,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             sessionService.save(session);
 
             if (errorResponse.isPresent()) {
-                Optional<UserProfile> userProfile = userContext.getUserProfile();
+
                 if (journeyType == JourneyType.REAUTHENTICATION
                         && notificationType == MFA_SMS
-                        && userProfile.isPresent()
                         && configurationService.isAuthenticationAttemptsServiceEnabled()) {
                     authenticationAttemptsService.createOrIncrementCount(
-                            userProfile.get().getSubjectID(),
+                            userProfile.getSubjectID(),
                             NowHelper.nowPlus(
                                             configurationService.getReauthEnterSMSCodeCountTTL(),
                                             ChronoUnit.SECONDS)
@@ -229,7 +235,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    session, codeRequest, userContext, journeyType, auditContext);
+                    session, codeRequest, userContext, userProfile, journeyType, auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -268,6 +274,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Session session,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
+            UserProfile userProfile,
             JourneyType journeyType,
             AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
@@ -296,11 +303,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     true);
 
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                Optional<UserProfile> userProfile = userContext.getUserProfile();
-                userProfile.ifPresent(
-                        profile ->
-                                clearReauthAttemptCountsForSuccessfullyReauthenticatedUser(
-                                        profile.getSubjectID()));
+                clearReauthAttemptCountsForSuccessfullyReauthenticatedUser(
+                        userProfile.getSubjectID());
             }
         }
 
