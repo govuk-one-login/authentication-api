@@ -11,6 +11,9 @@ module "frontend_api_verify_mfa_code_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_account_modifiers_read_access_policy.arn,
     aws_iam_policy.dynamo_account_modifiers_write_access_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
@@ -30,24 +33,26 @@ module "verify_mfa_code" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                         = var.environment
-    LOCKOUT_DURATION                    = var.lockout_duration
-    LOCKOUT_COUNT_TTL                   = var.lockout_count_ttl
-    TXMA_AUDIT_QUEUE_URL                = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                 = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                           = local.redis_key
-    DYNAMO_ENDPOINT                     = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TERMS_CONDITIONS_VERSION            = var.terms_and_conditions
-    TEST_CLIENT_VERIFY_EMAIL_OTP        = var.test_client_verify_email_otp
-    TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
-    TEST_CLIENTS_ENABLED                = var.test_clients_enabled
-    INTERNAl_SECTOR_URI                 = var.internal_sector_uri
-    EXPERIAN_PHONE_CHECKER_QUEUE_URL    = local.experian_phone_check_sqs_queue_id
-    PHONE_CHECKER_WITH_RETRY            = var.phone_checker_with_retry
-    CODE_MAX_RETRIES_INCREASED          = var.code_max_retries_increased
-    REDUCED_LOCKOUT_DURATION            = var.reduced_lockout_duration
-    SQS_ENDPOINT                        = var.use_localstack ? "http://localhost:45678/" : null
-    SUPPORT_REAUTH_SIGNOUT_ENABLED      = var.support_reauth_signout_enabled
+    ENVIRONMENT                             = var.environment
+    LOCKOUT_DURATION                        = var.lockout_duration
+    LOCKOUT_COUNT_TTL                       = var.lockout_count_ttl
+    TXMA_AUDIT_QUEUE_URL                    = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                     = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                               = local.redis_key
+    DYNAMO_ENDPOINT                         = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION                = var.terms_and_conditions
+    TEST_CLIENT_VERIFY_EMAIL_OTP            = var.test_client_verify_email_otp
+    TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP     = var.test_client_verify_phone_number_otp
+    TEST_CLIENTS_ENABLED                    = var.test_clients_enabled
+    INTERNAl_SECTOR_URI                     = var.internal_sector_uri
+    EXPERIAN_PHONE_CHECKER_QUEUE_URL        = local.experian_phone_check_sqs_queue_id
+    PHONE_CHECKER_WITH_RETRY                = var.phone_checker_with_retry
+    CODE_MAX_RETRIES_INCREASED              = var.code_max_retries_increased
+    REDUCED_LOCKOUT_DURATION                = var.reduced_lockout_duration
+    SQS_ENDPOINT                            = var.use_localstack ? "http://localhost:45678/" : null
+    SUPPORT_REAUTH_SIGNOUT_ENABLED          = var.support_reauth_signout_enabled
+    AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED = var.authentication_attempts_service_enabled
+    REAUTH_ENTER_AUTH_APP_CODE_COUNT_TTL    = var.reauth_enter_auth_app_code_count_ttl
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
 

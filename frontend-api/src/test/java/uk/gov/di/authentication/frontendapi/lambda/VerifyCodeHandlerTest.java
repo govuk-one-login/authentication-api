@@ -701,9 +701,7 @@ class VerifyCodeHandlerTest {
 
         verify(authenticationAttemptsService, times(1))
                 .deleteCount(
-                        expectedCommonSubject,
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_SMS_CODE);
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_SMS_CODE);
         assertThat(result, hasStatus(204));
     }
 
@@ -721,7 +719,7 @@ class VerifyCodeHandlerTest {
 
         verify(authenticationAttemptsService, times(1))
                 .createOrIncrementCount(
-                        expectedCommonSubject,
+                        TEST_SUBJECT_ID,
                         4070908800L,
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_SMS_CODE);
