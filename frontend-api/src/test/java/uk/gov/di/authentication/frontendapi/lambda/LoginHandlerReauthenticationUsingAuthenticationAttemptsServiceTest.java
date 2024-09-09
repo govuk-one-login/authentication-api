@@ -252,8 +252,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
-        when(authenticationAttemptsService.getCount(any(), eq(REAUTHENTICATION), eq(countType)))
-                .thenReturn(MAX_ALLOWED_RETRIES);
+        when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
+                .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
         if (countType != ENTER_PASSWORD) {
             when(authenticationAttemptsService.getCount(
