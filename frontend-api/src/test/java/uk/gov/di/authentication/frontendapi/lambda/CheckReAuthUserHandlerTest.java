@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -93,6 +94,8 @@ class CheckReAuthUserHandlerTest {
 
     private CheckReAuthUserHandler handler;
 
+    private static final int MAX_RETRIES = 6;
+
     @BeforeEach
     public void setUp() {
         var userProfile = generateUserProfile();
@@ -108,8 +111,9 @@ class CheckReAuthUserHandlerTest {
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
-        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -232,9 +236,9 @@ class CheckReAuthUserHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(userProfile);
-        when(authenticationAttemptsService.getCount(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
-                .thenReturn(5);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
         var result =
                 handler.handleRequestWithUserContext(
                         event,
@@ -253,7 +257,7 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         testAuditContextWithAuditEncoded,
                         AuditService.MetadataPair.pair(
-                                "number_of_attempts_user_allowed_to_login", 5));
+                                "number_of_attempts_user_allowed_to_login", MAX_RETRIES));
     }
 
     @Test
@@ -265,9 +269,44 @@ class CheckReAuthUserHandlerTest {
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationAttemptsService.getCount(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_PASSWORD))
-                .thenReturn(6);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
+
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
+
+        var expectedRpPairwiseSub =
+                ClientSubjectHelper.getSubject(
+                                userProfile,
+                                clientRegistry,
+                                authenticationService,
+                                INTERNAL_SECTOR_URI)
+                        .getValue();
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
+                        userContext);
+
+        assertEquals(400, result.getStatusCode());
+        var expectedErrorResponse = ErrorResponse.ERROR_1057;
+        assertThat(result, hasJsonBody(expectedErrorResponse));
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var userProfile = generateUserProfile();
+
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationAttemptsService.getCountsByJourney(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
 
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
