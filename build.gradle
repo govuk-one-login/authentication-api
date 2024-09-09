@@ -135,8 +135,8 @@ subprojects {
         constraints {
             implementation('org.apache.logging.log4j:log4j-api:2.23.1')
             testRuntimeOnly('org.apache.logging.log4j:log4j-api:2.23.1')
-            implementation('org.apache.logging.log4j:log4j-core:2.23.1')
-            testRuntimeOnly('org.apache.logging.log4j:log4j-core:2.23.1')
+            implementation('org.apache.logging.log4j:log4j-core:2.24.0')
+            testRuntimeOnly('org.apache.logging.log4j:log4j-core:2.24.0')
 
             configurations.configureEach { conf ->
                 add(conf.name, 'com.google.guava:guava:[32.0.0-jre,)') {
