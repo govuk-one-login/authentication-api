@@ -19,7 +19,7 @@ dependencies {
             configurations.ssm,
             configurations.cloudwatch,
             configurations.pact_provider,
-            "org.eclipse.jetty:jetty-server:11.0.18",
+            "org.eclipse.jetty:jetty-server:12.0.13",
             "com.google.code.gson:gson:2.10.1"
 
     implementation project(":orchestration-shared")
