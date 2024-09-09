@@ -5,6 +5,9 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
@@ -46,6 +49,20 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
             return 0;
         }
         return authenticationAttemptRecord.get().getCount();
+    }
+
+    public Map<CountType, Integer> getCountsByJourney(
+            String internalSubjectId, JourneyType journeyType) {
+        Map<CountType, Integer> results = new EnumMap<>(CountType.class);
+        Arrays.stream(CountType.values())
+                .forEach(
+                        countType -> {
+                            var count = getCount(internalSubjectId, journeyType, countType);
+                            if (count > 0) {
+                                results.put(countType, count);
+                            }
+                        });
+        return results;
     }
 
     public void deleteCount(

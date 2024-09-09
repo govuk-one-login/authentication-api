@@ -14,6 +14,7 @@ import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStor
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -121,6 +122,56 @@ class AuthenticationAttemptsServiceIntegrationTest {
                     authenticationAttemptsService.getCount(
                             INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
             assertEquals(0, authenticationAttempts);
+        }
+    }
+
+    @Test
+    void shouldGetAllCountTypesForAGivenJourney() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        var otherJourneyType = JourneyType.ACCOUNT_RECOVERY;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            var countTypesToCountsForRequestedJourney =
+                    Map.ofEntries(
+                            Map.entry(CountType.ENTER_EMAIL, 2),
+                            Map.entry(CountType.ENTER_PASSWORD, 4),
+                            Map.entry(CountType.ENTER_SMS_CODE, 5));
+
+            countTypesToCountsForRequestedJourney
+                    .entrySet()
+                    .forEach(
+                            entry -> {
+                                var countType = entry.getKey();
+                                var count = entry.getValue();
+                                for (int i = 0; i < count; i++) {
+                                    authenticationAttemptsService.createOrIncrementCount(
+                                            INTERNAL_SUBJECT_ID,
+                                            EXPECTEDTTL,
+                                            requestedJourneyType,
+                                            countType);
+                                }
+                            });
+
+            // set up some other data which should not affect the result
+            authenticationAttemptsService.createOrIncrementCount(
+                    INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_EMAIL);
+            authenticationAttemptsService.createOrIncrementCount(
+                    INTERNAL_SUBJECT_ID,
+                    EXPECTEDTTL,
+                    otherJourneyType,
+                    CountType.ENTER_AUTH_APP_CODE);
+
+            // Read the count
+            var authenticationAttempts =
+                    authenticationAttemptsService.getCountsByJourney(
+                            INTERNAL_SUBJECT_ID, JOURNEY_TYPE);
+            assertEquals(countTypesToCountsForRequestedJourney, authenticationAttempts);
         }
     }
 }
