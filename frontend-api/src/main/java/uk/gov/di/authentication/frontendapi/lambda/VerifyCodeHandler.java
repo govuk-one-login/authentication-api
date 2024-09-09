@@ -151,7 +151,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
 
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            if (journeyType == JourneyType.REAUTHENTICATION
+                    && configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 var countsByJourney =
                         authenticationAttemptsService.getCountsByJourney(
                                 userContext.getUserProfile().get().getSubjectID(),
@@ -162,6 +163,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                                 countsByJourney, configurationService);
 
                 if (!countTypesWhereBlocked.isEmpty()) {
+                    LOG.info(
+                            "Re-authentication locked due to {} counts exceeded.",
+                            countTypesWhereBlocked);
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
                 }
             }

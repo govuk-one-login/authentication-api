@@ -673,6 +673,19 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
+    void shouldAllowInteractiveSignInWhenMaxReauthAttemptsReachedAndJourneyIsNotReauthentciation() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, 6));
+        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+
+        var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
+
+        assertThat(result, hasStatus(204));
+    }
+
+    @Test
     void shouldReturnMaxReauthAttemptsReachedAndReturn400WhenMaxReauthAttemptsExceeded() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
@@ -680,8 +693,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, 6));
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
 
-        var result =
-                makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), JourneyType.REAUTHENTICATION);
+        var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.REAUTHENTICATION);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
