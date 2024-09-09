@@ -36,9 +36,11 @@ import java.util.Optional;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -152,10 +154,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                     auditContext,
                     e.getErrorResponse() == ErrorResponse.ERROR_1045
-                            ? AuditService.MetadataPair.pair(
+                            ? pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxPasswordRetries())
-                            : AuditService.MetadataPair.pair(
+                            : pair(
                                     "number_of_attempts_user_allowed_to_login",
                                     configurationService.getMaxEmailReAuthRetries()));
 
@@ -219,6 +221,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 CountType.ENTER_EMAIL);
 
         if (hasEnteredIncorrectEmailTooManyTimes(uniqueUserIdentifier)) {
+            auditService.submitAuditEvent(
+                    AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
+                    auditContext,
+                    pair("attemptNoFailedAt", configurationService.getMaxEmailReAuthRetries()),
+                    pair("rpPairwiseId", rpPairwiseId));
             throw new AccountLockedException(
                     "Re-authentication is locked due to too many failed attempts.",
                     ErrorResponse.ERROR_1057);

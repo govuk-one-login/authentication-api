@@ -32,8 +32,10 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
@@ -258,6 +260,14 @@ class CheckReAuthUserHandlerTest {
                         testAuditContextWithAuditEncoded,
                         AuditService.MetadataPair.pair(
                                 "number_of_attempts_user_allowed_to_login", MAX_RETRIES));
+
+        // In the case where a user is already locked out, we do not emit this event
+        // The case where the event is emitted is tested in integration tests
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
     }
 
     @Test
