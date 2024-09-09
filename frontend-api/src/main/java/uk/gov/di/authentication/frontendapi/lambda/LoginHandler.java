@@ -183,9 +183,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             var reauthCounts =
                     authenticationAttemptsService.getCountsByJourney(
                             userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
-            var helper =
-                    new ReauthAuthenticationAttemptsHelper(
-                            configurationService, authenticationAttemptsService);
+            var helper = new ReauthAuthenticationAttemptsHelper(configurationService);
             var exceedingCounts = helper.countTypesWhereUserIsBlockedForReauth(reauthCounts);
             if (!exceedingCounts.isEmpty()) {
                 LOG.info("User has existing reauth block on counts {}", exceedingCounts);
