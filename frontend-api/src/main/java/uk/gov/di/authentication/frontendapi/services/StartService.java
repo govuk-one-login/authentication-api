@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -20,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -44,7 +46,7 @@ public class StartService {
     private final DynamoService dynamoService;
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
-    private final ReauthAuthenticationAttemptsHelper reauthentireauthAuthenticationAttemptsHelper;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
     private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
@@ -55,12 +57,12 @@ public class StartService {
             ClientService clientService,
             DynamoService dynamoService,
             SessionService sessionService,
-            ReauthAuthenticationAttemptsHelper reauthAuthenticationAttemptsHelper,
+            AuthenticationAttemptsService authenticationAttemptsService,
             ConfigurationService configurationService) {
         this.clientService = clientService;
         this.dynamoService = dynamoService;
         this.sessionService = sessionService;
-        this.reauthentireauthAuthenticationAttemptsHelper = reauthAuthenticationAttemptsHelper;
+        this.authenticationAttemptsService = authenticationAttemptsService;
         this.configurationService = configurationService;
     }
 
@@ -183,10 +185,19 @@ public class StartService {
 
         boolean isBlockedForReauth = false;
         if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            isBlockedForReauth =
+            var reauthCountTypesToCounts =
                     internalSubjectId
-                            .map(reauthentireauthAuthenticationAttemptsHelper::isBlockedForReauth)
-                            .orElse(false);
+                            .map(
+                                    subjectId ->
+                                            authenticationAttemptsService.getCountsByJourney(
+                                                    subjectId, JourneyType.REAUTHENTICATION))
+                            .orElse(Map.of());
+            var helper =
+                    new ReauthAuthenticationAttemptsHelper(
+                            configurationService, authenticationAttemptsService);
+            var blockedCountTypes =
+                    helper.countTypesWhereUserIsBlockedForReauth(reauthCountTypesToCounts);
+            isBlockedForReauth = !blockedCountTypes.isEmpty();
         }
 
         LOG.info(
