@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -149,6 +150,21 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
+
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                var countsByJourney =
+                        authenticationAttemptsService.getCountsByJourney(
+                                userContext.getUserProfile().get().getSubjectID(),
+                                JourneyType.REAUTHENTICATION);
+
+                var countTypesWhereBlocked =
+                        ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                                countsByJourney, configurationService);
+
+                if (!countTypesWhereBlocked.isEmpty()) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+                }
+            }
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);

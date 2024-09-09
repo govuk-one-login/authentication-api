@@ -52,6 +52,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -60,6 +61,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -668,6 +670,21 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "PASSWORD_RESET"));
+    }
+
+    @Test
+    void shouldReturnMaxReauthAttemptsReachedAndReturn400WhenMaxReauthAttemptsExceeded() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, 6));
+        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+
+        var result =
+                makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), JourneyType.REAUTHENTICATION);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
     }
 
     @Test
