@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -114,24 +115,23 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     .getUserProfileByEmailMaybe(request.email())
                     .flatMap(
                             userProfile -> {
-                                if (hasEnteredIncorrectEmailTooManyTimes(
-                                        userProfile.getSubjectID())) {
+                                var countTypesToCounts =
+                                        authenticationAttemptsService.getCountsByJourney(
+                                                userProfile.getSubjectID(),
+                                                JourneyType.REAUTHENTICATION);
+
+                                var exceededCountTypes =
+                                        ReauthAuthenticationAttemptsHelper
+                                                .countTypesWhereUserIsBlockedForReauth(
+                                                        countTypesToCounts, configurationService);
+
+                                if (!exceededCountTypes.isEmpty()) {
+                                    LOG.info(
+                                            "Account is locked due to exceeded counts on count types {}",
+                                            exceededCountTypes);
                                     throw new AccountLockedException(
                                             "Account is locked due to too many failed attempts.",
                                             ErrorResponse.ERROR_1057);
-                                }
-
-                                if (hasEnteredIncorrectPasswordTooManyTimes(userProfile)) {
-                                    if (configurationService
-                                            .isAuthenticationAttemptsServiceEnabled()) {
-                                        throw new AccountLockedException(
-                                                "Reauth user has entered incorrect password too many times",
-                                                ErrorResponse.ERROR_1057);
-                                    } else {
-                                        throw new AccountLockedException(
-                                                "Account is locked due to too many failed incorrect password attempts.",
-                                                ErrorResponse.ERROR_1045);
-                                    }
                                 }
 
                                 return verifyReAuthentication(
@@ -237,16 +237,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         subjectId, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
 
         return incorrectEmailCount >= maxRetries;
-    }
-
-    private boolean hasEnteredIncorrectPasswordTooManyTimes(UserProfile userProfile) {
-        int incorrectPasswordCount;
-        incorrectPasswordCount =
-                authenticationAttemptsService.getCount(
-                        userProfile.getSubjectID(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_PASSWORD);
-        return incorrectPasswordCount >= configurationService.getMaxPasswordRetries();
     }
 
     private void clearCountOfFailedEmailEntryAttempts(UserProfile userProfile) {

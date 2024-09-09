@@ -180,11 +180,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         auditContext = auditContext.withUserId(internalCommonSubjectIdentifier);
 
         if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
-            var helper =
-                    new ReauthAuthenticationAttemptsHelper(
-                            configurationService, authenticationAttemptsService);
-            if (helper.isBlockedForReauth(userProfile.getSubjectID())) {
-                LOG.info("User has existing reauth block");
+            var reauthCounts =
+                    authenticationAttemptsService.getCountsByJourney(
+                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+            var exceedingCounts =
+                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                            reauthCounts, configurationService);
+            if (!exceedingCounts.isEmpty()) {
+                LOG.info("User has existing reauth block on counts {}", exceedingCounts);
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
             }
         }
