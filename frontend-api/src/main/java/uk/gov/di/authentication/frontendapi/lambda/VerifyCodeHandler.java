@@ -194,7 +194,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         journeyType,
                         notificationType,
                         userProfileMaybe,
-                        errorResponse,
+                        errorResponse.get(),
                         session,
                         auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -228,7 +228,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             NotificationType notificationType,
             Optional<UserProfile> userProfileMaybe,
-            Optional<ErrorResponse> errorResponse,
+            ErrorResponse errorResponse,
             Session session,
             AuditContext auditContext) {
         if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
@@ -246,32 +246,31 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         } else {
             processBlockedCodeSession(
-                    errorResponse.get(), session, codeRequest, journeyType, auditContext);
+                    errorResponse, session, codeRequest, journeyType, auditContext);
         }
     }
 
     private boolean checkErrorCountsForReauth(
             JourneyType journeyType, Optional<UserProfile> userProfileMaybe) {
         if (journeyType == JourneyType.REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            if (userProfileMaybe.isPresent()) {
-                var countsByJourney =
-                        authenticationAttemptsService.getCountsByJourney(
-                                userProfileMaybe.get().getSubjectID(),
-                                JourneyType.REAUTHENTICATION);
+                && configurationService.isAuthenticationAttemptsServiceEnabled()
+                && userProfileMaybe.isPresent()) {
+            var countsByJourney =
+                    authenticationAttemptsService.getCountsByJourney(
+                            userProfileMaybe.get().getSubjectID(), JourneyType.REAUTHENTICATION);
 
-                var countTypesWhereBlocked =
-                        ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                                countsByJourney, configurationService);
+            var countTypesWhereBlocked =
+                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                            countsByJourney, configurationService);
 
-                if (!countTypesWhereBlocked.isEmpty()) {
-                    LOG.info(
-                            "Re-authentication locked due to {} counts exceeded.",
-                            countTypesWhereBlocked);
-                    return true;
-                }
+            if (!countTypesWhereBlocked.isEmpty()) {
+                LOG.info(
+                        "Re-authentication locked due to {} counts exceeded.",
+                        countTypesWhereBlocked);
+                return true;
             }
         }
+
         return false;
     }
 
