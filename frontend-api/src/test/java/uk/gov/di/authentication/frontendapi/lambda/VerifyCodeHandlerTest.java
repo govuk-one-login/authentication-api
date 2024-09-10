@@ -364,17 +364,12 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-
-        when(authenticationService.getUserProfileFromEmail(email))
-                .thenReturn(Optional.of(userProfile));
-
         testSession.setEmailAddress(email);
         testSession.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, VERIFY_EMAIL);
-
         var result = makeCallWithCode(body, Optional.of(testSession), TEST_CLIENT_ID);
 
         assertThat(result, hasStatus(204));
@@ -405,10 +400,6 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-
-        when(authenticationService.getUserProfileFromEmail(email))
-                .thenReturn(Optional.of(userProfile));
-
         testSession.setEmailAddress(email);
         testSession.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         String body =
