@@ -47,7 +47,6 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 
 public class NotificationHandlerTest {
 
-    private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String BUCKET_NAME = "test-s3-bucket";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CONTACT_US_LINK_ROUTE = "contact-us";
@@ -61,7 +60,8 @@ public class NotificationHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configService.getNotifyTestDestinations()).thenReturn(List.of(NOTIFY_PHONE_NUMBER));
+        when(configService.getNotifyTestDestinations())
+                .thenReturn(List.of(CommonTestVariables.UK_MOBILE_NUMBER));
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
@@ -83,7 +83,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("email-address", CommonTestVariables.EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
@@ -182,7 +182,7 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        notifyRequest.getDestination(),
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         VERIFY_PHONE_NUMBER,
                         CommonTestVariables.CLIENT_SESSION_ID);
@@ -225,7 +225,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("email-address", CommonTestVariables.EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
@@ -279,7 +279,7 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                createRequest(NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+                createRequest(CommonTestVariables.UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -290,12 +290,15 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        notifyRequest.getDestination(),
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         VERIFY_PHONE_NUMBER,
                         CommonTestVariables.CLIENT_SESSION_ID);
         var putObjectRequest =
-                PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
+                PutObjectRequest.builder()
+                        .bucket(BUCKET_NAME)
+                        .key(CommonTestVariables.UK_MOBILE_NUMBER)
+                        .build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
     }
 
@@ -314,7 +317,7 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        notifyRequest.getDestination(),
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         MFA_SMS,
                         CommonTestVariables.CLIENT_SESSION_ID);
@@ -323,7 +326,8 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
-        NotifyRequest notifyRequest = createRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321");
+        NotifyRequest notifyRequest =
+                createRequest(CommonTestVariables.UK_MOBILE_NUMBER, MFA_SMS, "654321");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -334,12 +338,15 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(
-                        notifyRequest.getDestination(),
+                        CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         MFA_SMS,
                         CommonTestVariables.CLIENT_SESSION_ID);
         var putObjectRequest =
-                PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
+                PutObjectRequest.builder()
+                        .bucket(BUCKET_NAME)
+                        .key(CommonTestVariables.UK_MOBILE_NUMBER)
+                        .build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
     }
 
@@ -361,12 +368,15 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendEmail(
-                        notifyRequest.getDestination(),
+                        CommonTestVariables.EMAIL,
                         personalisation,
                         ACCOUNT_CREATED_CONFIRMATION,
                         CommonTestVariables.CLIENT_SESSION_ID);
         var putObjectRequest =
-                PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
+                PutObjectRequest.builder()
+                        .bucket(BUCKET_NAME)
+                        .key(CommonTestVariables.UK_MOBILE_NUMBER)
+                        .build();
         verify(s3Client, times(0)).putObject(eq(putObjectRequest), any(RequestBody.class));
     }
 
@@ -383,7 +393,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("email-address", CommonTestVariables.EMAIL);
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
@@ -407,7 +417,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
-        personalisation.put("email-address", notifyRequest.getDestination());
+        personalisation.put("email-address", CommonTestVariables.EMAIL);
 
         verify(notificationService)
                 .sendEmail(
