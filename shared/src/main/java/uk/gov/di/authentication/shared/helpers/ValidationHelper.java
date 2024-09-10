@@ -5,6 +5,7 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -151,6 +152,20 @@ public class ValidationHelper {
             return Optional.of(ErrorResponse.ERROR_1002);
         }
 
+        return getErrorResponse(
+                notificationType,
+                journeyType,
+                codeStorageService,
+                emailAddress,
+                configurationService);
+    }
+
+    private static @NotNull Optional<ErrorResponse> getErrorResponse(
+            NotificationType notificationType,
+            JourneyType journeyType,
+            CodeStorageService codeStorageService,
+            String emailAddress,
+            ConfigurationService configurationService) {
         if (journeyType != JourneyType.REAUTHENTICATION) {
             if (configurationService.supportAccountCreationTTL()
                     && notificationType == VERIFY_EMAIL) {
