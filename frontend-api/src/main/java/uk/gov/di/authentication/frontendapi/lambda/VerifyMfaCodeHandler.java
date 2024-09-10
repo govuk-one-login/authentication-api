@@ -159,26 +159,22 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
         }
 
-        UserProfile userProfile = null;
-
-        if (userProfileMaybe.isPresent()) {
-            userProfile = userProfileMaybe.get();
-        }
-
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(journeyType)) {
-            var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
-            var countTypesWhereLimitExceeded =
-                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                            counts, configurationService);
-
-            if (!countTypesWhereLimitExceeded.isEmpty()) {
-                LOG.info(
-                        "Re-authentication locked due to {} counts exceeded.",
-                        countTypesWhereLimitExceeded);
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+            if (userProfileMaybe.isPresent()) {
+                var counts =
+                        authenticationAttemptsService.getCountsByJourney(
+                                userProfileMaybe.get().getSubjectID(),
+                                JourneyType.REAUTHENTICATION);
+                var countTypesWhereLimitExceeded =
+                        ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                                counts, configurationService);
+                if (!countTypesWhereLimitExceeded.isEmpty()) {
+                    LOG.info(
+                            "Re-authentication locked due to {} counts exceeded.",
+                            countTypesWhereLimitExceeded);
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+                }
             }
         }
 
@@ -215,7 +211,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     session,
                     input,
                     userContext,
-                    userProfile,
+                    userProfileMaybe.isPresent() ? userProfileMaybe.get().getSubjectID() : null,
                     codeRequest,
                     mfaCodeProcessor);
 
@@ -281,7 +277,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            UserProfile userProfile,
+            String subjectId,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor) {
         var emailAddress = session.getEmailAddress();
@@ -307,9 +303,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (errorResponse.isEmpty()) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
-                    && userProfile != null
-                    && userProfile.getSubjectID() != null) {
-                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(userProfile.getSubjectID());
+                    && subjectId != null) {
+                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
@@ -317,9 +312,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
 
         if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                && configurationService.isAuthenticationAttemptsServiceEnabled()
+                && subjectId != null) {
             authenticationAttemptsService.createOrIncrementCount(
-                    userProfile.getSubjectID(),
+                    subjectId,
                     NowHelper.nowPlus(
                                     configurationService.getReauthEnterAuthAppCodeCountTTL(),
                                     ChronoUnit.SECONDS)
