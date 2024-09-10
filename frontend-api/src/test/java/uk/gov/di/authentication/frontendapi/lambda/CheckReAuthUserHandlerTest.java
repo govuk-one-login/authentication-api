@@ -46,6 +46,7 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
 class CheckReAuthUserHandlerTest {
@@ -135,6 +136,10 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        var existingCountOfIncorrectEmails = 1;
+        when(authenticationAttemptsService.getCount(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
+                .thenReturn(existingCountOfIncorrectEmails);
 
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
@@ -158,8 +163,10 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL,
-                        testAuditContextWithAuditEncoded);
+                        FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED,
+                        testAuditContextWithAuditEncoded,
+                        pair("rpPairwiseId", expectedRpPairwiseSub),
+                        pair("incorrect_email_attempt_count", existingCountOfIncorrectEmails));
 
         verify(authenticationService, atLeastOnce())
                 .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
@@ -195,8 +202,9 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_SUCCESSFUL,
-                        testAuditContextWithoutAuditEncoded);
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED),
+                        eq(testAuditContextWithoutAuditEncoded),
+                        any(AuditService.MetadataPair[].class));
     }
 
     @Test
@@ -258,8 +266,7 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         testAuditContextWithAuditEncoded,
-                        AuditService.MetadataPair.pair(
-                                "number_of_attempts_user_allowed_to_login", MAX_RETRIES));
+                        pair("number_of_attempts_user_allowed_to_login", MAX_RETRIES));
 
         // In the case where a user is already locked out, we do not emit this event
         // The case where the event is emitted is tested in integration tests
