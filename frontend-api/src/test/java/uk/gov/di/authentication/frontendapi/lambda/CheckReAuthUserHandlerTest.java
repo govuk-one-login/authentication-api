@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
@@ -282,6 +283,15 @@ class CheckReAuthUserHandlerTest {
                         eq(FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED),
                         any(),
                         any(AuditService.MetadataPair[].class));
+        verify(auditService, times(1))
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        testAuditContextWithAuditEncoded,
+                        AuditService.MetadataPair.pair("rp_pairwise_id", TEST_RP_PAIRWISE_ID),
+                        AuditService.MetadataPair.pair("incorrect_email_attempt_count", 6),
+                        AuditService.MetadataPair.pair("incorrect_password_attempt_count", 0),
+                        AuditService.MetadataPair.pair("incorrect_otp_code_attempt_count", 0),
+                        AuditService.MetadataPair.pair("failure-reason", "incorrect_email"));
     }
 
     @Test
@@ -306,6 +316,11 @@ class CheckReAuthUserHandlerTest {
                                 authenticationService,
                                 INTERNAL_SECTOR_URI)
                         .getValue();
+        CheckReauthUserRequest checkReauthUserRequest =
+                new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        checkReauthUserRequest.rpPairwiseId(), JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
         var result =
                 handler.handleRequestWithUserContext(
