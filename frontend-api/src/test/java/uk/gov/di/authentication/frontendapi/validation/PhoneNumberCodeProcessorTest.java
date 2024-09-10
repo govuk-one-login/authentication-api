@@ -209,7 +209,7 @@ class PhoneNumberCodeProcessorTest {
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
-                equalTo(Optional.of(ErrorResponse.ERROR_1027)));
+                equalTo(Optional.of(ErrorResponse.ERROR_1035)));
     }
 
     @ParameterizedTest

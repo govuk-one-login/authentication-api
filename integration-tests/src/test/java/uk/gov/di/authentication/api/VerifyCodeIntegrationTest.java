@@ -300,11 +300,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(journeyType != JourneyType.REAUTHENTICATION));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
+            assertThat(
+                    redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
+                    equalTo(journeyType != JourneyType.REAUTHENTICATION));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        } else {
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1035));
+        }
     }
 
     @ParameterizedTest
