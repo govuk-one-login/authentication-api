@@ -43,6 +43,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_FAILED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -195,6 +196,7 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
+                        AUTH_REAUTH_FAILED,
                         AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
                         AUTH_ACCOUNT_TEMPORARILY_LOCKED));
     }
