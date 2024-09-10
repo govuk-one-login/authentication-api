@@ -75,7 +75,9 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
-        incrementRetryCount(MFAMethodType.AUTH_APP);
+        if (codeRequestType.getJourneyType() != JourneyType.REAUTHENTICATION) {
+            incrementRetryCount(MFAMethodType.AUTH_APP);
+        }
 
         if (hasExceededRetryLimit(MFAMethodType.AUTH_APP)) {
             LOG.info("Exceeded code retry limit");
