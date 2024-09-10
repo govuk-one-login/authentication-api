@@ -151,19 +151,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         }
 
-        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
-
-        if (userProfileMaybe.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
-        }
-
-        UserProfile userProfile = userProfileMaybe.get();
-
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(codeRequest.getJourneyType())) {
             var counts =
                     authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+                            userContext.getUserProfile().get().getSubjectID(),
+                            JourneyType.REAUTHENTICATION);
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
@@ -205,13 +198,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         session);
             }
             processCodeSession(
-                    errorResponse,
-                    session,
-                    input,
-                    userContext,
-                    userProfile,
-                    codeRequest,
-                    mfaCodeProcessor);
+                    errorResponse, session, input, userContext, codeRequest, mfaCodeProcessor);
 
             sessionService.save(session);
 
@@ -275,7 +262,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            UserProfile userProfile,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor) {
         var emailAddress = session.getEmailAddress();
@@ -301,7 +287,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (errorResponse.isEmpty()) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
-                clearReauthAttemptCountsForSuccessfullyReauthenticatedUser(userProfile);
+                Optional<UserProfile> userProfile = userContext.getUserProfile();
+                userProfile.ifPresent(
+                        this::clearReauthAttemptCountsForSuccessfullyReauthenticatedUser);
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
@@ -310,15 +298,19 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            authenticationAttemptsService.createOrIncrementCount(
-                    userProfile.getSubjectID(),
-                    NowHelper.nowPlus(
-                                    configurationService.getReauthEnterAuthAppCodeCountTTL(),
-                                    ChronoUnit.SECONDS)
-                            .toInstant()
-                            .getEpochSecond(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_AUTH_APP_CODE);
+            Optional<UserProfile> userProfile = userContext.getUserProfile();
+            userProfile.ifPresent(
+                    profile ->
+                            authenticationAttemptsService.createOrIncrementCount(
+                                    profile.getSubjectID(),
+                                    NowHelper.nowPlus(
+                                                    configurationService
+                                                            .getReauthEnterAuthAppCodeCountTTL(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond(),
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_AUTH_APP_CODE));
         }
 
         if (errorResponse
