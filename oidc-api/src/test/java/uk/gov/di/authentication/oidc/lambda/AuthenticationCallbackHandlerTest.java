@@ -36,6 +36,7 @@ import uk.gov.di.orchestration.shared.services.LogoutService;
 import java.net.URI;
 import java.util.*;
 
+import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -46,7 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.eq;
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -194,6 +197,7 @@ class AuthenticationCallbackHandlerTest {
                 redirectLocation,
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
         var savedSession = ArgumentCaptor.forClass(Session.class);
+        verifyUserInfoRequest();
         verify(sessionService).save(savedSession.capture());
         assertTrue(savedSession.getValue().isAuthenticated());
         assertEquals(savedSession.getValue().isNewAccount(), Session.AccountState.EXISTING);
@@ -361,7 +365,7 @@ class AuthenticationCallbackHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(TEST_FRONTEND_ERROR_URI));
-
+        verifyUserInfoRequest();
         verifyAuditEvents(
                 List.of(
                         OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
@@ -718,5 +722,23 @@ class AuthenticationCallbackHandlerTest {
                                             .withPersistentSessionId(PERSISTENT_SESSION_ID)
                                             .withGovukSigninJourneyId(CLIENT_SESSION_ID)));
         }
+    }
+
+    private void verifyUserInfoRequest() throws UnsuccessfulCredentialResponseException {
+        HTTPRequest expectedUserInfoRequest =
+                new HTTPRequest(GET, buildURI(TEST_AUTH_BACKEND_BASE_URL, "userinfo"));
+        expectedUserInfoRequest.setHeader(SESSION_ID_HEADER, SESSION_ID);
+        expectedUserInfoRequest.setAuthorization(
+                (SUCCESSFUL_TOKEN_RESPONSE
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getAccessToken()
+                        .toAuthorizationHeader()));
+
+        var userInfoRequest = ArgumentCaptor.forClass(HTTPRequest.class);
+        verify(tokenService).sendUserInfoDataRequest(userInfoRequest.capture());
+        assertEquals(expectedUserInfoRequest.getURI(), userInfoRequest.getValue().getURI());
+        assertEquals(
+                expectedUserInfoRequest.getHeaderMap(), userInfoRequest.getValue().getHeaderMap());
     }
 }

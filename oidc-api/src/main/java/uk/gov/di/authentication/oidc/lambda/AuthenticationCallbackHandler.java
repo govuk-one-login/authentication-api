@@ -79,6 +79,7 @@ import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
+import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -318,15 +319,15 @@ public class AuthenticationCallbackHandler
                         buildURI(
                                 configurationService.getAuthenticationBackendURI().toString(),
                                 "userinfo");
-
+                var sessionId = userSession.getSessionId();
                 HTTPRequest authorizationRequest = new HTTPRequest(GET, userInfoURI);
+                authorizationRequest.setHeader(SESSION_ID_HEADER, sessionId);
                 authorizationRequest.setAuthorization(
                         tokenResponse
                                 .toSuccessResponse()
                                 .getTokens()
                                 .getAccessToken()
                                 .toAuthorizationHeader());
-
                 UserInfo userInfo = tokenService.sendUserInfoDataRequest(authorizationRequest);
 
                 auditService.submitAuditEvent(
