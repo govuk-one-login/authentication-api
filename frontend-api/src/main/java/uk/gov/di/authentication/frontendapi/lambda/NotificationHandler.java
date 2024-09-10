@@ -141,13 +141,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         request.getDestination(),
                         personalisation,
                         request.getNotificationType(),
-                        "");
+                        request.getClientSessionId());
             } else {
                 notificationService.sendText(
                         request.getDestination(),
                         personalisation,
                         request.getNotificationType(),
-                        "");
+                        request.getClientSessionId());
             }
             writeTestClientOtpToS3(
                     request.getNotificationType(), request.getCode(), request.getDestination());

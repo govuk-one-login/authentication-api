@@ -92,7 +92,11 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(CommonTestVariables.EMAIL, personalisation, VERIFY_EMAIL, "");
+                .sendEmail(
+                        CommonTestVariables.EMAIL,
+                        personalisation,
+                        VERIFY_EMAIL,
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -119,7 +123,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION,
-                        "");
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -144,7 +148,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION_SMS,
-                        "");
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -177,7 +181,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         ACCOUNT_CREATED_CONFIRMATION,
-                        "");
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -200,7 +204,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER, "");
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -256,7 +264,11 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(CommonTestVariables.EMAIL, personalisation, VERIFY_EMAIL, "");
+                .sendEmail(
+                        CommonTestVariables.EMAIL,
+                        personalisation,
+                        VERIFY_EMAIL,
+                        CommonTestVariables.CLIENT_SESSION_ID);
 
         RuntimeException exception =
                 assertThrows(
@@ -291,7 +303,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         personalisation,
                         VERIFY_PHONE_NUMBER,
-                        "");
+                        CommonTestVariables.CLIENT_SESSION_ID);
 
         RuntimeException exception =
                 assertThrows(
@@ -324,7 +336,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER, "");
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         var putObjectRequest =
                 PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
@@ -350,7 +366,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS, "");
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        MFA_SMS,
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -373,7 +393,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS, "");
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        MFA_SMS,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         var putObjectRequest =
                 PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
@@ -405,7 +429,7 @@ public class NotificationHandlerTest {
                         notifyRequest.getDestination(),
                         personalisation,
                         ACCOUNT_CREATED_CONFIRMATION,
-                        "");
+                        CommonTestVariables.CLIENT_SESSION_ID);
         var putObjectRequest =
                 PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
         verify(s3Client, times(0)).putObject(eq(putObjectRequest), any(RequestBody.class));
@@ -435,7 +459,10 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendEmail(
-                        CommonTestVariables.EMAIL, personalisation, RESET_PASSWORD_WITH_CODE, "");
+                        CommonTestVariables.EMAIL,
+                        personalisation,
+                        RESET_PASSWORD_WITH_CODE,
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     @Test
@@ -463,7 +490,7 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         personalisation,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
-                        "");
+                        CommonTestVariables.CLIENT_SESSION_ID);
     }
 
     private String buildContactUsUrl() {
