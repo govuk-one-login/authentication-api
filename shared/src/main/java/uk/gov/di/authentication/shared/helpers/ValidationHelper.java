@@ -136,7 +136,9 @@ public class ValidationHelper {
             ConfigurationService configurationService) {
 
         if (code.filter(input::equals).isPresent()) {
-            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
+            if (journeyType != JourneyType.REAUTHENTICATION) {
+                codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
+            }
 
             switch (notificationType) {
                 case MFA_SMS:
@@ -149,25 +151,29 @@ public class ValidationHelper {
             return Optional.of(ErrorResponse.ERROR_1002);
         }
 
-        if (configurationService.supportAccountCreationTTL() && notificationType == VERIFY_EMAIL) {
-            codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(emailAddress);
-        } else {
-            codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
-        }
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            if (configurationService.supportAccountCreationTTL()
+                    && notificationType == VERIFY_EMAIL) {
+                codeStorageService.increaseIncorrectMfaCodeAttemptsCountAccountCreation(
+                        emailAddress);
+            } else {
+                codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
+            }
 
-        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress)
-                > configurationService.getCodeMaxRetries()) {
-            switch (notificationType) {
-                case MFA_SMS:
-                    return Optional.of(ErrorResponse.ERROR_1027);
-                case VERIFY_EMAIL:
-                    return Optional.of(ErrorResponse.ERROR_1033);
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                    return Optional.of(ErrorResponse.ERROR_1048);
-                case VERIFY_PHONE_NUMBER:
-                    return Optional.of(ErrorResponse.ERROR_1034);
-                case RESET_PASSWORD_WITH_CODE:
-                    return Optional.of(ErrorResponse.ERROR_1039);
+            if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress)
+                    > configurationService.getCodeMaxRetries()) {
+                switch (notificationType) {
+                    case MFA_SMS:
+                        return Optional.of(ErrorResponse.ERROR_1027);
+                    case VERIFY_EMAIL:
+                        return Optional.of(ErrorResponse.ERROR_1033);
+                    case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                        return Optional.of(ErrorResponse.ERROR_1048);
+                    case VERIFY_PHONE_NUMBER:
+                        return Optional.of(ErrorResponse.ERROR_1034);
+                    case RESET_PASSWORD_WITH_CODE:
+                        return Optional.of(ErrorResponse.ERROR_1039);
+                }
             }
         }
 
