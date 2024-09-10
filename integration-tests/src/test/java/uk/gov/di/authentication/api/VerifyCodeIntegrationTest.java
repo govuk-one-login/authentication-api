@@ -422,7 +422,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+        }
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {

@@ -158,29 +158,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
 
-            UserProfile userProfile = null;
-
-            if (userProfileMaybe.isPresent()) {
-                userProfile = userProfileMaybe.get();
-            }
-
-            if (journeyType == JourneyType.REAUTHENTICATION
-                    && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                var countsByJourney =
-                        authenticationAttemptsService.getCountsByJourney(
-                                userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
-
-                var countTypesWhereBlocked =
-                        ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                                countsByJourney, configurationService);
-
-                if (!countTypesWhereBlocked.isEmpty()) {
-                    LOG.info(
-                            "Re-authentication locked due to {} counts exceeded.",
-                            countTypesWhereBlocked);
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
-                }
-            }
+            if (checkErrorCountsForReauth(journeyType, userProfileMaybe))
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
@@ -210,23 +189,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             sessionService.save(session);
 
             if (errorResponse.isPresent()) {
-
-                if (journeyType == JourneyType.REAUTHENTICATION
-                        && notificationType == MFA_SMS
-                        && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                    authenticationAttemptsService.createOrIncrementCount(
-                            userProfile.getSubjectID(),
-                            NowHelper.nowPlus(
-                                            configurationService.getReauthEnterSMSCodeCountTTL(),
-                                            ChronoUnit.SECONDS)
-                                    .toInstant()
-                                    .getEpochSecond(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_SMS_CODE);
-                } else {
-                    processBlockedCodeSession(
-                            errorResponse.get(), session, codeRequest, journeyType, auditContext);
-                }
+                handleInvalidVerificationCode(
+                        codeRequest,
+                        journeyType,
+                        notificationType,
+                        userProfileMaybe,
+                        errorResponse,
+                        session,
+                        auditContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -240,12 +210,69 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    session, codeRequest, userContext, userProfile, journeyType, auditContext);
+                    session,
+                    codeRequest,
+                    userContext,
+                    userProfileMaybe.isPresent() ? userProfileMaybe.get().getSubjectID() : null,
+                    journeyType,
+                    auditContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+    }
+
+    private void handleInvalidVerificationCode(
+            VerifyCodeRequest codeRequest,
+            JourneyType journeyType,
+            NotificationType notificationType,
+            Optional<UserProfile> userProfileMaybe,
+            Optional<ErrorResponse> errorResponse,
+            Session session,
+            AuditContext auditContext) {
+        if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()
+                    && userProfileMaybe.isPresent()) {
+                authenticationAttemptsService.createOrIncrementCount(
+                        userProfileMaybe.get().getSubjectID(),
+                        NowHelper.nowPlus(
+                                        configurationService.getReauthEnterSMSCodeCountTTL(),
+                                        ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond(),
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_SMS_CODE);
+            }
+        } else {
+            processBlockedCodeSession(
+                    errorResponse.get(), session, codeRequest, journeyType, auditContext);
+        }
+    }
+
+    private boolean checkErrorCountsForReauth(
+            JourneyType journeyType, Optional<UserProfile> userProfileMaybe) {
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            if (userProfileMaybe.isPresent()) {
+                var countsByJourney =
+                        authenticationAttemptsService.getCountsByJourney(
+                                userProfileMaybe.get().getSubjectID(),
+                                JourneyType.REAUTHENTICATION);
+
+                var countTypesWhereBlocked =
+                        ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                                countsByJourney, configurationService);
+
+                if (!countTypesWhereBlocked.isEmpty()) {
+                    LOG.info(
+                            "Re-authentication locked due to {} counts exceeded.",
+                            countTypesWhereBlocked);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
@@ -279,7 +306,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Session session,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
-            UserProfile userProfile,
+            String subjectId,
             JourneyType journeyType,
             AuditContext auditContext) {
         var notificationType = codeRequest.notificationType();
@@ -306,12 +333,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     levelOfConfidence.getValue(),
                     clientService.isTestJourney(clientId, session.getEmailAddress()),
                     true);
+        }
 
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && userProfile != null
-                    && userProfile.getSubjectID() != null) {
-                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(userProfile.getSubjectID());
-            }
+        if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
+            clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
         }
 
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
