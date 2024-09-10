@@ -59,6 +59,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -548,6 +549,46 @@ class VerifyMfaCodeHandlerTest {
                 pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
                 pair("journey-type", journeyType),
                 pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+    }
+
+    @Test
+    void shouldReturn400IfAnyReauthCountsExceededForAReauthJourney() throws Json.JsonException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        var maxRetries = 5;
+        when(configurationService.getMaxPasswordRetries()).thenReturn(maxRetries);
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, maxRetries));
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        CODE,
+                        JourneyType.REAUTHENTICATION,
+                        AUTH_APP_SECRET);
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+    }
+
+    @Test
+    void shouldReturn200IfAnyReauthCountsExceededButJourneyIsNotReauth() throws Json.JsonException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        var maxRetries = 5;
+        when(configurationService.getMaxPasswordRetries()).thenReturn(maxRetries);
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, maxRetries));
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, AUTH_APP_SECRET);
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(204));
     }
 
     @ParameterizedTest
