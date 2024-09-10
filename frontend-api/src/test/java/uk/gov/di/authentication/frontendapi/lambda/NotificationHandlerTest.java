@@ -413,21 +413,16 @@ public class NotificationHandlerTest {
         return sqsEvent;
     }
 
-    private NotifyRequest createRequest(
-            String destination, NotificationType template, String code) {
-        return new NotifyRequest(
-                destination,
-                template,
-                code,
-                SupportedLanguage.EN,
-                CommonTestVariables.SESSION_ID,
-                CommonTestVariables.CLIENT_SESSION_ID);
-    }
-
     private SQSEvent notifyRequestEvent(String destination, NotificationType template, String code)
             throws Json.JsonException {
-        NotifyRequest notifyRequest = createRequest(destination, template, code);
-        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
-        return generateSQSEvent(notifyRequestString);
+        var notifyRequest =
+                new NotifyRequest(
+                        destination,
+                        template,
+                        code,
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
+        return generateSQSEvent(objectMapper.writeValueAsString(notifyRequest));
     }
 }
