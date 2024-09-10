@@ -10,7 +10,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
@@ -25,7 +24,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.net.URI;
@@ -62,10 +60,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
 
-    @RegisterExtension
-    protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
-            new AuthenticationAttemptsStoreExtension();
-
     @BeforeEach
     void setup() {
         handler =
@@ -73,10 +67,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         REAUTH_SIGNOUT_AND_TXMA_ENABLED_CONFIGUARION_SERVICE,
                         redisConnectionService);
         txmaAuditQueue.clear();
-        var password = "password-1";
-        userStore.signUp(EMAIL_ADDRESS, password);
-        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
-        userStore.setPhoneNumberAndVerificationStatus(EMAIL_ADDRESS, "01234567890", true, true);
     }
 
     private static Stream<NotificationType> emailNotificationTypes() {

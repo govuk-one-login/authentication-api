@@ -52,7 +52,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -61,7 +60,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -364,17 +362,12 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-
-        when(authenticationService.getUserProfileFromEmail(email))
-                .thenReturn(Optional.of(userProfile));
-
         testSession.setEmailAddress(email);
         testSession.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, VERIFY_EMAIL);
-
         var result = makeCallWithCode(body, Optional.of(testSession), TEST_CLIENT_ID);
 
         assertThat(result, hasStatus(204));
@@ -405,10 +398,6 @@ class VerifyCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-
-        when(authenticationService.getUserProfileFromEmail(email))
-                .thenReturn(Optional.of(userProfile));
-
         testSession.setEmailAddress(email);
         testSession.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         String body =
@@ -679,33 +668,6 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "PASSWORD_RESET"));
-    }
-
-    @Test
-    void shouldAllowInteractiveSignInWhenMaxReauthAttemptsReachedAndJourneyIsNotReauthentciation() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, 6));
-        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
-
-        var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
-
-        assertThat(result, hasStatus(204));
-    }
-
-    @Test
-    void shouldReturnMaxReauthAttemptsReachedAndReturn400WhenMaxReauthAttemptsExceeded() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, 6));
-        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
-
-        var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.REAUTHENTICATION);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
     }
 
     @Test

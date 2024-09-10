@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -39,7 +38,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -152,31 +150,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         }
 
-        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
-
-        if (userProfileMaybe.isEmpty()) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
-        }
-
-        UserProfile userProfile = userProfileMaybe.get();
-
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                && JourneyType.REAUTHENTICATION.equals(codeRequest.getJourneyType())) {
-            var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
-            var countTypesWhereLimitExceeded =
-                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                            counts, configurationService);
-
-            if (!countTypesWhereLimitExceeded.isEmpty()) {
-                LOG.info(
-                        "Re-authentication locked due to {} counts exceeded.",
-                        countTypesWhereLimitExceeded);
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
-            }
-        }
-
         LOG.info("Invoking verify MFA code handler");
         try {
             var session = userContext.getSession();
@@ -206,13 +179,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         session);
             }
             processCodeSession(
-                    errorResponse,
-                    session,
-                    input,
-                    userContext,
-                    userProfile,
-                    codeRequest,
-                    mfaCodeProcessor);
+                    errorResponse, session, input, userContext, codeRequest, mfaCodeProcessor);
 
             sessionService.save(session);
 
@@ -276,7 +243,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            UserProfile userProfile,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor) {
         var emailAddress = session.getEmailAddress();
@@ -302,7 +268,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (errorResponse.isEmpty()) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
-                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(userProfile.getSubjectID());
+                Optional<UserProfile> userProfile = userContext.getUserProfile();
+                userProfile.ifPresent(
+                        this::clearReauthAttemptCountsForSuccessfullyReauthenticatedUser);
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
@@ -311,15 +279,19 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            authenticationAttemptsService.createOrIncrementCount(
-                    userProfile.getSubjectID(),
-                    NowHelper.nowPlus(
-                                    configurationService.getReauthEnterAuthAppCodeCountTTL(),
-                                    ChronoUnit.SECONDS)
-                            .toInstant()
-                            .getEpochSecond(),
-                    JourneyType.REAUTHENTICATION,
-                    CountType.ENTER_AUTH_APP_CODE);
+            Optional<UserProfile> userProfile = userContext.getUserProfile();
+            userProfile.ifPresent(
+                    profile ->
+                            authenticationAttemptsService.createOrIncrementCount(
+                                    profile.getSubjectID(),
+                                    NowHelper.nowPlus(
+                                                    configurationService
+                                                            .getReauthEnterAuthAppCodeCountTTL(),
+                                                    ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond(),
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_AUTH_APP_CODE));
         }
 
         if (errorResponse
@@ -330,12 +302,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
-        Arrays.stream(CountType.values())
-                .forEach(
-                        countType ->
-                                authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
+    private void clearReauthAttemptCountsForSuccessfullyReauthenticatedUser(UserProfile profile) {
+        authenticationAttemptsService.deleteCount(
+                profile.getSubjectID(),
+                JourneyType.REAUTHENTICATION,
+                CountType.ENTER_AUTH_APP_CODE);
     }
 
     private static boolean isInvalidReauthAuthAppAttempt(
