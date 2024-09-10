@@ -136,11 +136,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             ErrorResponse.ERROR_1057);
                                 }
 
+                                var updatedAuditContext =
+                                        auditContext.withUserId(userProfile.getSubjectID());
+
                                 return verifyReAuthentication(
                                         userProfile,
                                         userContext,
                                         request.rpPairwiseId(),
-                                        auditContext);
+                                        updatedAuditContext);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
                     .orElseGet(

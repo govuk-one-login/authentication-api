@@ -78,7 +78,7 @@ class CheckReAuthUserHandlerTest {
                     CLIENT_ID,
                     CLIENT_SESSION_ID,
                     SESSION_ID,
-                    AuditService.UNKNOWN,
+                    TEST_SUBJECT_ID,
                     EMAIL_USED_TO_SIGN_IN,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
@@ -232,7 +232,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded);
+                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN));
     }
 
     @Test
@@ -265,7 +265,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        testAuditContextWithAuditEncoded,
+                        testAuditContextWithAuditEncoded.withSubjectId(AuditService.UNKNOWN),
                         pair("number_of_attempts_user_allowed_to_login", MAX_RETRIES));
 
         // In the case where a user is already locked out, we do not emit this event
@@ -366,7 +366,7 @@ class CheckReAuthUserHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded);
+                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN));
     }
 
     private UserProfile generateUserProfile() {
