@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -149,24 +148,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     codeRequest.getMfaMethodType(),
                     codeRequest.getJourneyType());
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-        }
-
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                && JourneyType.REAUTHENTICATION.equals(codeRequest.getJourneyType())) {
-            var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            userContext.getUserProfile().get().getSubjectID(),
-                            JourneyType.REAUTHENTICATION);
-            var countTypesWhereLimitExceeded =
-                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                            counts, configurationService);
-
-            if (!countTypesWhereLimitExceeded.isEmpty()) {
-                LOG.info(
-                        "Re-authentication locked due to {} counts exceeded.",
-                        countTypesWhereLimitExceeded);
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
-            }
         }
 
         LOG.info("Invoking verify MFA code handler");
