@@ -158,7 +158,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
 
-            UserProfile userProfile = userProfileMaybe.get();
+            UserProfile userProfile = null;
+
+            if (userProfileMaybe.isPresent()) {
+                userProfile = userProfileMaybe.get();
+            }
 
             if (journeyType == JourneyType.REAUTHENTICATION
                     && configurationService.isAuthenticationAttemptsServiceEnabled()) {

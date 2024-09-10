@@ -159,7 +159,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
         }
 
-        UserProfile userProfile = userProfileMaybe.get();
+        UserProfile userProfile = null;
+
+        if (userProfileMaybe.isPresent()) {
+            userProfile = userProfileMaybe.get();
+        }
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(journeyType)) {
@@ -302,7 +306,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (errorResponse.isEmpty()) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
+                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
+                    && userProfile != null
+                    && userProfile.getSubjectID() != null) {
                 clearReauthErrorCountsForSuccessfullyAuthenticatedUser(userProfile.getSubjectID());
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
