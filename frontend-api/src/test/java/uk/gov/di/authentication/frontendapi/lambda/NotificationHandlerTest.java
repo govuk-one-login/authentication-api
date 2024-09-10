@@ -74,7 +74,12 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
+                        CommonTestVariables.EMAIL,
+                        VERIFY_EMAIL,
+                        "654321",
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -97,7 +102,9 @@ public class NotificationHandlerTest {
                 new NotifyRequest(
                         CommonTestVariables.EMAIL,
                         PASSWORD_RESET_CONFIRMATION,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -122,7 +129,9 @@ public class NotificationHandlerTest {
                 new NotifyRequest(
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PASSWORD_RESET_CONFIRMATION_SMS,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         var sqsEvent = generateSQSEvent(objectMapper.writeValueAsString(notifyRequest));
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
@@ -151,7 +160,9 @@ public class NotificationHandlerTest {
                 new NotifyRequest(
                         CommonTestVariables.EMAIL,
                         ACCOUNT_CREATED_CONFIRMATION,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -177,7 +188,9 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         "654321",
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -197,7 +210,9 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         TERMS_AND_CONDITIONS_BULK_EMAIL,
                         "",
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -225,7 +240,12 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        CommonTestVariables.EMAIL, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
+                        CommonTestVariables.EMAIL,
+                        VERIFY_EMAIL,
+                        "654321",
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -257,7 +277,9 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         "654321",
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -287,7 +309,12 @@ public class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
+                        NOTIFY_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        "654321",
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -311,7 +338,9 @@ public class NotificationHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         MFA_SMS,
                         "654321",
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -328,7 +357,13 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321", SupportedLanguage.EN);
+                new NotifyRequest(
+                        NOTIFY_PHONE_NUMBER,
+                        MFA_SMS,
+                        "654321",
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -352,7 +387,9 @@ public class NotificationHandlerTest {
                 new NotifyRequest(
                         CommonTestVariables.EMAIL,
                         ACCOUNT_CREATED_CONFIRMATION,
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -382,7 +419,9 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         RESET_PASSWORD_WITH_CODE,
                         "654321",
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
@@ -407,7 +446,9 @@ public class NotificationHandlerTest {
                         CommonTestVariables.EMAIL,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                         "654321",
-                        SupportedLanguage.EN);
+                        SupportedLanguage.EN,
+                        CommonTestVariables.SESSION_ID,
+                        CommonTestVariables.CLIENT_SESSION_ID);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
