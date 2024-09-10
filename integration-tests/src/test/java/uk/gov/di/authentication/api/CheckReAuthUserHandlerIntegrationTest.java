@@ -34,6 +34,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
@@ -41,7 +42,10 @@ import java.util.stream.IntStream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -188,6 +192,11 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                 authCodeExtension.getAuthenticationAttempt(
                         SUBJECT.getValue(), JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL),
                 equalTo(maxRetriesAllowed));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
+                        AUTH_ACCOUNT_TEMPORARILY_LOCKED));
     }
 
     @Test
