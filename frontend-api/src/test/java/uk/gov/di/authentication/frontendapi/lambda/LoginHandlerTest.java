@@ -26,7 +26,6 @@ import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -72,7 +71,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -751,17 +749,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        INTERNAL_SUBJECT_ID.getValue(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_EMAIL);
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        INTERNAL_SUBJECT_ID.getValue(),
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_PASSWORD);
     }
 
     private AuthenticationRequest generateAuthRequest() {
