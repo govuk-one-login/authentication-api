@@ -112,6 +112,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
+        var pairwiseIdMetadataPair = pair("rpPairwiseId", request.rpPairwiseId());
+
         try {
             return authenticationService
                     .getUserProfileByEmailMaybe(request.email())
@@ -143,7 +145,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         userProfile,
                                         userContext,
                                         request.rpPairwiseId(),
-                                        updatedAuditContext);
+                                        updatedAuditContext,
+                                        pairwiseIdMetadataPair);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
                     .orElseGet(
@@ -151,7 +154,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                     generateErrorResponse(
                                             emailUserIsSignedInWith,
                                             request.rpPairwiseId(),
-                                            auditContext));
+                                            auditContext,
+                                            pairwiseIdMetadataPair));
         } catch (AccountLockedException e) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -173,7 +177,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserProfile userProfile,
             UserContext userContext,
             String rpPairwiseId,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            AuditService.MetadataPair pairwiseIdMetadataPair) {
         var client = userContext.getClient().orElseThrow();
 
         var calculatedPairwiseId =
@@ -199,7 +204,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             auditService.submitAuditEvent(
                     AUTH_REAUTH_ACCOUNT_IDENTIFIED,
                     auditContext,
-                    pair("rpPairwiseId", rpPairwiseId),
+                    pairwiseIdMetadataPair,
                     pair("incorrect_email_attempt_count", incorrectEmailCount));
             return Optional.of(rpPairwiseId);
         } else {
@@ -216,7 +221,10 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            String emailUserIsSignedInWith, String rpPairwiseId, AuditContext auditContext) {
+            String emailUserIsSignedInWith,
+            String rpPairwiseId,
+            AuditContext auditContext,
+            AuditService.MetadataPair pairwiseIdMetadataPair) {
 
         String uniqueUserIdentifier;
 
@@ -244,7 +252,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         auditService.submitAuditEvent(
                 AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
                 auditContext,
-                pair("rpPairwiseId", rpPairwiseId),
+                pairwiseIdMetadataPair,
                 pair("incorrect_email_attempt_count", updatedCount));
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
@@ -252,7 +260,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
                     auditContext,
                     pair("attemptNoFailedAt", configurationService.getMaxEmailReAuthRetries()),
-                    pair("rpPairwiseId", rpPairwiseId));
+                    pairwiseIdMetadataPair);
             throw new AccountLockedException(
                     "Re-authentication is locked due to too many failed attempts.",
                     ErrorResponse.ERROR_1057);
