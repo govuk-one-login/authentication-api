@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -141,101 +143,156 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
-        if (!CodeRequestType.isValidCodeRequestType(
-                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
-            LOG.warn(
-                    "Invalid MFA Type '{}' for journey '{}'",
-                    codeRequest.getMfaMethodType(),
-                    codeRequest.getJourneyType());
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-        }
+        var journeyType = codeRequest.getJourneyType();
+        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+        UserProfile userProfile = userProfileMaybe.orElse(null);
 
         LOG.info("Invoking verify MFA code handler");
+
+        if (isInvalidCodeRequestType(codeRequest, journeyType))
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+
+        if (userProfileMissingForReauthenticationJourney(userProfile, journeyType))
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
+
+        if (errorCountsExceededForReauthentication(journeyType, userProfile))
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+
         try {
-            var session = userContext.getSession();
-            var mfaMethodType = codeRequest.getMfaMethodType();
-
-            var mfaCodeProcessor =
-                    mfaCodeProcessorFactory
-                            .getMfaCodeProcessor(mfaMethodType, codeRequest, userContext)
-                            .orElse(null);
-
-            if (Objects.isNull(mfaCodeProcessor)) {
-                LOG.info("No MFA code validator found for this MFA method type");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
-            }
-
-            var errorResponse = mfaCodeProcessor.validateCode();
-
-            if (errorResponse.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
-            }
-            if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
-                SessionHelper.updateSessionWithSubject(
-                        userContext,
-                        authenticationService,
-                        configurationService,
-                        sessionService,
-                        session);
-            }
-            processCodeSession(
-                    errorResponse, session, input, userContext, codeRequest, mfaCodeProcessor);
-
-            sessionService.save(session);
-
-            return errorResponse
-                    .map(response -> generateApiGatewayProxyErrorResponse(400, response))
-                    .orElseGet(
-                            () -> {
-                                var clientSession = userContext.getClientSession();
-                                var clientId = userContext.getClient().get().getClientID();
-                                var levelOfConfidence =
-                                        clientSession
-                                                        .getEffectiveVectorOfTrust()
-                                                        .containsLevelOfConfidence()
-                                                ? clientSession
-                                                        .getEffectiveVectorOfTrust()
-                                                        .getLevelOfConfidence()
-                                                : NONE;
-
-                                LOG.info(
-                                        "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
-                                        codeRequest.getMfaMethodType().getValue(),
-                                        codeRequest.getJourneyType().getValue());
-                                sessionService.save(
-                                        session.setCurrentCredentialStrength(
-                                                        CredentialTrustLevel.MEDIUM_LEVEL)
-                                                .setVerifiedMfaMethodType(
-                                                        codeRequest.getMfaMethodType()));
-                                cloudwatchMetricsService.incrementAuthenticationSuccess(
-                                        session.isNewAccount(),
-                                        clientId,
-                                        userContext.getClientName(),
-                                        levelOfConfidence.getValue(),
-                                        clientService.isTestJourney(
-                                                clientId, session.getEmailAddress()),
-                                        true);
-                                return ApiGatewayResponseHelper
-                                        .generateEmptySuccessApiGatewayResponse();
-                            });
-
+            String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
+            return verifyCode(input, codeRequest, userContext, journeyType, subjectID);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 
-    private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
-            ErrorResponse errorResponse) {
+    private static boolean isInvalidCodeRequestType(
+            VerifyMfaCodeRequest codeRequest, JourneyType journeyType) {
+        if (!CodeRequestType.isValidCodeRequestType(codeRequest.getMfaMethodType(), journeyType)) {
+            LOG.warn(
+                    "Invalid MFA Type '{}' for journey '{}'",
+                    codeRequest.getMfaMethodType(),
+                    journeyType);
+            return true;
+        }
+        return false;
+    }
 
-        Map<ErrorResponse, FrontendAuditableEvent> map =
-                Map.ofEntries(
-                        entry(ErrorResponse.ERROR_1042, AUTH_CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.ERROR_1043, AUTH_INVALID_CODE_SENT),
-                        entry(ErrorResponse.ERROR_1034, AUTH_CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.ERROR_1037, AUTH_INVALID_CODE_SENT));
+    private static boolean userProfileMissingForReauthenticationJourney(
+            UserProfile userProfile, JourneyType journeyType) {
+        return userProfile == null && journeyType == JourneyType.REAUTHENTICATION;
+    }
 
-        return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
+    private boolean errorCountsExceededForReauthentication(
+            JourneyType journeyType, UserProfile userProfile) {
+        if (configurationService.isAuthenticationAttemptsServiceEnabled()
+                && JourneyType.REAUTHENTICATION.equals(journeyType)
+                && userProfile != null) {
+            var counts =
+                    authenticationAttemptsService.getCountsByJourney(
+                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+            var countTypesWhereLimitExceeded =
+                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                            counts, configurationService);
+            if (!countTypesWhereLimitExceeded.isEmpty()) {
+                LOG.info(
+                        "Re-authentication locked due to {} counts exceeded.",
+                        countTypesWhereLimitExceeded);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private APIGatewayProxyResponseEvent verifyCode(
+            APIGatewayProxyRequestEvent input,
+            VerifyMfaCodeRequest codeRequest,
+            UserContext userContext,
+            JourneyType journeyType,
+            String subjectId) {
+
+        var mfaCodeProcessor =
+                mfaCodeProcessorFactory
+                        .getMfaCodeProcessor(
+                                codeRequest.getMfaMethodType(), codeRequest, userContext)
+                        .orElse(null);
+
+        if (Objects.isNull(mfaCodeProcessor)) {
+            LOG.info("No MFA code validator found for this MFA method type");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
+        }
+
+        var errorResponseMaybe = mfaCodeProcessor.validateCode();
+
+        if (errorResponseMaybe.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
+        }
+
+        var session = userContext.getSession();
+
+        if (JourneyType.PASSWORD_RESET_MFA.equals(journeyType)) {
+            SessionHelper.updateSessionWithSubject(
+                    userContext,
+                    authenticationService,
+                    configurationService,
+                    sessionService,
+                    session);
+        }
+
+        processCodeSession(
+                errorResponseMaybe,
+                session,
+                input,
+                userContext,
+                subjectId,
+                codeRequest,
+                mfaCodeProcessor);
+
+        sessionService.save(session);
+
+        return errorResponseMaybe
+                .map(response -> generateApiGatewayProxyErrorResponse(400, response))
+                .orElseGet(
+                        () -> {
+                            var clientSession = userContext.getClientSession();
+                            var levelOfConfidence =
+                                    clientSession
+                                                    .getEffectiveVectorOfTrust()
+                                                    .containsLevelOfConfidence()
+                                            ? clientSession
+                                                    .getEffectiveVectorOfTrust()
+                                                    .getLevelOfConfidence()
+                                            : NONE;
+
+                            LOG.info(
+                                    "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
+                                    codeRequest.getMfaMethodType().getValue(),
+                                    journeyType);
+
+                            sessionService.save(
+                                    session.setCurrentCredentialStrength(
+                                                    CredentialTrustLevel.MEDIUM_LEVEL)
+                                            .setVerifiedMfaMethodType(
+                                                    codeRequest.getMfaMethodType()));
+
+                            var clientId =
+                                    userContext.getClient().isPresent()
+                                            ? userContext.getClient().get().getClientID()
+                                            : null;
+
+                            cloudwatchMetricsService.incrementAuthenticationSuccess(
+                                    session.isNewAccount(),
+                                    clientId,
+                                    userContext.getClientName(),
+                                    levelOfConfidence.getValue(),
+                                    clientService.isTestJourney(
+                                            clientId, session.getEmailAddress()),
+                                    true);
+
+                            return ApiGatewayResponseHelper
+                                    .generateEmptySuccessApiGatewayResponse();
+                        });
     }
 
     private void processCodeSession(
@@ -243,6 +300,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
+            String subjectId,
             VerifyMfaCodeRequest codeRequest,
             MfaCodeProcessor mfaCodeProcessor) {
         var emailAddress = session.getEmailAddress();
@@ -267,10 +325,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (errorResponse.isEmpty()) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP) {
-                Optional<UserProfile> userProfile = userContext.getUserProfile();
-                userProfile.ifPresent(
-                        this::clearReauthAttemptCountsForSuccessfullyReauthenticatedUser);
+                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
+                    && subjectId != null) {
+                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
@@ -278,20 +335,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
 
         if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            Optional<UserProfile> userProfile = userContext.getUserProfile();
-            userProfile.ifPresent(
-                    profile ->
-                            authenticationAttemptsService.createOrIncrementCount(
-                                    profile.getSubjectID(),
-                                    NowHelper.nowPlus(
-                                                    configurationService
-                                                            .getReauthEnterAuthAppCodeCountTTL(),
-                                                    ChronoUnit.SECONDS)
-                                            .toInstant()
-                                            .getEpochSecond(),
-                                    JourneyType.REAUTHENTICATION,
-                                    CountType.ENTER_AUTH_APP_CODE));
+                && configurationService.isAuthenticationAttemptsServiceEnabled()
+                && subjectId != null) {
+            authenticationAttemptsService.createOrIncrementCount(
+                    subjectId,
+                    NowHelper.nowPlus(
+                                    configurationService.getReauthEnterAuthAppCodeCountTTL(),
+                                    ChronoUnit.SECONDS)
+                            .toInstant()
+                            .getEpochSecond(),
+                    JourneyType.REAUTHENTICATION,
+                    CountType.ENTER_AUTH_APP_CODE);
         }
 
         if (errorResponse
@@ -302,11 +356,25 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private void clearReauthAttemptCountsForSuccessfullyReauthenticatedUser(UserProfile profile) {
-        authenticationAttemptsService.deleteCount(
-                profile.getSubjectID(),
-                JourneyType.REAUTHENTICATION,
-                CountType.ENTER_AUTH_APP_CODE);
+    private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
+            ErrorResponse errorResponse) {
+
+        Map<ErrorResponse, FrontendAuditableEvent> map =
+                Map.ofEntries(
+                        entry(ErrorResponse.ERROR_1042, AUTH_CODE_MAX_RETRIES_REACHED),
+                        entry(ErrorResponse.ERROR_1043, AUTH_INVALID_CODE_SENT),
+                        entry(ErrorResponse.ERROR_1034, AUTH_CODE_MAX_RETRIES_REACHED),
+                        entry(ErrorResponse.ERROR_1037, AUTH_INVALID_CODE_SENT));
+
+        return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
+    }
+
+    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
+        Arrays.stream(CountType.values())
+                .forEach(
+                        countType ->
+                                authenticationAttemptsService.deleteCount(
+                                        subjectId, JourneyType.REAUTHENTICATION, countType));
     }
 
     private static boolean isInvalidReauthAuthAppAttempt(

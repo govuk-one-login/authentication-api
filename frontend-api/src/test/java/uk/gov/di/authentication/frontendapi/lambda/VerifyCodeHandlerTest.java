@@ -619,27 +619,36 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        } else {
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
+        }
+
         if (codeRequestType != CodeRequestType.SMS_REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
                             EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, LOCKOUT_DURATION);
         }
+
         verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
-                        AUDIT_CONTEXT,
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("account-recovery", false),
-                        pair(
-                                "journey-type",
-                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", 1),
-                        pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
+                            AUDIT_CONTEXT,
+                            pair("notification-type", MFA_SMS.name()),
+                            pair("account-recovery", false),
+                            pair(
+                                    "journey-type",
+                                    journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
+                            pair("mfa-type", MFAMethodType.SMS.getValue()),
+                            pair("loginFailureCount", 1),
+                            pair("MFACodeEntered", "6543221"),
+                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+        }
     }
 
     @Test
@@ -692,7 +701,7 @@ class VerifyCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
-    void shouldDeleteCountOnSuccessfulSMSCodeRequest(
+    void shouldNotDeleteCountOnSuccessfulSMSCodeRequest(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);

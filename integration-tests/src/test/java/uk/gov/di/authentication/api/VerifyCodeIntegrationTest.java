@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.net.URI;
@@ -59,6 +61,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     public static final String CLIENT_NAME = "test-client-name";
     private static final Subject SUBJECT = new Subject();
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+
+    @RegisterExtension
+    protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
+            new AuthenticationAttemptsStoreExtension();
 
     @BeforeEach
     void setup() {
@@ -300,11 +306,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(journeyType != JourneyType.REAUTHENTICATION));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
+            assertThat(
+                    redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
+                    equalTo(journeyType != JourneyType.REAUTHENTICATION));
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+        } else {
+            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1049));
+        }
     }
 
     @ParameterizedTest
@@ -412,7 +422,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_INVALID_CODE_SENT));
+        }
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {

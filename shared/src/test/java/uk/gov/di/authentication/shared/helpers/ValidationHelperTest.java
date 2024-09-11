@@ -462,11 +462,13 @@ class ValidationHelperTest {
                 EMAIL_ADDRESS,
                 configurationServiceMock);
 
-        if (notificationType == VERIFY_EMAIL) {
-            verify(codeStorageService)
-                    .increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL_ADDRESS);
-        } else {
-            verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS);
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            if (notificationType == VERIFY_EMAIL) {
+                verify(codeStorageService)
+                        .increaseIncorrectMfaCodeAttemptsCountAccountCreation(EMAIL_ADDRESS);
+            } else {
+                verify(codeStorageService).increaseIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            }
         }
     }
 }
