@@ -112,6 +112,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertThat(
                 userInfoResponse.getClaim(OIDCScopeValue.EMAIL.getValue()),
                 equalTo(TEST_EMAIL_ADDRESS));
+        assertThat(
+                redis.getSession(TEST_SESSION_ID).isNewAccount(),
+                equalTo(Session.AccountState.EXISTING));
 
         assertNull(userInfoResponse.getClaim("legacy_subject_id"));
         assertNull(userInfoResponse.getClaim("public_subject_id"));
@@ -181,6 +184,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                                 .toHTTPResponse()
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
+        assertThat(
+                redis.getSession(TEST_SESSION_ID).isNewAccount(),
+                equalTo(Session.AccountState.NEW));
     }
 
     @Test
@@ -215,6 +221,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 equalTo(Session.AccountState.NEW));
 
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
+        assertThat(
+                redis.getSession(TEST_SESSION_ID).isNewAccount(),
+                equalTo(Session.AccountState.NEW));
     }
 
     @Test
@@ -243,6 +252,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                                 .toHTTPResponse()
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
+        assertThat(
+                redis.getSession(TEST_SESSION_ID).isNewAccount(),
+                equalTo(Session.AccountState.NEW));
     }
 
     private UserProfile addTokenToDynamoAndCreateAssociatedUser(

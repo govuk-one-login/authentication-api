@@ -186,6 +186,8 @@ public class UserInfoHandler
                     accessToken.getValue());
         }
 
+        sessionService.storeOrUpdateSession(
+                userSession.setNewAccount(Session.AccountState.EXISTING));
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 
