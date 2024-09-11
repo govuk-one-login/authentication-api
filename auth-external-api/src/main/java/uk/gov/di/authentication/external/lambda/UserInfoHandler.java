@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
@@ -83,6 +84,15 @@ public class UserInfoHandler
         ThreadContext.clearMap();
         LOG.info("Request received to the UserInfoHandler");
         Map<String, String> headers = input.getHeaders();
+
+        String sessionId =
+                getOptionalHeaderValueFromHeaders(
+                                input.getHeaders(),
+                                SESSION_ID_HEADER,
+                                configurationService.getHeadersCaseInsensitive())
+                        .orElse("Not present");
+
+        LOG.info("Session-Id : {} in userinfo request", sessionId);
 
         Optional<String> authorisationHeader =
                 getOptionalHeaderValueFromHeaders(
