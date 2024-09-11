@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -41,16 +42,19 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
+    private final SessionService sessionService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
-            AuditService auditService) {
+            AuditService auditService,
+            SessionService sessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
+        this.sessionService = sessionService;
     }
 
     public UserInfoHandler() {
@@ -65,6 +69,7 @@ public class UserInfoHandler
                 new AccessTokenService(
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.sessionService = new SessionService(configurationService);
     }
 
     @Override
