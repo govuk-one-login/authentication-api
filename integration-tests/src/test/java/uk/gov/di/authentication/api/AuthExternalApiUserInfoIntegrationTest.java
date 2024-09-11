@@ -12,8 +12,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 
@@ -29,8 +32,10 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -40,6 +45,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String TEST_PASSWORD = "password-1";
     private static final Subject TEST_SUBJECT = new Subject();
+    private static final String TEST_SESSION_ID = UUID.randomUUID().toString();
     public static final String ENCODED_DEVICE_DETAILS =
             "YTtKVSlub1YlOSBTeEI4J3pVLVd7Jjl8VkBfREs2N3clZmN+fnU7fXNbcTJjKyEzN2IuUXIgMGttV058fGhUZ0xhenZUdldEblB8SH18XypwXUhWPXhYXTNQeURW%";
 
@@ -61,14 +67,13 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         return txmaAuditQueue.getQueueUrl();
                     }
                 };
-
         handler = new UserInfoHandler(configurationService);
     }
 
     @Test
     void
             shouldCallUserInfoWithAccessTokenAndReturn200WithASingleRequestedClaimAndTwoUnconditionalClaimsButNotClaimsWhichAreNotInAccessToken()
-                    throws ParseException {
+                    throws ParseException, Json.JsonException {
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
@@ -77,13 +82,15 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         accessTokenAsString,
                         List.of(OIDCScopeValue.EMAIL.getValue()),
                         isNewAccount);
+        withNewAccountSession();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         Map.ofEntries(
                                 Map.entry("Authorization", accessToken.toAuthorizationHeader()),
-                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS)),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
                         Map.of());
 
         assertThat(response, hasStatus(200));
@@ -120,14 +127,50 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
-    void shouldReturn401ForAccessTokenThatDoesNotExistInDatabase() {
+    void shouldReturn400AndNoSessionMessageWhenSessionHeaderNotPresent() {
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader())),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+    }
+
+    @Test
+    void shouldReturn400WhenNoSessionPresentForId() {
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+    }
+
+    @Test
+    void shouldReturn401ForAccessTokenThatDoesNotExistInDatabase() throws Json.JsonException {
+        withNewAccountSession();
         var accessToken =
                 new BearerAccessToken("any-as-we-will-not-be-seeding-this-into-the-test-db");
 
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
                         Map.of());
 
         assertThat(response, hasStatus(401));
@@ -141,7 +184,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
-    void shouldReturn401ForAccessTokenThatIsAlreadyUsed() {
+    void shouldReturn401ForAccessTokenThatIsAlreadyUsed() throws Json.JsonException {
+        withNewAccountSession();
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
@@ -153,7 +197,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
                         Map.of());
 
         assertThat(response, hasStatus(401));
@@ -164,12 +210,16 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                                 .toHTTPResponse()
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
+        assertThat(
+                redis.getSession(TEST_SESSION_ID).isNewAccount(),
+                equalTo(Session.AccountState.NEW));
 
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
     }
 
     @Test
-    void shouldReturn401ForAccessTokenThatIsPastItsTtl() {
+    void shouldReturn401ForAccessTokenThatIsPastItsTtl() throws Json.JsonException {
+        withNewAccountSession();
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
@@ -180,7 +230,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         var response =
                 makeRequest(
                         Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
                         Map.of());
 
         assertThat(response, hasStatus(401));
@@ -206,5 +258,10 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         return userStore.getUserProfileFromEmail(TEST_EMAIL_ADDRESS).get();
+    }
+
+    private void withNewAccountSession() throws Json.JsonException {
+        redis.createSession(TEST_SESSION_ID);
+        redis.setIsNewAccount(TEST_SESSION_ID, Session.AccountState.NEW);
     }
 }
