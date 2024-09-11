@@ -216,6 +216,10 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
 
+        when(authenticationAttemptsService.getCount(
+                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
+                .thenReturn(1);
+
         var result =
                 handler.handleRequestWithUserContext(
                         event,
@@ -231,8 +235,10 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN));
+                        FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        pair("incorrect_email_attempt_count", 1));
     }
 
     @Test
@@ -351,6 +357,9 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn404ForWhenUserDoesNotMatch() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
+        when(authenticationAttemptsService.getCount(
+                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
+                .thenReturn(3);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -365,8 +374,10 @@ class CheckReAuthUserHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID,
-                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN));
+                        FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        pair("incorrect_email_attempt_count", 3));
     }
 
     private UserProfile generateUserProfile() {
