@@ -66,6 +66,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final State STATE = new State();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    public static final String REQUEST_BODY =
+            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\"}";
 
     @BeforeEach
     void setup() {
@@ -107,7 +109,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+                makeRequest(
+                        Optional.of(REQUEST_BODY),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
         assertThat(response, hasStatus(200));
 
         var user =
@@ -172,7 +177,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
 
-        var response = makeRequest(Optional.empty(), headers, Map.of());
+        var response = makeRequest(Optional.of(REQUEST_BODY), headers, Map.of());
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -220,7 +225,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+                makeRequest(
+                        Optional.of(REQUEST_BODY),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -268,7 +276,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerClient(keyPair, ClientType.APP);
 
         var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+                makeRequest(
+                        Optional.of(REQUEST_BODY),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
         assertThat(response, hasStatus(200));
 
         var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
@@ -306,7 +317,10 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
-                makeRequest(Optional.empty(), standardHeadersWithSessionId(sessionId), Map.of());
+                makeRequest(
+                        Optional.of(REQUEST_BODY),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
 
         assertThat(response, hasStatus(200));
         assertThat(redis.getSession(sessionId).isAuthenticated(), equalTo(false));
