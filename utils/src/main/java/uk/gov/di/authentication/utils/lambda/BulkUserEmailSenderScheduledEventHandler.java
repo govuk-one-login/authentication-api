@@ -190,7 +190,7 @@ public class BulkUserEmailSenderScheduledEventHandler
     private boolean sendNotifyEmail(String email) throws NotificationClientException {
         if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
             LOG.info("Bulk user email sending email.");
-            notificationService.sendEmail(email, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL);
+            notificationService.sendEmail(email, Map.of(), TERMS_AND_CONDITIONS_BULK_EMAIL, "");
             return true;
         } else {
             LOG.info("Bulk user email email sending not enabled.");

@@ -11,6 +11,7 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.util.Collections.emptyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.frontendapi.services.NotificationServiceTest.FakeNotificationType.FAKE_EMAIL;
@@ -39,7 +40,7 @@ class NotificationServiceTest {
         emailPersonalisation.put("validation-code", "some-code");
         emailPersonalisation.put("email-address", TEST_EMAIL);
 
-        notificationService.sendEmail(TEST_EMAIL, emailPersonalisation, FAKE_EMAIL);
+        notificationService.sendEmail(TEST_EMAIL, emailPersonalisation, FAKE_EMAIL, "");
 
         verify(notificationClient).sendEmail("FAKE_EMAIL", TEST_EMAIL, emailPersonalisation, "");
     }
@@ -49,10 +50,33 @@ class NotificationServiceTest {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", "some-code");
         notificationService.sendText(
-                CommonTestVariables.UK_MOBILE_NUMBER, phonePersonalisation, FAKE_SMS);
+                CommonTestVariables.UK_MOBILE_NUMBER, phonePersonalisation, FAKE_SMS, "");
 
         verify(notificationClient)
                 .sendSms(
                         "FAKE_SMS", CommonTestVariables.UK_MOBILE_NUMBER, phonePersonalisation, "");
+    }
+
+    @Test
+    void shouldAttachReferenceToEmail() throws NotificationClientException {
+        notificationService.sendEmail(
+                CommonTestVariables.EMAIL, emptyMap(), FAKE_EMAIL, "some-reference-id");
+
+        verify(notificationClient)
+                .sendEmail(
+                        "FAKE_EMAIL", CommonTestVariables.EMAIL, emptyMap(), "some-reference-id");
+    }
+
+    @Test
+    void shouldAttachReferenceToText() throws NotificationClientException {
+        notificationService.sendText(
+                CommonTestVariables.UK_MOBILE_NUMBER, emptyMap(), FAKE_SMS, "some-reference-id");
+
+        verify(notificationClient)
+                .sendSms(
+                        "FAKE_SMS",
+                        CommonTestVariables.UK_MOBILE_NUMBER,
+                        emptyMap(),
+                        "some-reference-id");
     }
 }
