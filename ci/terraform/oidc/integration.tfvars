@@ -1,14 +1,16 @@
-oidc_api_lambda_zip_file             = "./artifacts/oidc-api.zip"
-frontend_api_lambda_zip_file         = "./artifacts/frontend-api.zip"
-client_registry_api_lambda_zip_file  = "./artifacts/client-registry-api.zip"
-ipv_api_lambda_zip_file              = "./artifacts/ipv-api.zip"
-doc_checking_app_api_lambda_zip_file = "./artifacts/doc-checking-app-api.zip"
-logging_endpoint_arn                 = ""
-logging_endpoint_arns                = []
-shared_state_bucket                  = "digital-identity-dev-tfstate"
-test_clients_enabled                 = false
-internal_sector_uri                  = "https://identity.integration.account.gov.uk"
-call_ticf_cri                        = true
+oidc_api_lambda_zip_file                = "./artifacts/oidc-api.zip"
+frontend_api_lambda_zip_file            = "./artifacts/frontend-api.zip"
+client_registry_api_lambda_zip_file     = "./artifacts/client-registry-api.zip"
+ipv_api_lambda_zip_file                 = "./artifacts/ipv-api.zip"
+doc_checking_app_api_lambda_zip_file    = "./artifacts/doc-checking-app-api.zip"
+logging_endpoint_arn                    = ""
+logging_endpoint_arns                   = []
+shared_state_bucket                     = "digital-identity-dev-tfstate"
+test_clients_enabled                    = false
+internal_sector_uri                     = "https://identity.integration.account.gov.uk"
+call_ticf_cri                           = true
+support_reauth_signout_enabled          = true
+authentication_attempts_service_enabled = true
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
