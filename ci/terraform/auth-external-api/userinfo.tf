@@ -12,7 +12,9 @@ module "auth_userinfo_role" {
     aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
     aws_iam_policy.access_token_store_signing_key_kms_policy.arn,
-    local.user_credentials_encryption_policy_arn
+    aws_iam_policy.redis_parameter_policy.arn,
+    local.user_credentials_encryption_policy_arn,
+    //ATO-981 Part 4: Setup access to new Auth Session Table
   ]
 }
 
