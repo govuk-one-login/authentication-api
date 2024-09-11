@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -114,9 +115,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var pairwiseIdMetadataPair = pair("rpPairwiseId", request.rpPairwiseId());
 
+        Optional<UserProfile> maybeUserProfileOfUserSuppliedEmail =
+                authenticationService.getUserProfileByEmailMaybe(request.email());
+
         try {
-            return authenticationService
-                    .getUserProfileByEmailMaybe(request.email())
+            return maybeUserProfileOfUserSuppliedEmail
                     .flatMap(
                             userProfile -> {
                                 var countTypesToCounts =
@@ -155,7 +158,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             emailUserIsSignedInWith,
                                             request.rpPairwiseId(),
                                             auditContext,
-                                            pairwiseIdMetadataPair));
+                                            pairwiseIdMetadataPair,
+                                            request.email(),
+                                            maybeUserProfileOfUserSuppliedEmail));
         } catch (AccountLockedException e) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -224,7 +229,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             String emailUserIsSignedInWith,
             String rpPairwiseId,
             AuditContext auditContext,
-            AuditService.MetadataPair pairwiseIdMetadataPair) {
+            AuditService.MetadataPair pairwiseIdMetadataPair,
+            String userSuppliedEmail,
+            Optional<UserProfile> userProfileOfSuppliedEmail) {
 
         String uniqueUserIdentifier;
 
@@ -249,11 +256,23 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationAttemptsService.getCount(
                         uniqueUserIdentifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
 
+        var metadataPairsForIncorrectEmail = new ArrayList<AuditService.MetadataPair>();
+        metadataPairsForIncorrectEmail.add(pairwiseIdMetadataPair);
+        metadataPairsForIncorrectEmail.add(pair("incorrect_email_attempt_count", updatedCount));
+        metadataPairsForIncorrectEmail.add(pair("user_supplied_email", userSuppliedEmail, true));
+
+        if (userProfileOfSuppliedEmail.isPresent()) {
+            metadataPairsForIncorrectEmail.add(
+                    pair(
+                            "user_id_for_user_supplied_email",
+                            userProfileOfSuppliedEmail.get().getSubjectID(),
+                            true));
+        }
+
         auditService.submitAuditEvent(
                 AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
                 auditContext,
-                pairwiseIdMetadataPair,
-                pair("incorrect_email_attempt_count", updatedCount));
+                metadataPairsForIncorrectEmail.toArray(new AuditService.MetadataPair[0]));
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
             auditService.submitAuditEvent(

@@ -238,7 +238,8 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
                         testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
-                        pair("incorrect_email_attempt_count", 1));
+                        pair("incorrect_email_attempt_count", 1),
+                        pair("user_supplied_email", EMAIL_USED_TO_SIGN_IN, true));
     }
 
     @Test
@@ -377,7 +378,42 @@ class CheckReAuthUserHandlerTest {
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
                         testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
                         pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
-                        pair("incorrect_email_attempt_count", 3));
+                        pair("incorrect_email_attempt_count", 3),
+                        pair("user_supplied_email", DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, true));
+    }
+
+    @Test
+    void shouldIncludeTheUserSubjectIdForWhenUserDoesNotMatchButHasAccount() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
+        var differentSubjectId = "ANOTHER_SUBJECT_ID";
+        when(authenticationAttemptsService.getCount(
+                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
+                .thenReturn(3);
+        when(authenticationService.getUserProfileByEmailMaybe(
+                        DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE))
+                .thenReturn(Optional.of(new UserProfile().withSubjectID(differentSubjectId)));
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event,
+                        context,
+                        new CheckReauthUserRequest(
+                                DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, TEST_RP_PAIRWISE_ID),
+                        userContext);
+
+        assertEquals(404, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                        testAuditContextWithAuditEncoded.withUserId(AuditService.UNKNOWN),
+                        pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        pair("incorrect_email_attempt_count", 3),
+                        pair("user_supplied_email", DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, true),
+                        pair("user_id_for_user_supplied_email", differentSubjectId, true));
     }
 
     private UserProfile generateUserProfile() {
