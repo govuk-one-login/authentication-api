@@ -34,8 +34,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTHENTICATION_INVALID;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -237,7 +237,17 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 JourneyType.REAUTHENTICATION,
                 CountType.ENTER_EMAIL);
 
-        if (hasEnteredIncorrectEmailTooManyTimes(uniqueUserIdentifier)) {
+        var updatedCount =
+                authenticationAttemptsService.getCount(
+                        uniqueUserIdentifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
+
+        auditService.submitAuditEvent(
+                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                auditContext,
+                pair("rpPairwiseId", rpPairwiseId),
+                pair("incorrect_email_attempt_count", updatedCount));
+
+        if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
             auditService.submitAuditEvent(
                     AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
                     auditContext,
@@ -248,18 +258,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                     ErrorResponse.ERROR_1057);
         }
 
-        auditService.submitAuditEvent(AUTH_REAUTHENTICATION_INVALID, auditContext);
-
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
     }
 
-    private boolean hasEnteredIncorrectEmailTooManyTimes(String subjectId) {
+    private boolean hasEnteredIncorrectEmailTooManyTimes(int count) {
         var maxRetries = configurationService.getMaxEmailReAuthRetries();
 
-        var incorrectEmailCount =
-                authenticationAttemptsService.getCount(
-                        subjectId, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
-
-        return incorrectEmailCount >= maxRetries;
+        return count >= maxRetries;
     }
 }
