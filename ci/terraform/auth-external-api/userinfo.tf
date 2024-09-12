@@ -29,7 +29,8 @@ module "auth_userinfo" {
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     TXMA_AUDIT_QUEUE_URL = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT  = null
+    LOCALSTACK_ENDPOINT  = null,
+    REDIS_KEY            = local.redis_key
     DYNAMO_ENDPOINT      = null
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
