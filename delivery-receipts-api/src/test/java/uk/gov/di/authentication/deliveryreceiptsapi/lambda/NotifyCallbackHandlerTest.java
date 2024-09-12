@@ -2,6 +2,10 @@ package uk.gov.di.authentication.deliveryreceiptsapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import org.apache.logging.log4j.core.LogEvent;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -25,6 +29,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -119,6 +124,7 @@ class NotifyCallbackHandlerTest {
         verify(cloudwatchMetricsService).incrementCounter("SmsSent", expectedContext);
 
         assertThat(response, hasStatus(204));
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -140,6 +146,7 @@ class NotifyCallbackHandlerTest {
                 .putEmbeddedValue("NotifyDeliveryDuration", 1000, expectedContext);
 
         assertThat(response, hasStatus(204));
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -161,6 +168,7 @@ class NotifyCallbackHandlerTest {
         verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
 
         assertThat(response, hasStatus(204));
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -183,6 +191,7 @@ class NotifyCallbackHandlerTest {
         verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
 
         assertThat(response, hasStatus(204));
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     private static Stream<DeliveryReceiptsNotificationType> emailTemplates() {
@@ -208,6 +217,7 @@ class NotifyCallbackHandlerTest {
                         Map.entry("NotifyStatus", "delivered"));
 
         verify(cloudwatchMetricsService).incrementCounter("EmailSent", expectedMetricsContext);
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -232,6 +242,7 @@ class NotifyCallbackHandlerTest {
         verify(dynamoService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -253,6 +264,7 @@ class NotifyCallbackHandlerTest {
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -267,6 +279,7 @@ class NotifyCallbackHandlerTest {
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -288,6 +301,7 @@ class NotifyCallbackHandlerTest {
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -305,6 +319,7 @@ class NotifyCallbackHandlerTest {
                 "Expected to throw exception");
 
         verifyNoInteractions(cloudwatchMetricsService);
+        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -369,6 +384,7 @@ class NotifyCallbackHandlerTest {
                                     null,
                                     null);
                     handler.handleRequest(eventWithBody(deliveryReceipt), context);
+                    assertThat(logging.events(), haveJourneyId(reference));
                 });
     }
 
@@ -443,5 +459,27 @@ class NotifyCallbackHandlerTest {
     private void setupNotifyTemplate(Optional<DeliveryReceiptsNotificationType> maybeTemplate) {
         when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(maybeTemplate);
+    }
+
+    private Matcher<List<LogEvent>> haveJourneyId(String journeyId) {
+        return new TypeSafeMatcher<>() {
+            @Override
+            protected boolean matchesSafely(List<LogEvent> items) {
+                return items.stream()
+                        .skip(1) // the first line will never have a journey id
+                        .map(LogEvent::getContextData)
+                        .map(item -> item.getValue("journeyId"))
+                        .allMatch(journeyId::equals);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description
+                        .appendText(
+                                "all but the first log events should have a context map with {journeyId=")
+                        .appendValue(journeyId)
+                        .appendText("}");
+            }
+        };
     }
 }
