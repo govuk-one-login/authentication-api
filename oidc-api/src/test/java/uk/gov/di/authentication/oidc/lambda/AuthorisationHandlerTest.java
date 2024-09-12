@@ -1725,110 +1725,150 @@ class AuthorisationHandlerTest {
                             pair("description", expectedErrorObject.getDescription()));
         }
 
-        @Test
-        void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
-            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-            APIGatewayProxyResponseEvent response =
-                    setupExistingSessionAndCookieInHeader(null, null);
+        @Nested
+        class BrowserSessionId {
+            @Test
+            void shouldCreateNewSessionWithNewBSIDWhenNeitherSessionNorBSIDCookiePresent() {
+                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                APIGatewayProxyResponseEvent response =
+                        setupExistingSessionAndCookieInHeader(null, null);
 
-            verify(sessionService).createSession();
-            verify(sessionService).save(sessionCaptor.capture());
-            assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
-            assertEquals(
-                    format(
-                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                    browserSessionIdCookieFromResponse(response));
-        }
+                verify(sessionService).createSession();
+                verify(sessionService).save(sessionCaptor.capture());
+                assertEquals(
+                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                assertEquals(
+                        format(
+                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                        browserSessionIdCookieFromResponse(response));
+            }
 
-        @Test
-        void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
-            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-            APIGatewayProxyResponseEvent response =
-                    setupExistingSessionAndCookieInHeader(null, BROWSER_SESSION_ID);
+            @Test
+            void shouldCreateNewSessionWithNewBSIDWhenNoSessionButCookieBSIDPresent() {
+                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                APIGatewayProxyResponseEvent response =
+                        setupExistingSessionAndCookieInHeader(null, BROWSER_SESSION_ID);
 
-            verify(sessionService).createSession();
-            verify(sessionService).save(sessionCaptor.capture());
-            assertEquals(NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
-            assertEquals(
-                    format(
-                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
-                    browserSessionIdCookieFromResponse(response));
-        }
+                verify(sessionService).createSession();
+                verify(sessionService).save(sessionCaptor.capture());
+                assertEquals(
+                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                assertEquals(
+                        format(
+                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                        browserSessionIdCookieFromResponse(response));
+            }
 
-        @Test
-        void shouldUseExistingSessionEvenWhenBSIDCookieAbsent() {
-            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-            APIGatewayProxyResponseEvent response =
-                    setupExistingSessionAndCookieInHeader(
-                            new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID), null);
+            @Test
+            void shouldCreateNewSessionWhenSessionHasBSIDButCookieDoesNot() {
+                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                APIGatewayProxyResponseEvent response =
+                        setupExistingSessionAndCookieInHeader(
+                                new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
+                                null);
 
-            verify(sessionService, never()).createSession();
-            verify(sessionService).save(sessionCaptor.capture());
-            assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
-            assertEquals(
-                    format(
-                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
-                    browserSessionIdCookieFromResponse(response));
-        }
+                verify(sessionService).createSession();
+                verify(sessionService).save(sessionCaptor.capture());
+                assertEquals(
+                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                assertEquals(
+                        format(
+                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                        browserSessionIdCookieFromResponse(response));
+            }
 
-        @Test
-        void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
-            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-            APIGatewayProxyResponseEvent response =
-                    setupExistingSessionAndCookieInHeader(
-                            new Session(SESSION_ID).withBrowserSessionId(null), BROWSER_SESSION_ID);
+            @Test
+            void shouldUseExistingSessionWithNoBSIDEvenWhenBSIDCookiePresent() {
+                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                APIGatewayProxyResponseEvent response =
+                        setupExistingSessionAndCookieInHeader(
+                                new Session(SESSION_ID).withBrowserSessionId(null),
+                                BROWSER_SESSION_ID);
 
-            verify(sessionService, never()).createSession();
-            verify(sessionService).save(sessionCaptor.capture());
-            assertNull(sessionCaptor.getValue().getBrowserSessionId());
-            assertEquals(2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
-            assertTrue(
-                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
-                            .noneMatch(
-                                    it ->
-                                            it.startsWith(
-                                                    format(
-                                                            "%s=",
-                                                            BROWSER_SESSION_ID_COOKIE_NAME))));
-        }
+                verify(sessionService, never()).createSession();
+                verify(sessionService).save(sessionCaptor.capture());
+                assertNull(sessionCaptor.getValue().getBrowserSessionId());
+                assertEquals(
+                        2, response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size());
+                assertTrue(
+                        response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
+                                .noneMatch(
+                                        it ->
+                                                it.startsWith(
+                                                        format(
+                                                                "%s=",
+                                                                BROWSER_SESSION_ID_COOKIE_NAME))));
+            }
 
-        @Test
-        void shouldUseExistingSessionWhenBSIDsMatch() {
-            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-            APIGatewayProxyResponseEvent response =
-                    setupExistingSessionAndCookieInHeader(
-                            new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
-                            BROWSER_SESSION_ID);
+            @Test
+            void shouldUseExistingSessionWhenBSIDsMatch() {
+                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                APIGatewayProxyResponseEvent response =
+                        setupExistingSessionAndCookieInHeader(
+                                new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
+                                BROWSER_SESSION_ID);
 
-            verify(sessionService, never()).createSession();
-            verify(sessionService).save(sessionCaptor.capture());
-            assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
-            assertEquals(
-                    format(
-                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
-                    browserSessionIdCookieFromResponse(response));
-        }
+                verify(sessionService, never()).createSession();
+                verify(sessionService).save(sessionCaptor.capture());
+                assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                assertEquals(
+                        format(
+                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
+                        browserSessionIdCookieFromResponse(response));
+            }
 
-        @Test
-        void shouldUseExistingSessionEvenWhenBSIDDoNotMatch() {
-            ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
-            APIGatewayProxyResponseEvent response =
-                    setupExistingSessionAndCookieInHeader(
-                            new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
-                            DIFFERENT_BROWSER_SESSION_ID);
+            @Test
+            void shouldCreateNewSessionWhenSessionAndCookieBSIDDoNotMatch() {
+                ArgumentCaptor<Session> sessionCaptor = ArgumentCaptor.forClass(Session.class);
+                APIGatewayProxyResponseEvent response =
+                        setupExistingSessionAndCookieInHeader(
+                                new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID),
+                                DIFFERENT_BROWSER_SESSION_ID);
 
-            verify(sessionService, never()).createSession();
-            verify(sessionService).save(sessionCaptor.capture());
-            assertEquals(BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
-            assertEquals(
-                    format(
-                            "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                            BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
-                    browserSessionIdCookieFromResponse(response));
+                verify(sessionService).createSession();
+                verify(sessionService).save(sessionCaptor.capture());
+                assertEquals(
+                        NEW_BROWSER_SESSION_ID, sessionCaptor.getValue().getBrowserSessionId());
+                assertEquals(
+                        format(
+                                "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                                BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
+                        browserSessionIdCookieFromResponse(response));
+            }
+
+            private APIGatewayProxyResponseEvent setupExistingSessionAndCookieInHeader(
+                    Session existingSession, String browserSessionIdFromCookie) {
+                when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
+                when(configService.isSignOutOnBrowserCloseEnabled()).thenReturn(true);
+                when(sessionService.getSessionFromSessionCookie(any()))
+                        .thenReturn(Optional.ofNullable(existingSession));
+                when(sessionService.createSession())
+                        .thenReturn(
+                                new Session(NEW_SESSION_ID)
+                                        .withBrowserSessionId(NEW_BROWSER_SESSION_ID));
+
+                Map<String, String> requestParams = buildRequestParams(null);
+                APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+                event.setRequestContext(
+                        new ProxyRequestContext()
+                                .withIdentity(
+                                        new RequestIdentity().withSourceIp("123.123.123.123")));
+                if (browserSessionIdFromCookie != null) {
+                    event.setHeaders(
+                            Map.of(
+                                    "Cookie",
+                                    format(
+                                            "%s=%s",
+                                            BROWSER_SESSION_ID_COOKIE_NAME,
+                                            browserSessionIdFromCookie)));
+                }
+
+                return makeHandlerRequest(event);
+            }
         }
     }
 
@@ -2389,30 +2429,9 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private APIGatewayProxyResponseEvent setupExistingSessionAndCookieInHeader(
-            Session existingSession, String browserSessionIdFromCookie) {
-        when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
-        when(sessionService.getSessionFromSessionCookie(any()))
-                .thenReturn(Optional.ofNullable(existingSession));
-        when(sessionService.createSession())
-                .thenReturn(
-                        new Session(NEW_SESSION_ID).withBrowserSessionId(NEW_BROWSER_SESSION_ID));
-
-        Map<String, String> requestParams = buildRequestParams(null);
-        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
-        event.setRequestContext(
-                new ProxyRequestContext()
-                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-        if (browserSessionIdFromCookie != null) {
-            event.setHeaders(Map.of(BROWSER_SESSION_ID_COOKIE_NAME, browserSessionIdFromCookie));
-        }
-
-        return makeHandlerRequest(event);
-    }
-
     private String browserSessionIdCookieFromResponse(APIGatewayProxyResponseEvent response) {
         return response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).stream()
-                .filter(it -> it.startsWith(format("%s", BROWSER_SESSION_ID_COOKIE_NAME)))
+                .filter(it -> it.startsWith(format("%s=", BROWSER_SESSION_ID_COOKIE_NAME)))
                 .findAny()
                 .orElseThrow();
     }

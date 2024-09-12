@@ -392,13 +392,26 @@ public class AuthorisationHandler
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
 
+        Optional<Session> sessionWithValidBrowserSessionId;
+
+        Optional<String> browserSessionIdFromSession = session.map(Session::getBrowserSessionId);
+        Optional<String> browserSessionIdFromCookie =
+                CookieHelper.parseBrowserSessionCookie(input.getHeaders());
+
         // TODO: ATO-989: delete these logs once feature metrics are complete
         if (configurationService.isBrowserSessionCookieEnabled() && session.isPresent()) {
-            logBrowserSessionIdMetrics(
-                    session.map(Session::getBrowserSessionId),
-                    CookieHelper.parseBrowserSessionCookie(input.getHeaders()));
+            logBrowserSessionIdMetrics(browserSessionIdFromSession, browserSessionIdFromCookie);
         }
         //
+
+        if (configurationService.isBrowserSessionCookieEnabled()
+                && configurationService.isSignOutOnBrowserCloseEnabled()
+                && browserSessionIdFromSession.isPresent()
+                && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
+            sessionWithValidBrowserSessionId = Optional.empty();
+        } else {
+            sessionWithValidBrowserSessionId = session;
+        }
 
         var vtrList = getVtrList(reauthRequested, authRequest);
         ClientSession clientSession =
@@ -419,7 +432,7 @@ public class AuthorisationHandler
                     user);
         }
         return handleAuthJourney(
-                session,
+                sessionWithValidBrowserSessionId,
                 clientSession,
                 authRequest,
                 persistentSessionId,
