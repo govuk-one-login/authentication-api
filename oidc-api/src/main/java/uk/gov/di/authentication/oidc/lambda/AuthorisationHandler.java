@@ -647,19 +647,26 @@ public class AuthorisationHandler
                         client, configurationService.getInternalSectorURI());
         var state = new State();
         orchestrationAuthorizationService.storeState(session.getSessionId(), state);
-        String reauthenticateClaim;
 
-        try {
-            reauthenticateClaim =
-                    reauthRequested ? getReauthenticateClaim(authenticationRequest) : null;
-        } catch (RuntimeException e) {
-            return generateErrorResponse(
-                    authenticationRequest.getRedirectionURI(),
-                    authenticationRequest.getState(),
-                    authenticationRequest.getResponseMode(),
-                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
-                    authenticationRequest.getClientID().getValue(),
-                    user);
+        String reauthSub = null;
+        String reauthSid = null;
+        if (reauthRequested) {
+            try {
+                SignedJWT reauthIdToken = getReauthIdToken(authenticationRequest);
+                reauthSub = reauthIdToken.getJWTClaimsSet().getSubject();
+                reauthSid = reauthIdToken.getJWTClaimsSet().getStringClaim("sid");
+            } catch (RuntimeException e) {
+                return generateErrorResponse(
+                        authenticationRequest.getRedirectionURI(),
+                        authenticationRequest.getState(),
+                        authenticationRequest.getResponseMode(),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
+                        authenticationRequest.getClientID().getValue(),
+                        user);
+            } catch (java.text.ParseException e) {
+                LOG.warn("Unable to parse id_token_hint SignedJWT into claims");
+                throw new RuntimeException("Invalid id_token_hint");
+            }
         }
 
         var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
@@ -684,7 +691,8 @@ public class AuthorisationHandler
                         .claim("state", state.getValue())
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
-                        .claim("reauthenticate", reauthenticateClaim);
+                        .claim("reauthenticate", reauthSub)
+                        .claim("previous_govuk_signin_journey_id", reauthSid);
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 
         var claimsSetRequest =
@@ -900,7 +908,7 @@ public class AuthorisationHandler
                 .build();
     }
 
-    private String getReauthenticateClaim(AuthenticationRequest authenticationRequest) {
+    private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest) {
         boolean isTokenSignatureValid =
                 segmentedFunctionCall(
                         "isTokenSignatureValid",
@@ -914,14 +922,13 @@ public class AuthorisationHandler
             throw new RuntimeException("Unable to validate id_token_hint");
         }
 
+        SignedJWT idToken;
         String aud;
-        String sub;
         try {
-            SignedJWT idToken =
+            idToken =
                     SignedJWT.parse(
                             authenticationRequest.getCustomParameter("id_token_hint").get(0));
             aud = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
-            sub = idToken.getJWTClaimsSet().getSubject();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse id_token_hint into SignedJWT");
             throw new RuntimeException("Invalid id_token_hint");
@@ -931,8 +938,7 @@ public class AuthorisationHandler
             LOG.warn("Audience on id_token_hint does not match client ID");
             throw new RuntimeException("Invalid id_token_hint for client");
         }
-
-        return sub;
+        return idToken;
     }
 
     private void logBrowserSessionIdMetrics(

@@ -227,7 +227,11 @@ class AuthorisationHandlerTest {
     private static final Subject SUBJECT = new Subject();
     private static final String SERIALIZED_SIGNED_ID_TOKEN =
             TokenGeneratorHelper.generateIDToken(
-                            CLIENT_ID.getValue(), SUBJECT, "http://localhost-rp", EC_SIGNING_KEY)
+                            CLIENT_ID.getValue(),
+                            SUBJECT,
+                            "http://localhost-rp",
+                            CLIENT_SESSION_ID,
+                            EC_SIGNING_KEY)
                     .serialize();
     private static final String ID_TOKEN_AUDIENCE = getIdTokenAudience();
     private static final String TXMA_ENCODED_HEADER_VALUE = "dGVzdAo=";
@@ -1339,7 +1343,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldNotAddReauthenticateClaimForQueryParameters() {
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParameters() {
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
@@ -1357,10 +1361,12 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
             assertThat(uri.getQuery(), not(containsString("reauthenticate")));
+            assertThat(uri.getQuery(), not(containsString("previous_govuk_signin_journey_id")));
         }
 
         @Test
-        void shouldNotAddReauthenticateClaimForQueryParametersWithAuthOrchSplitEnabled() {
+        void
+                shouldNotAddReauthenticateOrPreviousJourneyIdClaimForQueryParametersWithAuthOrchSplitEnabled() {
             Map<String, String> requestParams =
                     buildRequestParams(
                             Map.of(
@@ -1379,10 +1385,11 @@ class AuthorisationHandlerTest {
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
             assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
         }
 
         @Test
-        void shouldAddReauthenticateClaimIfPromptIsLoginAndIdTokenIsValid()
+        void shouldAddReauthenticateAndPreviousJourneyIdClaimIfPromptIsLoginAndIdTokenIsValid()
                 throws JOSEException, ParseException {
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
@@ -1417,6 +1424,9 @@ class AuthorisationHandlerTest {
             assertThat(
                     argument.getValue().getStringClaim("reauthenticate"),
                     equalTo(SUBJECT.getValue()));
+            assertThat(
+                    argument.getValue().getStringClaim("previous_govuk_signin_journey_id"),
+                    equalTo(CLIENT_SESSION_ID));
         }
 
         @Test
@@ -1483,8 +1493,8 @@ class AuthorisationHandlerTest {
 
         @ParameterizedTest
         @MethodSource("prompts")
-        void shouldNotAddReauthenticateClaimIfPromptIsNotLoginAndIdTokenIsValid(Prompt.Type prompt)
-                throws JOSEException {
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfPromptIsNotLoginAndIdTokenIsValid(
+                Prompt.Type prompt) throws JOSEException {
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
             var jwtClaimsSet =
@@ -1516,10 +1526,12 @@ class AuthorisationHandlerTest {
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
             assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
         }
 
         @Test
-        void shouldNotAddReauthenticateClaimIfIdTokenHintIsNotPresent() throws JOSEException {
+        void shouldNotAddReauthenticateOrPreviousJourneyIdClaimIfIdTokenHintIsNotPresent()
+                throws JOSEException {
             var jwtClaimsSet =
                     buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
 
@@ -1546,6 +1558,7 @@ class AuthorisationHandlerTest {
             ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
             assertNull(argument.getValue().getClaim("reauthenticate"));
+            assertNull(argument.getValue().getClaim("previous_govuk_signin_journey_id"));
         }
 
         @Test
