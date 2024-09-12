@@ -27,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -104,7 +105,8 @@ class NotifyCallbackHandlerTest {
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
             String number, String expectedCountryCode, String status) throws Json.JsonException {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
-        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID, reference);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         var expectedContext =
@@ -126,9 +128,10 @@ class NotifyCallbackHandlerTest {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var createdAtDate = Instant.now();
         var completedAt = createdAtDate.plusMillis(1000);
+        var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 deliveryReceiptWithCreatedAtAndCompletedAt(
-                        "sms", "delivered", createdAtDate, completedAt);
+                        "sms", "delivered", createdAtDate, completedAt, reference);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         var expectedContext = Map.of("Environment", ENVIRONMENT, "NotificationType", "sms");
@@ -145,9 +148,14 @@ class NotifyCallbackHandlerTest {
                     throws Json.JsonException {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var deliveryStatus = "permanentFailure";
+        var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 deliveryReceiptWithCreatedAtAndCompletedAt(
-                        "sms", deliveryStatus, Instant.now(), Instant.now().plusMillis(1));
+                        "sms",
+                        deliveryStatus,
+                        Instant.now(),
+                        Instant.now().plusMillis(1),
+                        reference);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
@@ -159,9 +167,10 @@ class NotifyCallbackHandlerTest {
     void shouldNotThrowAnErrorWhenMetricsParsingFails() throws Json.JsonException {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var invalidCreatedAtDate = "not-a-date";
+        var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 createDeliveryReceipt(
-                        "some-reference",
+                        reference,
                         UK_PHONE_NUMBER,
                         "delivered",
                         "sms",
@@ -187,7 +196,9 @@ class NotifyCallbackHandlerTest {
     void shouldCallCloudwatchMetricWithEmailNotificationType(DeliveryReceiptsNotificationType type)
             throws Json.JsonException {
         setupNotifyTemplate(Optional.of(type));
-        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         var expectedMetricsContext =
@@ -210,7 +221,9 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         String subjectId = "subject-id-1";
         UserProfile userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(subjectId);
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
@@ -232,7 +245,9 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
@@ -244,7 +259,9 @@ class NotifyCallbackHandlerTest {
     void shouldNotUpdateBulkEmailDeliveryReceiptsStatusWhenBulkEmailSwitchedOff()
             throws Json.JsonException {
         setupNotifyTemplate(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
-        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
@@ -263,7 +280,9 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
@@ -274,7 +293,9 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldThrowIfInvalidTemplateId() throws Json.JsonException {
         setupNotifyTemplate(Optional.empty());
-        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
+        var reference = UUID.randomUUID().toString();
+        var deliveryReceipt =
+                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
 
         var event = eventWithBody(deliveryReceipt);
 
@@ -336,9 +357,10 @@ class NotifyCallbackHandlerTest {
                 () -> {
                     when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                             .thenReturn(Optional.of(VERIFY_PHONE_NUMBER));
+                    var reference = UUID.randomUUID().toString();
                     var deliveryReceipt =
                             createDeliveryReceipt(
-                                    null,
+                                    reference,
                                     "+447316763843",
                                     "delivered",
                                     "sms",
@@ -373,9 +395,13 @@ class NotifyCallbackHandlerTest {
     }
 
     private NotifyDeliveryReceipt createDeliveryReceipt(
-            String destination, String status, String notificationType, String templateID) {
+            String destination,
+            String status,
+            String notificationType,
+            String templateID,
+            String reference) {
         return createDeliveryReceipt(
-                null,
+                reference,
                 destination,
                 status,
                 notificationType,
@@ -391,9 +417,13 @@ class NotifyCallbackHandlerTest {
     }
 
     private NotifyDeliveryReceipt deliveryReceiptWithCreatedAtAndCompletedAt(
-            String notificationType, String status, Instant createdAt, Instant completedAt) {
+            String notificationType,
+            String status,
+            Instant createdAt,
+            Instant completedAt,
+            String reference) {
         return createDeliveryReceipt(
-                "some-reference",
+                reference,
                 "+447316763843",
                 status,
                 notificationType,
