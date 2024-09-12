@@ -51,6 +51,7 @@ module "auth_userinfo" {
   authentication_vpc_arn = local.authentication_vpc_arn
   security_group_ids = [
     local.authentication_security_group_id,
+    local.authentication_oidc_redis_security_group_id
   ]
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.auth_userinfo_role.arn
