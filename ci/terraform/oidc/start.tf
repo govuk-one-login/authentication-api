@@ -23,7 +23,7 @@ module "start" {
 
   endpoint_name   = "start"
   path_part       = "start"
-  endpoint_method = ["GET", "POST"]
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
