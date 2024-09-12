@@ -2,7 +2,7 @@
     <Appenders>
         <Lambda name="Lambda">
             <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
-                <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
+                <KeyValuePair key="govuk_signin_journey_id" value="$${ctx:journeyId:-unknown}"/>
             </JsonLayout>
         </Lambda>
     </Appenders>
