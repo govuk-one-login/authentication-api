@@ -367,6 +367,23 @@ class NotifyCallbackHandlerTest {
     }
 
     @Test
+    void shouldErrorIfPayloadFailsToParse() {
+        var malformedBodyPayload =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN))
+                        .withBody("not-a-valid-delivery-receipt");
+
+        var exception =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> handler.handleRequest(malformedBodyPayload, context),
+                        "Expected to throw exception");
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        assertThat(exception.getMessage(), equalTo("Unable to parse Notify Delivery Receipt"));
+    }
+
+    @Test
     void shouldParsePayloadWithExpectedNullValues() {
         assertDoesNotThrow(
                 () -> {
