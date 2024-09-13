@@ -68,6 +68,13 @@ class CheckReAuthUserHandlerTest {
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "http://www.example.com";
     private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
+    private static final UserProfile USER_PROFILE =
+            new UserProfile()
+                    .withEmail(EMAIL_USED_TO_SIGN_IN)
+                    .withEmailVerified(true)
+                    .withPhoneNumberVerified(true)
+                    .withPublicSubjectID(new Subject().getValue())
+                    .withSubjectID(TEST_SUBJECT_ID);
 
     private final Session session =
             new Session(SESSION_ID)
@@ -102,11 +109,10 @@ class CheckReAuthUserHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        var userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(userProfile));
+                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(userProfile);
+                .thenReturn(USER_PROFILE);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
 
         when(userContext.getClient()).thenReturn(Optional.of(clientRegistry));
@@ -144,10 +150,9 @@ class CheckReAuthUserHandlerTest {
 
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
-        var userProfile = generateUserProfile();
         var expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
-                                userProfile,
+                                USER_PROFILE,
                                 clientRegistry,
                                 authenticationService,
                                 INTERNAL_SECTOR_URI)
@@ -182,11 +187,9 @@ class CheckReAuthUserHandlerTest {
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
         when(userContext.getTxmaAuditEncoded()).thenReturn(null);
 
-        var userProfile = generateUserProfile();
-
         var expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
-                                userProfile,
+                                USER_PROFILE,
                                 clientRegistry,
                                 authenticationService,
                                 INTERNAL_SECTOR_URI)
@@ -248,12 +251,11 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-        var userProfile = generateUserProfile();
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(userProfile));
+                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(userProfile);
+                .thenReturn(USER_PROFILE);
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
@@ -299,10 +301,9 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-        var userProfile = generateUserProfile();
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(userProfile));
+                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
@@ -311,7 +312,7 @@ class CheckReAuthUserHandlerTest {
 
         var expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
-                                userProfile,
+                                USER_PROFILE,
                                 clientRegistry,
                                 authenticationService,
                                 INTERNAL_SECTOR_URI)
@@ -339,10 +340,8 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-        var userProfile = generateUserProfile();
-
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(userProfile));
+                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
@@ -351,7 +350,7 @@ class CheckReAuthUserHandlerTest {
 
         var expectedRpPairwiseSub =
                 ClientSubjectHelper.getSubject(
-                                userProfile,
+                                USER_PROFILE,
                                 clientRegistry,
                                 authenticationService,
                                 INTERNAL_SECTOR_URI)
@@ -429,14 +428,5 @@ class CheckReAuthUserHandlerTest {
                         pair("incorrect_email_attempt_count", 3),
                         pair("user_supplied_email", DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, true),
                         pair("user_id_for_user_supplied_email", differentSubjectId, true));
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(EMAIL_USED_TO_SIGN_IN)
-                .withEmailVerified(true)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(new Subject().getValue())
-                .withSubjectID(TEST_SUBJECT_ID);
     }
 }
