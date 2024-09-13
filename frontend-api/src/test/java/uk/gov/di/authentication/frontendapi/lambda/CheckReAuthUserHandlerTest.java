@@ -289,8 +289,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        var expectedErrorResponse = ErrorResponse.ERROR_1057;
-        assertThat(result, hasJsonBody(expectedErrorResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
     }
 
     @Test
@@ -309,8 +308,7 @@ class CheckReAuthUserHandlerTest {
                         userContext);
 
         assertEquals(400, result.getStatusCode());
-        var expectedErrorResponse = ErrorResponse.ERROR_1057;
-        assertThat(result, hasJsonBody(expectedErrorResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
     }
 
     @Test
