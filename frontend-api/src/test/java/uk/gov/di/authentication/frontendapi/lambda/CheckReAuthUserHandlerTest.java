@@ -275,12 +275,6 @@ class CheckReAuthUserHandlerTest {
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
-        CheckReauthUserRequest checkReauthUserRequest =
-                new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        checkReauthUserRequest.rpPairwiseId(), JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
-
         var result =
                 handler.handleRequestWithUserContext(
                         API_REQUEST_EVENT_WITH_VALID_HEADERS,
