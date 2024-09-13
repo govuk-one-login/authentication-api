@@ -101,6 +101,8 @@ class CheckReAuthUserHandlerTest {
 
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
+    private String expectedRpPairwiseSub;
+
     private static final byte[] SALT = SaltHelper.generateNewSalt();
 
     private CheckReAuthUserHandler handler;
@@ -124,8 +126,17 @@ class CheckReAuthUserHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
-
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
+
+        expectedRpPairwiseSub =
+                ClientSubjectHelper.getSubject(
+                                USER_PROFILE,
+                                clientRegistry,
+                                authenticationService,
+                                INTERNAL_SECTOR_URI)
+                        .getValue();
 
         handler =
                 new CheckReAuthUserHandler(
@@ -147,16 +158,6 @@ class CheckReAuthUserHandlerTest {
         when(authenticationAttemptsService.getCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
                 .thenReturn(existingCountOfIncorrectEmails);
-
-        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
-
-        var expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                                USER_PROFILE,
-                                clientRegistry,
-                                authenticationService,
-                                INTERNAL_SECTOR_URI)
-                        .getValue();
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -184,16 +185,7 @@ class CheckReAuthUserHandlerTest {
         var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
-        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
         when(userContext.getTxmaAuditEncoded()).thenReturn(null);
-
-        var expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                                USER_PROFILE,
-                                clientRegistry,
-                                authenticationService,
-                                INTERNAL_SECTOR_URI)
-                        .getValue();
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -308,15 +300,6 @@ class CheckReAuthUserHandlerTest {
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
-        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
-
-        var expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                                USER_PROFILE,
-                                clientRegistry,
-                                authenticationService,
-                                INTERNAL_SECTOR_URI)
-                        .getValue();
         CheckReauthUserRequest checkReauthUserRequest =
                 new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub);
         when(authenticationAttemptsService.getCountsByJourney(
@@ -345,16 +328,6 @@ class CheckReAuthUserHandlerTest {
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
-
-        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
-
-        var expectedRpPairwiseSub =
-                ClientSubjectHelper.getSubject(
-                                USER_PROFILE,
-                                clientRegistry,
-                                authenticationService,
-                                INTERNAL_SECTOR_URI)
-                        .getValue();
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -407,7 +380,6 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(
                         DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE))
                 .thenReturn(Optional.of(new UserProfile().withSubjectID(differentSubjectId)));
-        when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
         var result =
                 handler.handleRequestWithUserContext(
