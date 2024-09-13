@@ -156,9 +156,7 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn200ForSuccessfulReAuthRequest() {
         var existingCountOfIncorrectEmails = 1;
-        when(authenticationAttemptsService.getCount(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
-                .thenReturn(existingCountOfIncorrectEmails);
+        setupExistingEnterEmailAttemptsCount(existingCountOfIncorrectEmails);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -205,9 +203,7 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
 
-        when(authenticationAttemptsService.getCount(
-                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
-                .thenReturn(1);
+        setupExistingEnterEmailAttemptsCount(1);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -233,9 +229,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
-        when(authenticationAttemptsService.getCountsByJourney(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
+        setupExistingEnterEmailAttemptsCount(MAX_RETRIES);
         var result =
                 handler.handleRequestWithUserContext(
                         API_REQUEST_EVENT_WITH_VALID_HEADERS,
@@ -321,9 +315,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn404ForWhenUserDoesNotMatch() {
-        when(authenticationAttemptsService.getCount(
-                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
-                .thenReturn(3);
+        setupExistingEnterEmailAttemptsCount(3);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -348,9 +340,7 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldIncludeTheUserSubjectIdForWhenUserDoesNotMatchButHasAccount() {
         var differentSubjectId = "ANOTHER_SUBJECT_ID";
-        when(authenticationAttemptsService.getCount(
-                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
-                .thenReturn(3);
+        setupExistingEnterEmailAttemptsCount(3);
         when(authenticationService.getUserProfileByEmailMaybe(
                         DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE))
                 .thenReturn(Optional.of(new UserProfile().withSubjectID(differentSubjectId)));
@@ -374,5 +364,14 @@ class CheckReAuthUserHandlerTest {
                         pair("incorrect_email_attempt_count", 3),
                         pair("user_supplied_email", DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, true),
                         pair("user_id_for_user_supplied_email", differentSubjectId, true));
+    }
+
+    private void setupExistingEnterEmailAttemptsCount(int count) {
+        when(authenticationAttemptsService.getCount(
+                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
+                .thenReturn(count);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
     }
 }
