@@ -11,6 +11,8 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -218,7 +220,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (!credentialsAreValid(request, userProfile)) {
             return handleInvalidCredentials(
-                    request, incorrectPasswordCount, auditContext, userProfile, isReauthJourney);
+                    request,
+                    incorrectPasswordCount,
+                    auditContext,
+                    userProfile,
+                    isReauthJourney,
+                    userContext);
         }
 
         return handleValidCredentials(
@@ -309,7 +316,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             int incorrectPasswordCount,
             AuditContext auditContext,
             UserProfile userProfile,
-            boolean isReauthJourney) {
+            boolean isReauthJourney,
+            UserContext userContext) {
         var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
 
         incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
@@ -322,6 +330,28 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
 
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+                var client = userContext.getClient().orElseThrow();
+                var calculatedPairwiseId =
+                        ClientSubjectHelper.getSubject(
+                                        userProfile,
+                                        client,
+                                        authenticationService,
+                                        configurationService.getInternalSectorUri())
+                                .getValue();
+                AuditService.MetadataPair[] metadataPairs =
+                        ReauthMetadataBuilder.builder(calculatedPairwiseId)
+                                .withAllIncorrectAttemptCounts(
+                                        authenticationAttemptsService.getCountsByJourney(
+                                                userProfile.getSubjectID(),
+                                                JourneyType.REAUTHENTICATION))
+                                .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
+                                .build();
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED, auditContext, metadataPairs);
+            }
+
             if (isJourneyWhereBlockingApplies(isReauthJourney)) {
                 blockUser(
                         userProfile.getSubjectID(),
