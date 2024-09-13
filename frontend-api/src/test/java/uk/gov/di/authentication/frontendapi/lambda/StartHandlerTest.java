@@ -245,7 +245,6 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
-        when(userContext.getClientSession()).thenReturn(clientSession);
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
@@ -293,7 +292,6 @@ class StartHandlerTest {
 
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
-        when(userContext.getClientSession()).thenReturn(clientSession);
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
@@ -326,7 +324,6 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
             throws ParseException, Json.JsonException {
-        when(userContext.getClientSession()).thenReturn(clientSession);
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
