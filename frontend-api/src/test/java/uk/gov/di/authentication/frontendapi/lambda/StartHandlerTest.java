@@ -57,6 +57,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -150,19 +151,8 @@ class StartHandlerTest {
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
             throws ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
-        when(startService.getCookieConsentValue(anyMap(), anyString()))
-                .thenReturn(cookieConsentValue);
-        when(startService.buildUserStartInfo(
-                        userContext,
-                        cookieConsentValue,
-                        gaTrackingId,
-                        true,
-                        false,
-                        Optional.empty()))
-                .thenReturn(userStartInfo);
         usingValidClientSession();
         usingValidSession();
 
@@ -194,22 +184,16 @@ class StartHandlerTest {
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null, false);
-        when(startService.buildUserContext(session, docAppClientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext))
-                .thenReturn(
-                        new ClientStartInfo(
-                                TEST_CLIENT_NAME,
-                                DOC_APP_SCOPE.toStringList(),
-                                "MANDATORY",
-                                false,
-                                REDIRECT_URL,
-                                STATE,
-                                false));
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(
-                        userContext, null, null, true, false, Optional.empty()))
-                .thenReturn(userStartInfo);
+        var clientStartInfo =
+                new ClientStartInfo(
+                        TEST_CLIENT_NAME,
+                        DOC_APP_SCOPE.toStringList(),
+                        "MANDATORY",
+                        false,
+                        REDIRECT_URL,
+                        STATE,
+                        false);
+        usingStartServiceThatReturns(userContext, clientStartInfo, userStartInfo);
         usingValidDocAppClientSession();
         usingValidSession();
 
@@ -243,12 +227,8 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, true, Optional.empty()))
-                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
 
@@ -289,12 +269,8 @@ class StartHandlerTest {
 
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, true, Optional.empty()))
-                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
 
@@ -320,13 +296,8 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
             throws ParseException, Json.JsonException {
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(
-                        userContext, null, null, true, false, Optional.empty()))
-                .thenReturn(new UserStartInfo(false, false, true, null, null, false, null, false));
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
 
@@ -488,5 +459,17 @@ class StartHandlerTest {
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
                 false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null, false);
+    }
+
+    private void usingStartServiceThatReturns(
+            UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo)
+            throws ParseException {
+        when(startService.buildUserContext(eq(session), any())).thenReturn(userContext);
+        when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
+        when(startService.getGATrackingId(anyMap())).thenReturn(null);
+        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
+        when(startService.buildUserStartInfo(
+                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), any()))
+                .thenReturn(userStartInfo);
     }
 }
