@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,7 +46,6 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 
@@ -75,6 +74,11 @@ class CheckReAuthUserHandlerTest {
                     .withPhoneNumberVerified(true)
                     .withPublicSubjectID(new Subject().getValue())
                     .withSubjectID(TEST_SUBJECT_ID);
+
+    // Here the body doesn't matter, as the method we're testing already assumes we've extracted
+    // the body into the relevant request object
+    private static final APIGatewayProxyRequestEvent API_REQUEST_EVENT_WITH_VALID_HEADERS =
+            apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
 
     private final Session session =
             new Session(SESSION_ID)
@@ -152,8 +156,6 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn200ForSuccessfulReAuthRequest() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         var existingCountOfIncorrectEmails = 1;
         when(authenticationAttemptsService.getCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
@@ -161,7 +163,7 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
                         userContext);
@@ -182,14 +184,12 @@ class CheckReAuthUserHandlerTest {
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         when(userContext.getTxmaAuditEncoded()).thenReturn(null);
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
                         userContext);
@@ -206,8 +206,6 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn404ForWhenUserNotFound() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
@@ -218,7 +216,7 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
                         userContext);
@@ -241,8 +239,6 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(USER_PROFILE));
@@ -253,7 +249,7 @@ class CheckReAuthUserHandlerTest {
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
                         userContext);
@@ -291,8 +287,6 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(USER_PROFILE));
@@ -308,7 +302,7 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
                         userContext);
@@ -321,8 +315,6 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var body = format("{ \"email\": \"%s\" }", EMAIL_USED_TO_SIGN_IN);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
@@ -331,7 +323,7 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
                         userContext);
@@ -344,14 +336,13 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn404ForWhenUserDoesNotMatch() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
         when(authenticationAttemptsService.getCount(
                         any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
                 .thenReturn(3);
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(
                                 DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, TEST_RP_PAIRWISE_ID),
@@ -372,7 +363,6 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldIncludeTheUserSubjectIdForWhenUserDoesNotMatchButHasAccount() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, null);
         var differentSubjectId = "ANOTHER_SUBJECT_ID";
         when(authenticationAttemptsService.getCount(
                         any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
@@ -383,7 +373,7 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event,
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
                         context,
                         new CheckReauthUserRequest(
                                 DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE, TEST_RP_PAIRWISE_ID),
