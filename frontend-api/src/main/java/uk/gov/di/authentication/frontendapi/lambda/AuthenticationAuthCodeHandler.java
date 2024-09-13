@@ -10,9 +10,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -23,6 +26,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.util.Arrays;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -34,6 +38,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
     private static final Logger LOG = LogManager.getLogger(AuthenticationAuthCodeHandler.class);
 
     private final DynamoAuthCodeService dynamoAuthCodeService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
 
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
@@ -41,7 +46,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         super(
                 AuthCodeRequest.class,
                 configurationService,
@@ -50,17 +56,23 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 clientService,
                 authenticationService);
         this.dynamoAuthCodeService = dynamoAuthCodeService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public AuthenticationAuthCodeHandler(ConfigurationService configurationService) {
         super(AuthCodeRequest.class, configurationService);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
     }
 
     public AuthenticationAuthCodeHandler(
-            ConfigurationService configurationService, RedisConnectionService redis) {
+            ConfigurationService configurationService,
+            RedisConnectionService redis,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         super(AuthCodeRequest.class, configurationService, redis);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public AuthenticationAuthCodeHandler() {
@@ -97,6 +109,17 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     authCodeRequest.getSectorIdentifier(),
                     authCodeRequest.isNewAccount(),
                     authCodeRequest.getPasswordResetTime());
+
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()
+                    && userProfile.get().getSubjectID() != null) {
+                Arrays.stream(CountType.values())
+                        .forEach(
+                                countType ->
+                                        authenticationAttemptsService.deleteCount(
+                                                userProfile.get().getSubjectID(),
+                                                JourneyType.REAUTHENTICATION,
+                                                countType));
+            }
 
             var state = State.parse(authCodeRequest.getState());
             var redirectUri = URI.create(authCodeRequest.getRedirectUri());

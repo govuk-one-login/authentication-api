@@ -708,9 +708,6 @@ class VerifyCodeHandlerTest {
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_SMS_CODE);
         assertThat(result, hasStatus(204));
     }
 

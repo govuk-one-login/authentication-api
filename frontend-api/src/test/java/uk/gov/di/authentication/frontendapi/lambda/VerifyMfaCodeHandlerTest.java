@@ -801,26 +801,6 @@ class VerifyMfaCodeHandlerTest {
         mockedNowHelperClass.close();
     }
 
-    @Test
-    void shouldDeleteAuthAppAuthenticationAttemptsCountIfCorrectCodeEntered()
-            throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                .thenReturn(Optional.of(authAppCodeProcessor));
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
-        makeCallWithCode(codeRequest);
-
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        TEST_SUBJECT_ID,
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_AUTH_APP_CODE);
-    }
-
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)
             throws Json.JsonException {
         var body = objectMapper.writeValueAsString(mfaCodeRequest);

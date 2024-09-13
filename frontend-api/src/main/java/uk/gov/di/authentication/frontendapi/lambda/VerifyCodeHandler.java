@@ -40,7 +40,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
@@ -334,24 +333,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     true);
         }
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
-            clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-        }
-
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
 
         var metadataPairArray =
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
-    }
-
-    void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
-        Arrays.stream(CountType.values())
-                .forEach(
-                        countType ->
-                                authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
     }
 
     private AuditService.MetadataPair[] metadataPairs(

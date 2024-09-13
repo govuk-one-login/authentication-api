@@ -39,7 +39,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -324,11 +323,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         auditService.submitAuditEvent(auditableEvent, auditContext, metadataPairs);
 
         if (errorResponse.isEmpty()) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
-                    && subjectId != null) {
-                clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
-            }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
                     extractPersistentIdFromHeaders(input.getHeaders()));
@@ -367,14 +361,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         entry(ErrorResponse.ERROR_1037, AUTH_INVALID_CODE_SENT));
 
         return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
-    }
-
-    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
-        Arrays.stream(CountType.values())
-                .forEach(
-                        countType ->
-                                authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
     }
 
     private static boolean isInvalidReauthAuthAppAttempt(
