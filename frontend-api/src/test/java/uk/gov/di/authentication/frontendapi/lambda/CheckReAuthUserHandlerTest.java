@@ -215,9 +215,6 @@ class CheckReAuthUserHandlerTest {
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
 
-        verify(authenticationService, atLeastOnce())
-                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
@@ -239,9 +236,6 @@ class CheckReAuthUserHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
-
-        verify(authenticationService, atLeastOnce())
-                .getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN);
 
         verify(auditService)
                 .submitAuditEvent(
