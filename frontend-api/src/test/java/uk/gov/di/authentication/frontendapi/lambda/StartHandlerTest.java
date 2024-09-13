@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -164,12 +163,7 @@ class StartHandlerTest {
         StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
         assertThat(response.client(), equalTo(getClientStartInfo()));
-        assertFalse(response.client().isOneLoginService());
-        assertThat(
-                response.user().isIdentityRequired(), equalTo(userStartInfo.isIdentityRequired()));
-        assertThat(response.user().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
-        assertThat(response.user().cookieConsent(), equalTo(cookieConsentValue));
-        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(gaTrackingId));
+        assertThat(response.user(), equalTo(userStartInfo));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -204,17 +198,9 @@ class StartHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertThat(response.client().clientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(response.client().scopes(), equalTo(DOC_APP_SCOPE.toStringList()));
-        assertThat(response.client().serviceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertThat(response.client().redirectUri(), equalTo(REDIRECT_URL));
-        assertFalse(response.client().cookieConsentShared());
-        assertTrue(response.user().isDocCheckingAppUser());
-        assertFalse(response.user().isIdentityRequired());
-        assertFalse(response.user().isUpliftRequired());
-        assertFalse(response.user().isAuthenticated());
-        assertThat(response.user().cookieConsent(), equalTo(null));
-        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(null));
+        assertThat(response.client(), equalTo(clientStartInfo));
+        assertThat(response.user(), equalTo(userStartInfo));
+
         verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
