@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,7 +59,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -253,10 +256,20 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
+        var rpPairwiseIdForReauth = "some-pairwise-id-for-reauth";
+        var previousSigninJourneyId = "some-signin-journey-id";
+
         Map<String, String> headers = new HashMap<>();
         headers.putAll(VALID_HEADERS);
         headers.put(REAUTHENTICATE_HEADER, "true");
-        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s,
+               "previous-govuk-signin-journey-id": %s }
+                """,
+                        rpPairwiseIdForReauth, previousSigninJourneyId);
+        var event = apiRequestEventWithHeadersAndBody(headers, body);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -270,6 +283,12 @@ class StartHandlerTest {
                         FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
+                        AUDIT_CONTEXT,
+                        pair("previous_govuk_signin_journey_id", previousSigninJourneyId),
+                        pair("rpPairwiseId", rpPairwiseIdForReauth));
     }
 
     @Test
@@ -298,6 +317,10 @@ class StartHandlerTest {
                         FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", AuditService.UNKNOWN));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
@@ -326,6 +349,11 @@ class StartHandlerTest {
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
         assertTrue(response.user().isAuthenticated());
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
     }
 
     @Test
