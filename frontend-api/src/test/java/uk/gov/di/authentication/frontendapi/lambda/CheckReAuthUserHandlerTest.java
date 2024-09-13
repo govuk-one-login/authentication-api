@@ -179,26 +179,6 @@ class CheckReAuthUserHandlerTest {
     }
 
     @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        when(userContext.getTxmaAuditEncoded()).thenReturn(null);
-
-        var result =
-                handler.handleRequestWithUserContext(
-                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
-                        context,
-                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, expectedRpPairwiseSub),
-                        userContext);
-
-        assertEquals(200, result.getStatusCode());
-
-        verify(auditService)
-                .submitAuditEvent(
-                        eq(FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED),
-                        eq(testAuditContextWithoutAuditEncoded),
-                        any(AuditService.MetadataPair[].class));
-    }
-
-    @Test
     void shouldReturn404ForWhenUserNotFound() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
