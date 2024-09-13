@@ -263,8 +263,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
@@ -282,8 +280,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
