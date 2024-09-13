@@ -72,8 +72,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -235,9 +235,6 @@ class StartHandlerTest {
         var rpPairwiseIdForReauth = "some-pairwise-id-for-reauth";
         var previousSigninJourneyId = "some-signin-journey-id";
 
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS);
-        headers.put(REAUTHENTICATE_HEADER, "true");
         var body =
                 format(
                         """
@@ -245,7 +242,7 @@ class StartHandlerTest {
                "previous-govuk-signin-journey-id": %s }
                 """,
                         rpPairwiseIdForReauth, previousSigninJourneyId);
-        var event = apiRequestEventWithHeadersAndBody(headers, body);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -274,9 +271,8 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
-        headers.put(REAUTHENTICATE_HEADER, "true");
+        var headers = headersWithReauthenticate("true");
+        headers.remove(TXMA_AUDIT_ENCODED_HEADER);
         var event = apiRequestEventWithHeadersAndBody(headers, "{}");
 
         var result = handler.handleRequest(event, context);
@@ -301,10 +297,7 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS);
-        headers.put(REAUTHENTICATE_HEADER, "false");
-        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("false"), "{}");
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -471,5 +464,12 @@ class StartHandlerTest {
         when(startService.buildUserStartInfo(
                         eq(userContext), any(), any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(userStartInfo);
+    }
+
+    private Map<String, String> headersWithReauthenticate(String reauthenticate) {
+        Map<String, String> headers = new HashMap<>();
+        headers.putAll(VALID_HEADERS);
+        headers.put(REAUTHENTICATE_HEADER, reauthenticate);
+        return headers;
     }
 }
