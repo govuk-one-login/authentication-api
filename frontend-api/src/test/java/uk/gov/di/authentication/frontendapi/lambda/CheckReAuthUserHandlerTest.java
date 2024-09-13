@@ -240,10 +240,6 @@ class CheckReAuthUserHandlerTest {
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
 
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(Optional.of(USER_PROFILE));
-        when(authenticationService.getUserProfileByEmail(EMAIL_USED_TO_SIGN_IN))
-                .thenReturn(USER_PROFILE);
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
