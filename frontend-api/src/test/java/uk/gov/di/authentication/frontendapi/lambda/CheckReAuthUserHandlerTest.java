@@ -155,7 +155,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn200ForSuccessfulReAuthRequest() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var existingCountOfIncorrectEmails = 1;
         when(authenticationAttemptsService.getCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
@@ -183,8 +182,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-
         when(userContext.getTxmaAuditEncoded()).thenReturn(null);
 
         var result =
@@ -205,8 +202,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn404ForWhenUserNotFound() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
 
@@ -238,8 +233,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, MAX_RETRIES));
@@ -282,8 +275,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
@@ -310,7 +301,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationAttemptsService.getCountsByJourney(
@@ -331,7 +321,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn404ForWhenUserDoesNotMatch() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(authenticationAttemptsService.getCount(
                         any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
                 .thenReturn(3);
@@ -358,7 +347,6 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldIncludeTheUserSubjectIdForWhenUserDoesNotMatchButHasAccount() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var differentSubjectId = "ANOTHER_SUBJECT_ID";
         when(authenticationAttemptsService.getCount(
                         any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
