@@ -176,3 +176,79 @@ resource "aws_iam_role_policy_attachment" "lambda_iam_role_pepper_parameters" {
   policy_arn = aws_iam_policy.pepper_parameter_policy.arn
   role       = aws_iam_role.lambda_iam_role.name
 }
+
+
+#### phone checker SSM parameter
+data "aws_kms_key" "parameter_store_key" {
+  key_id = aws_kms_key.parameter_store_key.id
+}
+
+resource "aws_ssm_parameter" "experian_base_url" {
+  name  = "/${var.environment}/experian-phone-check/api-base-url"
+  type  = "String"
+  value = var.experian_base_url
+}
+
+resource "aws_ssm_parameter" "experian_api_token" {
+  name  = "/${var.environment}/experian-phone-check/api-token"
+  type  = "SecureString"
+  value = var.experian_api_token
+
+  key_id = aws_kms_key.parameter_store_key.id
+}
+
+resource "aws_ssm_parameter" "experian_cache_period" {
+  name  = "/${var.environment}/experian-phone-check/cache-period"
+  type  = "String"
+  value = var.experian_cache_period
+}
+
+resource "aws_ssm_parameter" "txma_audit_queue_url" {
+  name  = "/${var.environment}/experian-phone-check/txma-audit-queue-url"
+  type  = "String"
+  value = data.aws_sqs_queue.txma_audit_queue.url
+}
+
+data "aws_iam_policy_document" "experian_parameter_policy" {
+  statement {
+    sid    = "AllowGetParameters"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameters*",
+    ]
+
+    resources = [
+      aws_ssm_parameter.experian_base_url.arn,
+      aws_ssm_parameter.experian_api_token.arn,
+      aws_ssm_parameter.experian_cache_period.arn,
+      aws_ssm_parameter.txma_audit_queue_url.arn
+    ]
+  }
+  statement {
+    sid    = "AllowDecryptOfParameters"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+    ]
+
+    resources = [
+      data.aws_kms_key.parameter_store_key.arn
+    ]
+    condition {
+      test = "ArnEquals"
+      values = [
+        aws_ssm_parameter.experian_api_token.arn
+      ]
+      variable = "kms:EncryptionContext:PARAMETER_ARN"
+    }
+  }
+}
+
+resource "aws_iam_policy" "parameter_policy_phone_check" {
+  policy      = data.aws_iam_policy_document.experian_parameter_policy.json
+  path        = "/${var.environment}/experian-phone-checker/"
+  name_prefix = "parameter-store-policy"
+}
+

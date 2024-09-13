@@ -76,3 +76,46 @@ resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.pending_email_check_dead_letter_queue.name}"
   alarm_actions     = [aws_sns_topic.slack_events.arn]
 }
+
+
+###Moving resource 
+
+data "aws_sqs_queue" "txma_audit_queue" {
+  name = "${var.environment}-oidc-txma-audit-queue"
+}
+
+data "aws_kms_key" "txma_audit_queue_encryption_key" {
+  key_id = "alias/${var.environment}-oidc-audit-kms-alias"
+}
+
+
+# Experain Phone sqs Queues  (resource moved from contra repo )
+resource "aws_sqs_queue" "experian_phone_check_sqs_queue" {
+  name                       = "${var.environment}-experian-phone-check-queue"
+  max_message_size           = 2048
+  message_retention_seconds  = 1209600
+  visibility_timeout_seconds = 900
+
+  kms_master_key_id                 = aws_kms_key.experian_phone_check_sqs_queue_encryption_key.arn
+  kms_data_key_reuse_period_seconds = 300
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.experian_phone_check_sqs_dead_letter_queue.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = local.default_tags
+}
+
+resource "aws_sqs_queue" "experian_phone_check_sqs_dead_letter_queue" {
+  name                       = "${var.environment}-experian-phone-check-dlq"
+  delay_seconds              = 300
+  visibility_timeout_seconds = 900
+
+  kms_master_key_id                 = "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
+
+  message_retention_seconds = 3600 * 6
+
+  tags = local.default_tags
+}

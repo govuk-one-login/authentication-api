@@ -190,3 +190,32 @@ variable "orch_protectedsub_cidr_blocks" {
   description = "Orchestration protected subnet cidr blocks"
   default     = []
 }
+
+variable "service_name" {
+  type        = string
+  description = "Name of the service that will be using these queues. Used for disambiguation"
+  default     = ""
+}
+
+variable "default_tags" {
+  default     = {}
+  type        = map(string)
+  description = "Default tags to apply to all resources"
+}
+
+variable "experian_base_url" {
+  default     = "https://api.experianaperture.io/"
+  type        = string
+  description = "The base URL for the Experian API"
+}
+
+variable "experian_api_token" {
+  type        = string
+  description = "The API token to use to access the Experian API"
+}
+
+variable "experian_cache_period" {
+  default     = "7"
+  type        = string
+  description = "The maximum age of a phone check result, cached at Experian, that we will accept (in days)"
+}

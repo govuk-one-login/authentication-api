@@ -893,3 +893,35 @@ resource "aws_kms_alias" "auth_session_table_encryption_key_alias" {
   name          = "alias/${var.environment}-auth-session-table-encryption-key"
   target_key_id = aws_kms_key.auth_session_table_encryption_key.key_id
 }
+
+
+### Experain Phone check KMS Queues & KMS Alais (resource moved from contra repo )
+resource "aws_kms_key" "experian_phone_check_sqs_queue_encryption_key" {
+  description              = "KMS signing key for encrypting ${var.service_name} Experian phone check queue at rest"
+  deletion_window_in_days  = 30
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  key_usage                = "ENCRYPT_DECRYPT"
+  enable_key_rotation      = true
+  tags                     = var.default_tags
+}
+
+resource "aws_kms_alias" "experian_phone_check_sqs_queue_encryption_key_alias" {
+  name          = "alias/${var.environment}-${var.service_name}-experian-sqs-kms-alias"
+  target_key_id = aws_kms_key.experian_phone_check_sqs_queue_encryption_key.key_id
+}
+
+resource "aws_kms_key" "experian_phone_check_sqs_dl_queue_encryption_key" {
+  description              = "KMS signing key for encrypting ${var.service_name} Experian phone check dl queue at rest"
+  deletion_window_in_days  = 30
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  key_usage                = "ENCRYPT_DECRYPT"
+  enable_key_rotation      = true
+
+
+  tags = var.default_tags
+}
+
+resource "aws_kms_alias" "experian_phone_check_sqs_dl_queue_encryption_key_alias" {
+  name          = "alias/${var.environment}-${var.service_name}-experian-sqs-dl-kms-alias"
+  target_key_id = aws_kms_key.experian_phone_check_sqs_dl_queue_encryption_key.key_id
+}
