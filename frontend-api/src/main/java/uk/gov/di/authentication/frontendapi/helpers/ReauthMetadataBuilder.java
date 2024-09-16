@@ -5,6 +5,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.services.AuditService;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -66,5 +67,15 @@ public class ReauthMetadataBuilder {
             metadataPairs.add(failureReason);
         }
         return metadataPairs.toArray(AuditService.MetadataPair[]::new);
+    }
+
+    public static ReauthFailureReasons getReauthFailureReason(List<CountType> exceededCountTypes) {
+        CountType exceededType = exceededCountTypes.get(0);
+        return switch (exceededType) {
+            case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
+            case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
+            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
+            default -> null;
+        };
     }
 }
