@@ -75,4 +75,5 @@ resource "aws_cloudwatch_metric_alarm" "ipv_handback_p1_cloudwatch_alarm" {
   threshold           = var.ipv_p1_alarm_error_threshold
   alarm_description   = "${var.ipv_p1_alarm_error_threshold} or more IPV handback errors have occurred in ${var.environment}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : data.aws_sns_topic.slack_events.arn]
+  treat_missing_data  = "notBreaching"
 }
