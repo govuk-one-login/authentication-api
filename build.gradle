@@ -29,7 +29,7 @@ ext {
         gson: "2.10.1",
         jetbrains_annotations: "24.1.0",
         nimbusds_oauth_version: "10.13.2",
-        nimbusds_jwt_version: "9.40",
+        nimbusds_jwt_version: "9.41.1",
         junit: "5.11.0",
         xray: "2.18.1",
         pact: "4.6.14"
