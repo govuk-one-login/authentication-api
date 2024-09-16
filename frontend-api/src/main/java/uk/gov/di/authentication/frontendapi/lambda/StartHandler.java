@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -169,6 +170,7 @@ public class StartHandler
                     "reauthenticateHeader: {} reauthenticate: {}",
                     reauthenticateHeader,
                     reauthenticate);
+
             Optional<String> maybeInternalSubjectId =
                     userContext.getUserProfile().map(UserProfile::getSubjectID);
             Optional<String> maybeInternalCommonSubjectIdentifier =
@@ -240,6 +242,10 @@ public class StartHandler
                     auditContext,
                     pair("internalSubjectId", internalSubjectIdForAuditEvent));
 
+            if (reauthenticate) {
+                emitReauthRequestedEvent(startRequest, auditContext);
+            }
+
             return generateApiGatewayProxyResponse(200, startResponse);
 
         } catch (JsonException e) {
@@ -249,5 +255,21 @@ public class StartHandler
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
         }
+    }
+
+    private void emitReauthRequestedEvent(StartRequest startRequest, AuditContext auditContext) {
+        var metadataPairs = new ArrayList<AuditService.MetadataPair>();
+        var previousSigninJourneyId = startRequest.previousGovUkSigninJourneyId();
+        if (!(previousSigninJourneyId == null || previousSigninJourneyId.isEmpty())) {
+            metadataPairs.add(pair("previous_govuk_signin_journey_id", previousSigninJourneyId));
+        }
+        var rpPairwiseId = startRequest.rpPairwiseIdForReauth();
+        if (!(rpPairwiseId == null || rpPairwiseId.isEmpty())) {
+            metadataPairs.add(pair("rpPairwiseId", rpPairwiseId));
+        }
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
+                auditContext,
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
     }
 }
