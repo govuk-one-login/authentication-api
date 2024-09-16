@@ -23,6 +23,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -55,7 +56,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -83,7 +83,10 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -269,45 +272,87 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         }
     }
 
-    private static Stream<Arguments> reauthCountTypes() {
-        return Arrays.stream(CountType.values())
-                .filter(c -> c != CountType.ENTER_EMAIL_CODE)
-                .map(Arguments::of);
+    private static Stream<Arguments> reauthCountTypesAndMetadata() {
+        return Stream.of(
+                Arguments.arguments(
+                        ENTER_EMAIL,
+                        MAX_ALLOWED_RETRIES,
+                        0,
+                        0,
+                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
+                Arguments.arguments(
+                        ENTER_PASSWORD,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        0,
+                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
+                Arguments.arguments(
+                        ENTER_SMS_CODE,
+                        0,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
+                Arguments.arguments(
+                        ENTER_AUTH_APP_CODE,
+                        0,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
     }
 
     @ParameterizedTest
-    @MethodSource("reauthCountTypes")
+    @MethodSource("reauthCountTypesAndMetadata")
     void shouldReturnErrorNotDeleteCountAndNotLockUserAccountOutIfUserHasAnyReauthLocks(
-            CountType countType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason) {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            when(clientSession.getAuthRequestParams())
+                    .thenReturn(generateAuthRequest().toParameters());
+            clientSubjectHelperMockedStatic
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
+                    .thenReturn(subject);
+            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+            when(authenticationAttemptsService.getCountsByJourney(
+                            any(String.class), eq(JourneyType.REAUTHENTICATION)))
+                    .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
-        setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
-        when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
-                .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
+            setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
+            when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
+                    .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
-        if (countType != ENTER_PASSWORD) {
-            when(authenticationAttemptsService.getCount(
-                            any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
-                    .thenReturn(0);
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+            usingValidSession();
+            usingApplicableUserCredentialsWithLogin(SMS, true);
+            usingDefaultVectorOfTrust();
+
+            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+
+            verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    Optional.of(ENCODED_DEVICE_DETAILS)),
+                            pair("rp_pairwise_id", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
+                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                            pair("failure-reason", expectedFailureReason));
         }
-
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-
-        usingValidSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingDefaultVectorOfTrust();
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
-
-        verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
     }
 
     @Test
