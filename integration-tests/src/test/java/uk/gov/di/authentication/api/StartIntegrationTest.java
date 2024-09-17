@@ -15,7 +15,9 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -30,6 +32,7 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -67,8 +70,12 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final State STATE = new State();
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
     public static final String REQUEST_BODY =
             "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\"}";
+
+    @RegisterExtension
+    protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
     @BeforeEach
     void setup() {
@@ -150,7 +157,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 JsonParser.parseString(format("{\"user\": %s,\"client\": %s}", user, client));
 
         assertThat(JsonParser.parseString(response.getBody()), is(equalTo(expectedJson)));
-
+        assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
@@ -185,7 +192,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 objectMapper.readValue(response.getBody(), StartResponse.class);
 
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
-
+        assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }
@@ -239,7 +246,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, state);
         verifyStandardUserInformationSetOnResponse(startResponse.user());
         assertThat(startResponse.user().isAuthenticated(), equalTo(true));
-
+        assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
@@ -294,7 +301,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSession = redis.getClientSession(CLIENT_SESSION_ID);
 
         assertNotNull(clientSession.getDocAppSubjectId());
-
+        assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
     }
@@ -330,9 +337,69 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
         verifyStandardUserInformationSetOnResponse(startResponse.user());
         verifyStandardClientInformationSetOnResponse(startResponse.client(), scope, STATE);
-
+        assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND));
+    }
+
+    @Nested
+    class AuthSession {
+        String sessionId;
+
+        @BeforeEach
+        void setup() throws Json.JsonException {
+            handler = new StartHandler(new TestConfigurationService(), redisConnectionService);
+            txmaAuditQueue.clear();
+            sessionId = redis.createSession(false);
+            userStore.signUp(EMAIL, "password");
+            redis.addEmailToSession(sessionId, EMAIL);
+            var state = new State();
+            Scope scope = new Scope();
+            scope.add(OIDCScopeValue.OPENID);
+            var builder =
+                    new AuthenticationRequest.Builder(
+                                    ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                            .nonce(new Nonce())
+                            .state(state);
+            var authRequest = builder.build();
+            redis.createClientSession(
+                    CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+            registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
+        }
+
+        @Test
+        void shouldAddSessionToDynamoWhenNoPreviousSessionIdIsProvidedInRequestBody() {
+            makeRequest(Optional.of("{}"), standardHeadersWithSessionId(sessionId), Map.of());
+
+            assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        }
+
+        @Test
+        void shouldReplaceSessionInDynamoWhenPreviousSessionIsProvidedInRequestBody() {
+            authSessionExtension.addSession(Optional.empty(), PREVIOUS_SESSION_ID);
+            assertThat(
+                    authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
+                    equalTo(true));
+
+            makeRequest(
+                    Optional.of(REQUEST_BODY), standardHeadersWithSessionId(sessionId), Map.of());
+
+            assertThat(
+                    authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
+                    equalTo(false));
+            assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        }
+
+        @Test
+        void shouldAddSessionToDynamoWhenPreviousSessionIsProvidedInRequestBodyButIsNotInDynamo() {
+            makeRequest(
+                    Optional.of(REQUEST_BODY), standardHeadersWithSessionId(sessionId), Map.of());
+
+            assertThat(
+                    authSessionExtension.getSession(PREVIOUS_SESSION_ID).isPresent(),
+                    equalTo(false));
+            assertThat(authSessionExtension.getSession(sessionId).isPresent(), equalTo(true));
+        }
     }
 
     private void registerClient(KeyPair keyPair, ClientType clientType) {
