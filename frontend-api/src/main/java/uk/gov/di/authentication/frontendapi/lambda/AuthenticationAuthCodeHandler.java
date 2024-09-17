@@ -12,6 +12,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -33,6 +34,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeRequest> {
 
@@ -125,7 +127,17 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                                 userProfile.get().getPhoneNumber(),
                                 PersistentIdHelper.extractPersistentIdFromHeaders(
                                         input.getHeaders()));
-                auditService.submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext);
+
+                var client = userContext.getClient().orElseThrow();
+                var rpPairwiseId =
+                        ClientSubjectHelper.getSubject(
+                                        userProfile.get(),
+                                        client,
+                                        authenticationService,
+                                        configurationService.getInternalSectorUri())
+                                .getValue();
+                var pairs = pair("rpPairwiseId", rpPairwiseId);
+                auditService.submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, pairs);
             }
 
             return generateApiGatewayProxyResponse(
