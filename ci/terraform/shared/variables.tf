@@ -219,3 +219,7 @@ variable "experian_cache_period" {
   type        = string
   description = "The maximum age of a phone check result, cached at Experian, that we will accept (in days)"
 }
+variable "auth_new_frontend_account_id" {
+  type        = string
+  description = "Account id of the auth new frontend"
+}

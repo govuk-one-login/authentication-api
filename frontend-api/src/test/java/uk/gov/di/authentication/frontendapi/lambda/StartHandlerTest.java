@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -51,14 +50,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -68,8 +71,8 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.D
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
+import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -147,20 +150,8 @@ class StartHandlerTest {
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
             throws ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
-        when(startService.getCookieConsentValue(anyMap(), anyString()))
-                .thenReturn(cookieConsentValue);
-        when(startService.buildUserStartInfo(
-                        userContext,
-                        cookieConsentValue,
-                        gaTrackingId,
-                        true,
-                        false,
-                        Optional.empty()))
-                .thenReturn(userStartInfo);
         usingValidClientSession();
         usingValidSession();
 
@@ -172,12 +163,7 @@ class StartHandlerTest {
         StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
         assertThat(response.client(), equalTo(getClientStartInfo()));
-        assertFalse(response.client().isOneLoginService());
-        assertThat(
-                response.user().isIdentityRequired(), equalTo(userStartInfo.isIdentityRequired()));
-        assertThat(response.user().isUpliftRequired(), equalTo(userStartInfo.isUpliftRequired()));
-        assertThat(response.user().cookieConsent(), equalTo(cookieConsentValue));
-        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(gaTrackingId));
+        assertThat(response.user(), equalTo(userStartInfo));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -191,24 +177,17 @@ class StartHandlerTest {
             throws ParseException, Json.JsonException {
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null, false);
-        when(startService.buildUserContext(session, docAppClientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext))
-                .thenReturn(
-                        new ClientStartInfo(
-                                TEST_CLIENT_NAME,
-                                DOC_APP_SCOPE.toStringList(),
-                                "MANDATORY",
-                                false,
-                                REDIRECT_URL,
-                                STATE,
-                                false));
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(
-                        userContext, null, null, true, false, Optional.empty()))
-                .thenReturn(userStartInfo);
+        var clientStartInfo =
+                new ClientStartInfo(
+                        TEST_CLIENT_NAME,
+                        DOC_APP_SCOPE.toStringList(),
+                        "MANDATORY",
+                        false,
+                        REDIRECT_URL,
+                        STATE,
+                        false);
+        usingStartServiceThatReturns(userContext, clientStartInfo, userStartInfo);
         usingValidDocAppClientSession();
         usingValidSession();
 
@@ -219,17 +198,9 @@ class StartHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
-        assertThat(response.client().clientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(response.client().scopes(), equalTo(DOC_APP_SCOPE.toStringList()));
-        assertThat(response.client().serviceType(), equalTo(ServiceType.MANDATORY.toString()));
-        assertThat(response.client().redirectUri(), equalTo(REDIRECT_URL));
-        assertFalse(response.client().cookieConsentShared());
-        assertTrue(response.user().isDocCheckingAppUser());
-        assertFalse(response.user().isIdentityRequired());
-        assertFalse(response.user().isUpliftRequired());
-        assertFalse(response.user().isAuthenticated());
-        assertThat(response.user().cookieConsent(), equalTo(null));
-        assertThat(response.user().gaCrossDomainTrackingId(), equalTo(null));
+        assertThat(response.client(), equalTo(clientStartInfo));
+        assertThat(response.user(), equalTo(userStartInfo));
+
         verify(clientSessionService).updateStoredClientSession(anyString(), any());
 
         verify(auditService)
@@ -242,21 +213,22 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, true, Optional.empty()))
-                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS);
-        headers.put(REAUTHENTICATE_HEADER, "true");
-        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
+        var rpPairwiseIdForReauth = "some-pairwise-id-for-reauth";
+        var previousSigninJourneyId = "some-signin-journey-id";
+
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s,
+               "previous-govuk-signin-journey-id": %s }
+                """,
+                        rpPairwiseIdForReauth, previousSigninJourneyId);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -270,24 +242,23 @@ class StartHandlerTest {
                         FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT,
                         pair("internalSubjectId", AuditService.UNKNOWN));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
+                        AUDIT_CONTEXT,
+                        pair("previous_govuk_signin_journey_id", previousSigninJourneyId),
+                        pair("rpPairwiseId", rpPairwiseIdForReauth));
     }
 
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true, true, Optional.empty()))
-                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null, false));
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
-        headers.put(REAUTHENTICATE_HEADER, "true");
+        var headers = headersWithReauthenticate("true");
+        headers.remove(TXMA_AUDIT_ENCODED_HEADER);
         var event = apiRequestEventWithHeadersAndBody(headers, "{}");
 
         var result = handler.handleRequest(event, context);
@@ -298,27 +269,21 @@ class StartHandlerTest {
                         FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                         AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()),
                         pair("internalSubjectId", AuditService.UNKNOWN));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
+                        AUDIT_CONTEXT.withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
             throws ParseException, Json.JsonException {
-        when(userContext.getClientSession()).thenReturn(clientSession);
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
-        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
-        when(startService.getGATrackingId(anyMap())).thenReturn(null);
-        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(
-                        userContext, null, null, true, false, Optional.empty()))
-                .thenReturn(new UserStartInfo(false, false, true, null, null, false, null, false));
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         usingValidSession();
         usingValidClientSession();
 
-        Map<String, String> headers = new HashMap<>();
-        headers.putAll(VALID_HEADERS);
-        headers.put(REAUTHENTICATE_HEADER, "false");
-        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("false"), "{}");
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -326,6 +291,11 @@ class StartHandlerTest {
         var response = objectMapper.readValue(result.getBody(), StartResponse.class);
 
         assertTrue(response.user().isAuthenticated());
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
     }
 
     @Test
@@ -360,7 +330,6 @@ class StartHandlerTest {
     @Test
     void shouldReturn400WhenBuildClientStartInfoThrowsException()
             throws ParseException, Json.JsonException {
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenThrow(new ParseException("Unable to parse authentication request"));
@@ -396,6 +365,7 @@ class StartHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
     }
 
     private void usingInvalidSession() {
@@ -468,5 +438,24 @@ class StartHandlerTest {
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
                 false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null, false);
+    }
+
+    private void usingStartServiceThatReturns(
+            UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo)
+            throws ParseException {
+        when(startService.buildUserContext(eq(session), any())).thenReturn(userContext);
+        when(startService.buildClientStartInfo(userContext)).thenReturn(clientStartInfo);
+        when(startService.getGATrackingId(anyMap())).thenReturn(null);
+        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
+        when(startService.buildUserStartInfo(
+                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), any()))
+                .thenReturn(userStartInfo);
+    }
+
+    private Map<String, String> headersWithReauthenticate(String reauthenticate) {
+        Map<String, String> headers = new HashMap<>();
+        headers.putAll(VALID_HEADERS);
+        headers.put(REAUTHENTICATE_HEADER, reauthenticate);
+        return headers;
     }
 }
