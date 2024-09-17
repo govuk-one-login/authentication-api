@@ -77,9 +77,7 @@ resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm
   alarm_actions     = [aws_sns_topic.slack_events.arn]
 }
 
-
-###Moving resource 
-
+###Moving resource
 data "aws_sqs_queue" "txma_audit_queue" {
   name = "${var.environment}-oidc-txma-audit-queue"
 }
