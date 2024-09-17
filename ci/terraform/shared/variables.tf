@@ -194,4 +194,5 @@ variable "orch_protectedsub_cidr_blocks" {
 variable "auth_new_frontend_account_id" {
   type        = string
   description = "Account id of the auth new frontend"
+  default     = ""
 }
