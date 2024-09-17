@@ -251,4 +251,3 @@ resource "aws_iam_policy" "parameter_policy_phone_check" {
   path        = "/${var.environment}/experian-phone-checker/"
   name_prefix = "parameter-store-policy"
 }
-
