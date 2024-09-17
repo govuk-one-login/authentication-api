@@ -92,14 +92,14 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             dynamoAuthCodeService.saveAuthCode(
                     userProfile.get().getSubjectID(),
                     authorisationCode.getValue(),
-                    authCodeRequest.getClaims(),
+                    authCodeRequest.claims(),
                     false,
-                    authCodeRequest.getSectorIdentifier(),
+                    authCodeRequest.sectorIdentifier(),
                     authCodeRequest.isNewAccount(),
-                    authCodeRequest.getPasswordResetTime());
+                    authCodeRequest.passwordResetTime());
 
-            var state = State.parse(authCodeRequest.getState());
-            var redirectUri = URI.create(authCodeRequest.getRedirectUri());
+            var state = State.parse(authCodeRequest.state());
+            var redirectUri = URI.create(authCodeRequest.redirectUri());
             var authorizationResponse =
                     new AuthorizationSuccessResponse(
                             redirectUri, authorisationCode, null, state, null);

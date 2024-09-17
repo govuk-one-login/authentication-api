@@ -66,7 +66,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false,
-                        Optional.empty());
+                        null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(200));
     }
@@ -77,12 +77,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         setUpDynamo();
         var authRequest =
                 new AuthCodeRequest(
-                        TEST_REDIRECT_URI,
-                        TEST_STATE,
-                        null,
-                        TEST_SECTOR_IDENTIFIER,
-                        false,
-                        Optional.empty());
+                        TEST_REDIRECT_URI, TEST_STATE, null, TEST_SECTOR_IDENTIFIER, false, null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(200));
     }
@@ -97,7 +92,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false,
-                        Optional.empty());
+                        null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
@@ -113,7 +108,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false,
-                        Optional.empty());
+                        null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
