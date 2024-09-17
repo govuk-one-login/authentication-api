@@ -190,3 +190,8 @@ variable "orch_protectedsub_cidr_blocks" {
   description = "Orchestration protected subnet cidr blocks"
   default     = []
 }
+
+variable "auth_new_frontend_account_id" {
+  type        = string
+  description = "Account id of the auth new frontend"
+}

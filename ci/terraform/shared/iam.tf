@@ -2,8 +2,8 @@
 
 # Create a new IAM role for cross account access
 resource "aws_iam_role" "cross_account_role" {
-  count       = var.environment == "build" ? 1 : 0
-  name        = "CrossAccountRole-new-build"
+  count       = var.environment == "build" || var.environment == "staging" ? 1 : 0
+  name        = "CrossAccountRole-new-${var.environment}"
   description = "A role to be assumed by new Build AWS account"
 
   assume_role_policy = jsonencode({
@@ -13,7 +13,7 @@ resource "aws_iam_role" "cross_account_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::058264536367:root"
+          AWS = "arn:aws:iam::${var.auth_new_frontend_account_id}:root"
         }
       }
     ]
@@ -21,29 +21,29 @@ resource "aws_iam_role" "cross_account_role" {
 }
 
 data "aws_dynamodb_table" "user_credentials_table" {
-  count = var.environment == "build" ? 1 : 0
+  count = var.environment == "build" || var.environment == "staging" ? 1 : 0
   name  = "${var.environment}-user-credentials"
 }
 
 data "aws_dynamodb_table" "user_profile_table" {
-  count = var.environment == "build" ? 1 : 0
+  count = var.environment == "build" || var.environment == "staging" ? 1 : 0
   name  = "${var.environment}-user-profile"
 }
 
 data "aws_dynamodb_table" "stub_account_intevention_table" {
-  count = var.environment == "build" ? 1 : 0
+  count = var.environment == "build" || var.environment == "staging" ? 1 : 0
   name  = "${var.environment}-stub-account-interventions"
 }
 
 data "aws_dynamodb_table" "account_modifiers_table" {
-  count = var.environment == "build" ? 1 : 0
+  count = var.environment == "build" || var.environment == "staging" ? 1 : 0
   name  = "${var.environment}-account-modifiers"
 }
 
 
 # Create a new IAM policy for the role
 data "aws_iam_policy_document" "dynamo_access_policy" {
-  count = var.environment == "build" ? 1 : 0
+  count = var.environment == "build" || var.environment == "staging" ? 1 : 0
   statement {
     sid    = "AllowAccessToDynamoTables"
     effect = "Allow"
@@ -86,7 +86,7 @@ data "aws_iam_policy_document" "dynamo_access_policy" {
 
 # Create  policy to the role
 resource "aws_iam_policy" "dynamo_access_policy" {
-  count       = var.environment == "build" ? 1 : 0
+  count       = var.environment == "build" || var.environment == "staging" ? 1 : 0
   name        = "${var.environment}-dynamo-access-policy"
   path        = "/"
   description = "IAM policy access to dyanama table"
@@ -97,7 +97,7 @@ resource "aws_iam_policy" "dynamo_access_policy" {
 
 # Attach the policy to the role
 resource "aws_iam_role_policy_attachment" "cross_account_attach" {
-  count      = var.environment == "build" ? 1 : 0
+  count      = var.environment == "build" || var.environment == "staging" ? 1 : 0
   role       = aws_iam_role.cross_account_role[0].name
   policy_arn = aws_iam_policy.dynamo_access_policy[0].arn
 }
