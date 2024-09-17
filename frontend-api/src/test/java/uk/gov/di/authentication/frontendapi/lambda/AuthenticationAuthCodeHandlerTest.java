@@ -6,11 +6,13 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -28,17 +30,26 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.EMAIL;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.frontendapi.lambda.CheckEmailFraudBlockHandlerTest.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -62,6 +73,8 @@ class AuthenticationAuthCodeHandlerTest {
     private final Session session =
             new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
 
+    private final AuditService auditService = mock(AuditService.class);
+
     @BeforeEach
     void setUp() throws Json.JsonException {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
@@ -77,7 +90,8 @@ class AuthenticationAuthCodeHandlerTest {
                         sessionService,
                         clientSessionService,
                         clientService,
-                        authenticationService);
+                        authenticationService,
+                        auditService);
     }
 
     @Test
@@ -176,6 +190,65 @@ class AuthenticationAuthCodeHandlerTest {
         assertTrue(uri.getQuery().contains("state"));
         assertTrue(uri.getQuery().contains(TEST_STATE));
         assertFalse(uri.getQuery().contains("random_query_parameter"));
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
+    }
+
+    @Test
+    void shouldSubmitReauthSuccessfulEventForSuccessfulReauthJourney() {
+        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+        userProfile.setSubjectID(TEST_SUBJECT_ID);
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        var body =
+                format(
+                        "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",
+                        TEST_REDIRECT_URI,
+                        TEST_STATE,
+                        List.of("email-verified", "email"),
+                        TEST_SECTOR_IDENTIFIER,
+                        false,
+                        true);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        var auditContext =
+                new AuditContext(
+                        AuditService.UNKNOWN,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        TEST_SUBJECT_ID,
+                        EMAIL,
+                        IP_ADDRESS,
+                        UK_MOBILE_NUMBER,
+                        DI_PERSISTENT_SESSION_ID,
+                        Optional.of(ENCODED_DEVICE_DETAILS));
+
+        verify(auditService).submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext);
+    }
+
+    @Test
+    void shouldNotSubmitReauthSuccessEventForNonReauthJourney() {
+        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+        userProfile.setSubjectID(TEST_SUBJECT_ID);
+        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                .thenReturn(Optional.of(userProfile));
+
+        var result = handler.handleRequest(validAuthCodeRequest(), context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(auditService, never())
+                .submitAuditEvent(
+                        eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
     }
 
     @Test

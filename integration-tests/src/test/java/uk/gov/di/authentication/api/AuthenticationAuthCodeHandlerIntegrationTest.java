@@ -66,6 +66,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false,
+                        null,
                         null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(200));
@@ -77,7 +78,13 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         setUpDynamo();
         var authRequest =
                 new AuthCodeRequest(
-                        TEST_REDIRECT_URI, TEST_STATE, null, TEST_SECTOR_IDENTIFIER, false, null);
+                        TEST_REDIRECT_URI,
+                        TEST_STATE,
+                        null,
+                        TEST_SECTOR_IDENTIFIER,
+                        false,
+                        null,
+                        null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(200));
     }
@@ -92,6 +99,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false,
+                        null,
                         null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
@@ -108,6 +116,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false,
+                        null,
                         null);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));

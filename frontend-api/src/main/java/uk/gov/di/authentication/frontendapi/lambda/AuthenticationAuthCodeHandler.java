@@ -8,11 +8,15 @@ import com.nimbusds.oauth2.sdk.AuthorizationSuccessResponse;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -24,6 +28,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_SUCCESS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -34,6 +39,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
     private static final Logger LOG = LogManager.getLogger(AuthenticationAuthCodeHandler.class);
 
     private final DynamoAuthCodeService dynamoAuthCodeService;
+    private final AuditService auditService;
 
     public AuthenticationAuthCodeHandler(
             DynamoAuthCodeService dynamoAuthCodeService,
@@ -41,7 +47,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            AuditService auditService) {
         super(
                 AuthCodeRequest.class,
                 configurationService,
@@ -50,17 +57,20 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 clientService,
                 authenticationService);
         this.dynamoAuthCodeService = dynamoAuthCodeService;
+        this.auditService = auditService;
     }
 
     public AuthenticationAuthCodeHandler(ConfigurationService configurationService) {
         super(AuthCodeRequest.class, configurationService);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public AuthenticationAuthCodeHandler(
             ConfigurationService configurationService, RedisConnectionService redis) {
         super(AuthCodeRequest.class, configurationService, redis);
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public AuthenticationAuthCodeHandler() {
@@ -103,6 +113,20 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             var authorizationResponse =
                     new AuthorizationSuccessResponse(
                             redirectUri, authorisationCode, null, state, null);
+
+            if (configurationService.supportReauthSignoutEnabled()
+                    && Boolean.TRUE.equals(authCodeRequest.isReauthJourney())) {
+                var auditContext =
+                        AuditContext.auditContextFromUserContext(
+                                userContext,
+                                userProfile.get().getSubjectID(),
+                                userProfile.get().getEmail(),
+                                IpAddressHelper.extractIpAddress(input),
+                                userProfile.get().getPhoneNumber(),
+                                PersistentIdHelper.extractPersistentIdFromHeaders(
+                                        input.getHeaders()));
+                auditService.submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext);
+            }
 
             return generateApiGatewayProxyResponse(
                     200, new AuthCodeResponse(authorizationResponse.toURI().toString()));

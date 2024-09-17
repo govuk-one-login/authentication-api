@@ -12,4 +12,5 @@ public record AuthCodeRequest(
         @SerializedName("claims") @Expose List<String> claims,
         @SerializedName("rp-sector-uri") @Expose @Required String sectorIdentifier,
         @SerializedName("is-new-account") @Expose @Required boolean isNewAccount,
-        @SerializedName("password-reset-time") @Expose Long passwordResetTime) {}
+        @SerializedName("password-reset-time") @Expose Long passwordResetTime,
+        @SerializedName("is-reauth-journey") @Expose Boolean isReauthJourney) {}
