@@ -34,7 +34,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -142,11 +141,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                     LOG.info(
                                             "Account is locked due to exceeded counts on count types {}",
                                             exceededCountTypes);
-
-                                    ReauthFailureReasons reauthFailureReason =
-                                            getReauthFailureReason(exceededCountTypes);
-
-                                    AuditService.MetadataPair[] metadataPairs =
+                                    auditService.submitAuditEvent(
+                                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                                            updatedAuditContext,
                                             ReauthMetadataBuilder.builder(request.rpPairwiseId())
                                                     .withAllIncorrectAttemptCounts(
                                                             authenticationAttemptsService
@@ -155,13 +152,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                                                                     .getSubjectID(),
                                                                             JourneyType
                                                                                     .REAUTHENTICATION))
-                                                    .withFailureReason(reauthFailureReason)
-                                                    .build();
-
-                                    auditService.submitAuditEvent(
-                                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                                            updatedAuditContext,
-                                            metadataPairs);
+                                                    .withFailureReason(exceededCountTypes)
+                                                    .build());
 
                                     throw new AccountLockedException(
                                             "Account is locked due to too many failed attempts.",
@@ -200,16 +192,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             LOG.error("Account is locked due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
-    }
-
-    private static ReauthFailureReasons getReauthFailureReason(List<CountType> exceededCountTypes) {
-        CountType exceededType = exceededCountTypes.get(0);
-        return switch (exceededType) {
-            case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
-            case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
-            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
-            default -> null;
-        };
     }
 
     private Optional<String> verifyReAuthentication(
@@ -308,16 +290,15 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 metadataPairsForIncorrectEmail.toArray(new AuditService.MetadataPair[0]));
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
-            AuditService.MetadataPair[] metadataPairs =
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext,
                     ReauthMetadataBuilder.builder(rpPairwiseId)
                             .withAllIncorrectAttemptCounts(
                                     authenticationAttemptsService.getCountsByJourney(
                                             uniqueUserIdentifier, JourneyType.REAUTHENTICATION))
                             .withFailureReason(ReauthFailureReasons.INCORRECT_EMAIL)
-                            .build();
-
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_REAUTH_FAILED, auditContext, metadataPairs);
+                            .build());
 
             auditService.submitAuditEvent(
                     AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,

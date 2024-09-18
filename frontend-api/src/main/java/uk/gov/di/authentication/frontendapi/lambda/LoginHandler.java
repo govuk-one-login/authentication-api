@@ -50,7 +50,6 @@ import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
-import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReason;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
@@ -191,19 +190,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             reauthCounts, configurationService);
             if (!exceedingCounts.isEmpty()) {
                 LOG.info("User has existing reauth block on counts {}", exceedingCounts);
-                ReauthFailureReasons reauthFailureReason = getReauthFailureReason(exceedingCounts);
                 var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
-                AuditService.MetadataPair[] metadataPairs =
-                        ReauthMetadataBuilder.builder(calculatedPairwiseId)
-                                .withAllIncorrectAttemptCounts(
-                                        authenticationAttemptsService.getCountsByJourney(
-                                                userProfile.getSubjectID(),
-                                                JourneyType.REAUTHENTICATION))
-                                .withFailureReason(reauthFailureReason)
-                                .build();
-
                 auditService.submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTH_FAILED, auditContext, metadataPairs);
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContext,
+                        ReauthMetadataBuilder.builder(calculatedPairwiseId)
+                                .withAllIncorrectAttemptCounts(reauthCounts)
+                                .withFailureReason(exceedingCounts)
+                                .build());
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
             }
@@ -357,17 +351,16 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
-                AuditService.MetadataPair[] metadataPairs =
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContext,
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(
                                         authenticationAttemptsService.getCountsByJourney(
                                                 userProfile.getSubjectID(),
                                                 JourneyType.REAUTHENTICATION))
                                 .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
-                                .build();
-
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTH_FAILED, auditContext, metadataPairs);
+                                .build());
             }
 
             if (isJourneyWhereBlockingApplies(isReauthJourney)) {
