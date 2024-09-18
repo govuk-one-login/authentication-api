@@ -6,8 +6,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
@@ -20,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -155,7 +158,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (userProfileMissingForReauthenticationJourney(userProfile, journeyType))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
 
-        if (errorCountsExceededForReauthentication(journeyType, userProfile))
+        if (errorCountsExceededForReauthentication(journeyType, userProfile, userContext, auditContext))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
         try {
@@ -185,7 +188,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private boolean errorCountsExceededForReauthentication(
-            JourneyType journeyType, UserProfile userProfile) {
+            JourneyType journeyType, UserProfile userProfile, UserContext userContext, AuditContext auditContext) {
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
@@ -195,7 +198,16 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
+
             if (!countTypesWhereLimitExceeded.isEmpty()) {
+                var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContext,
+                        ReauthMetadataBuilder.builder(calculatedPairwiseId)
+                                .withAllIncorrectAttemptCounts(counts)
+                                .withFailureReason(countTypesWhereLimitExceeded)
+                                .build());
                 LOG.info(
                         "Re-authentication locked due to {} counts exceeded.",
                         countTypesWhereLimitExceeded);
@@ -445,5 +457,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
                 .toArray(AuditService.MetadataPair[]::new);
+    }
+
+    private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
+        var client = userContext.getClient().orElseThrow();
+        return ClientSubjectHelper.getSubject(
+                        userProfile,
+                        client,
+                        authenticationService,
+                        configurationService.getInternalSectorUri())
+                .getValue();
     }
 }
