@@ -39,7 +39,7 @@ class FraudCheckMetricsHelperTest {
         var journeyType = JourneyType.REGISTRATION;
         var environment = "test-env";
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
-                cloudwatchMetricsService, journeyType, notificationType, environment);
+                cloudwatchMetricsService, journeyType, notificationType.name(), environment);
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -60,7 +60,7 @@ class FraudCheckMetricsHelperTest {
     @MethodSource("nonSetupNotificationTypes")
     void shouldNotIncrementMetricIfAnyOtherNotificationType(NotificationType notificationType) {
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
-                cloudwatchMetricsService, JourneyType.SIGN_IN, notificationType, "test-env");
+                cloudwatchMetricsService, JourneyType.SIGN_IN, notificationType.name(), "test-env");
 
         verify(cloudwatchMetricsService, never()).incrementCounter(any(), anyMap());
     }

@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -52,6 +53,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
@@ -74,6 +76,7 @@ public class SendOtpNotificationHandler
     private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
     public SendOtpNotificationHandler(
@@ -85,7 +88,8 @@ public class SendOtpNotificationHandler
             DynamoService dynamoService,
             DynamoEmailCheckResultService dynamoEmailCheckResultService,
             AuditService auditService,
-            ClientService clientService) {
+            ClientService clientService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
@@ -95,6 +99,7 @@ public class SendOtpNotificationHandler
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.auditService = auditService;
         this.clientService = clientService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
@@ -117,6 +122,7 @@ public class SendOtpNotificationHandler
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public SendOtpNotificationHandler() {
@@ -168,6 +174,12 @@ public class SendOtpNotificationHandler
                     e);
             return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
         }
+
+        incrementUserSubmittedCredentialIfNotificationSetupJourney(
+                cloudwatchMetricsService,
+                JourneyType.ACCOUNT_MANAGEMENT,
+                sendNotificationRequest.getNotificationType().name(),
+                configurationService.getEnvironment());
 
         if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
             LOG.warn(

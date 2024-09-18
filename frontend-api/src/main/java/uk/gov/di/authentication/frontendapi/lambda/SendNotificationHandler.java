@@ -65,6 +65,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -295,6 +296,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         sessionService.storeOrUpdateSession(
                 session.incrementCodeRequestCount(
                         request.getNotificationType(), request.getJourneyType()));
+
+        incrementUserSubmittedCredentialIfNotificationSetupJourney(
+                METRICS,
+                request.getJourneyType(),
+                request.getNotificationType().name(),
+                configurationService.getEnvironment());
+
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
 

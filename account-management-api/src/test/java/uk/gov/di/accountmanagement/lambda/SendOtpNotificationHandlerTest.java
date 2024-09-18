@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -88,6 +90,8 @@ class SendOtpNotificationHandlerTest {
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final DynamoEmailCheckResultService dynamoEmailCheckResultService =
             mock(DynamoEmailCheckResultService.class);
     private final Context context = mock(Context.class);
@@ -118,7 +122,8 @@ class SendOtpNotificationHandlerTest {
                     dynamoService,
                     dynamoEmailCheckResultService,
                     auditService,
-                    clientService);
+                    clientService,
+                    cloudwatchMetricsService);
 
     @BeforeEach
     void setup() {
@@ -127,6 +132,7 @@ class SendOtpNotificationHandlerTest {
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
+        when(configurationService.getEnvironment()).thenReturn("test-env");
         when(configurationService.getTestClientVerifyPhoneNumberOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
         when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
@@ -189,6 +195,8 @@ class SendOtpNotificationHandlerTest {
                             auditContext.withPhoneNumber(null),
                             pair("notification-type", VERIFY_EMAIL),
                             pair("test-user", false));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(eq("UserSubmittedCredential"), anyMap());
         }
     }
 
@@ -334,6 +342,7 @@ class SendOtpNotificationHandlerTest {
                         auditContext,
                         pair("notification-type", VERIFY_PHONE_NUMBER),
                         pair("test-user", false));
+        verify(cloudwatchMetricsService).incrementCounter(eq("UserSubmittedCredential"), anyMap());
     }
 
     @Test
