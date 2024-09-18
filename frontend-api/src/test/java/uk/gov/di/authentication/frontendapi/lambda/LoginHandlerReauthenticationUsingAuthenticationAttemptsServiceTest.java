@@ -248,7 +248,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                     Optional.of(ENCODED_DEVICE_DETAILS)),
-                            pair("rp_pairwise_id", TEST_RP_PAIRWISE_ID),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", 0),
                             pair("incorrect_password_attempt_count", 6),
                             pair("incorrect_otp_code_attempt_count", 0),
@@ -347,7 +347,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                             FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                             auditContextWithAllUserInfo.withTxmaAuditEncoded(
                                     Optional.of(ENCODED_DEVICE_DETAILS)),
-                            pair("rp_pairwise_id", TEST_RP_PAIRWISE_ID),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
                             pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
                             pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
