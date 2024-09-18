@@ -49,6 +49,18 @@ public class ReauthMetadataBuilder {
         return this;
     }
 
+    public ReauthMetadataBuilder withFailureReason(List<CountType> exceededCountTypes) {
+        CountType exceededType = exceededCountTypes.get(0);
+        ReauthFailureReasons reauthFailureReason =
+                switch (exceededType) {
+                    case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
+                    case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
+                    case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
+                    default -> null;
+                };
+        return withFailureReason(reauthFailureReason);
+    }
+
     public AuditService.MetadataPair[] build() {
         var metadataPairs = new ArrayList<AuditService.MetadataPair>();
         if (rpPairwiseIdPair != null) {
@@ -67,15 +79,5 @@ public class ReauthMetadataBuilder {
             metadataPairs.add(failureReason);
         }
         return metadataPairs.toArray(AuditService.MetadataPair[]::new);
-    }
-
-    public static ReauthFailureReasons getReauthFailureReason(List<CountType> exceededCountTypes) {
-        CountType exceededType = exceededCountTypes.get(0);
-        return switch (exceededType) {
-            case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
-            case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
-            case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
-            default -> null;
-        };
     }
 }
