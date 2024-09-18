@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -60,6 +61,7 @@ public class StartHandler
     private final SessionService sessionService;
     private final AuditService auditService;
     private final StartService startService;
+    private final AuthSessionService authSessionService;
     private final ConfigurationService configurationService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -68,11 +70,13 @@ public class StartHandler
             SessionService sessionService,
             AuditService auditService,
             StartService startService,
+            AuthSessionService authSessionService,
             ConfigurationService configurationService) {
         this.clientSessionService = clientSessionService;
         this.sessionService = sessionService;
         this.auditService = auditService;
         this.startService = startService;
+        this.authSessionService = authSessionService;
         this.configurationService = configurationService;
     }
 
@@ -91,6 +95,7 @@ public class StartHandler
                         sessionService,
                         authenticationAttemptsService,
                         configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
     }
 
@@ -109,6 +114,7 @@ public class StartHandler
                         sessionService,
                         authenticationAttemptsService,
                         configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
     }
 
@@ -180,6 +186,7 @@ public class StartHandler
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
             LOG.info("previousSessionId: {}", previousSessionId);
+            authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
 
             var userStartInfo =
                     startService.buildUserStartInfo(
