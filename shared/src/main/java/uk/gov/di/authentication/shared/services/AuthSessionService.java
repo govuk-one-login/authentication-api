@@ -17,7 +17,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     public AuthSessionService(ConfigurationService configurationService) {
         super(AuthSessionItem.class, "auth-session", configurationService);
-        this.timeToLive = 86400L; // 24 hours
+        this.timeToLive = configurationService.getSessionExpiry();
     }
 
     public void addOrUpdateSessionId(Optional<String> previousSessionId, String newSessionId) {
