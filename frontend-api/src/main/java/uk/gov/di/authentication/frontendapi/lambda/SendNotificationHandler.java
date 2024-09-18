@@ -292,7 +292,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                                         notificationType));
 
         LOG.info("Incrementing code request count");
-        sessionService.save(
+        sessionService.storeOrUpdateSession(
                 session.incrementCodeRequestCount(
                         request.getNotificationType(), request.getJourneyType()));
         var testClientWithAllowedEmail =
@@ -389,7 +389,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
 
             LOG.info("Resetting code request count");
-            sessionService.save(session.resetCodeRequestCount(notificationType, journeyType));
+            sessionService.storeOrUpdateSession(
+                    session.resetCodeRequestCount(notificationType, journeyType));
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {

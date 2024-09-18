@@ -114,7 +114,7 @@ public class LogoutService {
             clientSessionService.deleteStoredClientSession(clientSessionId);
         }
         LOG.info("Deleting Session");
-        sessionService.deleteSessionFromRedis(session.getSessionId());
+        sessionService.deleteStoredSession(session.getSessionId());
     }
 
     public APIGatewayProxyResponseEvent handleLogout(

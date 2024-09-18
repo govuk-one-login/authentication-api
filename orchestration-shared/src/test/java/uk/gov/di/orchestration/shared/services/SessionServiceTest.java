@@ -39,7 +39,7 @@ class SessionServiceTest {
         try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
             when(configuration.isBrowserSessionCookieEnabled()).thenReturn(true);
             idGenerator.when(IdGenerator::generate).thenReturn("id-1", "id-2");
-            Session session = sessionService.createSession();
+            Session session = sessionService.generateSession();
 
             assertEquals("id-1", session.getSessionId());
             assertEquals("id-2", session.getBrowserSessionId());
@@ -52,7 +52,7 @@ class SessionServiceTest {
 
         var session = new Session("session-id").addClientSession("client-session-id");
 
-        sessionService.save(session);
+        sessionService.storeOrUpdateSession(session);
 
         verify(redis, times(1))
                 .saveWithExpiry("session-id", objectMapper.writeValueAsString(session), 1234L);
@@ -151,8 +151,8 @@ class SessionServiceTest {
     void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
         var session = new Session("session-id").addClientSession("client-session-id");
 
-        sessionService.save(session);
-        sessionService.updateSessionId(session);
+        sessionService.storeOrUpdateSession(session);
+        sessionService.updateWithNewSessionId(session);
 
         verify(redis, times(2)).saveWithExpiry(anyString(), anyString(), anyLong());
         verify(redis).deleteValue("session-id");
@@ -162,8 +162,8 @@ class SessionServiceTest {
     void shouldDeleteSessionIdFromRedis() {
         var session = new Session("session-id").addClientSession("client-session-id");
 
-        sessionService.save(session);
-        sessionService.deleteSessionFromRedis(session.getSessionId());
+        sessionService.storeOrUpdateSession(session);
+        sessionService.deleteStoredSession(session.getSessionId());
 
         verify(redis).deleteValue("session-id");
     }

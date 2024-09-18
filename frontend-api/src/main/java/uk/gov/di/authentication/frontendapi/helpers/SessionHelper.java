@@ -34,7 +34,7 @@ public class SessionHelper {
                                         authenticationService)
                                 .getValue();
         LOG.info("Setting internal common subject identifier in user session");
-        sessionService.save(
+        sessionService.storeOrUpdateSession(
                 userContext
                         .getSession()
                         .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));

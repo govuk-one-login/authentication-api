@@ -249,7 +249,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 codeRequest,
                 mfaCodeProcessor);
 
-        sessionService.save(session);
+        sessionService.storeOrUpdateSession(session);
 
         return errorResponseMaybe
                 .map(response -> generateApiGatewayProxyErrorResponse(400, response))
@@ -270,7 +270,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                     codeRequest.getMfaMethodType().getValue(),
                                     journeyType);
 
-                            sessionService.save(
+                            sessionService.storeOrUpdateSession(
                                     session.setCurrentCredentialStrength(
                                                     CredentialTrustLevel.MEDIUM_LEVEL)
                                             .setVerifiedMfaMethodType(

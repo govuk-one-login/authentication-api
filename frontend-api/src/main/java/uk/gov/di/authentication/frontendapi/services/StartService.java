@@ -76,7 +76,7 @@ public class StartService {
                     "Session is authenticated but user profile is empty. Creating new session with existing sessionID");
             session = new Session(session.getSessionId());
             session.addClientSession(clientSessionId);
-            sessionService.save(session);
+            sessionService.storeOrUpdateSession(session);
         }
         return session;
     }

@@ -191,7 +191,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                             RESET_PASSWORD_WITH_CODE);
                                     return newCode;
                                 });
-        sessionService.save(userContext.getSession().incrementPasswordResetCount());
+        sessionService.storeOrUpdateSession(userContext.getSession().incrementPasswordResetCount());
 
         if (isTestClient) {
             LOG.info("User is a TestClient so will NOT place message on queue");
@@ -254,7 +254,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     userContext.getSession().getEmailAddress(),
                     codeRequestBlockedKeyPrefix,
                     configurationService.getLockoutDuration());
-            sessionService.save(userContext.getSession().resetPasswordResetCount());
+            sessionService.storeOrUpdateSession(userContext.getSession().resetPasswordResetCount());
             return Optional.of(ErrorResponse.ERROR_1022);
         }
         if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {

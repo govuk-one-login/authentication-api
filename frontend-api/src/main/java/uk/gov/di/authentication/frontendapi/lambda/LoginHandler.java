@@ -243,7 +243,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserCredentials userCredentials,
             UserProfile userProfile,
             AuditContext auditContext) {
-        sessionService.save(
+        sessionService.storeOrUpdateSession(
                 userContext
                         .getSession()
                         .setNewAccount(EXISTING)

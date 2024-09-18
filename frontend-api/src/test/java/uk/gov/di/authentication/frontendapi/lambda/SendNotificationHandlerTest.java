@@ -276,7 +276,7 @@ class SendNotificationHandlerTest {
                                 EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
                 verify(codeStorageService).getOtpCode(EMAIL, notificationType);
                 verify(sessionService)
-                        .save(
+                        .storeOrUpdateSession(
                                 argThat(
                                         session ->
                                                 isSessionWithEmailSent(
@@ -462,7 +462,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService)
                 .saveOtpCode(EMAIL, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, notificationType);
         verify(sessionService)
-                .save(
+                .storeOrUpdateSession(
                         argThat(
                                 session ->
                                         isSessionWithEmailSent(
@@ -494,7 +494,7 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(codeStorageService);
         verify(sessionService, never())
-                .save(
+                .storeOrUpdateSession(
                         argThat(
                                 session ->
                                         isSessionWithEmailSent(

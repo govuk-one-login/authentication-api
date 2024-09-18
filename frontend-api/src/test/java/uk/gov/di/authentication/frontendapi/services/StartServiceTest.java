@@ -130,7 +130,7 @@ class StartServiceTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         assertTrue(session.getClientSessions().contains("some-client-session-id"));
         assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
-        verify(sessionService).save(session);
+        verify(sessionService).storeOrUpdateSession(session);
     }
 
     @Test

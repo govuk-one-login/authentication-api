@@ -487,7 +487,7 @@ public class AuthorisationHandler
             String persistentSessionId,
             TxmaAuditUser user) {
 
-        var session = existingSession.orElseGet(sessionService::createSession);
+        var session = existingSession.orElseGet(sessionService::generateSession);
         attachSessionIdToLogs(session);
 
         if (existingSession.isEmpty()) {
@@ -495,7 +495,7 @@ public class AuthorisationHandler
             LOG.info("Created session");
         } else {
             var previousSessionId = session.getSessionId();
-            sessionService.updateSessionId(session);
+            sessionService.updateWithNewSessionId(session);
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
@@ -514,7 +514,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.save(session);
+        sessionService.storeOrUpdateSession(session);
         LOG.info("Session saved successfully");
 
         var state = new State();
@@ -577,7 +577,7 @@ public class AuthorisationHandler
                     authenticationRequest.getClientID().getValue(),
                     user);
         }
-        var session = existingSession.orElseGet(sessionService::createSession);
+        var session = existingSession.orElseGet(sessionService::generateSession);
         attachSessionIdToLogs(session);
 
         Optional<String> previousSessionId = existingSession.map(Session::getSessionId);
@@ -586,7 +586,7 @@ public class AuthorisationHandler
             LOG.info("Created session");
         } else {
             previousSessionId = Optional.of(session.getSessionId());
-            sessionService.updateSessionId(session);
+            sessionService.updateWithNewSessionId(session);
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
@@ -604,7 +604,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        sessionService.save(session);
+        sessionService.storeOrUpdateSession(session);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
                 session,

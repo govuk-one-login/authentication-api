@@ -135,7 +135,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     emailAddress,
                     CodeStorageService.PASSWORD_BLOCKED_KEY_PREFIX + JourneyType.PASSWORD_RESET)) {
                 LOG.info("User account is locked");
-                sessionService.save(userContext.getSession());
+                sessionService.storeOrUpdateSession(userContext.getSession());
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -212,7 +212,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             userMfaDetail.getMfaMethodType(),
                             getLastDigitsOfPhoneNumber(userMfaDetail),
                             lockoutInformation);
-            sessionService.save(userContext.getSession());
+            sessionService.storeOrUpdateSession(userContext.getSession());
 
             LOG.info("Successfully processed request");
 
