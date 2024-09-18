@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -21,6 +22,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -52,6 +54,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -60,7 +63,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -76,6 +81,10 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -96,14 +105,17 @@ class VerifyCodeHandlerTest {
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
             "testclient.user1@digital.cabinet-office.gov.uk";
+    private static final String TEST_RP_PAIRWISE_ID = "test-rp-pairwise-id";
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final int MAX_ALLOWED_RETRIES = 6;
 
     private final Context context = mock(Context.class);
+    private final Subject subject = mock(Subject.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -735,6 +747,68 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         mockedNowHelperClass.close();
+    }
+
+    private static Stream<Arguments> reauthCountTypesAndExpectedMetadata() {
+        return Stream.of(
+                Arguments.arguments(
+                        ENTER_EMAIL,
+                        MAX_ALLOWED_RETRIES,
+                        0,
+                        0,
+                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
+                Arguments.arguments(
+                        ENTER_PASSWORD,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        0,
+                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
+                Arguments.arguments(
+                        ENTER_SMS_CODE,
+                        0,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
+                Arguments.arguments(
+                        ENTER_AUTH_APP_CODE,
+                        0,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("reauthCountTypesAndExpectedMetadata")
+    void shouldBlockUserFromReauthWhenAnyReauthAttemptCountIsExceeded(
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason) {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class)) {
+            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+            when(configurationService.getCodeMaxRetries()).thenReturn(MAX_ALLOWED_RETRIES);
+            when(authenticationAttemptsService.getCountsByJourney(
+                            any(String.class), eq(JourneyType.REAUTHENTICATION)))
+                    .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
+            clientSubjectHelperMockedStatic
+                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
+                    .thenReturn(subject);
+            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+
+            makeCallWithCode(INVALID_CODE, MFA_SMS.name(), JourneyType.REAUTHENTICATION);
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            AUDIT_CONTEXT,
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
+                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                            pair("failure-reason", expectedFailureReason));
+        }
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
