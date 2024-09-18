@@ -18,7 +18,7 @@ public class ReauthMetadataBuilder {
     private AuditService.MetadataPair failureReason;
 
     private ReauthMetadataBuilder(String rpPairwiseId) {
-        this.rpPairwiseIdPair = pair("rp_pairwise_id", rpPairwiseId);
+        this.rpPairwiseIdPair = pair("rpPairwiseId", rpPairwiseId);
     }
 
     public static ReauthMetadataBuilder builder(String rpPairwiseId) {
