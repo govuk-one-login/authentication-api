@@ -14,6 +14,8 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.services.UserInfoService;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -22,15 +24,17 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class UserInfoHandler
@@ -41,16 +45,19 @@ public class UserInfoHandler
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
+    private final SessionService sessionService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
-            AuditService auditService) {
+            AuditService auditService,
+            SessionService sessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
+        this.sessionService = sessionService;
     }
 
     public UserInfoHandler() {
@@ -65,6 +72,7 @@ public class UserInfoHandler
                 new AccessTokenService(
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.sessionService = new SessionService(configurationService);
     }
 
     @Override
@@ -85,15 +93,6 @@ public class UserInfoHandler
         LOG.info("Request received to the UserInfoHandler");
         Map<String, String> headers = input.getHeaders();
 
-        String sessionId =
-                getOptionalHeaderValueFromHeaders(
-                                input.getHeaders(),
-                                SESSION_ID_HEADER,
-                                configurationService.getHeadersCaseInsensitive())
-                        .orElse("Not present");
-
-        LOG.info("Session-Id : {} in userinfo request", sessionId);
-
         Optional<String> authorisationHeader =
                 getOptionalHeaderValueFromHeaders(
                         headers,
@@ -109,6 +108,25 @@ public class UserInfoHandler
                             .toHTTPResponse()
                             .getHeaderMap());
         }
+
+        Session userSession;
+        try {
+            Optional<Session> optionalSession =
+                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
+
+            if (optionalSession.isEmpty()) {
+                LOG.warn("Session cannot be found");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+
+            userSession = optionalSession.get();
+        } catch (Exception e) {
+            LOG.error("Error retrieving session from redis: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+
+        attachSessionIdToLogs(userSession);
+
         UserInfo userInfo;
         AccessToken accessToken;
         AccessTokenStore accessTokenStore;
@@ -168,6 +186,8 @@ public class UserInfoHandler
                     accessToken.getValue());
         }
 
+        sessionService.storeOrUpdateSession(
+                userSession.setNewAccount(Session.AccountState.EXISTING));
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 

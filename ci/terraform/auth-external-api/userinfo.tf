@@ -12,7 +12,9 @@ module "auth_userinfo_role" {
     aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
     aws_iam_policy.access_token_store_signing_key_kms_policy.arn,
-    local.user_credentials_encryption_policy_arn
+    aws_iam_policy.redis_parameter_policy.arn,
+    local.user_credentials_encryption_policy_arn,
+    //ATO-981 Part 4: Setup access to new Auth Session Table
   ]
 }
 
@@ -27,7 +29,8 @@ module "auth_userinfo" {
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     TXMA_AUDIT_QUEUE_URL = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT  = null
+    LOCALSTACK_ENDPOINT  = null,
+    REDIS_KEY            = local.redis_key
     DYNAMO_ENDPOINT      = null
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
@@ -51,6 +54,7 @@ module "auth_userinfo" {
   authentication_vpc_arn = local.authentication_vpc_arn
   security_group_ids = [
     local.authentication_security_group_id,
+    local.authentication_oidc_redis_security_group_id
   ]
   subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.auth_userinfo_role.arn
