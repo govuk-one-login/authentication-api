@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -18,10 +19,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
@@ -71,6 +74,7 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -88,6 +92,11 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -431,8 +440,7 @@ class VerifyMfaCodeHandlerTest {
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
-        return Stream.of(
-                JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATION);
+        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, REAUTHENTICATION);
     }
 
     @ParameterizedTest
@@ -469,10 +477,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
         var authAppSecret =
-                List.of(
-                                        JourneyType.SIGN_IN,
-                                        JourneyType.PASSWORD_RESET_MFA,
-                                        JourneyType.REAUTHENTICATION)
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, REAUTHENTICATION)
                                 .contains(journeyType)
                         ? null
                         : AUTH_APP_SECRET;
@@ -519,8 +524,7 @@ class VerifyMfaCodeHandlerTest {
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.AUTH_APP_REGISTRATION),
                 Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP),
-                Arguments.of(
-                        JourneyType.REAUTHENTICATION, CodeRequestType.AUTH_APP_REAUTHENTICATION));
+                Arguments.of(REAUTHENTICATION, CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -542,7 +546,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
-        if (journeyType != JourneyType.REAUTHENTICATION) {
+        if (journeyType != REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
         }
@@ -601,10 +605,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         var profileInformation =
-                List.of(
-                                        JourneyType.SIGN_IN,
-                                        JourneyType.PASSWORD_RESET_MFA,
-                                        JourneyType.REAUTHENTICATION)
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, REAUTHENTICATION)
                                 .contains(journeyType)
                         ? null
                         : AUTH_APP_SECRET;
@@ -641,7 +642,7 @@ class VerifyMfaCodeHandlerTest {
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.SMS_ACCOUNT_RECOVERY),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_SMS),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION),
-                Arguments.of(JourneyType.REAUTHENTICATION, CodeRequestType.SMS_REAUTHENTICATION));
+                Arguments.of(REAUTHENTICATION, CodeRequestType.SMS_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -666,7 +667,7 @@ class VerifyMfaCodeHandlerTest {
                 .contains(codeRequestType)) {
             blockTime = 300L;
         }
-        if (journeyType != JourneyType.REAUTHENTICATION) {
+        if (journeyType != REAUTHENTICATION) {
             verify(codeStorageService)
                     .saveBlockedForEmail(
                             EMAIL, CODE_BLOCKED_KEY_PREFIX + codeRequestType, blockTime);
@@ -794,15 +795,14 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Date.from(Instant.parse("2024-01-01T00:00:00.00Z")));
 
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
         makeCallWithCode(codeRequest);
 
         verify(authenticationAttemptsService, times(1))
                 .createOrIncrementCount(
                         TEST_SUBJECT_ID,
                         1704067200L,
-                        JourneyType.REAUTHENTICATION,
+                        REAUTHENTICATION,
                         CountType.ENTER_AUTH_APP_CODE);
 
         mockedNowHelperClass.close();
@@ -869,6 +869,80 @@ class VerifyMfaCodeHandlerTest {
                                         Objects.equals(
                                                 s.getPreservedReauthCountsForAudit(),
                                                 existingCounts)));
+    }
+
+    private static Stream<Arguments> reauthCountTypesAndMetadata() {
+        return Stream.of(
+                Arguments.arguments(
+                        ENTER_EMAIL,
+                        MAX_RETRIES,
+                        0,
+                        0,
+                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
+                Arguments.arguments(
+                        ENTER_PASSWORD,
+                        0,
+                        MAX_RETRIES,
+                        0,
+                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
+                Arguments.arguments(
+                        ENTER_SMS_CODE,
+                        0,
+                        0,
+                        MAX_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
+                Arguments.arguments(
+                        ENTER_AUTH_APP_CODE,
+                        0,
+                        0,
+                        MAX_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("reauthCountTypesAndMetadata")
+    void shouldReturnErrorIfUserHasTooManyReauthAttemptCountsOfAnyType(
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason)
+            throws Json.JsonException {
+        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+            when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
+                    .thenReturn(Map.of(countType, MAX_RETRIES));
+            when(configurationService.getInternalSectorUri())
+                    .thenReturn("https://test.account.gov.uk");
+            Subject subject = new Subject(TEST_SUBJECT_ID);
+            mockedClientSubjectHelperClass
+                    .when(
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            eq(userProfile),
+                                            any(ClientRegistry.class),
+                                            any(AuthenticationService.class),
+                                            any(String.class)))
+                    .thenReturn(subject);
+
+            var codeRequest =
+                    new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, REAUTHENTICATION, null);
+            var result = makeCallWithCode(codeRequest);
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            AUDIT_CONTEXT,
+                            pair("rpPairwiseId", subject.getValue()),
+                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
+                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                            pair("failure-reason", expectedFailureReason));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+        }
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)
