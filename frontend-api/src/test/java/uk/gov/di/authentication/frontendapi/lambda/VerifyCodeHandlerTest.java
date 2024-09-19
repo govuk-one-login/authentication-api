@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -52,6 +53,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -60,7 +62,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -99,6 +103,7 @@ class VerifyCodeHandlerTest {
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
+    private static final String TEST_RP_PAIRWISE_ID = "test-rp-pairwise-id";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
@@ -108,6 +113,7 @@ class VerifyCodeHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
+    private final Subject subject = new Subject("subjectId");
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
@@ -735,6 +741,47 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         mockedNowHelperClass.close();
+    }
+
+    @Test
+    void shouldReturnErrorIfUserHasAnyReauthenticationBlocksAgainstThem() {
+        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+            when(authenticationAttemptsService.getCountsByJourney(
+                            any(), eq(JourneyType.REAUTHENTICATION)))
+                    .thenReturn(Map.of(CountType.ENTER_SMS_CODE, 6));
+            when(configurationService.getInternalSectorUri())
+                    .thenReturn("https://test.account.gov.uk");
+            when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+            Subject subject = new Subject(TEST_RP_PAIRWISE_ID);
+            clientSubjectHelperMockedStatic
+                    .when(
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            eq(userProfile), any(), any(), any()))
+                    .thenReturn(subject);
+
+            var result =
+                    makeCallWithCode(INVALID_CODE, MFA_SMS.name(), JourneyType.REAUTHENTICATION);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                            eq(AUDIT_CONTEXT),
+                            any(),
+                            eq(AuditService.MetadataPair.pair("incorrect_email_attempt_count", 0)),
+                            eq(
+                                    AuditService.MetadataPair.pair(
+                                            "incorrect_password_attempt_count", 0)),
+                            eq(
+                                    AuditService.MetadataPair.pair(
+                                            "incorrect_otp_code_attempt_count", 6)),
+                            eq(AuditService.MetadataPair.pair("failure-reason", "incorrect_otp")));
+        }
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
