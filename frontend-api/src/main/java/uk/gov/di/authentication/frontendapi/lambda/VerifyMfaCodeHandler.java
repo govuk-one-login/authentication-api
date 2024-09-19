@@ -176,7 +176,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
-            return verifyCode(input, codeRequest, userContext, journeyType, subjectID);
+            return verifyCode(
+                    input, codeRequest, userContext, journeyType, subjectID, authSessionId.get());
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -226,7 +227,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
             JourneyType journeyType,
-            String subjectId) {
+            String subjectId,
+            String authSessionId) {
 
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
@@ -291,6 +293,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                                     CredentialTrustLevel.MEDIUM_LEVEL)
                                             .setVerifiedMfaMethodType(
                                                     codeRequest.getMfaMethodType()));
+
+                            authSessionService.setVerifiedMfaMethodType(
+                                    authSessionId, codeRequest.getMfaMethodType());
 
                             var clientId =
                                     userContext.getClient().isPresent()
