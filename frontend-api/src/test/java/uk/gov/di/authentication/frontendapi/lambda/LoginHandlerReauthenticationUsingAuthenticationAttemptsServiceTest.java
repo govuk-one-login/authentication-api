@@ -355,6 +355,88 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         }
     }
 
+    @ParameterizedTest
+    @EnumSource(JourneyType.class)
+    void
+            shouldNotEmitReauthFailedAuditEventWhenJourneyTypeIsNotReauthenticationWhenUserAlreadyBlocked(
+                    JourneyType journeyType) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(authenticationAttemptsService.getCount(
+                        any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
+                .thenReturn(MAX_ALLOWED_RETRIES - 1);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1))
+                .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
+
+        setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
+
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, false);
+        usingDefaultVectorOfTrust();
+
+        String validBodyWithJourney =
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        CommonTestVariables.PASSWORD, EMAIL.toUpperCase(), journeyType);
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithJourney);
+
+        handler.handleRequest(event, context);
+
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(JourneyType.class)
+    void
+            shouldNotEmitReauthFailedAuditEventWhenJourneyTypeIsNotReauthWhenUserEntersTooManyIncorrectPasswords(
+                    JourneyType journeyType) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(authenticationAttemptsService.getCountsByJourney(
+                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+                .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
+
+        setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
+
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, false);
+        usingDefaultVectorOfTrust();
+
+        String validBodyWithJourney =
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        CommonTestVariables.PASSWORD, EMAIL.toUpperCase(), journeyType);
+
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithJourney);
+
+        handler.handleRequest(event, context);
+
+        if (journeyType != JourneyType.REAUTHENTICATION) {
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
+                            any(AuditContext.class),
+                            any(AuditService.MetadataPair[].class));
+        }
+    }
+
     @Test
     void shouldIncrementRelevantCountWhenCredentialsAreInvalid() {
         UserProfile userProfile = generateUserProfile(null);

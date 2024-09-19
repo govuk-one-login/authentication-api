@@ -349,7 +349,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 pair(ATTEMPT_NO_FAILED_AT, configurationService.getMaxPasswordRetries()));
 
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
                 var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
