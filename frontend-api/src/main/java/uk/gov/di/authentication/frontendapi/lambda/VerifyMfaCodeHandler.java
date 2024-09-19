@@ -492,12 +492,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private String getInternalCommonSubjectIdentifier(
             UserProfile userProfile, ClientRegistry client) {
-        var internalCommonSubjectIdentifier =
-                ClientSubjectHelper.getSubject(
-                        userProfile,
-                        client,
-                        authenticationService,
-                        configurationService.getInternalSectorUri());
-        return internalCommonSubjectIdentifier.getValue();
+        try {
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            client,
+                            authenticationService,
+                            configurationService.getInternalSectorUri());
+            return internalCommonSubjectIdentifier.getValue();
+        } catch (RuntimeException e) {
+            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
+            return AuditService.UNKNOWN;
+        }
     }
 }
