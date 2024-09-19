@@ -146,7 +146,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
-            Optional<String> authSessionId = authSessionService.getSessionIdFromRequestHeaders(input.getHeaders());
+            Optional<String> authSessionId =
+                    authSessionService.getSessionIdFromRequestHeaders(input.getHeaders());
             if (authSessionId.isEmpty()) {
                 LOG.warn("Auth session ID cannot be found");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
@@ -225,6 +226,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             processSuccessfulCodeRequest(
                     session,
+                    authSessionId.get(),
                     codeRequest,
                     userContext,
                     userProfileMaybe.isPresent() ? userProfileMaybe.get().getSubjectID() : null,
@@ -317,6 +319,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private void processSuccessfulCodeRequest(
             Session session,
+            String authSessionId,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
@@ -339,6 +342,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     false);
             sessionService.storeOrUpdateSession(
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS));
+            authSessionService.setVerifiedMfaMethodType(authSessionId, MFAMethodType.SMS);
             clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),

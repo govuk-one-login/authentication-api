@@ -6,6 +6,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
@@ -35,6 +37,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             ConfigurationService configurationService) {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
+        this.configurationService = configurationService;
     }
 
     public Optional<String> getSessionIdFromRequestHeaders(Map<String, String> headers) {
@@ -115,6 +118,25 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                     sessionItem.getSessionId(),
                     e.getMessage());
             throw e;
+        }
+    }
+
+    public void setVerifiedMfaMethodType(String sessionId, MFAMethodType mfaMethodType) {
+        try {
+            Optional<AuthSessionItem> item = getSession(sessionId);
+            if (item.isPresent()) {
+                AuthSessionItem updatedItem =
+                        item.get().withVerifiedMfaMethodType(mfaMethodType.getValue());
+                update(updatedItem);
+                LOG.info("verifiedMfaMethodType updated in Auth session table.");
+            } else {
+                LOG.error("No Auth session item found with provided sessionId");
+                throw new AuthSessionException(
+                        "No Auth session item found with provided sessionId");
+            }
+        } catch (DynamoDbException e) {
+            LOG.error("Failed to update verifiedMfaMethodType: {}", e.getMessage());
+            throw new AuthSessionException("Failed to update verifiedMfaMethodType");
         }
     }
 }
