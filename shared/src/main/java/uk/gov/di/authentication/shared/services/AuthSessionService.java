@@ -9,16 +9,23 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     private static final Logger LOG = LogManager.getLogger(AuthSessionService.class);
 
+    private final ConfigurationService configurationService;
+
     private final long timeToLive;
 
     public AuthSessionService(ConfigurationService configurationService) {
         super(AuthSessionItem.class, "auth-session", configurationService);
+        this.configurationService = configurationService;
         this.timeToLive = configurationService.getSessionExpiry();
     }
 
@@ -28,6 +35,19 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             ConfigurationService configurationService) {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
+    }
+
+    public Optional<String> getSessionIdFromRequestHeaders(Map<String, String> headers) {
+        Optional<String> sessionId =
+                getOptionalHeaderValueFromHeaders(
+                        headers,
+                        SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+
+        if (sessionId.isEmpty()) {
+            LOG.warn("Value not found for Client-Session-Id header");
+        }
+        return sessionId;
     }
 
     public void addOrUpdateSessionId(Optional<String> previousSessionId, String newSessionId) {
