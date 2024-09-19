@@ -234,7 +234,7 @@ class CheckReAuthUserHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         testAuditContextWithAuditEncoded,
-                        AuditService.MetadataPair.pair("rp_pairwise_id", TEST_RP_PAIRWISE_ID),
+                        AuditService.MetadataPair.pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                         AuditService.MetadataPair.pair("incorrect_email_attempt_count", 6),
                         AuditService.MetadataPair.pair("incorrect_password_attempt_count", 0),
                         AuditService.MetadataPair.pair("incorrect_otp_code_attempt_count", 0),

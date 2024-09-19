@@ -5,6 +5,7 @@ import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.services.AuditService;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -17,7 +18,7 @@ public class ReauthMetadataBuilder {
     private AuditService.MetadataPair failureReason;
 
     private ReauthMetadataBuilder(String rpPairwiseId) {
-        this.rpPairwiseIdPair = pair("rp_pairwise_id", rpPairwiseId);
+        this.rpPairwiseIdPair = pair("rpPairwiseId", rpPairwiseId);
     }
 
     public static ReauthMetadataBuilder builder(String rpPairwiseId) {
@@ -46,6 +47,18 @@ public class ReauthMetadataBuilder {
         this.failureReason =
                 failureReason == null ? null : pair("failure-reason", failureReason.getValue());
         return this;
+    }
+
+    public ReauthMetadataBuilder withFailureReason(List<CountType> exceededCountTypes) {
+        CountType exceededType = exceededCountTypes.get(0);
+        ReauthFailureReasons reauthFailureReason =
+                switch (exceededType) {
+                    case ENTER_EMAIL -> ReauthFailureReasons.INCORRECT_EMAIL;
+                    case ENTER_PASSWORD -> ReauthFailureReasons.INCORRECT_PASSWORD;
+                    case ENTER_AUTH_APP_CODE, ENTER_SMS_CODE -> ReauthFailureReasons.INCORRECT_OTP;
+                    default -> null;
+                };
+        return withFailureReason(reauthFailureReason);
     }
 
     public AuditService.MetadataPair[] build() {
