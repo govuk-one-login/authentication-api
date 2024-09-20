@@ -34,8 +34,10 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_ACCOUNT_IDENTIFIED;
@@ -121,6 +123,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         Optional<UserProfile> maybeUserProfileOfUserSuppliedEmail =
                 authenticationService.getUserProfileByEmailMaybe(request.email());
 
+        AtomicReference<Map<CountType, Integer>> maybeExistingCounts = new AtomicReference<>();
+
         try {
             return maybeUserProfileOfUserSuppliedEmail
                     .flatMap(
@@ -132,6 +136,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         authenticationAttemptsService.getCountsByJourney(
                                                 userProfile.getSubjectID(),
                                                 JourneyType.REAUTHENTICATION);
+
+                                maybeExistingCounts.set(countTypesToCounts);
 
                                 var exceededCountTypes =
                                         ReauthAuthenticationAttemptsHelper
@@ -173,7 +179,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             auditContext,
                                             pairwiseIdMetadataPair,
                                             request.email(),
-                                            maybeUserProfileOfUserSuppliedEmail));
+                                            maybeUserProfileOfUserSuppliedEmail,
+                                            Optional.ofNullable(maybeExistingCounts.get())));
         } catch (AccountLockedException e) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -237,7 +244,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             AuditContext auditContext,
             AuditService.MetadataPair pairwiseIdMetadataPair,
             String userSuppliedEmail,
-            Optional<UserProfile> userProfileOfSuppliedEmail) {
+            Optional<UserProfile> userProfileOfSuppliedEmail,
+            Optional<Map<CountType, Integer>> maybeExistingCounts) {
 
         String uniqueUserIdentifier;
         if (emailUserIsSignedInWith != null) {
@@ -247,23 +255,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             uniqueUserIdentifier = rpPairwiseId;
         }
 
-        authenticationAttemptsService.createOrIncrementCount(
-                uniqueUserIdentifier,
-                NowHelper.nowPlus(
-                                configurationService.getReauthEnterEmailCountTTL(),
-                                ChronoUnit.SECONDS)
-                        .toInstant()
-                        .getEpochSecond(),
-                JourneyType.REAUTHENTICATION,
-                CountType.ENTER_EMAIL);
-
-        var updatedCount =
-                authenticationAttemptsService.getCount(
-                        uniqueUserIdentifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
+        var updatedCounts =
+                incrementEmailCountAndRetrieveNewCounts(maybeExistingCounts, uniqueUserIdentifier);
+        var updatedEnterEmailCount = updatedCounts.getOrDefault(CountType.ENTER_EMAIL, 0);
 
         var metadataPairsForIncorrectEmail = new ArrayList<AuditService.MetadataPair>();
         metadataPairsForIncorrectEmail.add(pairwiseIdMetadataPair);
-        metadataPairsForIncorrectEmail.add(pair("incorrect_email_attempt_count", updatedCount));
+        metadataPairsForIncorrectEmail.add(
+                pair("incorrect_email_attempt_count", updatedEnterEmailCount));
         metadataPairsForIncorrectEmail.add(pair("user_supplied_email", userSuppliedEmail, true));
 
         if (userProfileOfSuppliedEmail.isPresent()) {
@@ -279,14 +278,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 auditContext,
                 metadataPairsForIncorrectEmail.toArray(new AuditService.MetadataPair[0]));
 
-        if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
+        if (hasEnteredIncorrectEmailTooManyTimes(updatedEnterEmailCount)) {
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(rpPairwiseId)
-                            .withAllIncorrectAttemptCounts(
-                                    authenticationAttemptsService.getCountsByJourney(
-                                            uniqueUserIdentifier, JourneyType.REAUTHENTICATION))
+                            .withAllIncorrectAttemptCounts(updatedCounts)
                             .withFailureReason(ReauthFailureReasons.INCORRECT_EMAIL)
                             .build());
 
@@ -301,6 +298,35 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         }
 
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
+    }
+
+    private Map<CountType, Integer> incrementEmailCountAndRetrieveNewCounts(
+            Optional<Map<CountType, Integer>> maybeExistingCounts, String uniqueUserIdentifier) {
+        authenticationAttemptsService.createOrIncrementCount(
+                uniqueUserIdentifier,
+                NowHelper.nowPlus(
+                                configurationService.getReauthEnterEmailCountTTL(),
+                                ChronoUnit.SECONDS)
+                        .toInstant()
+                        .getEpochSecond(),
+                JourneyType.REAUTHENTICATION,
+                CountType.ENTER_EMAIL);
+
+        Map<CountType, Integer> updatedCounts;
+        if (maybeExistingCounts.isPresent()) {
+            var existingCounts = new EnumMap<CountType, Integer>(CountType.class);
+            existingCounts.putAll(maybeExistingCounts.get());
+            var existingEnterEmailCount = existingCounts.getOrDefault(CountType.ENTER_EMAIL, 0);
+            // If we already have the counts, we don't have to re-retrieve, we can just increment
+            // the map in memory
+            existingCounts.put(CountType.ENTER_EMAIL, existingEnterEmailCount + 1);
+            updatedCounts = existingCounts;
+        } else {
+            updatedCounts =
+                    authenticationAttemptsService.getCountsByJourney(
+                            uniqueUserIdentifier, JourneyType.REAUTHENTICATION);
+        }
+        return updatedCounts;
     }
 
     private boolean hasEnteredIncorrectEmailTooManyTimes(int count) {
