@@ -52,6 +52,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -60,7 +62,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -701,16 +707,41 @@ class VerifyCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("codeRequestTypes")
-    void shouldNotDeleteCountOnSuccessfulSMSCodeRequest(
+    void shouldDeleteCountOnSuccessfulSMSCodeRequest(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        var existingCounts = Map.of(CountType.ENTER_EMAIL, 5, CountType.ENTER_PASSWORD, 1);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(6);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        any(), eq(JourneyType.REAUTHENTICATION)))
+                .thenReturn(existingCounts);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
         verify(authenticationAttemptsService, times(1))
                 .deleteCount(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_SMS_CODE);
+
+        if (journeyType == JourneyType.REAUTHENTICATION) {
+            verify(sessionService, atLeastOnce())
+                    .storeOrUpdateSession(
+                            argThat(
+                                    s ->
+                                            s.getPreservedReauthCountsForAudit()
+                                                    .equals(existingCounts)));
+        } else {
+            verify(sessionService, never())
+                    .storeOrUpdateSession(
+                            argThat(
+                                    s ->
+                                            Objects.equals(
+                                                    s.getPreservedReauthCountsForAudit(),
+                                                    existingCounts)));
+        }
+
         assertThat(result, hasStatus(204));
     }
 
