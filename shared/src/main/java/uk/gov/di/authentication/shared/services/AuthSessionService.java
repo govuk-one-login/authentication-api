@@ -45,6 +45,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 AuthSessionItem newItem =
                         new AuthSessionItem()
                                 .withSessionId(newSessionId)
+                                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()

@@ -18,13 +18,16 @@ class AuthSessionServiceIntegrationTest {
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
     @Test
-    void shouldAddSessionWhenPreviousSessionIdNotGiven() {
+    void shouldAddNewSessionWithExpectedDefaultValuesWhenNoPreviousSessionIdProvided() {
         authSessionExtension.addSession(Optional.empty(), SESSION_ID);
 
         Optional<AuthSessionItem> retrievedSession = authSessionExtension.getSession(SESSION_ID);
 
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+        assertThat(
+                retrievedSession.get().getIsNewAccount(),
+                equalTo(AuthSessionItem.AccountState.UNKNOWN));
     }
 
     @Test
@@ -52,5 +55,8 @@ class AuthSessionServiceIntegrationTest {
         assertThat(retrievedPreviousSession.isPresent(), equalTo(false));
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+        assertThat(
+                retrievedSession.get().getIsNewAccount(),
+                equalTo(AuthSessionItem.AccountState.UNKNOWN));
     }
 }
