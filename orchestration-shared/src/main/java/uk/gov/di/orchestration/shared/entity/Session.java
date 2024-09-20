@@ -33,6 +33,7 @@ public class Session {
     @Expose private int passwordResetCount;
 
     @Expose private Map<CodeRequestType, Integer> codeRequestCountMap;
+    @Expose private Map<CountType, Integer> preservedReauthCountsForAudit;
 
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
