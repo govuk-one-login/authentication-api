@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -160,7 +161,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                         userContext,
                                         request.rpPairwiseId(),
                                         updatedAuditContext,
-                                        pairwiseIdMetadataPair);
+                                        pairwiseIdMetadataPair,
+                                        countTypesToCounts);
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
                     .orElseGet(
@@ -194,7 +196,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext,
             String rpPairwiseId,
             AuditContext auditContext,
-            AuditService.MetadataPair pairwiseIdMetadataPair) {
+            AuditService.MetadataPair pairwiseIdMetadataPair,
+            Map<CountType, Integer> existingCountTypes) {
         var client = userContext.getClient().orElseThrow();
 
         var calculatedPairwiseId =
@@ -206,22 +209,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                         .getValue();
 
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
-            // note here that this retrieval is duplicated a lot here. Currently duplicating so that
-            // we don't hit merge conflicts with
-            // other PRs that are forced to populate these values in audit events in different ways,
-            // but
-            // once these are done, we should make this consistent and just get these counts once.
-            var incorrectEmailCount =
-                    authenticationAttemptsService.getCount(
-                            userProfile.getSubjectID(),
-                            JourneyType.REAUTHENTICATION,
-                            CountType.ENTER_EMAIL);
 
             auditService.submitAuditEvent(
                     AUTH_REAUTH_ACCOUNT_IDENTIFIED,
                     auditContext,
                     pairwiseIdMetadataPair,
-                    pair("incorrect_email_attempt_count", incorrectEmailCount));
+                    pair(
+                            "incorrect_email_attempt_count",
+                            existingCountTypes.getOrDefault(CountType.ENTER_EMAIL, 0)));
             return Optional.of(rpPairwiseId);
         } else {
             LOG.warn("Could not calculate rp pairwise ID");
