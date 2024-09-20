@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
@@ -259,24 +258,18 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 incrementEmailCountAndRetrieveNewCounts(maybeExistingCounts, uniqueUserIdentifier);
         var updatedEnterEmailCount = updatedCounts.getOrDefault(CountType.ENTER_EMAIL, 0);
 
-        var metadataPairsForIncorrectEmail = new ArrayList<AuditService.MetadataPair>();
-        metadataPairsForIncorrectEmail.add(pairwiseIdMetadataPair);
-        metadataPairsForIncorrectEmail.add(
-                pair("incorrect_email_attempt_count", updatedEnterEmailCount));
-        metadataPairsForIncorrectEmail.add(pair("user_supplied_email", userSuppliedEmail, true));
+        var metadataBuilder =
+                ReauthMetadataBuilder.builder(rpPairwiseId)
+                        .withIncorrectEmailAttemptCount(updatedEnterEmailCount)
+                        .withRestrictedUserSuppliedEmail(userSuppliedEmail);
 
-        if (userProfileOfSuppliedEmail.isPresent()) {
-            metadataPairsForIncorrectEmail.add(
-                    pair(
-                            "user_id_for_user_supplied_email",
-                            userProfileOfSuppliedEmail.get().getSubjectID(),
-                            true));
-        }
+        userProfileOfSuppliedEmail.ifPresent(
+                userProfile ->
+                        metadataBuilder.withRestrictedUserIdForUserSuppliedEmail(
+                                userProfile.getSubjectID()));
 
         auditService.submitAuditEvent(
-                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                auditContext,
-                metadataPairsForIncorrectEmail.toArray(new AuditService.MetadataPair[0]));
+                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED, auditContext, metadataBuilder.build());
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedEnterEmailCount)) {
             auditService.submitAuditEvent(
