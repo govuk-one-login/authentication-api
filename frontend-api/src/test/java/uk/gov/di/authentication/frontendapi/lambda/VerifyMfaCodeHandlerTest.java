@@ -59,6 +59,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -68,6 +70,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -802,12 +806,23 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Test
-    void shouldDeleteAuthAppAuthenticationAttemptsCountIfCorrectCodeEntered()
-            throws Json.JsonException {
+    void
+            shouldDeleteAuthAppAuthenticationAttemptsCountAndStoreCountsInSessionIfCorrectCodeEnteredForReauthJourney()
+                    throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(6);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+        when(configurationService.getCodeMaxRetries()).thenReturn(6);
+
+        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(existingCounts);
 
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -819,6 +834,49 @@ class VerifyMfaCodeHandlerTest {
                         TEST_SUBJECT_ID,
                         JourneyType.REAUTHENTICATION,
                         CountType.ENTER_AUTH_APP_CODE);
+
+        verify(sessionService, atLeastOnce())
+                .storeOrUpdateSession(
+                        argThat(s -> s.getPreservedReauthCountsForAudit().equals(existingCounts)));
+    }
+
+    @Test
+    void
+            shouldDeleteAuthAppAuthenticationAttemptsCountAndNotStoreCountsInSessionIfCorrectCodeEnteredForSigninJourney()
+                    throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(6);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
+        when(configurationService.getCodeMaxRetries()).thenReturn(6);
+
+        var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
+        when(authenticationAttemptsService.getCountsByJourney(
+                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(existingCounts);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, null);
+        makeCallWithCode(codeRequest);
+
+        verify(authenticationAttemptsService, times(1))
+                .deleteCount(
+                        TEST_SUBJECT_ID,
+                        JourneyType.REAUTHENTICATION,
+                        CountType.ENTER_AUTH_APP_CODE);
+
+        verify(sessionService, never())
+                .storeOrUpdateSession(
+                        argThat(
+                                s ->
+                                        Objects.equals(
+                                                s.getPreservedReauthCountsForAudit(),
+                                                existingCounts)));
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)

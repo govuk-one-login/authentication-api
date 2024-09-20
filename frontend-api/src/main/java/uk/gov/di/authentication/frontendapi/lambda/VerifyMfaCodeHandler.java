@@ -327,6 +327,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                     && subjectId != null) {
+                preserveReauthCountsForAuditIfJourneyIsReauth(
+                        codeRequest.getJourneyType(), subjectId, session);
                 clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
@@ -375,6 +377,19 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         countType ->
                                 authenticationAttemptsService.deleteCount(
                                         subjectId, JourneyType.REAUTHENTICATION, countType));
+    }
+
+    void preserveReauthCountsForAuditIfJourneyIsReauth(
+            JourneyType journeyType, String subjectId, Session session) {
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && configurationService.supportReauthSignoutEnabled()
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            var counts =
+                    authenticationAttemptsService.getCountsByJourney(
+                            subjectId, JourneyType.REAUTHENTICATION);
+            var updatedSession = session.setPreservedReauthCountsForAudit(counts);
+            sessionService.storeOrUpdateSession(updatedSession);
+        }
     }
 
     private static boolean isInvalidReauthAuthAppAttempt(
