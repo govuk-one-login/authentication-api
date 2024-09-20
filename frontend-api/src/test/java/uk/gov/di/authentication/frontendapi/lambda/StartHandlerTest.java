@@ -268,6 +268,55 @@ class StartHandlerTest {
     }
 
     @Test
+    void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff() throws ParseException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+
+        // This should not be called. Setup here is to ensure that the feature flag is determining
+        // this test's behaviour
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
+
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s }
+                """,
+                        TEST_RP_PAIRWISE_ID);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        handler.handleRequest(event, context);
+
+        verifyNoInteractions(authenticationAttemptsService);
+    }
+
+    @Test
+    void shouldNotCallAuthenticationAttemptsServiceWhenThereIsNoSubjectId() throws ParseException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
+        when(userProfile.getSubjectID()).thenReturn(null);
+
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s }
+                """,
+                        TEST_RP_PAIRWISE_ID);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        handler.handleRequest(event, context);
+
+        verifyNoInteractions(authenticationAttemptsService);
+    }
+
+    @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -539,7 +588,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
-                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), any()))
+                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(userStartInfo);
     }
 

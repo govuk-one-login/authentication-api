@@ -15,13 +15,11 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -37,7 +35,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -99,9 +96,7 @@ public class StartHandler
                 new StartService(
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService),
-                        sessionService,
-                        authenticationAttemptsService,
-                        configurationService);
+                        sessionService);
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
     }
@@ -116,9 +111,7 @@ public class StartHandler
                 new StartService(
                         new DynamoClientService(configurationService),
                         new DynamoService(configurationService),
-                        sessionService,
-                        authenticationAttemptsService,
-                        configurationService);
+                        sessionService);
         this.authSessionService = new AuthSessionService(configurationService);
         this.configurationService = configurationService;
     }
@@ -193,6 +186,39 @@ public class StartHandler
             LOG.info("previousSessionId: {}", previousSessionId);
             authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
 
+            var clientSessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            var txmaAuditHeader =
+                    getOptionalHeaderValueFromHeaders(
+                            input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
+            String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
+            String internalCommonSubjectIdentifierForAuditEvent = AuditService.UNKNOWN;
+
+            var auditContext =
+                    new AuditContext(
+                            userContext.getClient().get().getClientID(),
+                            clientSessionId,
+                            session.getSessionId(),
+                            internalCommonSubjectIdentifierForAuditEvent,
+                            userContext
+                                    .getUserProfile()
+                                    .map(UserProfile::getEmail)
+                                    .orElse(AuditService.UNKNOWN),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            extractPersistentIdFromHeaders(input.getHeaders()),
+                            txmaAuditHeader);
+
+            boolean isBlockedForReauth = false;
+            if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
+                isBlockedForReauth =
+                        checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
+                                maybeInternalSubjectId, auditContext, startRequest);
+            }
+
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
@@ -200,12 +226,8 @@ public class StartHandler
                             gaTrackingId,
                             configurationService.isIdentityEnabled(),
                             reauthenticate,
-                            maybeInternalSubjectId);
-            var clientSessionId =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
+                            isBlockedForReauth);
+
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =
                         DocAppSubjectIdHelper.calculateDocAppSubjectId(
@@ -219,35 +241,15 @@ public class StartHandler
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
-            String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
-            String internalCommonSubjectIdentifierForAuditEvent = AuditService.UNKNOWN;
-
             if (userStartInfo.isAuthenticated()) {
                 LOG.info(
                         "User is authenticated. Setting internalCommonSubjectId and internalSubjectId for audit event");
-                internalCommonSubjectIdentifierForAuditEvent =
-                        maybeInternalCommonSubjectIdentifier.orElse(AuditService.UNKNOWN);
+                auditContext =
+                        auditContext.withSubjectId(
+                                maybeInternalCommonSubjectIdentifier.orElse(AuditService.UNKNOWN));
                 internalSubjectIdForAuditEvent =
                         maybeInternalSubjectId.orElse(AuditService.UNKNOWN);
             }
-
-            var txmaAuditHeader =
-                    getOptionalHeaderValueFromHeaders(
-                            input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
-            var auditContext =
-                    new AuditContext(
-                            userContext.getClient().get().getClientID(),
-                            clientSessionId,
-                            session.getSessionId(),
-                            internalCommonSubjectIdentifierForAuditEvent,
-                            userContext
-                                    .getUserProfile()
-                                    .map(UserProfile::getEmail)
-                                    .orElse(AuditService.UNKNOWN),
-                            IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                            txmaAuditHeader);
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_START_INFO_FOUND,
@@ -256,25 +258,6 @@ public class StartHandler
 
             if (reauthenticate) {
                 emitReauthRequestedEvent(startRequest, auditContext);
-
-                if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                        && userStartInfo.isBlockedForReauth()
-                        && maybeInternalSubjectId.isPresent()) {
-                    Map<CountType, Integer> countsByJourney =
-                            authenticationAttemptsService.getCountsByJourney(
-                                    maybeInternalSubjectId.get(), JourneyType.REAUTHENTICATION);
-                    List<CountType> exceedingCounts =
-                            ReauthAuthenticationAttemptsHelper
-                                    .countTypesWhereUserIsBlockedForReauth(
-                                            countsByJourney, configurationService);
-                    auditService.submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            auditContext,
-                            ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
-                                    .withAllIncorrectAttemptCounts(countsByJourney)
-                                    .withFailureReason(exceedingCounts)
-                                    .build());
-                }
             }
 
             return generateApiGatewayProxyResponse(200, startResponse);
@@ -286,6 +269,32 @@ public class StartHandler
         } catch (ParseException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
         }
+    }
+
+    private boolean checkUserIsBlockedForReauthAndEmitFailureAuditEvent(
+            Optional<String> maybeInternalSubjectId,
+            AuditContext auditContext,
+            StartRequest startRequest) {
+        var reauthCountTypesToCounts =
+                maybeInternalSubjectId
+                        .map(
+                                subjectId ->
+                                        authenticationAttemptsService.getCountsByJourney(
+                                                subjectId, JourneyType.REAUTHENTICATION))
+                        .orElse(Map.of());
+        var blockedCountTypes =
+                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                        reauthCountTypesToCounts, configurationService);
+        if (!blockedCountTypes.isEmpty() && maybeInternalSubjectId.isPresent()) {
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext,
+                    ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
+                            .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
+                            .withFailureReason(blockedCountTypes)
+                            .build());
+        }
+        return !blockedCountTypes.isEmpty();
     }
 
     private void emitReauthRequestedEvent(StartRequest startRequest, AuditContext auditContext) {

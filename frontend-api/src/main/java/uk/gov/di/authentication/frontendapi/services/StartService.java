@@ -13,17 +13,13 @@ import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -45,8 +41,6 @@ public class StartService {
     private final ClientService clientService;
     private final DynamoService dynamoService;
     private final SessionService sessionService;
-    private final ConfigurationService configurationService;
-    private final AuthenticationAttemptsService authenticationAttemptsService;
     private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
@@ -56,14 +50,10 @@ public class StartService {
     public StartService(
             ClientService clientService,
             DynamoService dynamoService,
-            SessionService sessionService,
-            AuthenticationAttemptsService authenticationAttemptsService,
-            ConfigurationService configurationService) {
+            SessionService sessionService) {
         this.clientService = clientService;
         this.dynamoService = dynamoService;
         this.sessionService = sessionService;
-        this.authenticationAttemptsService = authenticationAttemptsService;
-        this.configurationService = configurationService;
     }
 
     public Session validateSession(Session session, String clientSessionId) {
@@ -158,7 +148,7 @@ public class StartService {
             String gaTrackingId,
             boolean identityEnabled,
             boolean reauthenticate,
-            Optional<String> internalSubjectId) {
+            boolean isBlockedForReauth) {
         var uplift = false;
         var identityRequired = false;
         MFAMethodType mfaMethodType = null;
@@ -182,21 +172,6 @@ public class StartService {
                 !docCheckingAppUser
                         && userContext.getSession().isAuthenticated()
                         && !reauthenticate;
-
-        boolean isBlockedForReauth = false;
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            var reauthCountTypesToCounts =
-                    internalSubjectId
-                            .map(
-                                    subjectId ->
-                                            authenticationAttemptsService.getCountsByJourney(
-                                                    subjectId, JourneyType.REAUTHENTICATION))
-                            .orElse(Map.of());
-            var blockedCountTypes =
-                    ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
-                            reauthCountTypesToCounts, configurationService);
-            isBlockedForReauth = !blockedCountTypes.isEmpty();
-        }
 
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}, IsBlockedForReauth: {}",
