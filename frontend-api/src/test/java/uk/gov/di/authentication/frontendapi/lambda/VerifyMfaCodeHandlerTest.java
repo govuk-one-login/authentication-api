@@ -106,6 +106,7 @@ class VerifyMfaCodeHandlerTest {
     private static final String SECTOR_HOST = "test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT_ID = "test-subject-id";
+    private static final int MAX_RETRIES = 6;
 
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
@@ -167,7 +168,9 @@ class VerifyMfaCodeHandlerTest {
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(configurationService.getLockoutDuration()).thenReturn(900L);
         when(configurationService.getReducedLockoutDuration()).thenReturn(300L);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -524,7 +527,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("blockedCodeForAuthAppOTPEnteredTooManyTimes")
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
             JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        withReauthTurnedOn();
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -645,7 +648,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("blockedCodeForInvalidPhoneNumberTooManyTimes")
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeTooManyTimes(
             JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        withReauthTurnedOn();
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
@@ -782,7 +785,7 @@ class VerifyMfaCodeHandlerTest {
         long ttl = 3600L;
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         when(configurationService.getReauthEnterAuthAppCodeCountTTL()).thenReturn(ttl);
         MockedStatic<NowHelper> mockedNowHelperClass = mockStatic(NowHelper.class);
@@ -811,13 +814,8 @@ class VerifyMfaCodeHandlerTest {
                     throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(6);
-        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
-        when(configurationService.getCodeMaxRetries()).thenReturn(6);
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
         when(authenticationAttemptsService.getCountsByJourney(
@@ -846,14 +844,8 @@ class VerifyMfaCodeHandlerTest {
                     throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
-        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+        withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-
-        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(6);
-        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
-        when(configurationService.getCodeMaxRetries()).thenReturn(6);
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
         when(authenticationAttemptsService.getCountsByJourney(
@@ -907,5 +899,10 @@ class VerifyMfaCodeHandlerTest {
     private void assertAuditEventSubmittedWithMetadata(
             AuditableEvent event, AuditService.MetadataPair... pairs) {
         verify(auditService).submitAuditEvent(event, AUDIT_CONTEXT, pairs);
+    }
+
+    private void withReauthTurnedOn() {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
     }
 }
