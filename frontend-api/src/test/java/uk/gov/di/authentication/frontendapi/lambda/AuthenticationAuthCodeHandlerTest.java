@@ -38,6 +38,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -48,7 +49,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -230,7 +233,7 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldSubmitReauthSuccessfulEventForSuccessfulReauthJourney() {
+    void shouldSubmitReauthSuccessfulEventAndCleanUpSessionCountsForSuccessfulReauthJourney() {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class)) {
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
@@ -277,6 +280,9 @@ class AuthenticationAuthCodeHandlerTest {
                     };
 
             verify(auditService).submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, expectedPairs);
+            verify(sessionService, atLeastOnce())
+                    .storeOrUpdateSession(
+                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())));
         }
     }
 
