@@ -12,13 +12,17 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
+import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -33,6 +37,8 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,6 +69,7 @@ public class StartHandler
     private final StartService startService;
     private final AuthSessionService authSessionService;
     private final ConfigurationService configurationService;
+    private final AuthenticationAttemptsService authenticationAttemptsService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public StartHandler(
@@ -71,23 +78,23 @@ public class StartHandler
             AuditService auditService,
             StartService startService,
             AuthSessionService authSessionService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuthenticationAttemptsService authenticationAttemptsService) {
         this.clientSessionService = clientSessionService;
         this.sessionService = sessionService;
         this.auditService = auditService;
         this.startService = startService;
         this.authSessionService = authSessionService;
         this.configurationService = configurationService;
+        this.authenticationAttemptsService = authenticationAttemptsService;
     }
 
     public StartHandler(ConfigurationService configurationService) {
         this.clientSessionService = new ClientSessionService(configurationService);
         this.sessionService = new SessionService(configurationService);
         this.auditService = new AuditService(configurationService);
-        AuthenticationAttemptsService authenticationAttemptsService = null;
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
-        }
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
@@ -103,10 +110,8 @@ public class StartHandler
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.sessionService = new SessionService(configurationService, redis);
         this.auditService = new AuditService(configurationService);
-        AuthenticationAttemptsService authenticationAttemptsService = null;
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
-        }
+        this.authenticationAttemptsService =
+                new AuthenticationAttemptsService(configurationService);
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
@@ -251,6 +256,25 @@ public class StartHandler
 
             if (reauthenticate) {
                 emitReauthRequestedEvent(startRequest, auditContext);
+
+                if (configurationService.isAuthenticationAttemptsServiceEnabled()
+                        && userStartInfo.isBlockedForReauth()
+                        && maybeInternalSubjectId.isPresent()) {
+                    Map<CountType, Integer> countsByJourney =
+                            authenticationAttemptsService.getCountsByJourney(
+                                    maybeInternalSubjectId.get(), JourneyType.REAUTHENTICATION);
+                    List<CountType> exceedingCounts =
+                            ReauthAuthenticationAttemptsHelper
+                                    .countTypesWhereUserIsBlockedForReauth(
+                                            countsByJourney, configurationService);
+                    auditService.submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContext,
+                            ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
+                                    .withAllIncorrectAttemptCounts(countsByJourney)
+                                    .withFailureReason(exceedingCounts)
+                                    .build());
+                }
             }
 
             return generateApiGatewayProxyResponse(200, startResponse);
