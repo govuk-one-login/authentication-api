@@ -19,6 +19,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -36,6 +37,8 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -46,7 +49,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -73,6 +78,7 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String LOCATION = "location";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
+    private static final String CALCULATED_PAIRWISE_ID = "some-rp-pairwise-id";
     private static final Long PASSWORD_RESET_TIME = 1696869005821L;
 
     private AuthenticationAuthCodeHandler handler;
@@ -84,13 +90,25 @@ class AuthenticationAuthCodeHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
-    private final Session session =
-            new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
+    private Session session;
     private final AuditService auditService = mock(AuditService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
 
+    private final AuditContext auditContext =
+            new AuditContext(
+                    CLIENT_ID,
+                    CLIENT_SESSION_ID,
+                    SESSION_ID,
+                    TEST_SUBJECT_ID,
+                    EMAIL,
+                    IP_ADDRESS,
+                    UK_MOBILE_NUMBER,
+                    DI_PERSISTENT_SESSION_ID,
+                    Optional.of(ENCODED_DEVICE_DETAILS));
+
     @BeforeEach
     void setUp() throws Json.JsonException {
+        session = new Session(SESSION_ID).setEmailAddress(CommonTestVariables.EMAIL);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -215,12 +233,11 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldSubmitReauthSuccessfulEventForSuccessfulReauthJourney() {
+    void shouldSubmitReauthSuccessfulEventAndCleanUpSessionCountsForSuccessfulReauthJourney() {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class)) {
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
-            var pairwiseId = "some-rp-pairwise-id";
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
@@ -230,7 +247,13 @@ class AuthenticationAuthCodeHandlerTest {
                             () ->
                                     ClientSubjectHelper.getSubject(
                                             eq(userProfile), any(), any(), any()))
-                    .thenReturn(new Subject(pairwiseId));
+                    .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
+            var existingPasswordCount = 1;
+            var existingEmailCount = 2;
+            session.setPreservedReauthCountsForAudit(
+                    Map.ofEntries(
+                            Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
+                            Map.entry(CountType.ENTER_EMAIL, existingEmailCount)));
 
             var body =
                     format(
@@ -247,21 +270,63 @@ class AuthenticationAuthCodeHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(200));
-            var auditContext =
-                    new AuditContext(
-                            CLIENT_ID,
-                            CLIENT_SESSION_ID,
-                            SESSION_ID,
-                            TEST_SUBJECT_ID,
-                            EMAIL,
-                            IP_ADDRESS,
-                            UK_MOBILE_NUMBER,
-                            DI_PERSISTENT_SESSION_ID,
-                            Optional.of(ENCODED_DEVICE_DETAILS));
 
-            var expectedPairs = pair("rpPairwiseId", pairwiseId);
+            var expectedPairs =
+                    new AuditService.MetadataPair[] {
+                        pair("rpPairwiseId", CALCULATED_PAIRWISE_ID),
+                        pair("incorrect_email_attempt_count", existingEmailCount),
+                        pair("incorrect_password_attempt_count", existingPasswordCount),
+                        pair("incorrect_otp_code_attempt_count", 0)
+                    };
 
             verify(auditService).submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, expectedPairs);
+            verify(sessionService, atLeastOnce())
+                    .storeOrUpdateSession(
+                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAudit())));
+        }
+    }
+
+    @Test
+    void
+            shouldStillSubmitReauthSuccessfulEventButWithoutCountsForSuccessfulReauthJourneyWhenSessionCountsAreNull() {
+        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
+                Mockito.mockStatic(ClientSubjectHelper.class)) {
+            var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+            userProfile.setSubjectID(TEST_SUBJECT_ID);
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
+            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            mockedClientSubjectHelperClass
+                    .when(
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            eq(userProfile), any(), any(), any()))
+                    .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
+            // This is already the case but just to make it explicit here
+            session.setPreservedReauthCountsForAudit(null);
+
+            var body =
+                    format(
+                            "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",
+                            TEST_REDIRECT_URI,
+                            TEST_STATE,
+                            List.of("email-verified", "email"),
+                            TEST_SECTOR_IDENTIFIER,
+                            false,
+                            true);
+
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_REAUTH_SUCCESS,
+                            auditContext,
+                            pair("rpPairwiseId", CALCULATED_PAIRWISE_ID));
         }
     }
 

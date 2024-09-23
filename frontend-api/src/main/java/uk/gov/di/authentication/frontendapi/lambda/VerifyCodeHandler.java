@@ -336,6 +336,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
+            preserveReauthCountsForAuditIfJourneyIsReauth(journeyType, subjectId, session);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
         }
 
@@ -345,6 +346,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 metadataPairs(notificationType, journeyType, codeRequest, loginFailureCount, false);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
+    }
+
+    void preserveReauthCountsForAuditIfJourneyIsReauth(
+            JourneyType journeyType, String subjectId, Session session) {
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && configurationService.supportReauthSignoutEnabled()
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+            var counts =
+                    authenticationAttemptsService.getCountsByJourney(
+                            subjectId, JourneyType.REAUTHENTICATION);
+            var updatedSession = session.setPreservedReauthCountsForAudit(counts);
+            sessionService.storeOrUpdateSession(updatedSession);
+        }
     }
 
     void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
