@@ -233,6 +233,44 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1057));
     }
 
+    @Test
+    void shouldReturn400WhenUserHasExceededMaxEmailRetriesAcrossSubjectIdAndPairwiseId() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://randomSectorIDuRI.COM");
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var expectedPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+
+        var ttl = Instant.now().getEpochSecond() + 60L;
+        IntStream.range(0, 3)
+                .forEach(
+                        i -> {
+                            authCodeExtension.createOrIncrementCount(
+                                    SUBJECT.getValue(),
+                                    ttl,
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_EMAIL);
+                            authCodeExtension.createOrIncrementCount(
+                                    expectedPairwiseId,
+                                    ttl,
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_EMAIL);
+                        });
+
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        requestHeaders,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", expectedPairwiseId));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1057));
+    }
+
     private ClientSession createClientSession() {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(

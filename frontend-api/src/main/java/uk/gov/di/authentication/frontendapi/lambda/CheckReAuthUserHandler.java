@@ -276,8 +276,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserProfile userProfile, AuditContext auditContext, String pairwiseId)
             throws AccountLockedException {
         var countTypesToCounts =
-                authenticationAttemptsService.getCountsByJourney(
-                        userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+                authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        userProfile.getSubjectID(), pairwiseId, JourneyType.REAUTHENTICATION);
 
         var exceededCountTypes =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(

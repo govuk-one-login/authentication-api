@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AuthenticationAttemptsServiceIntegrationTest {
 
     private static final String INTERNAL_SUBJECT_ID = "internal-sub-id";
+    private static final String RP_PAIRWISE_ID = "RP_PAIRWISE_ID";
 
     private static final JourneyType JOURNEY_TYPE = JourneyType.REAUTHENTICATION;
     private static final String NON_EXISTENT_INTERNAL_SUBJECT_ID = "non-existent-internal-sub-id";
@@ -143,20 +144,10 @@ class AuthenticationAttemptsServiceIntegrationTest {
                             Map.entry(CountType.ENTER_PASSWORD, 4),
                             Map.entry(CountType.ENTER_SMS_CODE, 5));
 
-            countTypesToCountsForRequestedJourney
-                    .entrySet()
-                    .forEach(
-                            entry -> {
-                                var countType = entry.getKey();
-                                var count = entry.getValue();
-                                for (int i = 0; i < count; i++) {
-                                    authenticationAttemptsService.createOrIncrementCount(
-                                            INTERNAL_SUBJECT_ID,
-                                            EXPECTEDTTL,
-                                            requestedJourneyType,
-                                            countType);
-                                }
-                            });
+            incrementCountsForIdentifier(
+                    INTERNAL_SUBJECT_ID,
+                    requestedJourneyType,
+                    countTypesToCountsForRequestedJourney);
 
             // set up some other data which should not affect the result
             authenticationAttemptsService.createOrIncrementCount(
@@ -173,5 +164,73 @@ class AuthenticationAttemptsServiceIntegrationTest {
                             INTERNAL_SUBJECT_ID, JOURNEY_TYPE);
             assertEquals(countTypesToCountsForRequestedJourney, authenticationAttempts);
         }
+    }
+
+    @Test
+    void shouldGetAllCountTypesForAGivenJourneyAgainstTwoIdentifiers() {
+        var requestedJourneyType = JourneyType.REAUTHENTICATION;
+        var otherJourneyType = JourneyType.ACCOUNT_RECOVERY;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.ofEpochSecond(MOCKEDTIMESTAMP)));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(TTLINSECONDS, ChronoUnit.SECONDS))
+                    .thenReturn(Date.from(Instant.ofEpochSecond(EXPECTEDTTL)));
+
+            var countsForSubjectId =
+                    Map.ofEntries(
+                            Map.entry(CountType.ENTER_EMAIL, 2),
+                            Map.entry(CountType.ENTER_PASSWORD, 4),
+                            Map.entry(CountType.ENTER_SMS_CODE, 5));
+
+            var countsForRpPairwiseId =
+                    Map.ofEntries(
+                            Map.entry(CountType.ENTER_EMAIL, 1),
+                            Map.entry(CountType.ENTER_PASSWORD, 2),
+                            Map.entry(CountType.ENTER_AUTH_APP_CODE, 1));
+
+            incrementCountsForIdentifier(
+                    INTERNAL_SUBJECT_ID, requestedJourneyType, countsForSubjectId);
+            incrementCountsForIdentifier(
+                    RP_PAIRWISE_ID, requestedJourneyType, countsForRpPairwiseId);
+
+            // set up some other data which should not affect the result
+            authenticationAttemptsService.createOrIncrementCount(
+                    INTERNAL_SUBJECT_ID, EXPECTEDTTL, otherJourneyType, CountType.ENTER_EMAIL);
+            authenticationAttemptsService.createOrIncrementCount(
+                    INTERNAL_SUBJECT_ID,
+                    EXPECTEDTTL,
+                    otherJourneyType,
+                    CountType.ENTER_AUTH_APP_CODE);
+
+            // Read the count
+            var authenticationAttempts =
+                    authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            INTERNAL_SUBJECT_ID, RP_PAIRWISE_ID, JOURNEY_TYPE);
+
+            var expectedCountTypesAcrossBothIdentifiers =
+                    Map.ofEntries(
+                            Map.entry(CountType.ENTER_EMAIL, 3),
+                            Map.entry(CountType.ENTER_PASSWORD, 6),
+                            Map.entry(CountType.ENTER_SMS_CODE, 5),
+                            Map.entry(CountType.ENTER_AUTH_APP_CODE, 1));
+
+            assertEquals(expectedCountTypesAcrossBothIdentifiers, authenticationAttempts);
+        }
+    }
+
+    private void incrementCountsForIdentifier(
+            String identifier, JourneyType journeyType, Map<CountType, Integer> counts) {
+        counts.entrySet()
+                .forEach(
+                        entry -> {
+                            var countType = entry.getKey();
+                            var count = entry.getValue();
+                            for (int i = 0; i < count; i++) {
+                                authenticationAttemptsService.createOrIncrementCount(
+                                        identifier, EXPECTEDTTL, journeyType, countType);
+                            }
+                        });
     }
 }

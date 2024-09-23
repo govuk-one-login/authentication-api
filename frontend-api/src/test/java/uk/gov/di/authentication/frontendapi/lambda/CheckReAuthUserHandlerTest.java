@@ -237,8 +237,8 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(authenticationAttemptsService.getCountsByJourney(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
         var result =
@@ -254,8 +254,8 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(authenticationAttemptsService.getCountsByJourney(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
 
         var result =
@@ -328,6 +328,9 @@ class CheckReAuthUserHandlerTest {
                 .thenReturn(count);
         when(authenticationAttemptsService.getCountsByJourney(
                         TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        TEST_SUBJECT_ID, TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
     }
 }

@@ -65,6 +65,25 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
         return results;
     }
 
+    // This should only be used in specific journeys (e.g. reauth) where it's possible that a
+    // non-logged in user
+    // can go through a journey, and have counts initially stored against a pairwise id
+    public Map<CountType, Integer> getCountsByJourneyForSubjectIdAndRpPairwiseId(
+            String internalSubjectId, String rpPairwiseId, JourneyType journeyType) {
+        Map<CountType, Integer> results = new EnumMap<>(CountType.class);
+        Arrays.stream(CountType.values())
+                .forEach(
+                        countType -> {
+                            var count =
+                                    getCount(internalSubjectId, journeyType, countType)
+                                            + getCount(rpPairwiseId, journeyType, countType);
+                            if (count > 0) {
+                                results.put(countType, count);
+                            }
+                        });
+        return results;
+    }
+
     public void deleteCount(
             String internalSubjectId, JourneyType journeyType, CountType countType) {
         delete(internalSubjectId, buildSortKey(journeyType, countType));
