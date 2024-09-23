@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -266,23 +265,18 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 authenticationAttemptsService.getCount(
                         uniqueUserIdentifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
 
-        var metadataPairsForIncorrectEmail = new ArrayList<AuditService.MetadataPair>();
-        metadataPairsForIncorrectEmail.add(pairwiseIdMetadataPair);
-        metadataPairsForIncorrectEmail.add(pair("incorrect_email_attempt_count", updatedCount));
-        metadataPairsForIncorrectEmail.add(pair("user_supplied_email", userSuppliedEmail, true));
+        var pairBuilder =
+                ReauthMetadataBuilder.builder(rpPairwiseId)
+                        .withIncorrectEmailCount(updatedCount)
+                        .withRestrictedUserSuppliedEmailPair(userSuppliedEmail);
 
-        if (userProfileOfSuppliedEmail.isPresent()) {
-            metadataPairsForIncorrectEmail.add(
-                    pair(
-                            "user_id_for_user_supplied_email",
-                            userProfileOfSuppliedEmail.get().getSubjectID(),
-                            true));
-        }
+        userProfileOfSuppliedEmail.ifPresent(
+                userProfile ->
+                        pairBuilder.withRestrictedUserIdForUserSuppliedEmailPair(
+                                userProfile.getSubjectID()));
 
         auditService.submitAuditEvent(
-                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                auditContext,
-                metadataPairsForIncorrectEmail.toArray(new AuditService.MetadataPair[0]));
+                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED, auditContext, pairBuilder.build());
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
             auditService.submitAuditEvent(
