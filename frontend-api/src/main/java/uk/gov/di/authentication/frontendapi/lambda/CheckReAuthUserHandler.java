@@ -147,18 +147,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             request.email(),
                                             maybeUserProfileOfUserSuppliedEmail));
         } catch (AccountLockedException e) {
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                    auditContext,
-                    e.getErrorResponse() == ErrorResponse.ERROR_1045
-                            ? pair(
-                                    "number_of_attempts_user_allowed_to_login",
-                                    configurationService.getMaxPasswordRetries())
-                            : pair(
-                                    "number_of_attempts_user_allowed_to_login",
-                                    configurationService.getMaxEmailReAuthRetries()));
-
-            LOG.error("Account is locked due to too many failed attempts.");
+            LOG.error("Account is unable to reauth due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
     }

@@ -217,12 +217,6 @@ class CheckReAuthUserHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        testAuditContextWithAuditEncoded.withSubjectId(AuditService.UNKNOWN),
-                        pair("number_of_attempts_user_allowed_to_login", MAX_RETRIES));
-
         // In the case where a user is already locked out, we do not emit this event
         // The case where the event is emitted is tested in integration tests
         verify(auditService, never())
