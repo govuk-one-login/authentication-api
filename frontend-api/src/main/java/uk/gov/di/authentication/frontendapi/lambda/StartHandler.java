@@ -212,6 +212,10 @@ public class StartHandler
                             extractPersistentIdFromHeaders(input.getHeaders()),
                             txmaAuditHeader);
 
+            if (reauthenticate) {
+                emitReauthRequestedEvent(startRequest, auditContext);
+            }
+
             boolean isBlockedForReauth = false;
             if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
                 isBlockedForReauth =
@@ -254,10 +258,6 @@ public class StartHandler
                     FrontendAuditableEvent.AUTH_START_INFO_FOUND,
                     auditContext,
                     pair("internalSubjectId", internalSubjectIdForAuditEvent));
-
-            if (reauthenticate) {
-                emitReauthRequestedEvent(startRequest, auditContext);
-            }
 
             return generateApiGatewayProxyResponse(200, startResponse);
 
