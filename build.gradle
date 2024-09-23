@@ -196,7 +196,7 @@ subprojects {
         lettuce "org.apache.commons:commons-pool2:2.12.0",
                 "io.lettuce:lettuce-core:6.4.0.RELEASE"
 
-        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.45"
+        libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.46"
 
         logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.16"
