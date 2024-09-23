@@ -126,33 +126,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 var updatedAuditContext =
                                         auditContext.withUserId(userProfile.getSubjectID());
 
-                                var countTypesToCounts =
-                                        authenticationAttemptsService.getCountsByJourney(
-                                                userProfile.getSubjectID(),
-                                                JourneyType.REAUTHENTICATION);
-
-                                var exceededCountTypes =
-                                        ReauthAuthenticationAttemptsHelper
-                                                .countTypesWhereUserIsBlockedForReauth(
-                                                        countTypesToCounts, configurationService);
-
-                                if (!exceededCountTypes.isEmpty()) {
-                                    LOG.info(
-                                            "Account is locked due to exceeded counts on count types {}",
-                                            exceededCountTypes);
-                                    auditService.submitAuditEvent(
-                                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                                            updatedAuditContext,
-                                            ReauthMetadataBuilder.builder(request.rpPairwiseId())
-                                                    .withAllIncorrectAttemptCounts(
-                                                            countTypesToCounts)
-                                                    .withFailureReason(exceededCountTypes)
-                                                    .build());
-
-                                    throw new AccountLockedException(
-                                            "Account is locked due to too many failed attempts.",
-                                            ErrorResponse.ERROR_1057);
-                                }
+                                throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
+                                        userProfile, updatedAuditContext, request.rpPairwiseId());
 
                                 return verifyReAuthentication(
                                         userProfile,
@@ -306,5 +281,33 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         var maxRetries = configurationService.getMaxEmailReAuthRetries();
 
         return count >= maxRetries;
+    }
+
+    private void throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
+            UserProfile userProfile, AuditContext auditContext, String pairwiseId)
+            throws AccountLockedException {
+        var countTypesToCounts =
+                authenticationAttemptsService.getCountsByJourney(
+                        userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+
+        var exceededCountTypes =
+                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                        countTypesToCounts, configurationService);
+
+        if (!exceededCountTypes.isEmpty()) {
+            LOG.info(
+                    "Account is locked due to exceeded counts on count types {}",
+                    exceededCountTypes);
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext,
+                    ReauthMetadataBuilder.builder(pairwiseId)
+                            .withAllIncorrectAttemptCounts(countTypesToCounts)
+                            .withFailureReason(exceededCountTypes)
+                            .build());
+
+            throw new AccountLockedException(
+                    "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
+        }
     }
 }
