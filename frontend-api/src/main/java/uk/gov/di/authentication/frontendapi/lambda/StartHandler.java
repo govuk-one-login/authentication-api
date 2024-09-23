@@ -243,8 +243,6 @@ public class StartHandler
 
             String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
             if (userStartInfo.isAuthenticated()) {
-                LOG.info(
-                        "User is authenticated. Setting internalCommonSubjectId and internalSubjectId for audit event");
                 auditContext =
                         auditContext.withSubjectId(
                                 maybeInternalCommonSubjectIdentifier.orElse(AuditService.UNKNOWN));
