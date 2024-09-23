@@ -110,6 +110,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/8bc4e01c-466b-4663-9c60-c29d5e9f2fcf
       defaultProvisionedConcurrency: 0
       aisUriSecretId: 6b29b810-e509-4354-9d75-934d0f154d07
+      javaToolOptions: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "6of9f4amvg"
@@ -141,6 +142,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/5fdfad8b-ca31-4afc-a948-59fd498c0f3c
       defaultProvisionedConcurrency: 1
       aisUriSecretId: fd6ef1f1-7d31-40ca-978d-2180199141d8
+      javaToolOptions: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "1rvwudxmbk"
@@ -172,6 +174,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       defaultProvisionedConcurrency: 3
       aisUriSecretId: daea90b7-b7a9-45b1-98fb-7d9ce8da5a72
+      javaToolOptions: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       authApiId: "k2skqhxed6"
@@ -203,6 +206,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:761723964695:key/e34095ae-a65b-4609-99b3-9c1f407eff73
       defaultProvisionedConcurrency: 1
       aisUriSecretId: ""
+      javaToolOptions: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       authApiId: "s4gj268zy6"
@@ -234,6 +238,7 @@ Mappings:
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:172348255554:key/0e5c92f4-26a1-442d-a57b-87db810a40d1
       defaultProvisionedConcurrency: 3
       aisUriSecretId: ""
+      javaToolOptions: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
   ProvisionedConcurrency:
     staging:
       TrustmarkFunction: 1
@@ -289,6 +294,12 @@ Globals:
                 dynatraceSecretArn,
               ]
         DT_OPEN_TELEMETRY_ENABLE_INTEGRATION: "true"
+        JAVA_TOOL_OPTIONS:
+          !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            javaToolOptions,
+          ]
     MemorySize: 1536
     Timeout: 30
     Runtime: java17
