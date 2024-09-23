@@ -194,7 +194,6 @@ public class StartHandler
             var txmaAuditHeader =
                     getOptionalHeaderValueFromHeaders(
                             input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
-            String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
             String internalCommonSubjectIdentifierForAuditEvent = AuditService.UNKNOWN;
             String phoneNumber = AuditService.UNKNOWN;
 
@@ -242,6 +241,7 @@ public class StartHandler
 
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
+            String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
             if (userStartInfo.isAuthenticated()) {
                 LOG.info(
                         "User is authenticated. Setting internalCommonSubjectId and internalSubjectId for audit event");
