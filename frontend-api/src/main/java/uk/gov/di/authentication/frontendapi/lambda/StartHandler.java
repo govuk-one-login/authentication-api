@@ -196,6 +196,7 @@ public class StartHandler
                             input.getHeaders(), TXMA_AUDIT_ENCODED_HEADER, false);
             String internalSubjectIdForAuditEvent = AuditService.UNKNOWN;
             String internalCommonSubjectIdentifierForAuditEvent = AuditService.UNKNOWN;
+            String phoneNumber = AuditService.UNKNOWN;
 
             var auditContext =
                     new AuditContext(
@@ -208,7 +209,7 @@ public class StartHandler
                                     .map(UserProfile::getEmail)
                                     .orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN,
+                            phoneNumber,
                             extractPersistentIdFromHeaders(input.getHeaders()),
                             txmaAuditHeader);
 
