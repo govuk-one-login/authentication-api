@@ -208,9 +208,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             Optional<UserProfile> userProfileOfSuppliedEmail) {
 
         String uniqueUserIdentifier;
+        Optional<String> additionalIdentifier = Optional.empty();
         if (emailUserIsSignedInWith != null) {
             var userProfile = authenticationService.getUserProfileByEmail(emailUserIsSignedInWith);
             uniqueUserIdentifier = userProfile.getSubjectID();
+            additionalIdentifier = Optional.of(rpPairwiseId);
         } else {
             uniqueUserIdentifier = rpPairwiseId;
         }
@@ -227,7 +229,17 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var updatedCount =
                 authenticationAttemptsService.getCount(
-                        uniqueUserIdentifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
+                                uniqueUserIdentifier,
+                                JourneyType.REAUTHENTICATION,
+                                CountType.ENTER_EMAIL)
+                        + additionalIdentifier
+                                .map(
+                                        identifier ->
+                                                authenticationAttemptsService.getCount(
+                                                        identifier,
+                                                        JourneyType.REAUTHENTICATION,
+                                                        CountType.ENTER_EMAIL))
+                                .orElse(0);
 
         var pairBuilder =
                 ReauthMetadataBuilder.builder(rpPairwiseId)
@@ -243,13 +255,21 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 AUTH_REAUTH_INCORRECT_EMAIL_ENTERED, auditContext, pairBuilder.build());
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
+            var incorrectCounts =
+                    additionalIdentifier.isPresent()
+                            ? authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            uniqueUserIdentifier,
+                                            additionalIdentifier.get(),
+                                            JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService.getCountsByJourney(
+                                    uniqueUserIdentifier, JourneyType.REAUTHENTICATION);
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(rpPairwiseId)
-                            .withAllIncorrectAttemptCounts(
-                                    authenticationAttemptsService.getCountsByJourney(
-                                            uniqueUserIdentifier, JourneyType.REAUTHENTICATION))
+                            .withAllIncorrectAttemptCounts(incorrectCounts)
                             .withFailureReason(ReauthFailureReasons.INCORRECT_EMAIL)
                             .build());
 
