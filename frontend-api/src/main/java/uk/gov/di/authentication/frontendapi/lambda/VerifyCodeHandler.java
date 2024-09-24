@@ -238,7 +238,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     userContext,
                     userProfile != null ? userProfile.getSubjectID() : null,
                     journeyType,
-                    auditContext);
+                    auditContext,
+                    client);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -343,12 +344,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             UserContext userContext,
             String subjectId,
             JourneyType journeyType,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            ClientRegistry client) {
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
         var clientSession = userContext.getClientSession();
-        var clientId = userContext.getClient().get().getClientID();
+        var clientId = client.getClientID();
         var levelOfConfidence =
                 clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
                         ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
