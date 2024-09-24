@@ -212,20 +212,25 @@ public class SendOtpNotificationHandler
                                             .getAuthorizer()
                                             .getOrDefault("principalId", AuditService.UNKNOWN)
                                             .toString();
+                            UUID requestReference = UUID.randomUUID();
+                            long timeOfInitialRequest = NowHelper.now().toInstant().toEpochMilli();
                             pendingEmailCheckSqsClient.send(
                                     objectMapper.writeValueAsString(
                                             new PendingEmailCheckRequest(
                                                     userId,
-                                                    UUID.randomUUID(),
+                                                    requestReference,
                                                     email,
                                                     sessionId,
                                                     clientSessionId,
                                                     persistentSessionId,
                                                     IpAddressHelper.extractIpAddress(input),
                                                     JourneyType.ACCOUNT_MANAGEMENT,
-                                                    NowHelper.now().toInstant().toEpochMilli(),
+                                                    timeOfInitialRequest,
                                                     isTestUserRequest)));
-                            LOG.info("Email address check requested");
+                            LOG.info(
+                                    "Email address check requested for {} at {}",
+                                    requestReference,
+                                    timeOfInitialRequest);
                         } else {
                             LOG.info(
                                     "Skipped request for new email address check. Result already cached");

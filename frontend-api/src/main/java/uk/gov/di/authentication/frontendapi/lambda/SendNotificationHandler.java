@@ -317,20 +317,25 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 String persistentSessionId =
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
+                UUID requestReference = UUID.randomUUID();
+                long timeOfInitialRequest = NowHelper.now().toInstant().toEpochMilli();
                 pendingEmailCheckSqsClient.send(
                         objectMapper.writeValueAsString(
                                 new PendingEmailCheckRequest(
                                         AuditService.UNKNOWN,
-                                        UUID.randomUUID(),
+                                        requestReference,
                                         destination,
                                         sessionId,
                                         clientSessionId,
                                         persistentSessionId,
                                         IpAddressHelper.extractIpAddress(input),
                                         JourneyType.REGISTRATION,
-                                        NowHelper.now().toInstant().toEpochMilli(),
+                                        timeOfInitialRequest,
                                         testClientWithAllowedEmail)));
-                LOG.info("Email address check requested");
+                LOG.info(
+                        "Email address check requested for {} at {}",
+                        requestReference,
+                        timeOfInitialRequest);
             } else {
                 LOG.info("Skipped request for new email address check. Result already cached");
             }
