@@ -51,7 +51,7 @@ resource "aws_lambda_function" "email_check_results_writer_lambda" {
 
   environment {
     variables = {
-      JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+      JAVA_TOOL_OPTIONS = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
       ENVIRONMENT       = var.environment
     }
   }
