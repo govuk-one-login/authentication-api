@@ -709,7 +709,8 @@ public class AuthorisationHandler
                         .claim("client_id", configurationService.getOrchestrationClientId())
                         .claim("redirect_uri", configurationService.getOrchestrationRedirectURI())
                         .claim("reauthenticate", reauthSub)
-                        .claim("previous_govuk_signin_journey_id", reauthSid);
+                        .claim("previous_govuk_signin_journey_id", reauthSid)
+                        .claim("channel", client.getChannel());
         previousSessionId.ifPresent(id -> claimsBuilder.claim("previous_session_id", id));
 
         var claimsSetRequest =
