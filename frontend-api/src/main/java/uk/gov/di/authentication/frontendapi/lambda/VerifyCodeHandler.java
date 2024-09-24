@@ -173,13 +173,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     userContext.getClient().orElseThrow(() -> new ClientNotFoundException(session));
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+            UserProfile userProfile = userProfileMaybe.orElse(null);
 
-            if (userProfileMaybe.isEmpty() && journeyType == JourneyType.REAUTHENTICATION) {
+            if (userProfile == null && journeyType == JourneyType.REAUTHENTICATION) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
 
             if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                    journeyType, userProfileMaybe, auditContext, client))
+                    journeyType, userProfile, auditContext, client))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
@@ -214,7 +215,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         codeRequest,
                         journeyType,
                         notificationType,
-                        userProfileMaybe,
+                        userProfile,
                         errorResponse.get(),
                         session,
                         auditContext);
@@ -235,7 +236,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     authSessionId.get(),
                     codeRequest,
                     userContext,
-                    userProfileMaybe.isPresent() ? userProfileMaybe.get().getSubjectID() : null,
+                    userProfile != null ? userProfile.getSubjectID() : null,
                     journeyType,
                     auditContext);
 
@@ -249,15 +250,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
             NotificationType notificationType,
-            Optional<UserProfile> userProfileMaybe,
+            UserProfile userProfile,
             ErrorResponse errorResponse,
             Session session,
             AuditContext auditContext) {
-        if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && userProfileMaybe.isPresent()) {
+        if (journeyType == JourneyType.REAUTHENTICATION
+                && notificationType == MFA_SMS
+                && userProfile != null) {
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
-                        userProfileMaybe.get().getSubjectID(),
+                        userProfile.getSubjectID(),
                         NowHelper.nowPlus(
                                         configurationService.getReauthEnterSMSCodeCountTTL(),
                                         ChronoUnit.SECONDS)
@@ -274,23 +276,22 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private boolean checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
             JourneyType journeyType,
-            Optional<UserProfile> userProfileMaybe,
+            UserProfile userProfile,
             AuditContext auditContext,
             ClientRegistry client) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.isAuthenticationAttemptsServiceEnabled()
-                && userProfileMaybe.isPresent()) {
+                && userProfile != null) {
             var countsByJourney =
                     authenticationAttemptsService.getCountsByJourney(
-                            userProfileMaybe.get().getSubjectID(), JourneyType.REAUTHENTICATION);
+                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             countsByJourney, configurationService);
 
             if (!countTypesWhereBlocked.isEmpty()) {
-                String rpPairwiseId =
-                        getInternalCommonSubjectIdentifier(userProfileMaybe.get(), client);
+                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
