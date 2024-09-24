@@ -43,6 +43,7 @@ module "processing-identity" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
+    JAVA_TOOL_OPTIONS                           = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 
