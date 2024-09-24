@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -21,6 +22,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -83,6 +85,11 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.I
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -282,6 +289,7 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -326,6 +334,7 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -357,6 +366,7 @@ class VerifyCodeHandlerTest {
                                 "account-recovery",
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
                         pair("journey-type", expectedJourneyType));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -390,6 +400,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -423,6 +434,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -446,6 +458,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -459,6 +472,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -472,6 +486,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -487,6 +502,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -514,6 +530,7 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true),
                         pair("journey-type", "ACCOUNT_RECOVERY"));
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -557,6 +574,7 @@ class VerifyCodeHandlerTest {
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -628,7 +646,7 @@ class VerifyCodeHandlerTest {
         var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
         assertThat(result, hasStatus(400));
-        if (journeyType != JourneyType.REAUTHENTICATION) {
+        if (journeyType != REAUTHENTICATION) {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
         } else {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
@@ -642,7 +660,7 @@ class VerifyCodeHandlerTest {
 
         verifyNoInteractions(accountModifiersService);
 
-        if (journeyType != JourneyType.REAUTHENTICATION) {
+        if (journeyType != REAUTHENTICATION) {
             verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verify(auditService)
                     .submitAuditEvent(
@@ -713,18 +731,16 @@ class VerifyCodeHandlerTest {
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         withReauthTurnedOn();
-        var existingCounts = Map.of(CountType.ENTER_EMAIL, 5, CountType.ENTER_PASSWORD, 1);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        any(), eq(JourneyType.REAUTHENTICATION)))
+        var existingCounts = Map.of(ENTER_EMAIL, 5, ENTER_PASSWORD, 1);
+        when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
                 .thenReturn(existingCounts);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
         verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_SMS_CODE);
+                .deleteCount(TEST_SUBJECT_ID, REAUTHENTICATION, ENTER_SMS_CODE);
 
-        if (journeyType == JourneyType.REAUTHENTICATION) {
+        if (journeyType == REAUTHENTICATION) {
             verify(sessionService, atLeastOnce())
                     .storeOrUpdateSession(
                             argThat(
@@ -754,17 +770,85 @@ class VerifyCodeHandlerTest {
                 .when(() -> NowHelper.nowPlus(ttl, ChronoUnit.SECONDS))
                 .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
 
-        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.name(), JourneyType.REAUTHENTICATION);
+        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.name(), REAUTHENTICATION);
 
         verify(authenticationAttemptsService, times(1))
                 .createOrIncrementCount(
-                        TEST_SUBJECT_ID,
-                        4070908800L,
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_SMS_CODE);
+                        TEST_SUBJECT_ID, 4070908800L, REAUTHENTICATION, ENTER_SMS_CODE);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         mockedNowHelperClass.close();
+    }
+
+    private static Stream<Arguments> reauthCountTypesAndMetadata() {
+        return Stream.of(
+                Arguments.arguments(
+                        ENTER_EMAIL,
+                        MAX_RETRIES,
+                        0,
+                        0,
+                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
+                Arguments.arguments(
+                        ENTER_PASSWORD,
+                        0,
+                        MAX_RETRIES,
+                        0,
+                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
+                Arguments.arguments(
+                        ENTER_SMS_CODE,
+                        0,
+                        0,
+                        MAX_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
+                Arguments.arguments(
+                        ENTER_AUTH_APP_CODE,
+                        0,
+                        0,
+                        MAX_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("reauthCountTypesAndMetadata")
+    void shouldReturnErrorIfUserHasTooManyReauthAttemptCountsOfAnyType(
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason) {
+        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
+                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
+            withReauthTurnedOn();
+            when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
+                    .thenReturn(Map.of(countType, MAX_RETRIES));
+            when(configurationService.getInternalSectorUri())
+                    .thenReturn("https://test.account.gov.uk");
+            Subject subject = new Subject(TEST_SUBJECT_ID);
+            mockedClientSubjectHelperClass
+                    .when(
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            eq(userProfile),
+                                            any(ClientRegistry.class),
+                                            any(AuthenticationService.class),
+                                            anyString()))
+                    .thenReturn(subject);
+
+            var result = makeCallWithCode(CODE, MFA_SMS.name(), REAUTHENTICATION);
+
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            AUDIT_CONTEXT,
+                            pair("rpPairwiseId", subject.getValue()),
+                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
+                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                            pair("failure-reason", expectedFailureReason));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
+        }
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
@@ -823,7 +907,7 @@ class VerifyCodeHandlerTest {
     private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
                 Arguments.of(CodeRequestType.PW_RESET_MFA_SMS, JourneyType.PASSWORD_RESET_MFA),
-                Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, JourneyType.REAUTHENTICATION),
+                Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, REAUTHENTICATION),
                 Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN),
                 Arguments.of(CodeRequestType.SMS_SIGN_IN, null));
     }

@@ -9,8 +9,10 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -20,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -166,6 +169,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
+            var client =
+                    userContext.getClient().orElseThrow(() -> new ClientNotFoundException(session));
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
 
@@ -173,7 +178,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
 
-            if (checkErrorCountsForReauth(journeyType, userProfileMaybe))
+            if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
+                    journeyType, userProfileMaybe, auditContext, client))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
@@ -266,8 +272,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
     }
 
-    private boolean checkErrorCountsForReauth(
-            JourneyType journeyType, Optional<UserProfile> userProfileMaybe) {
+    private boolean checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
+            JourneyType journeyType,
+            Optional<UserProfile> userProfileMaybe,
+            AuditContext auditContext,
+            ClientRegistry client) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.isAuthenticationAttemptsServiceEnabled()
                 && userProfileMaybe.isPresent()) {
@@ -280,6 +289,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             countsByJourney, configurationService);
 
             if (!countTypesWhereBlocked.isEmpty()) {
+                String rpPairwiseId =
+                        getInternalCommonSubjectIdentifier(userProfileMaybe.get(), client);
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContext,
+                        ReauthMetadataBuilder.builder(rpPairwiseId)
+                                .withAllIncorrectAttemptCounts(countsByJourney)
+                                .withFailureReason(countTypesWhereBlocked)
+                                .build());
                 LOG.info(
                         "Re-authentication locked due to {} counts exceeded.",
                         countTypesWhereBlocked);
@@ -489,5 +507,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
         }
         return journeyType;
+    }
+
+    private String getInternalCommonSubjectIdentifier(
+            UserProfile userProfile, ClientRegistry client) {
+        var internalCommonSubjectIdentifier =
+                ClientSubjectHelper.getSubject(
+                        userProfile,
+                        client,
+                        authenticationService,
+                        configurationService.getInternalSectorUri());
+        return internalCommonSubjectIdentifier.getValue();
     }
 }
