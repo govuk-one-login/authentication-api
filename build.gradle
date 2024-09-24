@@ -407,7 +407,7 @@ task utilsTerraform (type: Terraform) {
 
 String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
 
-sonarqube {
+sonar {
     properties {
         property "sonar.projectKey", "govuk-one-login_authentication-api"
         property "sonar.organization", "govuk-one-login"
