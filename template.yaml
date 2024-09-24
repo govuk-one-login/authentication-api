@@ -173,7 +173,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:758531536632:key/3afafd1f-59f2-4ceb-806c-f67c0c120968
       authenticationCallbackUserinfoKeyArn: arn:aws:kms:eu-west-2:758531536632:key/3d990d7b-0042-4115-8263-e6b472d84cc2
       defaultProvisionedConcurrency: 3
-      aisUriSecretId: daea90b7-b7a9-45b1-98fb-7d9ce8da5a72
+      aisUriSecretId: 2b9a3315-50e9-4970-87e6-b354cc4a2484
       javaToolOptions: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
