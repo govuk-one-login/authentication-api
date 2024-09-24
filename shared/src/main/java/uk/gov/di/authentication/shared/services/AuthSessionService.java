@@ -127,7 +127,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             if (item.isPresent()) {
                 AuthSessionItem updatedItem =
                         item.get().withVerifiedMfaMethodType(mfaMethodType.getValue());
-                update(updatedItem);
+                updateSession(updatedItem);
                 LOG.info("verifiedMfaMethodType updated in Auth session table.");
             } else {
                 LOG.error("No Auth session item found with provided sessionId");

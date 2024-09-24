@@ -16,6 +16,7 @@ public class AuthSessionItem {
         EXISTING_DOC_APP_JOURNEY,
         UNKNOWN
     }
+
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
 
     private String sessionId;
