@@ -96,6 +96,11 @@ public class ClientRegistrationResponse {
     @Expose
     private String idTokenSigningAlgorithm;
 
+    @SerializedName("channel")
+    @Expose
+    @Required
+    private String channel;
+
     public ClientRegistrationResponse(
             String clientName,
             String clientId,
@@ -113,7 +118,8 @@ public class ClientRegistrationResponse {
             List<String> claims,
             String sectorIdentifierUri,
             String clientType,
-            String idTokenSigningAlgorithm) {
+            String idTokenSigningAlgorithm,
+            String channel) {
         this.clientName = clientName;
         this.clientId = clientId;
         this.redirectUris = redirectUris;
@@ -131,6 +137,7 @@ public class ClientRegistrationResponse {
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.clientType = clientType;
         this.idTokenSigningAlgorithm = idTokenSigningAlgorithm;
+        this.channel = channel;
     }
 
     public ClientRegistrationResponse() {}

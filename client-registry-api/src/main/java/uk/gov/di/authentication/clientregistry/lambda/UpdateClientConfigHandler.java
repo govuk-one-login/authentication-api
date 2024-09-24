@@ -122,7 +122,8 @@ public class UpdateClientConfigHandler
                             clientRegistry.getClaims(),
                             clientRegistry.getSectorIdentifierUri(),
                             clientRegistry.getClientType(),
-                            clientRegistry.getIdTokenSigningAlgorithm());
+                            clientRegistry.getIdTokenSigningAlgorithm(),
+                            clientRegistry.getChannel());
             LOG.info("Client updated");
             return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
         } catch (JsonException | NullPointerException e) {

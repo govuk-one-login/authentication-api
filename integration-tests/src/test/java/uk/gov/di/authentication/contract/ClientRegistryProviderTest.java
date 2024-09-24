@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeAll;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -38,6 +39,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
     private static final String TOKEN_AUTH_METHOD = "private_key_jwt";
     private static final String ID_TOKEN_SIGNING_ALGORITHM = JWSAlgorithm.ES256.getName();
     private static final List<String> CLIENT_LOCS = List.of();
+    private static final String CHANNEL = Channel.WEB.getValue();
 
     private DynamoClientService clientService;
 
@@ -88,6 +90,7 @@ public class ClientRegistryProviderTest extends PactProviderTest {
                 CLIENT_SECRET,
                 TOKEN_AUTH_METHOD,
                 ID_TOKEN_SIGNING_ALGORITHM,
-                CLIENT_LOCS);
+                CLIENT_LOCS,
+                CHANNEL);
     }
 }
