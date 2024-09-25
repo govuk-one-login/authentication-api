@@ -34,15 +34,11 @@ public class AuthoriseAccessTokenHandler
     private static final Logger LOG = LogManager.getLogger(AuthoriseAccessTokenHandler.class);
 
     private final TokenValidationService tokenValidationService;
-    private final ConfigurationService configurationService;
     private final DynamoClientService clientService;
 
     public AuthoriseAccessTokenHandler(
-            TokenValidationService tokenValidationService,
-            ConfigurationService configurationService,
-            DynamoClientService clientService) {
+            TokenValidationService tokenValidationService, DynamoClientService clientService) {
         this.tokenValidationService = tokenValidationService;
-        this.configurationService = configurationService;
         this.clientService = clientService;
     }
 
@@ -51,7 +47,6 @@ public class AuthoriseAccessTokenHandler
     }
 
     public AuthoriseAccessTokenHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         tokenValidationService =
                 new TokenValidationService(
                         new JwksService(

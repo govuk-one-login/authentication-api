@@ -36,7 +36,6 @@ class AuthoriseAccessTokenHandlerTest {
 
     private final TokenValidationService tokenValidationServicen =
             mock(TokenValidationService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
     private AuthoriseAccessTokenHandler handler;
     private final Context context = mock(Context.class);
@@ -52,9 +51,7 @@ class AuthoriseAccessTokenHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler =
-                new AuthoriseAccessTokenHandler(
-                        tokenValidationServicen, configurationService, clientService);
+        handler = new AuthoriseAccessTokenHandler(tokenValidationServicen, clientService);
     }
 
     @Test
