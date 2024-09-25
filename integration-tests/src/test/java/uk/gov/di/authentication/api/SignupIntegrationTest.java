@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 
 import java.net.URI;
@@ -31,6 +32,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -42,6 +44,8 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Scope OIDC_SCOPE = new Scope(OIDCScopeValue.OPENID);
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private static final String SESSION_ID = "session-id";
+    private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
     @BeforeEach
     void setup() throws Json.JsonException {
@@ -52,10 +56,11 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200WhenValidSignUpRequest() throws Json.JsonException {
         setUpTest();
-        var sessionId = redis.createSession();
+        redis.createSession(SESSION_ID);
+        withAuthSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
+        headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
@@ -71,7 +76,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(200));
         assertTrue(
-                Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
+                Objects.nonNull(redis.getSession(SESSION_ID).getInternalCommonSubjectIdentifier()));
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CREATE_ACCOUNT));
     }
@@ -79,10 +84,11 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn400WhenCommonPassword() throws Json.JsonException {
         setUpTest();
-        var sessionId = redis.createSession();
+        redis.createSession(SESSION_ID);
+        withAuthSession();
 
         Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
+        headers.put("Session-Id", SESSION_ID);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
         headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
@@ -98,6 +104,28 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+    }
+
+    @Test
+    void shouldReturn400WhenNoAuthSessionPresent() throws Json.JsonException {
+        setUpTest();
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", SESSION_ID);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SignupRequest(
+                                        "joe.bloggs+5@digital.cabinet-office.gov.uk",
+                                        "password-1")),
+                        headers,
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
     }
 
     private void setUpTest() throws Json.JsonException {
@@ -124,5 +152,9 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
 
         redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
+    }
+
+    private void withAuthSession() {
+        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
     }
 }

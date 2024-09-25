@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -106,6 +107,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+
+        var optionalAuthSessionItem =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (optionalAuthSessionItem.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+        AuthSessionItem authSessionItem = optionalAuthSessionItem.get();
 
         LOG.info("Received request");
 
