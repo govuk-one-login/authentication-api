@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
@@ -85,7 +86,9 @@ public class ValidationHelper {
     }
 
     static boolean isAcceptedPhoneNumberType(PhoneNumberType phoneNumberType) {
-        return MOBILE.equals(phoneNumberType) || FIXED_LINE_OR_MOBILE.equals(phoneNumberType);
+        return MOBILE.equals(phoneNumberType)
+                || FIXED_LINE_OR_MOBILE.equals(phoneNumberType)
+                || FIXED_LINE.equals(phoneNumberType);
     }
 
     public static Optional<ErrorResponse> validateEmailAddressUpdate(

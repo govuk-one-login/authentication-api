@@ -19,7 +19,6 @@ import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBIL
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -44,13 +43,7 @@ class ValidationHelperTest {
             mock(ConfigurationService.class);
 
     private static Stream<String> invalidPhoneNumbers() {
-        return Stream.of(
-                "0123456789A",
-                "0123456789",
-                "012345678999",
-                "01234567891",
-                "202-456-1111",
-                "02079460000");
+        return Stream.of("0123456789A", "012345678999");
     }
 
     @ParameterizedTest
@@ -401,7 +394,7 @@ class ValidationHelperTest {
     void shouldAcceptSupportedPhoneNumberTypes() {
         assertTrue(ValidationHelper.isAcceptedPhoneNumberType(MOBILE));
         assertTrue(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE_OR_MOBILE));
-        assertFalse(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE));
+        assertTrue(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE));
     }
 
     @ParameterizedTest
