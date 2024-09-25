@@ -8,10 +8,18 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class AuthSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
+    public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
+
+    public enum AccountState {
+        NEW,
+        EXISTING,
+        EXISTING_DOC_APP_JOURNEY,
+        UNKNOWN
+    }
 
     private String sessionId;
-
     private long timeToLive;
+    private AccountState isNewAccount;
 
     public AuthSessionItem() {}
 
@@ -41,6 +49,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withTimeToLive(long timeToLive) {
         this.timeToLive = timeToLive;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_NEW_ACCOUNT)
+    public AccountState getIsNewAccount() {
+        return this.isNewAccount;
+    }
+
+    public void setIsNewAccount(AccountState accountState) {
+        this.isNewAccount = accountState;
+    }
+
+    public AuthSessionItem withAccountState(AccountState accountState) {
+        this.isNewAccount = accountState;
         return this;
     }
 }

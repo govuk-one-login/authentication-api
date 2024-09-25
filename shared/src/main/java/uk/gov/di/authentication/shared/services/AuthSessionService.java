@@ -2,6 +2,8 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -17,6 +19,14 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     public AuthSessionService(ConfigurationService configurationService) {
         super(AuthSessionItem.class, "auth-session", configurationService);
+        this.timeToLive = configurationService.getSessionExpiry();
+    }
+
+    public AuthSessionService(
+            DynamoDbClient dynamoDbClient,
+            DynamoDbTable<AuthSessionItem> dynamoDbTable,
+            ConfigurationService configurationService) {
+        super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
     }
 
@@ -45,6 +55,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 AuthSessionItem newItem =
                         new AuthSessionItem()
                                 .withSessionId(newSessionId)
+                                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
@@ -73,5 +84,17 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             LOG.info("Auth session item with expired TTL found. Session ID: {}", sessionId);
         }
         return validAuthSession;
+    }
+
+    public void updateSession(AuthSessionItem sessionItem) {
+        try {
+            update(sessionItem);
+        } catch (DynamoDbException e) {
+            LOG.error(
+                    "Error updating Auth session item with id {}, Error: {}",
+                    sessionItem.getSessionId(),
+                    e.getMessage());
+            throw e;
+        }
     }
 }
