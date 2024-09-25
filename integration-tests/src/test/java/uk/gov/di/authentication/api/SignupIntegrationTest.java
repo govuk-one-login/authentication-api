@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -27,6 +28,7 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CREATE_ACCOUNT;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
@@ -78,6 +80,10 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(
                 Objects.nonNull(redis.getSession(SESSION_ID).getInternalCommonSubjectIdentifier()));
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
+        assertThat(authSessionExtension.getSession(SESSION_ID).isPresent(), equalTo(true));
+        assertThat(
+                authSessionExtension.getSession(SESSION_ID).get().getIsNewAccount(),
+                equalTo(AuthSessionItem.AccountState.NEW));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CREATE_ACCOUNT));
     }
 

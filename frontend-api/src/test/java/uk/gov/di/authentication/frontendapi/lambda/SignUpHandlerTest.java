@@ -202,6 +202,31 @@ class SignUpHandlerTest {
     }
 
     @Test
+    void shouldUpdateAuthSession() {
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
+        usingValidSession();
+        usingValidClientSession();
+        withValidAuthSession();
+        var body = format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL);
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(authenticationService)
+                .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
+        verify(sessionService)
+                .storeOrUpdateSession(argThat(s -> s.getEmailAddress().equals(EMAIL)));
+
+        assertThat(result, hasStatus(200));
+        verify(authSessionService)
+                .updateSession(
+                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.NEW));
+    }
+
+    @Test
     void checkCreateAccountAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(authenticationService.signUp(
