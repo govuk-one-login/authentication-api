@@ -69,6 +69,10 @@ subprojects {
                 classpath('io.netty:netty-codec-http2:[4.1.100.Final,)') {
                     because 'CVE-2023-44487 is fixed in 4.1.100.Final and above'
                 }
+
+                classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
+                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
+                }
             }
         }
     }
@@ -136,6 +140,10 @@ subprojects {
 
                 add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
                     because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
+                }
+
+                add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
+                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
             }
         }
