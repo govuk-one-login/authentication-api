@@ -175,12 +175,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);
 
-            if (userProfile == null && journeyType == JourneyType.REAUTHENTICATION) {
+            String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
+
+            if (journeyType == JourneyType.REAUTHENTICATION
+                    && (userProfile == null || subjectId == null)) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
 
             if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                    journeyType, userProfile, auditContext, client))
+                    journeyType, subjectId, auditContext, userProfile, client))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
@@ -210,12 +213,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             sessionService.storeOrUpdateSession(session);
 
-            if (errorResponse.isPresent() && userProfile != null) {
+            if (errorResponse.isPresent()) {
                 handleInvalidVerificationCode(
                         codeRequest,
                         journeyType,
                         notificationType,
-                        userProfile.getSubjectID(),
+                        subjectId,
                         errorResponse.get(),
                         session,
                         auditContext);
@@ -232,11 +235,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    session,
                     authSessionId.get(),
                     codeRequest,
                     userContext,
-                    userProfile != null ? userProfile.getSubjectID() : null,
+                    subjectId,
                     journeyType,
                     auditContext,
                     client);
@@ -275,15 +277,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private boolean checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
             JourneyType journeyType,
-            UserProfile userProfile,
+            String subjectId,
             AuditContext auditContext,
+            UserProfile userProfile,
             ClientRegistry client) {
         if (journeyType == JourneyType.REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()
-                && userProfile != null) {
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
                     authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+                            subjectId, JourneyType.REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
@@ -336,7 +338,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private void processSuccessfulCodeRequest(
-            Session session,
             String authSessionId,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
@@ -344,6 +345,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             AuditContext auditContext,
             ClientRegistry client) {
+        var session = userContext.getSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
