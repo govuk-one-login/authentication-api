@@ -113,6 +113,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.auditService = auditService;
     }
 
+    public SendNotificationHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
     public SendNotificationHandler(ConfigurationService configurationService) {
         super(SendNotificationRequest.class, configurationService);
         this.emailSqsClient =
@@ -147,25 +151,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.dynamoEmailCheckResultService =
-                new DynamoEmailCheckResultService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
-    public SendNotificationHandler() {
-        super(SendNotificationRequest.class, ConfigurationService.getInstance());
-        this.emailSqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEmailQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.pendingEmailCheckSqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getPendingEmailCheckQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.codeGeneratorService = new CodeGeneratorService();
-        this.codeStorageService = new CodeStorageService(configurationService);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
