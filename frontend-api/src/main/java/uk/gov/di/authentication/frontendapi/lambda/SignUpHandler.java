@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -46,6 +47,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
+    private final AuthSessionService authSessionService;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -55,7 +57,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             AuthenticationService authenticationService,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
-            PasswordValidator passwordValidator) {
+            PasswordValidator passwordValidator,
+            AuthSessionService authSessionService) {
         super(
                 SignupRequest.class,
                 configurationService,
@@ -66,6 +69,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
+        this.authSessionService = authSessionService;
     }
 
     public SignUpHandler() {
@@ -77,6 +81,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public SignUpHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -84,6 +89,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
