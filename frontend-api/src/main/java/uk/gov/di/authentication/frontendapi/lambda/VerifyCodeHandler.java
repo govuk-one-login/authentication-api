@@ -210,12 +210,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             sessionService.storeOrUpdateSession(session);
 
-            if (errorResponse.isPresent()) {
+            if (errorResponse.isPresent() && userProfile != null) {
                 handleInvalidVerificationCode(
                         codeRequest,
                         journeyType,
                         notificationType,
-                        userProfile,
+                        userProfile.getSubjectID(),
                         errorResponse.get(),
                         session,
                         auditContext);
@@ -251,16 +251,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
             NotificationType notificationType,
-            UserProfile userProfile,
+            String subjectId,
             ErrorResponse errorResponse,
             Session session,
             AuditContext auditContext) {
-        if (journeyType == JourneyType.REAUTHENTICATION
-                && notificationType == MFA_SMS
-                && userProfile != null) {
+        if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
             if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
-                        userProfile.getSubjectID(),
+                        subjectId,
                         NowHelper.nowPlus(
                                         configurationService.getReauthEnterSMSCodeCountTTL(),
                                         ChronoUnit.SECONDS)
