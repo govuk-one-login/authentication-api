@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
@@ -34,9 +33,8 @@ import static org.mockito.Mockito.when;
 
 class AuthoriseAccessTokenHandlerTest {
 
-    private final TokenValidationService tokenValidationServicen =
+    private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
     private AuthoriseAccessTokenHandler handler;
     private final Context context = mock(Context.class);
@@ -52,9 +50,7 @@ class AuthoriseAccessTokenHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler =
-                new AuthoriseAccessTokenHandler(
-                        tokenValidationServicen, configurationService, clientService);
+        handler = new AuthoriseAccessTokenHandler(tokenValidationService, clientService);
     }
 
     @Test
@@ -64,7 +60,7 @@ class AuthoriseAccessTokenHandlerTest {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+        when(tokenValidationService.validateAccessTokenSignature(signedAccessToken))
                 .thenReturn(true);
         when(clientService.isValidClient(CLIENT_ID)).thenReturn(true);
         AuthPolicy authPolicy = handler.handleRequest(tokenAuthorizerContext, context);
@@ -97,7 +93,7 @@ class AuthoriseAccessTokenHandlerTest {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+        when(tokenValidationService.validateAccessTokenSignature(signedAccessToken))
                 .thenReturn(false);
 
         RuntimeException exception =
@@ -146,7 +142,7 @@ class AuthoriseAccessTokenHandlerTest {
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
+        when(tokenValidationService.validateAccessTokenSignature(signedAccessToken))
                 .thenReturn(true);
 
         RuntimeException exception =

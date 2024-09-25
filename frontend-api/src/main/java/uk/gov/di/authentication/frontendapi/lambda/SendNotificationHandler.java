@@ -113,6 +113,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.auditService = auditService;
     }
 
+    public SendNotificationHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
     public SendNotificationHandler(ConfigurationService configurationService) {
         super(SendNotificationRequest.class, configurationService);
         this.emailSqsClient =
@@ -147,25 +151,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService, redis);
-        this.dynamoEmailCheckResultService =
-                new DynamoEmailCheckResultService(configurationService);
-        this.auditService = new AuditService(configurationService);
-    }
-
-    public SendNotificationHandler() {
-        super(SendNotificationRequest.class, ConfigurationService.getInstance());
-        this.emailSqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getEmailQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.pendingEmailCheckSqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getPendingEmailCheckQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.codeGeneratorService = new CodeGeneratorService();
-        this.codeStorageService = new CodeStorageService(configurationService);
         this.dynamoEmailCheckResultService =
                 new DynamoEmailCheckResultService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -423,82 +408,76 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private ErrorResponse getErrorResponseForCodeRequestLimitReached(
             NotificationType notificationType) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return ErrorResponse.ERROR_1029;
-            case VERIFY_PHONE_NUMBER:
-                return ErrorResponse.ERROR_1030;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return ErrorResponse.ERROR_1046;
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL -> ErrorResponse.ERROR_1029;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1030;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1046;
+            default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
-        }
+            }
+        };
     }
 
     private ErrorResponse getErrorResponseForMaxCodeRequests(NotificationType notificationType) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return ErrorResponse.ERROR_1031;
-            case VERIFY_PHONE_NUMBER:
-                return ErrorResponse.ERROR_1032;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return ErrorResponse.ERROR_1047;
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL -> ErrorResponse.ERROR_1031;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1032;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1047;
+            default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
-        }
+            }
+        };
     }
 
     private ErrorResponse getErrorResponseForMaxCodeAttempts(NotificationType notificationType) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return ErrorResponse.ERROR_1033;
-            case VERIFY_PHONE_NUMBER:
-                return ErrorResponse.ERROR_1034;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return ErrorResponse.ERROR_1048;
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL -> ErrorResponse.ERROR_1033;
+            case VERIFY_PHONE_NUMBER -> ErrorResponse.ERROR_1034;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> ErrorResponse.ERROR_1048;
+            default -> {
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
-        }
+            }
+        };
     }
 
     private AuditableEvent getSuccessfulAuditEventFromNotificationType(
             NotificationType notificationType, boolean isTestClient) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return isTestClient ? AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT : AUTH_EMAIL_CODE_SENT;
-            case VERIFY_PHONE_NUMBER:
-                return isTestClient ? AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT : AUTH_PHONE_CODE_SENT;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return isTestClient
-                        ? AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
-                        : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL -> isTestClient
+                    ? AUTH_EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                    : AUTH_EMAIL_CODE_SENT;
+            case VERIFY_PHONE_NUMBER -> isTestClient
+                    ? AUTH_PHONE_CODE_SENT_FOR_TEST_CLIENT
+                    : AUTH_PHONE_CODE_SENT;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> isTestClient
+                    ? AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                    : AUTH_ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+            default -> {
                 LOG.error(
                         "No successful Audit event configured for NotificationType: {}",
                         notificationType);
                 throw new RuntimeException(
                         "No Successful Audit event configured for NotificationType");
-        }
+            }
+        };
     }
 
     private AuditableEvent getInvalidCodeAuditEventFromNotificationType(
             NotificationType notificationType) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return AUTH_EMAIL_INVALID_CODE_REQUEST;
-            case VERIFY_PHONE_NUMBER:
-                return AUTH_PHONE_INVALID_CODE_REQUEST;
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                return AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
-            default:
+        return switch (notificationType) {
+            case VERIFY_EMAIL -> AUTH_EMAIL_INVALID_CODE_REQUEST;
+            case VERIFY_PHONE_NUMBER -> AUTH_PHONE_INVALID_CODE_REQUEST;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> AUTH_ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+            default -> {
                 LOG.error(
                         "No invalid code request Audit event configured for NotificationType: {}",
                         notificationType);
                 throw new RuntimeException(
                         "No Invalid Code Audit event configured for NotificationType");
-        }
+            }
+        };
     }
 }
