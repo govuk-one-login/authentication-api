@@ -8,6 +8,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -23,10 +24,10 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
+import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 
 import java.net.URI;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,12 +63,38 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+    private static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
+    private static AuthenticationRequest.Builder basicAuthRequestBuilder =
+            new AuthenticationRequest.Builder(
+                            ResponseType.CODE,
+                            SCOPE,
+                            new ClientID(CLIENT_ID),
+                            URI.create(REDIRECT_URI))
+                    .nonce(new Nonce());
 
     @BeforeEach
     void setup() {
         handler = new LoginHandler(TXMA_ENABLED_CONFIGURATION_SERVICE, redisConnectionService);
         txmaAuditQueue.clear();
+
+        clientStore.registerClient(
+                CLIENT_ID,
+                "The test client",
+                singletonList(REDIRECT_URI),
+                singletonList("test-client@test.com"),
+                singletonList(SCOPE.toString()),
+                Base64.getMimeEncoder()
+                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public");
     }
+
+    @RegisterExtension
+    protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
+            new AuthenticationAttemptsStoreExtension();
 
     @ParameterizedTest
     @MethodSource("vectorOfTrust")
@@ -82,7 +109,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(Optional.empty(), sessionId);
-        var scope = new Scope(OIDCScopeValue.OPENID);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
@@ -94,36 +120,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
         }
 
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce());
+        AuthenticationRequest.Builder builder = basicAuthRequestBuilder;
         if (level != null) {
             builder.customParameter("vtr", jsonArrayOf(level.getValue()));
         }
         redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList(REDIRECT_URI),
-                singletonList("test-client@test.com"),
-                singletonList(scope.toString()),
-                Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        var headers = validHeadersWithSessionId(sessionId);
 
         var response =
                 makeRequest(
@@ -184,45 +187,18 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(Optional.empty(), sessionId);
-        var scope = new Scope(OIDCScopeValue.OPENID);
 
         userStore.signUp(email, password);
         userStore.updateTermsAndConditions(email, CURRENT_TERMS_AND_CONDITIONS);
         userStore.setPhoneNumberAndVerificationStatus(email, "01234567890", true, true);
 
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce());
-
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList(REDIRECT_URI),
-                singletonList("test-client@test.com"),
-                singletonList(scope.toString()),
-                Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public");
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
 
         var response =
                 makeRequest(
                         Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
-                        headers,
+                        validHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
         assertThat(
@@ -236,13 +212,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
+
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(Optional.empty(), sessionId);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
+        var headers = validHeadersWithSessionId(sessionId);
 
         var response =
                 makeRequest(
@@ -261,10 +237,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(Optional.empty(), sessionId);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        var headers = validHeadersWithSessionId(sessionId);
+
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
 
         var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
 
@@ -297,10 +273,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
         authSessionExtension.addSession(Optional.empty(), sessionId);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION);
+        var headers = validHeadersWithSessionId(sessionId);
+
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, basicAuthRequestBuilder.build().toParameters());
 
         var request = new LoginRequest(email, password, JourneyType.SIGN_IN);
 
@@ -322,5 +298,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         AUTH_INVALID_CREDENTIALS,
                         AUTH_INVALID_CREDENTIALS,
                         AUTH_INVALID_CREDENTIALS));
+    }
+
+    private Map<String, String> validHeadersWithSessionId(String sessionId) {
+        return Map.ofEntries(
+                Map.entry("Session-Id", sessionId),
+                Map.entry("X-API-Key", FRONTEND_API_KEY),
+                Map.entry("Client-Session-Id", CLIENT_SESSION_ID),
+                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_INFORMATION));
     }
 }

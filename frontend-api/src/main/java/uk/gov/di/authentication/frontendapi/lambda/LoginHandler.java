@@ -191,6 +191,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         }
 
         UserProfile userProfile = userProfileMaybe.get();
+        var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
         UserCredentials userCredentials = userContext.getUserCredentials().get();
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
@@ -199,14 +200,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
             var reauthCounts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+                    authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            userProfile.getSubjectID(),
+                            calculatedPairwiseId,
+                            JourneyType.REAUTHENTICATION);
             var exceedingCounts =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             reauthCounts, configurationService);
             if (!exceedingCounts.isEmpty()) {
                 LOG.info("User has existing reauth block on counts {}", exceedingCounts);
-                var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
@@ -250,7 +252,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     auditContext,
                     userProfile,
                     isReauthJourney,
-                    userContext);
+                    calculatedPairwiseId);
         }
 
         return handleValidCredentials(
@@ -357,7 +359,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditContext auditContext,
             UserProfile userProfile,
             boolean isReauthJourney,
-            UserContext userContext) {
+            String calculatedPairwiseId) {
         var updatedIncorrectPasswordCount = incorrectPasswordCount + 1;
 
         incrementCountOfFailedAttemptsToProvidePassword(userProfile, isReauthJourney);
@@ -371,15 +373,16 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (updatedIncorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
             if (isReauthJourneyWithFlagsEnabled(isReauthJourney)) {
-                var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
                         ReauthMetadataBuilder.builder(calculatedPairwiseId)
                                 .withAllIncorrectAttemptCounts(
-                                        authenticationAttemptsService.getCountsByJourney(
-                                                userProfile.getSubjectID(),
-                                                JourneyType.REAUTHENTICATION))
+                                        authenticationAttemptsService
+                                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                                        userProfile.getSubjectID(),
+                                                        calculatedPairwiseId,
+                                                        JourneyType.REAUTHENTICATION))
                                 .withFailureReason(ReauthFailureReasons.INCORRECT_PASSWORD)
                                 .build());
             }
