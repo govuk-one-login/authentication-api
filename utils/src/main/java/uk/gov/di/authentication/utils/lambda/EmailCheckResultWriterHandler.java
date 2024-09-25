@@ -63,10 +63,15 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                         emailCheckResult.timeToExist(),
                         emailCheckResult.requestReference());
 
+                long currentTime = now().getTime();
+                long timeOfInitialRequest = emailCheckResult.timeOfInitialRequest();
+                long duration = currentTime - timeOfInitialRequest;
                 LOG.info(
-                        "Message for email check reference {} written to database",
-                        emailCheckResult.requestReference());
-                var duration = now().getTime() - emailCheckResult.timeOfInitialRequest();
+                        "Message for email check reference {} written to database. Started at {}, now {} for duration {}",
+                        emailCheckResult.requestReference(),
+                        timeOfInitialRequest,
+                        currentTime,
+                        duration);
 
                 cloudwatchMetricsService.logEmailCheckDuration(duration);
             } catch (JsonException e) {
