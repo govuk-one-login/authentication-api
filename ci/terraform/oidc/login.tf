@@ -20,8 +20,11 @@ module "frontend_api_login_role" {
     local.user_credentials_encryption_policy_arn,
     aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
-    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn
+    aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
+    aws_iam_policy.dynamo_auth_session_read_write_policy.arn
   ]
+  // The joint read/write policy above is required because we've reached the managed polices per role quota limit (20)
+  // Ticket raised to request quota increase (ATO-1056)
 }
 
 
