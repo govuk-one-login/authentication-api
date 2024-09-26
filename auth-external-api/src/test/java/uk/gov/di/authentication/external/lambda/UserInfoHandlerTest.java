@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -46,6 +47,7 @@ class UserInfoHandlerTest {
     private AccessTokenService accessTokenService;
     private UserInfoHandler userInfoHandler;
     private SessionService sessionService;
+    private AuthSessionService authSessionService;
     private static final AccessTokenStore accessTokenStore = mock(AccessTokenStore.class);
     private static final Subject TEST_SUBJECT = new Subject();
     private static final UserInfo TEST_SUBJECT_USER_INFO = new UserInfo(TEST_SUBJECT);
@@ -64,6 +66,7 @@ class UserInfoHandlerTest {
         userInfoService = mock(UserInfoService.class);
         accessTokenService = mock(AccessTokenService.class);
         sessionService = mock(SessionService.class);
+        authSessionService = mock(AuthSessionService.class);
         when(accessTokenService.getAccessTokenStore(any()))
                 .thenReturn(Optional.of(accessTokenStore));
         userInfoHandler =
@@ -72,7 +75,8 @@ class UserInfoHandlerTest {
                         userInfoService,
                         accessTokenService,
                         auditService,
-                        sessionService);
+                        sessionService,
+                        authSessionService);
 
         TEST_SUBJECT_USER_INFO.setEmailAddress("test@test.com");
         TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");

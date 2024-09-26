@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -46,18 +47,21 @@ public class UserInfoHandler
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
     private final SessionService sessionService;
+    private final AuthSessionService authSessionService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
             AuditService auditService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            AuthSessionService authSessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
         this.sessionService = sessionService;
+        this.authSessionService = authSessionService;
     }
 
     public UserInfoHandler() {
@@ -73,6 +77,7 @@ public class UserInfoHandler
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
         this.sessionService = new SessionService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
