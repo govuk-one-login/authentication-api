@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -137,6 +138,7 @@ class VerifyMfaCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -173,6 +175,8 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
+        when(authSessionService.getSessionIdFromRequestHeaders(any()))
+                .thenReturn(Optional.of(SESSION_ID));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -185,7 +189,8 @@ class VerifyMfaCodeHandlerTest {
                         auditService,
                         mfaCodeProcessorFactory,
                         cloudwatchMetricsService,
-                        authenticationAttemptsService);
+                        authenticationAttemptsService,
+                        authSessionService);
     }
 
     @AfterEach

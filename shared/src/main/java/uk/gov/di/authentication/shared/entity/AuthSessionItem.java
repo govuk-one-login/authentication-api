@@ -17,7 +17,10 @@ public class AuthSessionItem {
         UNKNOWN
     }
 
+    public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
+
     private String sessionId;
+    private String verifiedMfaMethodType;
     private long timeToLive;
     private AccountState isNewAccount;
 
@@ -35,6 +38,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withSessionId(String sessionId) {
         this.sessionId = sessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE)
+    public String getVerifiedMfaMethodType() {
+        return verifiedMfaMethodType;
+    }
+
+    public void setVerifiedMfaMethodType(String verifiedMfaMethodType) {
+        this.verifiedMfaMethodType = verifiedMfaMethodType;
+    }
+
+    public AuthSessionItem withVerifiedMfaMethodType(String verifiedMfaMethodType) {
+        this.verifiedMfaMethodType = verifiedMfaMethodType;
         return this;
     }
 

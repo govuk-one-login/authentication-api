@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelpe
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -53,6 +54,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHA
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
@@ -69,6 +71,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountModifiersService accountModifiersService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final AuthSessionService authSessionService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -80,7 +83,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoAccountModifiersService accountModifiersService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
+            AuthenticationAttemptsService authenticationAttemptsService,
+            AuthSessionService authSessionService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -93,6 +97,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountModifiersService = accountModifiersService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.authSessionService = authSessionService;
     }
 
     public VerifyCodeHandler() {
@@ -107,6 +112,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -118,6 +124,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.accountModifiersService = new DynamoAccountModifiersService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -139,6 +146,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
+            Optional<String> authSessionId =
+                    authSessionService.getSessionIdFromRequestHeaders(input.getHeaders());
+            if (authSessionId.isEmpty()) {
+                LOG.warn("Auth session ID cannot be found");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            } else {
+                attachAuthSessionIdToLogs(authSessionId.get());
+            }
             var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
@@ -211,6 +226,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             processSuccessfulCodeRequest(
                     session,
+                    authSessionId.get(),
                     codeRequest,
                     userContext,
                     userProfileMaybe.isPresent() ? userProfileMaybe.get().getSubjectID() : null,
@@ -303,6 +319,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private void processSuccessfulCodeRequest(
             Session session,
+            String authSessionId,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
@@ -325,6 +342,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     false);
             sessionService.storeOrUpdateSession(
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS));
+            authSessionService.setVerifiedMfaMethodType(authSessionId, MFAMethodType.SMS);
             clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),

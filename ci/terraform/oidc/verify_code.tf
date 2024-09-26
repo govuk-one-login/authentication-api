@@ -16,6 +16,8 @@ module "frontend_api_verify_code_role" {
     aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
+    aws_iam_policy.dynamo_auth_session_read_policy.arn,
+    aws_iam_policy.dynamo_auth_session_write_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,

@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -133,6 +134,7 @@ class VerifyCodeHandlerTest {
             mock(DynamoAccountModifiersService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     private final ClientRegistry clientRegistry =
             new ClientRegistry()
@@ -196,7 +198,8 @@ class VerifyCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         accountModifiersService,
-                        authenticationAttemptsService);
+                        authenticationAttemptsService,
+                        authSessionService);
 
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -212,6 +215,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
+        when(authSessionService.getSessionIdFromRequestHeaders(any()))
+                .thenReturn(Optional.of(SESSION_ID));
     }
 
     @Test

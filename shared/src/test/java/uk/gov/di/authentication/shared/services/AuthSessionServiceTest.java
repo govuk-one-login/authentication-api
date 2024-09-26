@@ -2,45 +2,80 @@ package uk.gov.di.authentication.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 
+import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class AuthSessionServiceTest {
-    private final DynamoDbTable<AuthSessionItem> mockTable = mock(DynamoDbTable.class);
-    private final DynamoDbClient mockClient = mock(DynamoDbClient.class);
+    private static final String SESSION_ID = "test-session-id";
+    private static final String NEW_SESSION_ID = "new-session-id";
+    private static final long VALID_TTL = Instant.now().plusSeconds(100).getEpochSecond();
+    private static final long EXPIRED_TTL = Instant.now().minusSeconds(100).getEpochSecond();
+    private static final Key SESSION_ID_PARTITION_KEY =
+            Key.builder().partitionValue(SESSION_ID).build();
+
+    private final DynamoDbTable<AuthSessionItem> table = mock(DynamoDbTable.class);
+    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final String sessionId = "test-session-id";
-    private final Key sessionIdPartitionKey = Key.builder().partitionValue(sessionId).build();
     private AuthSessionService authSessionService;
 
     @BeforeEach
-    void testSetup() {
-        authSessionService = new AuthSessionService(mockClient, mockTable, configurationService);
+    void setup() {
+        when(configurationService.getSessionExpiry()).thenReturn(86400L);
+        authSessionService = new AuthSessionService(dynamoDbClient, table, configurationService);
+    }
+
+    @Test
+    void shouldRetrieveSessionIdUsingRequestHeaders() {
+        var sessionId =
+                authSessionService.getSessionIdFromRequestHeaders(Map.of("Session-Id", SESSION_ID));
+
+        sessionId.ifPresentOrElse(
+                session -> assertThat(sessionId.get(), is(SESSION_ID)),
+                () -> fail("Could not retrieve result"));
+    }
+
+    @Test
+    void shouldReturnEmptyIfSessionIdNotInRequestHeaders() {
+        var sessionId =
+                authSessionService.getSessionIdFromRequestHeaders(
+                        Map.of("A-Header", "example-header"));
+
+        assertTrue(sessionId.isEmpty());
     }
 
     @Test
     void getSessionReturnsSessionWithValidTtl() {
         withValidSession();
-        var session = authSessionService.getSession(sessionId);
+        var session = authSessionService.getSession(SESSION_ID);
         assertThat(session.isPresent(), equalTo(true));
     }
 
     @Test
     void getSessionReturnsEmptyOptionalWhenExpired() {
         withExpiredSession();
-        var session = authSessionService.getSession(sessionId);
+        var session = authSessionService.getSession(SESSION_ID);
         assertThat(session.isPresent(), equalTo(false));
     }
 
@@ -49,33 +84,118 @@ class AuthSessionServiceTest {
         withFailedUpdate();
         var sessionToBeUpdated =
                 new AuthSessionItem()
-                        .withSessionId(sessionId)
+                        .withSessionId(SESSION_ID)
                         .withAccountState(AuthSessionItem.AccountState.EXISTING);
         assertThrows(
                 DynamoDbException.class,
                 () -> authSessionService.updateSession(sessionToBeUpdated));
     }
 
-    private void withValidSession() {
-        when(mockTable.getItem(sessionIdPartitionKey))
-                .thenReturn(
-                        new AuthSessionItem()
-                                .withSessionId(sessionId)
-                                .withTimeToLive(NowHelper.now().getTime()));
+    @Test
+    void shouldAddNewSessionWhenNoPreviousSessionGiven() {
+        authSessionService.addOrUpdateSessionId(Optional.empty(), NEW_SESSION_ID);
+
+        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+        verify(table).putItem(captor.capture());
+        AuthSessionItem savedItem = captor.getValue();
+
+        assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
+        assertTrue(savedItem.getTimeToLive() > Instant.now().getEpochSecond());
+    }
+
+    @Test
+    void shouldAddNewSessionWhenNoPreviousSessionExists() {
+        withNoSession();
+
+        authSessionService.addOrUpdateSessionId(Optional.of(SESSION_ID), NEW_SESSION_ID);
+
+        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+        verify(table).putItem(captor.capture());
+        AuthSessionItem savedItem = captor.getValue();
+
+        assertThat(savedItem.getSessionId(), is(NEW_SESSION_ID));
+        assertTrue(savedItem.getTimeToLive() > Instant.now().getEpochSecond());
+    }
+
+    @Test
+    void shouldPutAndDeleteSessionWhenUpdatingSessionId() {
+        AuthSessionItem existingSession = withValidSession();
+
+        authSessionService.addOrUpdateSessionId(Optional.of(SESSION_ID), NEW_SESSION_ID);
+
+        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+        verify(table).putItem(captor.capture());
+        AuthSessionItem updatedItem = captor.getValue();
+
+        assertThat(updatedItem.getSessionId(), is(NEW_SESSION_ID));
+        assertTrue(updatedItem.getTimeToLive() > Instant.now().getEpochSecond());
+        verify(table).deleteItem(existingSession);
+    }
+
+    @Test
+    void shouldReturnEmptyWhenSessionIsExpired() {
+        withExpiredSession();
+
+        Optional<AuthSessionItem> result = authSessionService.getSession(SESSION_ID);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void shouldSetVerifiedMfaMethodTypeSuccessfully() {
+        withValidSession();
+
+        authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS);
+
+        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+        verify(table).updateItem(captor.capture());
+        AuthSessionItem updatedItem = captor.getValue();
+
+        assertThat(updatedItem.getVerifiedMfaMethodType(), is(MFAMethodType.SMS.getValue()));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenSessionNotFoundWhenSettingMfa() {
+        withNoSession();
+
+        assertThrows(
+                AuthSessionException.class,
+                () -> authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDynamoDbFailsDuringMfaUpdate() {
+        AuthSessionItem sessionItem =
+                new AuthSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
+        doThrow(DynamoDbException.class).when(table).putItem(sessionItem);
+
+        assertThrows(
+                AuthSessionException.class,
+                () -> authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS));
+    }
+
+    private AuthSessionItem withValidSession() {
+        AuthSessionItem existingSession =
+                new AuthSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
+        when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
+        return existingSession;
     }
 
     private void withExpiredSession() {
-        long septemberThe7th2002 = 1031405521;
-        when(mockTable.getItem(sessionIdPartitionKey))
+        when(table.getItem(SESSION_ID_PARTITION_KEY))
                 .thenReturn(
                         new AuthSessionItem()
-                                .withSessionId(sessionId)
-                                .withTimeToLive(septemberThe7th2002));
+                                .withSessionId(SESSION_ID)
+                                .withTimeToLive(EXPIRED_TTL));
+    }
+
+    private void withNoSession() {
+        when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(null);
     }
 
     private void withFailedUpdate() {
         doThrow(DynamoDbException.builder().message("Failed to update table").build())
-                .when(mockTable)
+                .when(table)
                 .updateItem(any(AuthSessionItem.class));
     }
 }

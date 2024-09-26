@@ -82,7 +82,7 @@ public class SessionService {
                         configurationService.getHeadersCaseInsensitive());
 
         if (sessionId.isEmpty()) {
-            LOG.warn("Value not found for Client-Session-Id header");
+            LOG.warn("Value not found for Session-Id header");
         }
 
         return sessionId
