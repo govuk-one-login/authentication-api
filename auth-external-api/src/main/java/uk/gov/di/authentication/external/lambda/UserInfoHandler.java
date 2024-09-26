@@ -204,6 +204,8 @@ public class UserInfoHandler
 
         sessionService.storeOrUpdateSession(
                 userSession.setNewAccount(Session.AccountState.EXISTING));
+        authSessionService.updateSession(
+                authSession.withAccountState(AuthSessionItem.AccountState.EXISTING));
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 

@@ -71,6 +71,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         return txmaAuditQueue.getQueueUrl();
                     }
                 };
+        txmaAuditQueue.clear();
         handler = new UserInfoHandler(configurationService);
     }
 
@@ -132,6 +133,30 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
                 singletonList(AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION));
+    }
+
+    @Test
+    void shouldUpdateAuthSessionWithAccountStateExisting() throws Json.JsonException {
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+        addTokenToDynamoAndCreateAssociatedUser(
+                accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), true);
+        withNewAccountSession();
+        withAuthSessionNewAccount();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(
+                authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
+                equalTo(AuthSessionItem.AccountState.EXISTING));
     }
 
     @Test

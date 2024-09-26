@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -159,6 +160,33 @@ class UserInfoHandlerTest {
                                 "0123456789",
                                 "",
                                 Optional.empty()));
+    }
+
+    @Test
+    void shouldUpdateAuthSessionWithAccountStateExisting()
+            throws ParseException, AccessTokenException {
+        withAuthSession();
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        String validTokenHeader = "Bearer valid-token";
+        AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
+        request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
+        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+                .thenReturn(validToken);
+        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(sessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(testSession));
+
+        APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
+
+        assertEquals(200, response.getStatusCode());
+        assertTrue(
+                response.getBody()
+                        .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
+
+        verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
+        verify(authSessionService)
+                .updateSession(
+                        argThat(t -> t.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
     }
 
     @Test
