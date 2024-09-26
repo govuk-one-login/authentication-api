@@ -18,8 +18,10 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.net.URI;
 import java.util.Base64;
@@ -58,6 +60,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_NAME = "test-client-name";
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
+    private final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
     @BeforeEach
     void setup() {
@@ -75,7 +78,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var password = "password-1";
-        var sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        var sessionId = IdGenerator.generate();
+        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        authSessionExtension.addSession(Optional.empty(), sessionId);
         var scope = new Scope(OIDCScopeValue.OPENID);
 
         userStore.signUp(email, password);
@@ -176,7 +181,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        var sessionId = IdGenerator.generate();
+        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        authSessionExtension.addSession(Optional.empty(), sessionId);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
@@ -196,7 +203,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        var sessionId = IdGenerator.generate();
+        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        authSessionExtension.addSession(Optional.empty(), sessionId);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
@@ -230,7 +239,9 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        var sessionId = IdGenerator.generate();
+        redis.createUnauthenticatedSessionWithIdAndEmail(sessionId, email);
+        authSessionExtension.addSession(Optional.empty(), sessionId);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);

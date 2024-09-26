@@ -24,6 +24,7 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -216,6 +217,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -266,6 +268,7 @@ class LoginHandlerTest {
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event =
@@ -291,6 +294,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
@@ -314,6 +318,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
@@ -349,6 +354,7 @@ class LoginHandlerTest {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingValidAuthSession();
 
         usingDefaultVectorOfTrust();
 
@@ -376,6 +382,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
@@ -412,6 +419,7 @@ class LoginHandlerTest {
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -438,6 +446,7 @@ class LoginHandlerTest {
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(maxRetriesAllowed - 1);
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
@@ -479,6 +488,7 @@ class LoginHandlerTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
@@ -520,6 +530,7 @@ class LoginHandlerTest {
                 .thenReturn(MAX_ALLOWED_PASSWORD_RETRIES);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
 
@@ -554,6 +565,7 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -580,6 +592,7 @@ class LoginHandlerTest {
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -611,6 +624,7 @@ class LoginHandlerTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
 
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
@@ -640,6 +654,7 @@ class LoginHandlerTest {
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -657,6 +672,7 @@ class LoginHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, bodyWithoutEmail);
 
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -682,10 +698,23 @@ class LoginHandlerTest {
     }
 
     @Test
+    void shouldReturn400IfNoAuthSessionPresent() {
+        usingInvalidAuthSession();
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -714,6 +743,7 @@ class LoginHandlerTest {
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
+        usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -743,6 +773,7 @@ class LoginHandlerTest {
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
 
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -778,6 +809,20 @@ class LoginHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private void usingValidAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
+    }
+
+    private void usingInvalidAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.empty());
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {

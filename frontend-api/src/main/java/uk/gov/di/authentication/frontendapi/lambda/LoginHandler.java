@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -155,6 +156,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             Context context,
             LoginRequest request,
             UserContext userContext) {
+
+        var optionalAuthSession =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+
+        if (optionalAuthSession.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        AuthSessionItem authSession = optionalAuthSession.get();
 
         AuditContext auditContext =
                 auditContextFromUserContext(

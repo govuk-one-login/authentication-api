@@ -26,6 +26,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -234,6 +235,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
             usingValidSession();
+            usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
             usingDefaultVectorOfTrust();
 
@@ -333,6 +335,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
             usingValidSession();
+            usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
             usingDefaultVectorOfTrust();
 
@@ -380,6 +383,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
         usingDefaultVectorOfTrust();
 
@@ -419,6 +423,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
         usingDefaultVectorOfTrust();
 
@@ -454,6 +459,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
 
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
@@ -496,6 +502,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 .thenReturn(MAX_ALLOWED_RETRIES - 1);
 
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
@@ -547,6 +554,15 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private void usingValidAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
