@@ -429,6 +429,11 @@ public class AuthorisationHandler
                 && browserSessionIdFromSession.isPresent()
                 && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
             sessionWithValidBrowserSessionId = Optional.empty();
+            auditService.submitAuditEvent(
+                    OidcAuditableEvent.AUTHORISATION_INITIATED,
+                    authRequest.getClientID().getValue(),
+                    user,
+                    pair("new_authentication_required", true));
         } else {
             sessionWithValidBrowserSessionId = session;
         }
