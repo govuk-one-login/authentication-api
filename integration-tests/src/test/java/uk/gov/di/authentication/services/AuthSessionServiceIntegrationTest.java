@@ -5,10 +5,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
 class AuthSessionServiceIntegrationTest {
     private static final String SESSION_ID = "test-session-id";
@@ -89,5 +91,15 @@ class AuthSessionServiceIntegrationTest {
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
+    void shouldGetSessionFromRequestHeaders() {
+        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+        var headersWithSessionId = Map.of(SESSION_ID_HEADER, SESSION_ID);
+        Optional<AuthSessionItem> retrievedSession =
+                authSessionExtension.getSessionFromRequestHeaders(headersWithSessionId);
+        assertThat(retrievedSession.isPresent(), equalTo(true));
+        assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
     }
 }

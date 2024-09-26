@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.util.Map;
 import java.util.Optional;
 
 public class AuthSessionExtension extends DynamoExtension implements AfterEachCallback {
@@ -76,5 +77,10 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
 
     public void updateSession(AuthSessionItem sessionItem) {
         authSessionService.updateSession(sessionItem);
+    }
+
+    public Optional<AuthSessionItem> getSessionFromRequestHeaders(
+            Map<String, String> requestHeaders) {
+        return authSessionService.getSessionFromRequestHeaders(requestHeaders);
     }
 }
