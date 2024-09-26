@@ -392,6 +392,26 @@ public class AuthorisationHandler
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
 
+        var vtrList = getVtrList(reauthRequested, authRequest);
+        ClientSession clientSession =
+                clientSessionService.generateClientSession(
+                        authRequest.toParameters(),
+                        LocalDateTime.now(),
+                        vtrList,
+                        client.getClientName());
+
+        if (DocAppUserHelper.isDocCheckingAppUser(
+                authRequest.toParameters(), Optional.of(client))) {
+            return handleDocAppJourney(
+                    session,
+                    clientSession,
+                    authRequest,
+                    client,
+                    clientSessionId,
+                    persistentSessionId,
+                    user);
+        }
+
         Optional<Session> sessionWithValidBrowserSessionId;
 
         Optional<String> browserSessionIdFromSession = session.map(Session::getBrowserSessionId);
@@ -413,24 +433,6 @@ public class AuthorisationHandler
             sessionWithValidBrowserSessionId = session;
         }
 
-        var vtrList = getVtrList(reauthRequested, authRequest);
-        ClientSession clientSession =
-                clientSessionService.generateClientSession(
-                        authRequest.toParameters(),
-                        LocalDateTime.now(),
-                        vtrList,
-                        client.getClientName());
-        if (DocAppUserHelper.isDocCheckingAppUser(
-                authRequest.toParameters(), Optional.of(client))) {
-            return handleDocAppJourney(
-                    session,
-                    clientSession,
-                    authRequest,
-                    client,
-                    clientSessionId,
-                    persistentSessionId,
-                    user);
-        }
         return handleAuthJourney(
                 sessionWithValidBrowserSessionId,
                 clientSession,
