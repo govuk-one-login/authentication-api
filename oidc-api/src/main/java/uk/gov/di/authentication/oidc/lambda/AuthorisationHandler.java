@@ -412,8 +412,6 @@ public class AuthorisationHandler
                     user);
         }
 
-        Optional<Session> sessionWithValidBrowserSessionId;
-
         Optional<String> browserSessionIdFromSession = session.map(Session::getBrowserSessionId);
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
@@ -424,6 +422,7 @@ public class AuthorisationHandler
         }
         //
 
+        Optional<Session> sessionWithValidBrowserSessionId = session;
         if (configurationService.isBrowserSessionCookieEnabled()
                 && configurationService.isSignOutOnBrowserCloseEnabled()
                 && browserSessionIdFromSession.isPresent()
@@ -434,8 +433,6 @@ public class AuthorisationHandler
                     authRequest.getClientID().getValue(),
                     user,
                     pair("new_authentication_required", true));
-        } else {
-            sessionWithValidBrowserSessionId = session;
         }
 
         return handleAuthJourney(
