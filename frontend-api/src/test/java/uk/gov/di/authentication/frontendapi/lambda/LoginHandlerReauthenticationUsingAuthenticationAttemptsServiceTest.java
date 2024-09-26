@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -160,6 +161,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -200,7 +202,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        authenticationAttemptsService);
+                        authenticationAttemptsService,
+                        authSessionService);
     }
 
     @ParameterizedTest

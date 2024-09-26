@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelpe
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -78,6 +79,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final AuthSessionService authSessionService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -90,7 +92,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             CommonPasswordsService commonPasswordsService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
+            AuthenticationAttemptsService authenticationAttemptsService,
+            AuthSessionService authSessionService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -105,6 +108,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.authSessionService = authSessionService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -118,6 +122,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -131,6 +136,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler() {
