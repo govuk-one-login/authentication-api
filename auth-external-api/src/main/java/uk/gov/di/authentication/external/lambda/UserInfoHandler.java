@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.services.UserInfoService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
@@ -129,6 +130,16 @@ public class UserInfoHandler
             LOG.error("Error retrieving session from redis: {}", e.getMessage());
             throw new RuntimeException(e);
         }
+
+        AuthSessionItem authSession;
+
+        Optional<AuthSessionItem> optionalAuthSession =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+
+        if (optionalAuthSession.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+        authSession = optionalAuthSession.get();
 
         attachSessionIdToLogs(userSession);
 
