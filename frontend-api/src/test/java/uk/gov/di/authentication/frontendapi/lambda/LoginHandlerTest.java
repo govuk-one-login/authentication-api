@@ -73,6 +73,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -785,6 +786,30 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(200));
     }
 
+    @Test
+    void shouldUpdateAuthSessionStoreWithExistingAccountState() {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSession();
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verifyAuthSessionIsSaved();
+    }
+
     private AuthenticationRequest generateAuthRequest() {
         return generateAuthRequest(null);
     }
@@ -887,5 +912,11 @@ class LoginHandlerTest {
                                                         .equals(expectedCommonSubject)
                                                 && t.isNewAccount()
                                                         == Session.AccountState.EXISTING));
+    }
+
+    private void verifyAuthSessionIsSaved() {
+        verify(authSessionService, times(1))
+                .updateSession(
+                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
     }
 }

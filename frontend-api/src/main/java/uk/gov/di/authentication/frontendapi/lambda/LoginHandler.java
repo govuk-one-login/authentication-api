@@ -259,7 +259,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 internalCommonSubjectIdentifier,
                 userCredentials,
                 userProfile,
-                auditContext);
+                auditContext,
+                authSession);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -284,12 +285,16 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             String internalCommonSubjectIdentifier,
             UserCredentials userCredentials,
             UserProfile userProfile,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            AuthSessionItem authSessionItem) {
         sessionService.storeOrUpdateSession(
                 userContext
                         .getSession()
                         .setNewAccount(EXISTING)
                         .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
+
+        authSessionService.updateSession(
+                authSessionItem.withAccountState(AuthSessionItem.AccountState.EXISTING));
 
         var userMfaDetail =
                 getUserMFADetail(
