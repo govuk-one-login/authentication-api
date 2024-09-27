@@ -27,7 +27,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
       var.handler_environment_variables,
       local.deploy_dynatrace ? local.dynatrace_environment_variables : {},
       {
-        JAVA_TOOL_OPTIONS = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+        JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })
   }
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
@@ -65,6 +65,10 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.endpoint_lambda.arn
   function_version = aws_lambda_function.endpoint_lambda.version
+
+  lifecycle {
+    ignore_changes = [function_version, routing_config]
+  }
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {

@@ -46,7 +46,7 @@ resource "aws_lambda_function" "authorizer" {
     variables = {
       TOKEN_SIGNING_KEY_ALIAS = data.aws_kms_key.id_token_public_key.key_id
       ENVIRONMENT             = var.environment
-      JAVA_TOOL_OPTIONS       = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      JAVA_TOOL_OPTIONS       = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     }
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
@@ -69,6 +69,11 @@ resource "aws_lambda_alias" "authorizer_alias" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.authorizer.arn
   function_version = aws_lambda_function.authorizer.version
+
+  lifecycle {
+    ignore_changes = [function_version, routing_config]
+  }
+
 }
 
 
@@ -181,4 +186,14 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_
     }
   }
   alarm_actions = [data.aws_sns_topic.slack_events.arn]
+}
+
+module "codedeploy_authorizer" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "authorizer"
+  environment          = var.environment
+  lambda_function_name = aws_lambda_function.authorizer.function_name
+  lambda_version       = aws_lambda_function.authorizer.version
+  lambda_alias_name    = aws_lambda_alias.authorizer_alias.name
+  lambda_alias_version = aws_lambda_alias.authorizer_alias.function_version
 }

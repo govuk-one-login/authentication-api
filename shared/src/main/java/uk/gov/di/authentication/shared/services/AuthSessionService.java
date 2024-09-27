@@ -2,55 +2,22 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import java.util.Optional;
-
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     private static final Logger LOG = LogManager.getLogger(AuthSessionService.class);
 
-    private final ConfigurationService configurationService;
-
     private final long timeToLive;
 
     public AuthSessionService(ConfigurationService configurationService) {
         super(AuthSessionItem.class, "auth-session", configurationService);
-        this.configurationService = configurationService;
         this.timeToLive = configurationService.getSessionExpiry();
-    }
-
-    public AuthSessionService(
-            DynamoDbClient dynamoDbClient,
-            DynamoDbTable<AuthSessionItem> dynamoDbTable,
-            ConfigurationService configurationService) {
-        super(dynamoDbTable, dynamoDbClient);
-        this.timeToLive = configurationService.getSessionExpiry();
-        this.configurationService = configurationService;
-    }
-
-    public Optional<String> getSessionIdFromRequestHeaders(Map<String, String> headers) {
-        Optional<String> sessionId =
-                getOptionalHeaderValueFromHeaders(
-                        headers,
-                        SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
-
-        if (sessionId.isEmpty()) {
-            LOG.warn("Value not found for Session-Id header");
-        }
-        return sessionId;
     }
 
     public void addOrUpdateSessionId(Optional<String> previousSessionId, String newSessionId) {
@@ -78,7 +45,6 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 AuthSessionItem newItem =
                         new AuthSessionItem()
                                 .withSessionId(newSessionId)
-                                .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
@@ -107,36 +73,5 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
             LOG.info("Auth session item with expired TTL found. Session ID: {}", sessionId);
         }
         return validAuthSession;
-    }
-
-    public void updateSession(AuthSessionItem sessionItem) {
-        try {
-            update(sessionItem);
-        } catch (DynamoDbException e) {
-            LOG.error(
-                    "Error updating Auth session item with id {}, Error: {}",
-                    sessionItem.getSessionId(),
-                    e.getMessage());
-            throw e;
-        }
-    }
-
-    public void setVerifiedMfaMethodType(String sessionId, MFAMethodType mfaMethodType) {
-        try {
-            Optional<AuthSessionItem> item = getSession(sessionId);
-            if (item.isPresent()) {
-                AuthSessionItem updatedItem =
-                        item.get().withVerifiedMfaMethodType(mfaMethodType.getValue());
-                updateSession(updatedItem);
-                LOG.info("verifiedMfaMethodType updated in Auth session table.");
-            } else {
-                LOG.error("No Auth session item found with provided sessionId");
-                throw new AuthSessionException(
-                        "No Auth session item found with provided sessionId");
-            }
-        } catch (DynamoDbException e) {
-            LOG.error("Failed to update verifiedMfaMethodType: {}", e.getMessage());
-            throw new AuthSessionException("Failed to update verifiedMfaMethodType");
-        }
     }
 }

@@ -1,11 +1,9 @@
 package uk.gov.di.authentication.shared.helpers;
 
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 
 import static uk.gov.di.authentication.shared.helpers.InputSanitiser.sanitiseBase64;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AUTH_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
 
 public class LogLineHelper {
@@ -14,7 +12,6 @@ public class LogLineHelper {
 
     public enum LogFieldName {
         SESSION_ID("sessionId", true),
-        AUTH_SESSION_ID("authSessionId", true),
         CLIENT_SESSION_ID("clientSessionId", true),
         GOVUK_SIGNIN_JOURNEY_ID("govukSigninJourneyId", true),
         PERSISTENT_SESSION_ID("persistentSessionId", true),
@@ -57,14 +54,6 @@ public class LogLineHelper {
 
     public static void attachSessionIdToLogs(String sessionId) {
         attachLogFieldToLogs(SESSION_ID, sessionId);
-    }
-
-    public static void attachAuthSessionIdToLogs(AuthSessionItem authSession) {
-        attachLogFieldToLogs(AUTH_SESSION_ID, authSession.getSessionId());
-    }
-
-    public static void attachAuthSessionIdToLogs(String sessionId) {
-        attachLogFieldToLogs(AUTH_SESSION_ID, sessionId);
     }
 
     public static void updateAttachedSessionIdToLogs(String sessionId) {

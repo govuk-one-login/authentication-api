@@ -43,7 +43,6 @@ module "processing-identity" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     AUTH_FRONTEND_BASE_URL                      = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
-    JAVA_TOOL_OPTIONS                           = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 
@@ -80,4 +79,13 @@ module "processing-identity" {
   ]
 
   use_localstack = var.use_localstack
+}
+module "codedeploy_processing_identity" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "processing-identity"
+  environment          = var.environment
+  lambda_function_name = module.processing-identity.lambda_function_name
+  lambda_version       = module.processing-identity.lambda_version
+  lambda_alias_name    = module.processing-identity.lambda_alias_name
+  lambda_alias_version = module.processing-identity.lambda_alias_version
 }

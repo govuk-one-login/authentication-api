@@ -71,3 +71,13 @@ module "update" {
     aws_api_gateway_resource.register_resource,
   ]
 }
+
+module "codedeploy_update_client_info" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update-client-info"
+  environment          = var.environment
+  lambda_function_name = module.update[0].lambda_function_name
+  lambda_version       = module.update[0].lambda_version
+  lambda_alias_name    = module.update[0].lambda_alias_name
+  lambda_alias_version = module.update[0].lambda_alias_version
+}

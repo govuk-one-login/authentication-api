@@ -52,3 +52,13 @@ module "openid_configuration_discovery" {
 
   ]
 }
+
+module "codedeploy_openid_configuration_discovery" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "openid-configuration"
+  environment          = var.environment
+  lambda_function_name = module.openid_configuration_discovery.lambda_function_name
+  lambda_version       = module.openid_configuration_discovery.lambda_version
+  lambda_alias_name    = module.openid_configuration_discovery.lambda_alias_name
+  lambda_alias_version = module.openid_configuration_discovery.lambda_alias_version
+}

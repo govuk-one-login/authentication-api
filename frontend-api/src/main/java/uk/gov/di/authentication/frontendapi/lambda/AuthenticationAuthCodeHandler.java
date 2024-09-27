@@ -11,7 +11,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
-import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -35,6 +34,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeRequest> {
 
@@ -136,17 +136,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
                                 .getValue();
-                var metadataBuilder = ReauthMetadataBuilder.builder(rpPairwiseId);
-                if (userContext.getSession().getPreservedReauthCountsForAudit() != null) {
-                    metadataBuilder.withAllIncorrectAttemptCounts(
-                            userContext.getSession().getPreservedReauthCountsForAudit());
-                } else {
-                    LOG.warn("No preserved reauth counts found for reauth journey");
-                }
-                auditService.submitAuditEvent(
-                        AUTH_REAUTH_SUCCESS, auditContext, metadataBuilder.build());
-                sessionService.storeOrUpdateSession(
-                        userContext.getSession().setPreservedReauthCountsForAudit(null));
+                var pairs = pair("rpPairwiseId", rpPairwiseId);
+                auditService.submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, pairs);
             }
 
             return generateApiGatewayProxyResponse(

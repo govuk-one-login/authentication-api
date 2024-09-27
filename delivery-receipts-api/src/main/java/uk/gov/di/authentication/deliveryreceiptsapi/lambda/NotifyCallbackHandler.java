@@ -8,7 +8,6 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -36,7 +35,6 @@ public class NotifyCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
-    private static final String JOURNEY_ID = "journeyId";
     private final ConfigurationService configurationService;
     private DynamoService dynamoService = null;
 
@@ -88,8 +86,6 @@ public class NotifyCallbackHandler
         NotifyDeliveryReceipt deliveryReceipt;
         try {
             deliveryReceipt = objectMapper.readValue(input.getBody(), NotifyDeliveryReceipt.class);
-            ThreadContext.remove(JOURNEY_ID);
-            ThreadContext.put(JOURNEY_ID, deliveryReceipt.reference());
             if (deliveryReceipt.notificationType().equals("sms")) {
                 LOG.info("Sms delivery receipt received");
                 var countryCode = getCountryCodeFromNumber(deliveryReceipt.to());
@@ -128,10 +124,8 @@ public class NotifyCallbackHandler
             }
         } catch (JsonException e) {
             LOG.error("Unable to parse Notify Delivery Receipt");
-            ThreadContext.remove(JOURNEY_ID);
             throw new RuntimeException("Unable to parse Notify Delivery Receipt");
         }
-        ThreadContext.remove(JOURNEY_ID);
         return generateEmptySuccessApiGatewayResponse();
     }
 

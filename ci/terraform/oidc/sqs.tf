@@ -181,7 +181,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_URL                = var.notify_url
       NOTIFY_TEST_DESTINATIONS  = var.notify_test_destinations
       SMOKETEST_SMS_BUCKET_NAME = local.sms_bucket_name
-      JAVA_TOOL_OPTIONS         = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      JAVA_TOOL_OPTIONS         = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
       ENVIRONMENT               = var.environment
     })
   }

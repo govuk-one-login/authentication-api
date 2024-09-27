@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@d0e41abbcc8c1103c6ae7e451681d071f05e1c20 # v12.2873.0
+        uses: bridgecrewio/checkov-action@be3465ae00c3f4e125ac7a63e91672f9df26337f # v12.2862.0
         with:
           directory: ci/terraform/${{ matrix.module }}
           soft_fail: true
@@ -39,7 +39,7 @@ jobs:
           skip_check: CKV_OPENAPI_20,CKV_OPENAPI_4
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.25.12v3
+        uses: github/codeql-action/upload-sarif@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.25.12v3
         with:
           sarif_file: results.sarif
           category: ${{ matrix.module }}
@@ -53,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@d0e41abbcc8c1103c6ae7e451681d071f05e1c20 # v12.2873.0
+        uses: bridgecrewio/checkov-action@be3465ae00c3f4e125ac7a63e91672f9df26337f # v12.2862.0
         with:
           file: template.yaml
           framework: cloudformation
@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload SARIF file
         if: always()
-        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.25.12v3
+        uses: github/codeql-action/upload-sarif@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.25.12v3
         with:
           sarif_file: results.sarif
           category: orch-sam

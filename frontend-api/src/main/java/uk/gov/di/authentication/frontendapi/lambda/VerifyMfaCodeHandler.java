@@ -6,14 +6,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -23,13 +20,11 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -59,7 +54,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -73,7 +67,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
-    private final AuthSessionService authSessionService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -85,8 +78,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuditService auditService,
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
-            AuthenticationAttemptsService authenticationAttemptsService,
-            AuthSessionService authSessionService) {
+            AuthenticationAttemptsService authenticationAttemptsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -99,7 +91,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
-        this.authSessionService = authSessionService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -120,7 +111,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -138,7 +128,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
-        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -154,27 +143,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
-        Optional<String> authSessionId =
-                authSessionService.getSessionIdFromRequestHeaders(input.getHeaders());
-        if (authSessionId.isEmpty()) {
-            LOG.warn("Auth session ID cannot be found");
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-        } else {
-            attachAuthSessionIdToLogs(authSessionId.get());
-        }
-
         var journeyType = codeRequest.getJourneyType();
         Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
-
-        var auditContext =
-                auditContextFromUserContext(
-                        userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        userContext.getSession().getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()));
 
         LOG.info("Invoking verify MFA code handler");
 
@@ -184,14 +155,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (userProfileMissingForReauthenticationJourney(userProfile, journeyType))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
 
-        if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
-                journeyType, userProfile, auditContext, userContext))
+        if (errorCountsExceededForReauthentication(journeyType, userProfile))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
-            return verifyCode(
-                    input, codeRequest, userContext, journeyType, subjectID, authSessionId.get());
+            return verifyCode(input, codeRequest, userContext, journeyType, subjectID);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -215,11 +184,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return userProfile == null && journeyType == JourneyType.REAUTHENTICATION;
     }
 
-    private boolean checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
-            JourneyType journeyType,
-            UserProfile userProfile,
-            AuditContext auditContext,
-            UserContext userContext) {
+    private boolean errorCountsExceededForReauthentication(
+            JourneyType journeyType, UserProfile userProfile) {
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
@@ -229,18 +195,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
-
-            ClientRegistry client = userContext.getClient().orElse(null);
-            if (!countTypesWhereLimitExceeded.isEmpty() && client != null) {
-                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
-                auditService.submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                        auditContext,
-                        ReauthMetadataBuilder.builder(rpPairwiseId)
-                                .withAllIncorrectAttemptCounts(counts)
-                                .withFailureReason(countTypesWhereLimitExceeded)
-                                .build());
-
+            if (!countTypesWhereLimitExceeded.isEmpty()) {
                 LOG.info(
                         "Re-authentication locked due to {} counts exceeded.",
                         countTypesWhereLimitExceeded);
@@ -255,8 +210,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
             JourneyType journeyType,
-            String subjectId,
-            String authSessionId) {
+            String subjectId) {
 
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
@@ -322,9 +276,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                             .setVerifiedMfaMethodType(
                                                     codeRequest.getMfaMethodType()));
 
-                            authSessionService.setVerifiedMfaMethodType(
-                                    authSessionId, codeRequest.getMfaMethodType());
-
                             var clientId =
                                     userContext.getClient().isPresent()
                                             ? userContext.getClient().get().getClientID()
@@ -376,8 +327,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             if (configurationService.isAuthenticationAttemptsServiceEnabled()
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                     && subjectId != null) {
-                preserveReauthCountsForAuditIfJourneyIsReauth(
-                        codeRequest.getJourneyType(), subjectId, session);
                 clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
@@ -426,19 +375,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         countType ->
                                 authenticationAttemptsService.deleteCount(
                                         subjectId, JourneyType.REAUTHENTICATION, countType));
-    }
-
-    void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType, String subjectId, Session session) {
-        if (journeyType == JourneyType.REAUTHENTICATION
-                && configurationService.supportReauthSignoutEnabled()
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
-            var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
-            var updatedSession = session.setPreservedReauthCountsForAudit(counts);
-            sessionService.storeOrUpdateSession(updatedSession);
-        }
     }
 
     private static boolean isInvalidReauthAuthAppAttempt(
@@ -509,21 +445,5 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 };
         return Stream.concat(basicMetadataPairs.stream(), additionalPairs.stream())
                 .toArray(AuditService.MetadataPair[]::new);
-    }
-
-    private String getInternalCommonSubjectIdentifier(
-            UserProfile userProfile, ClientRegistry client) {
-        try {
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            client,
-                            authenticationService,
-                            configurationService.getInternalSectorUri());
-            return internalCommonSubjectIdentifier.getValue();
-        } catch (RuntimeException e) {
-            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
-            return AuditService.UNKNOWN;
-        }
     }
 }

@@ -84,3 +84,13 @@ module "send_otp_notification" {
     aws_elasticache_replication_group.account_management_sessions_store,
   ]
 }
+
+module "codedeploy_send_notification" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "send-otp-notification"
+  environment          = var.environment
+  lambda_function_name = module.send_otp_notification.lambda_function_name
+  lambda_version       = module.send_otp_notification.lambda_version
+  lambda_alias_name    = module.send_otp_notification.lambda_alias_name
+  lambda_alias_version = module.send_otp_notification.lambda_alias_version
+}

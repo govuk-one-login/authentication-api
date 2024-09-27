@@ -74,3 +74,13 @@ module "auth_token" {
     aws_api_gateway_rest_api.di_auth_ext_api,
   ]
 }
+
+module "codedeploy_auth_token" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "auth-token"
+  environment          = var.environment
+  lambda_function_name = module.auth_token.lambda_function_name
+  lambda_version       = module.auth_token.lambda_version
+  lambda_alias_name    = module.auth_token.lambda_alias_name
+  lambda_alias_version = module.auth_token.lambda_alias_version
+}

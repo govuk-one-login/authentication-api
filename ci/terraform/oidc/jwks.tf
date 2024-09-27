@@ -57,3 +57,13 @@ module "jwks" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_jwks" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "jwks"
+  environment          = var.environment
+  lambda_function_name = module.jwks.lambda_function_name
+  lambda_version       = module.jwks.lambda_version
+  lambda_alias_name    = module.jwks.lambda_alias_name
+  lambda_alias_version = module.jwks.lambda_alias_version
+}

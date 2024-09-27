@@ -66,3 +66,13 @@ module "update_password" {
 
   depends_on = [module.account_management_api_update_password_role]
 }
+
+module "codedeploy_update_password" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update-password"
+  environment          = var.environment
+  lambda_function_name = module.update_password.lambda_function_name
+  lambda_version       = module.update_password.lambda_version
+  lambda_alias_name    = module.update_password.lambda_alias_name
+  lambda_alias_version = module.update_password.lambda_alias_version
+}

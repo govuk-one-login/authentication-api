@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
@@ -93,9 +92,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     protected static final AuthenticationAttemptsStoreExtension authCodeExtension =
             new AuthenticationAttemptsStoreExtension();
 
-    @RegisterExtension
-    protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
-
     @BeforeEach
     void beforeEachSetup() throws Json.JsonException {
         handler =
@@ -106,7 +102,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
 
         this.sessionId = redis.createSession();
-        authSessionExtension.addSession(Optional.empty(), this.sessionId);
         redis.addInternalCommonSubjectIdToSession(this.sessionId, internalCommonSubjectId);
         setUpTest(sessionId, withScope());
     }

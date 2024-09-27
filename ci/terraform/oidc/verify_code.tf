@@ -16,8 +16,6 @@ module "frontend_api_verify_code_role" {
     aws_iam_policy.dynamo_authentication_attempt_write_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_read_policy.arn,
     aws_iam_policy.dynamo_authentication_attempt_delete_policy.arn,
-    aws_iam_policy.dynamo_auth_session_read_policy.arn,
-    aws_iam_policy.dynamo_auth_session_write_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
@@ -92,4 +90,14 @@ module "verify_code" {
     aws_api_gateway_resource.wellknown_resource,
     aws_sqs_queue.email_queue,
   ]
+}
+
+module "codedeploy_verify_code" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "verify-code"
+  environment          = var.environment
+  lambda_function_name = module.verify_code.lambda_function_name
+  lambda_version       = module.verify_code.lambda_version
+  lambda_alias_name    = module.verify_code.lambda_alias_name
+  lambda_alias_version = module.verify_code.lambda_alias_version
 }

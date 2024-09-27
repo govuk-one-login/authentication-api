@@ -23,3 +23,21 @@ output "endpoint_lambda_alias" {
 output "invoke_arn" {
   value = module.endpoint_lambda.invoke_arn
 }
+
+#Below are required for code deploy
+
+output "lambda_function_name" {
+  value = module.endpoint_lambda.endpoint_lambda_function.function_name
+}
+
+output "lambda_version" {
+  value = module.endpoint_lambda.endpoint_lambda_function.version
+}
+
+output "lambda_alias_name" {
+  value = module.endpoint_lambda.endpoint_lambda_alias.name
+}
+
+output "lambda_alias_version" {
+  value = module.endpoint_lambda.endpoint_lambda_alias.function_version
+}

@@ -34,8 +34,6 @@ public class Session {
 
     @Expose private Map<CodeRequestType, Integer> codeRequestCountMap;
 
-    @Expose private Map<CountType, Integer> preservedReauthCountsForAudit;
-
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
     @Expose private AccountState isNewAccount;
@@ -146,16 +144,6 @@ public class Session {
         codeRequestCountMap.put(requestType, 0);
         LOG.info("CodeRequest count reset: {}", codeRequestCountMap);
         return this;
-    }
-
-    public Session setPreservedReauthCountsForAudit(
-            Map<CountType, Integer> reauthCountsBeforeDeletionFromCountStore) {
-        this.preservedReauthCountsForAudit = reauthCountsBeforeDeletionFromCountStore;
-        return this;
-    }
-
-    public Map<CountType, Integer> getPreservedReauthCountsForAudit() {
-        return preservedReauthCountsForAudit;
     }
 
     public CredentialTrustLevel getCurrentCredentialStrength() {

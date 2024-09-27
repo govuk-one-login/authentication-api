@@ -2,10 +2,6 @@ package uk.gov.di.authentication.deliveryreceiptsapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import org.apache.logging.log4j.core.LogEvent;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -29,10 +25,8 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -110,8 +104,7 @@ class NotifyCallbackHandlerTest {
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
             String number, String expectedCountryCode, String status) throws Json.JsonException {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", TEMPLATE_ID);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         var expectedContext =
@@ -124,7 +117,6 @@ class NotifyCallbackHandlerTest {
         verify(cloudwatchMetricsService).incrementCounter("SmsSent", expectedContext);
 
         assertThat(response, hasStatus(204));
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -134,10 +126,9 @@ class NotifyCallbackHandlerTest {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var createdAtDate = Instant.now();
         var completedAt = createdAtDate.plusMillis(1000);
-        var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 deliveryReceiptWithCreatedAtAndCompletedAt(
-                        "sms", "delivered", createdAtDate, completedAt, reference);
+                        "sms", "delivered", createdAtDate, completedAt);
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         var expectedContext = Map.of("Environment", ENVIRONMENT, "NotificationType", "sms");
@@ -146,7 +137,6 @@ class NotifyCallbackHandlerTest {
                 .putEmbeddedValue("NotifyDeliveryDuration", 1000, expectedContext);
 
         assertThat(response, hasStatus(204));
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -155,30 +145,23 @@ class NotifyCallbackHandlerTest {
                     throws Json.JsonException {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var deliveryStatus = "permanentFailure";
-        var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 deliveryReceiptWithCreatedAtAndCompletedAt(
-                        "sms",
-                        deliveryStatus,
-                        Instant.now(),
-                        Instant.now().plusMillis(1),
-                        reference);
+                        "sms", deliveryStatus, Instant.now(), Instant.now().plusMillis(1));
         var response = handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
 
         assertThat(response, hasStatus(204));
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
     void shouldNotThrowAnErrorWhenMetricsParsingFails() throws Json.JsonException {
         setupNotifyTemplate(Optional.of(VERIFY_PHONE_NUMBER));
         var invalidCreatedAtDate = "not-a-date";
-        var reference = UUID.randomUUID().toString();
         var deliveryReceipt =
                 createDeliveryReceipt(
-                        reference,
+                        "some-reference",
                         UK_PHONE_NUMBER,
                         "delivered",
                         "sms",
@@ -191,7 +174,6 @@ class NotifyCallbackHandlerTest {
         verify(cloudwatchMetricsService, never()).putEmbeddedValue(any(), anyDouble(), any());
 
         assertThat(response, hasStatus(204));
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     private static Stream<DeliveryReceiptsNotificationType> emailTemplates() {
@@ -205,9 +187,7 @@ class NotifyCallbackHandlerTest {
     void shouldCallCloudwatchMetricWithEmailNotificationType(DeliveryReceiptsNotificationType type)
             throws Json.JsonException {
         setupNotifyTemplate(Optional.of(type));
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt =
-                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         var expectedMetricsContext =
@@ -217,7 +197,6 @@ class NotifyCallbackHandlerTest {
                         Map.entry("NotifyStatus", "delivered"));
 
         verify(cloudwatchMetricsService).incrementCounter("EmailSent", expectedMetricsContext);
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -231,9 +210,7 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt =
-                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         String subjectId = "subject-id-1";
         UserProfile userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(subjectId);
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
@@ -242,7 +219,6 @@ class NotifyCallbackHandlerTest {
         verify(dynamoService).getUserProfileByEmailMaybe(EMAIL);
 
         verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -256,30 +232,24 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt =
-                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
     void shouldNotUpdateBulkEmailDeliveryReceiptsStatusWhenBulkEmailSwitchedOff()
             throws Json.JsonException {
         setupNotifyTemplate(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt =
-                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handler.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -293,23 +263,18 @@ class NotifyCallbackHandlerTest {
                         configurationService,
                         dynamoService,
                         bulkEmailUsersService);
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt =
-                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
         handlerBulkEmailOn.handleRequest(eventWithBody(deliveryReceipt), context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
                 .updateDeliveryReceiptStatus(anyString(), anyString());
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
     void shouldThrowIfInvalidTemplateId() throws Json.JsonException {
         setupNotifyTemplate(Optional.empty());
-        var reference = UUID.randomUUID().toString();
-        var deliveryReceipt =
-                createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID, reference);
+        var deliveryReceipt = createDeliveryReceipt(EMAIL, "delivered", "email", TEMPLATE_ID);
 
         var event = eventWithBody(deliveryReceipt);
 
@@ -319,7 +284,6 @@ class NotifyCallbackHandlerTest {
                 "Expected to throw exception");
 
         verifyNoInteractions(cloudwatchMetricsService);
-        assertThat(logging.events(), haveJourneyId(reference));
     }
 
     @Test
@@ -367,32 +331,14 @@ class NotifyCallbackHandlerTest {
     }
 
     @Test
-    void shouldErrorIfPayloadFailsToParse() {
-        var malformedBodyPayload =
-                new APIGatewayProxyRequestEvent()
-                        .withHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN))
-                        .withBody("not-a-valid-delivery-receipt");
-
-        var exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(malformedBodyPayload, context),
-                        "Expected to throw exception");
-
-        verifyNoInteractions(cloudwatchMetricsService);
-        assertThat(exception.getMessage(), equalTo("Unable to parse Notify Delivery Receipt"));
-    }
-
-    @Test
     void shouldParsePayloadWithExpectedNullValues() {
         assertDoesNotThrow(
                 () -> {
                     when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                             .thenReturn(Optional.of(VERIFY_PHONE_NUMBER));
-                    var reference = UUID.randomUUID().toString();
                     var deliveryReceipt =
                             createDeliveryReceipt(
-                                    reference,
+                                    null,
                                     "+447316763843",
                                     "delivered",
                                     "sms",
@@ -401,7 +347,6 @@ class NotifyCallbackHandlerTest {
                                     null,
                                     null);
                     handler.handleRequest(eventWithBody(deliveryReceipt), context);
-                    assertThat(logging.events(), haveJourneyId(reference));
                 });
     }
 
@@ -428,13 +373,9 @@ class NotifyCallbackHandlerTest {
     }
 
     private NotifyDeliveryReceipt createDeliveryReceipt(
-            String destination,
-            String status,
-            String notificationType,
-            String templateID,
-            String reference) {
+            String destination, String status, String notificationType, String templateID) {
         return createDeliveryReceipt(
-                reference,
+                null,
                 destination,
                 status,
                 notificationType,
@@ -450,13 +391,9 @@ class NotifyCallbackHandlerTest {
     }
 
     private NotifyDeliveryReceipt deliveryReceiptWithCreatedAtAndCompletedAt(
-            String notificationType,
-            String status,
-            Instant createdAt,
-            Instant completedAt,
-            String reference) {
+            String notificationType, String status, Instant createdAt, Instant completedAt) {
         return createDeliveryReceipt(
-                reference,
+                "some-reference",
                 "+447316763843",
                 status,
                 notificationType,
@@ -476,27 +413,5 @@ class NotifyCallbackHandlerTest {
     private void setupNotifyTemplate(Optional<DeliveryReceiptsNotificationType> maybeTemplate) {
         when(configurationService.getNotificationTypeFromTemplateId(TEMPLATE_ID))
                 .thenReturn(maybeTemplate);
-    }
-
-    private Matcher<List<LogEvent>> haveJourneyId(String journeyId) {
-        return new TypeSafeMatcher<>() {
-            @Override
-            protected boolean matchesSafely(List<LogEvent> items) {
-                return items.stream()
-                        .skip(1) // the first line will never have a journey id
-                        .map(LogEvent::getContextData)
-                        .map(item -> item.getValue("journeyId"))
-                        .allMatch(journeyId::equals);
-            }
-
-            @Override
-            public void describeTo(Description description) {
-                description
-                        .appendText(
-                                "all but the first log events should have a context map with {journeyId=")
-                        .appendValue(journeyId)
-                        .appendText("}");
-            }
-        };
     }
 }

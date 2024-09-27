@@ -184,7 +184,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       CONTACT_US_LINK_ROUTE = var.contact_us_link_route
       NOTIFY_API_KEY        = var.notify_api_key
       NOTIFY_URL            = var.notify_url
-      JAVA_TOOL_OPTIONS     = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      JAVA_TOOL_OPTIONS     = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })
   }
   kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
@@ -227,4 +227,19 @@ resource "aws_lambda_alias" "sqs_lambda_active" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.email_sqs_lambda.arn
   function_version = aws_lambda_function.email_sqs_lambda.version
+
+  lifecycle {
+    ignore_changes = [function_version, routing_config]
+  }
+
+}
+
+module "codedeploy_email_sqs_lambda" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "email-sqs-lambda"
+  environment          = var.environment
+  lambda_function_name = aws_lambda_function.email_sqs_lambda.function_name
+  lambda_version       = aws_lambda_function.email_sqs_lambda.version
+  lambda_alias_name    = aws_lambda_alias.sqs_lambda_active.name
+  lambda_alias_version = aws_lambda_alias.sqs_lambda_active.function_version
 }

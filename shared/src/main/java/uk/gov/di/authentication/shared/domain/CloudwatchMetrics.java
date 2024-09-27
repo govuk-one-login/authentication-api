@@ -15,8 +15,7 @@ public enum CloudwatchMetrics {
     ACCESS_TOKEN_SERVICE_CONSISTENT_READ_QUERY_ATTEMPT(
             "AccessTokenServiceConsistentReadQueryAttempt"),
     ACCESS_TOKEN_SERVICE_CONSISTENT_READ_QUERY_SUCCESS(
-            "AccessTokenServiceConsistentReadQueryAttemptSuccess"),
-    USER_SUBMITTED_CREDENTIAL("UserSubmittedCredential");
+            "AccessTokenServiceConsistentReadQueryAttemptSuccess");
     private String value;
 
     CloudwatchMetrics(String value) {

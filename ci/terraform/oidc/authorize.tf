@@ -95,3 +95,13 @@ module "authorize" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_authorize" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "authorize"
+  environment          = var.environment
+  lambda_function_name = module.authorize.lambda_function_name
+  lambda_version       = module.authorize.lambda_version
+  lambda_alias_name    = module.authorize.lambda_alias_name
+  lambda_alias_version = module.authorize.lambda_alias_version
+}
