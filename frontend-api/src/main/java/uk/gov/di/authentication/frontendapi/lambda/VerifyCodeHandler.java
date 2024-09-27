@@ -9,8 +9,10 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -20,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelper;
@@ -166,14 +169,21 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
                             extractPersistentIdFromHeaders(input.getHeaders()));
+            var client =
+                    userContext.getClient().orElseThrow(() -> new ClientNotFoundException(session));
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+            UserProfile userProfile = userProfileMaybe.orElse(null);
 
-            if (userProfileMaybe.isEmpty() && journeyType == JourneyType.REAUTHENTICATION) {
+            String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
+
+            if (journeyType == JourneyType.REAUTHENTICATION
+                    && (userProfile == null || subjectId == null)) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
 
-            if (checkErrorCountsForReauth(journeyType, userProfileMaybe))
+            if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
+                    journeyType, subjectId, auditContext, userProfile, client))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
@@ -208,7 +218,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         codeRequest,
                         journeyType,
                         notificationType,
-                        userProfileMaybe,
+                        subjectId,
                         errorResponse.get(),
                         session,
                         auditContext);
@@ -225,13 +235,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    session,
                     authSessionId.get(),
                     codeRequest,
                     userContext,
-                    userProfileMaybe.isPresent() ? userProfileMaybe.get().getSubjectID() : null,
+                    subjectId,
                     journeyType,
-                    auditContext);
+                    auditContext,
+                    client);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -243,15 +253,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             VerifyCodeRequest codeRequest,
             JourneyType journeyType,
             NotificationType notificationType,
-            Optional<UserProfile> userProfileMaybe,
+            String subjectId,
             ErrorResponse errorResponse,
             Session session,
             AuditContext auditContext) {
         if (journeyType == JourneyType.REAUTHENTICATION && notificationType == MFA_SMS) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && userProfileMaybe.isPresent()) {
+            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
                 authenticationAttemptsService.createOrIncrementCount(
-                        userProfileMaybe.get().getSubjectID(),
+                        subjectId,
                         NowHelper.nowPlus(
                                         configurationService.getReauthEnterSMSCodeCountTTL(),
                                         ChronoUnit.SECONDS)
@@ -266,20 +275,31 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
     }
 
-    private boolean checkErrorCountsForReauth(
-            JourneyType journeyType, Optional<UserProfile> userProfileMaybe) {
+    private boolean checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
+            JourneyType journeyType,
+            String subjectId,
+            AuditContext auditContext,
+            UserProfile userProfile,
+            ClientRegistry client) {
         if (journeyType == JourneyType.REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()
-                && userProfileMaybe.isPresent()) {
+                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
                     authenticationAttemptsService.getCountsByJourney(
-                            userProfileMaybe.get().getSubjectID(), JourneyType.REAUTHENTICATION);
+                            subjectId, JourneyType.REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             countsByJourney, configurationService);
 
             if (!countTypesWhereBlocked.isEmpty()) {
+                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContext,
+                        ReauthMetadataBuilder.builder(rpPairwiseId)
+                                .withAllIncorrectAttemptCounts(countsByJourney)
+                                .withFailureReason(countTypesWhereBlocked)
+                                .build());
                 LOG.info(
                         "Re-authentication locked due to {} counts exceeded.",
                         countTypesWhereBlocked);
@@ -318,18 +338,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private void processSuccessfulCodeRequest(
-            Session session,
             String authSessionId,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
             JourneyType journeyType,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            ClientRegistry client) {
+        var session = userContext.getSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
         var clientSession = userContext.getClientSession();
-        var clientId = userContext.getClient().get().getClientID();
+        var clientId = client.getClientID();
         var levelOfConfidence =
                 clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
                         ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
@@ -489,5 +510,21 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
         }
         return journeyType;
+    }
+
+    private String getInternalCommonSubjectIdentifier(
+            UserProfile userProfile, ClientRegistry client) {
+        try {
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            client,
+                            authenticationService,
+                            configurationService.getInternalSectorUri());
+            return internalCommonSubjectIdentifier.getValue();
+        } catch (RuntimeException e) {
+            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
+            return AuditService.UNKNOWN;
+        }
     }
 }

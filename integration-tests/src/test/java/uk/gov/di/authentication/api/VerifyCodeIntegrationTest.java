@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
@@ -184,7 +185,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldReturnMaxReachedButNotSetBlockWhenVerifyEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        setUpTestWithoutSignUp(sessionId, withScope());
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
@@ -192,7 +193,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var response =
                 makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
@@ -210,7 +213,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldReturnMaxCodesReachedIfAccountRecoveryEmailCodeIsBlocked()
             throws Json.JsonException {
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        setUpTestWithoutSignUp(sessionId, withScope());
 
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
@@ -222,7 +225,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var response =
                 makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
@@ -233,7 +238,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        setUpTestWithoutSignUp(sessionId, withScope());
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
@@ -241,7 +246,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var response =
                 makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
                         codeRequest.notificationType(), JourneyType.ACCOUNT_RECOVERY);
@@ -258,7 +265,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @Test
     void shouldReturnMaxReachedAndSetBlockWhenPasswordResetEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        setUpTestWithSignUp(sessionId, withScope());
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
@@ -266,7 +273,9 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var response =
                 makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
                         codeRequest.notificationType(), JourneyType.PASSWORD_RESET);
@@ -286,10 +295,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @ParameterizedTest
-    @MethodSource("journeyTypes")
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN", "PASSWORD_RESET_MFA"})
     void shouldReturnMaxReachedAndSetBlockWhenSignInSmsCodeAttemptsExceedMaxRetryCount(
             JourneyType journeyType) throws Json.JsonException {
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        setUpTestWithoutSignUp(sessionId, withScope());
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
@@ -297,21 +308,38 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         var response =
                 makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(codeRequest.notificationType(), journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
-        if (journeyType != JourneyType.REAUTHENTICATION) {
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
-            assertThat(
-                    redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                    equalTo(journeyType != JourneyType.REAUTHENTICATION));
-            assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
-        } else {
-            assertThat(response, hasJsonBody(ErrorResponse.ERROR_1049));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
+        assertThat(
+                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
+                equalTo(true));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_MAX_RETRIES_REACHED));
+    }
+
+    @Test
+    void shouldReturnMaxReachedAndSingalLogoutWhenReauthSmsCodeAttemptsExceedMaxRetryCount()
+            throws Json.JsonException {
+        setUpTestWithSignUp(sessionId, withScope());
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
+        var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456", JourneyType.REAUTHENTICATION);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1035));
         assertThat(
                 authSessionExtension.getSession(sessionId).get().getVerifiedMfaMethodType(),
                 equalTo(null));
