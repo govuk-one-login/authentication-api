@@ -64,8 +64,14 @@ paths:
         uri: "${endpoint_modules.update-phone-number.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
-  /mfa-methods/retrieve:
-    post:
+  /mfa-methods/{publicSubjectId}:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
       security:
         - authorise-access-token: []
       x-amazon-apigateway-integration:
@@ -74,17 +80,11 @@ paths:
         uri: "${endpoint_modules.update-phone-number.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
-      description: "Retrieve mfaMethods that match criteria in the MFASearchRequest in the request body"
+      description: "Retrieve mfaMethods that for the given public subject id"
       tags:
         - 2FAManagement
       summary: Retrieves the list of MFA Methods for a user
       operationId: "mfa-methods-retrieve"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MfaSearchRequest"
-        required: true
       responses:
         "200":
           description: Successful Operation.  The retrieve query was accepted and the response contains all matching MFAMethods.
@@ -102,22 +102,22 @@ paths:
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        endPoint: "n/a"
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
                       methodVerified: true
                 user-with-multiple-mfa-types-primary-sms:
-                  summary: a user with a single MFA
+                  summary: a user with a default mfa method of SMS, and a backup auth app method
                   value:
                     - mfaIdentifier: 1
                       priorityIdentifier: DEFAULT
                       method:
                         mfaMethodType: SMS
-                        endPoint: "070"
+                        phoneNumber: "070"
                       methodVerified: true
                     - mfaIdentifier: 2
                       priorityIdentifier: BACKUP
                       method:
                         mfaMethodType: AUTH_APP
-                        endPoint: "n/a"
+                        credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
                       methodVerified: true
         "400":
           description: Bad Request
@@ -150,8 +150,6 @@ paths:
           label: cURL request example
           source: |
             curl -X POST "http://localhost/mfa-methods -H "Content-Type: application/json" -H "Prefer:{example=an-example -d '{"email": "user@gov.uk"}'
-
-  /mfa-methods:
     post:
       security:
         - authorise-access-token: []
@@ -163,7 +161,7 @@ paths:
         timeoutInMillis: 29000
       tags:
         - 2FAManagement
-      description: Creates an mfa method. A new MFA Method cannot be created as PRIMARY, it must be SECONDARY and promoted at a later stage
+      description: Creates an mfa method. A new MFA Method cannot be created as DEFAULT, it must be BACKUP and promoted at a later stage
       operationId: "mfa-method-create"
       requestBody:
         content:
@@ -190,7 +188,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProblemDetail"
-  /mfa-methods/{mfaIdentifier}:
+  /mfa-methods/{publicSubjectId}/{mfaIdentifier}:
+    parameters:
+      - name: mfaIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: publicSubjectId
+        in: path
+        required: true
+        schema:
+          type: string
     put:
       security:
         - authorise-access-token: []
@@ -202,14 +211,8 @@ paths:
         timeoutInMillis: 29000
       tags:
         - 2FAManagement
-      description: Updates an mfa method. If the MFA method is updated to 'PRIMARY', the current 'PRIMARY' gets relegated to secondary.
+      description: Updates an mfa method. If the MFA method is updated to 'DEFAULT', the current 'DEFAULT' gets relegated to backup.
       operationId: "mfa-methods-update"
-      parameters:
-        - name: mfaIdentifier
-          in: path
-          required: true
-          schema:
-            type: string
       requestBody:
         content:
           application/json:
@@ -248,30 +251,9 @@ paths:
         - 2FAManagement
       description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'PRIMARY'.
       operationId: "mfa-method-delete"
-      parameters:
-        - name: mfaIdentifier
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
-        "200":
+        "204":
           description: MFA Method Deleted
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: "#/components/schemas/MfaMethod"
-              examples:
-                user-with-backup-mfa-type-app:
-                  summary: a user with a single MFA
-                  value:
-                    - mfaIdentifier: 1
-                      priorityIdentifier: BACKUP
-                      method:
-                        mfaMethodType: AUTH_APP
-                        endPoint: "n/a"
-                      methodVerified: true
         "404":
           description: MFA Method Not found
           content:
@@ -297,11 +279,6 @@ components:
       enum:
         - DEFAULT
         - BACKUP
-    MethodTypeEnum:
-      type: string
-      enum:
-        - SMS
-        - AUTH_APP
     MfaMethod:
       required:
         - priorityIdentifier
@@ -318,8 +295,6 @@ components:
             - $ref: "#/components/schemas/AuthAppMethod"
         methodVerified:
           type: boolean
-        smsPhoneNumber:
-          type: string
     SmsMethod:
       type: object
       properties:
@@ -327,7 +302,18 @@ components:
           type: string
           enum:
             - SMS
-        endPoint:
+        phoneNumber:
+          type: string
+    CreateSmsMethod:
+      type: object
+      properties:
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+        phoneNumber:
+          type: string
+        otp:
           type: string
     AuthAppMethod:
       type: object
@@ -342,99 +328,64 @@ components:
     MfaMethodCreate:
       required:
         - priorityIdentifier
-        - mfaMethodType
+        - method
       type: object
       properties:
         priorityIdentifier:
           $ref: "#/components/schemas/PriorityEnum"
-        mfaMethodType:
-          $ref: "#/components/schemas/MethodTypeEnum"
-        endPoint:
-          type: string
-        credential:
-          type: string
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/CreateSmsMethod"
+            - $ref: "#/components/schemas/AuthAppMethod"
       example:
         priorityIdentifier: DEFAULT
-        mfaMethodType: AUTH_APP
-        endPoint: "n/a"
+        method:
+          mfaMethodType: AUTH_APP
+          credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
     MfaMethodUpdate:
       required:
-        - mfaIdentifier
         - priorityIdentifier
-        - mfaMethodType
+        - method
       type: object
       properties:
-        mfaIdentifier:
-          type: integer
         priorityIdentifier:
           $ref: "#/components/schemas/PriorityEnum"
-        mfaMethodType:
-          $ref: "#/components/schemas/MethodTypeEnum"
-        credential:
-          type: string
-        endPoint:
-          type: string
+        method:
+          oneOf:
+            - $ref: "#/components/schemas/SmsMethod"
+            - $ref: "#/components/schemas/AuthAppMethod"
       example:
-        mfaIdentifier: 1
         priorityIdentifier: DEFAULT
-        mfaMethodType: SMS
-        endPoint: "070"
-    MfaSearchRequest:
-      required:
-        - email
-      type: object
-      properties:
-        email:
-          type: string
-      example:
-        email: "testusersearching@searchersexampledomain.co.uk"
+        method:
+          mfaMethodType: SMS
+          phoneNumber: "070"
     MfaMethodCreateRequest:
       required:
-        - email
-        - credential
-        - otp
         - mfaMethod
       type: object
       properties:
-        email:
-          type: string
-        credential:
-          type: string
-        otp:
-          type: string
         mfaMethod:
           $ref: "#/components/schemas/MfaMethodCreate"
       example:
-        email: "testuser@testexampledomain.co.uk"
-        credential: "???"
-        otp: "123456"
         mfaMethod:
           priorityIdentifier: DEFAULT
-          mfaMethodType: AUTH_APP
-          endPoint: "n/a"
-        methodVerified: true
+          method:
+            mfaMethodType: AUTH_APP
+            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
 
     MfaMethodUpdateRequest:
       required:
-        - email
-        - otp
         - mfaMethod
       type: object
       properties:
-        email:
-          type: string
-        otp:
-          type: string
         mfaMethod:
-          $ref: "#/components/schemas/MfaMethodUpdate"
+          $ref: "#/components/schemas/MfaMethodCreate"
       example:
-        email: "testuser@testexampledomain.co.uk"
-        otp: "123456"
         mfaMethod:
-          mfaIdentifier: 1
           priorityIdentifier: DEFAULT
-          mfaMethodType: AUTH_APP
-          endPoint: "n/a"
+          method:
+            mfaMethodType: AUTH_APP
+            credential: "AAAABBBBCCCCCDDDDD55551111EEEE2222FFFF3333GGGG4444"
     ProblemDetail:
       type: object
       properties:
