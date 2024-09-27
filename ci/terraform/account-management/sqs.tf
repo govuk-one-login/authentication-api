@@ -227,4 +227,18 @@ resource "aws_lambda_alias" "sqs_lambda_active" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.email_sqs_lambda.arn
   function_version = aws_lambda_function.email_sqs_lambda.version
+
+  lifecycle {
+    ignore_changes = [function_version, routing_config]
+  }
+}
+
+module "codedeploy_email_sqs_lambda" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "email-sqs-lambda"
+  environment          = var.environment
+  lambda_function_name = aws_lambda_function.email_sqs_lambda.function_name
+  lambda_version       = aws_lambda_function.email_sqs_lambda.version
+  lambda_alias_name    = aws_lambda_alias.sqs_lambda_active.name
+  lambda_alias_version = aws_lambda_alias.sqs_lambda_active.function_version
 }

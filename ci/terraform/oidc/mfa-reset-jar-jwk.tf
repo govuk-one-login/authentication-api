@@ -54,3 +54,13 @@ module "mfa_reset_jar_signing_jwk" {
     aws_api_gateway_resource.auth_frontend_wellknown_resource,
   ]
 }
+
+module "codedeploy_mfa_reset_jar_signing_jwk" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "reverification-jwk.json"
+  environment          = var.environment
+  lambda_function_name = module.mfa_reset_jar_signing_jwk.lambda_function_name
+  lambda_version       = module.mfa_reset_jar_signing_jwk.lambda_version
+  lambda_alias_name    = module.mfa_reset_jar_signing_jwk.lambda_alias_name
+  lambda_alias_version = module.mfa_reset_jar_signing_jwk.lambda_alias_version
+}

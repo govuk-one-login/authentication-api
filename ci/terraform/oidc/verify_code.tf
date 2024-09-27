@@ -93,3 +93,14 @@ module "verify_code" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+
+module "codedeploy_verify_code" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "verify-code"
+  environment          = var.environment
+  lambda_function_name = module.verify_code.lambda_function_name
+  lambda_version       = module.verify_code.lambda_version
+  lambda_alias_name    = module.verify_code.lambda_alias_name
+  lambda_alias_version = module.verify_code.lambda_alias_version
+}

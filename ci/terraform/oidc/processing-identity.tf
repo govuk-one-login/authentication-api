@@ -81,3 +81,13 @@ module "processing-identity" {
 
   use_localstack = var.use_localstack
 }
+
+module "codedeploy_processing_identity" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "processing-identity"
+  environment          = var.environment
+  lambda_function_name = module.processing-identity.lambda_function_name
+  lambda_version       = module.processing-identity.lambda_version
+  lambda_alias_name    = module.processing-identity.lambda_alias_name
+  lambda_alias_version = module.processing-identity.lambda_alias_version
+}

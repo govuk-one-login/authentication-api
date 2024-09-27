@@ -70,3 +70,13 @@ module "update_email" {
 
   depends_on = [module.account_management_api_update_email_role]
 }
+
+module "codedeploy_update_email" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "update-email"
+  environment          = var.environment
+  lambda_function_name = module.update_email.lambda_function_name
+  lambda_version       = module.update_email.lambda_version
+  lambda_alias_name    = module.update_email.lambda_alias_name
+  lambda_alias_version = module.update_email.lambda_alias_version
+}

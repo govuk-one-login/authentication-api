@@ -69,6 +69,9 @@ resource "aws_lambda_alias" "authorizer_alias" {
   description      = "Alias pointing at active version of Lambda"
   function_name    = aws_lambda_function.authorizer.arn
   function_version = aws_lambda_function.authorizer.version
+  lifecycle {
+    ignore_changes = [function_version, routing_config]
+  }
 }
 
 
@@ -181,4 +184,14 @@ resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_
     }
   }
   alarm_actions = [data.aws_sns_topic.slack_events.arn]
+}
+
+module "codedeploy_authorizer" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "authorizer"
+  environment          = var.environment
+  lambda_function_name = aws_lambda_function.authorizer.function_name
+  lambda_version       = aws_lambda_function.authorizer.version
+  lambda_alias_name    = aws_lambda_alias.authorizer_alias.name
+  lambda_alias_version = aws_lambda_alias.authorizer_alias.function_version
 }

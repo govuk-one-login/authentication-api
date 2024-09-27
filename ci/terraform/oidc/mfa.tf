@@ -79,3 +79,13 @@ module "mfa" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+module "codedeploy_mfa" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "mfa"
+  environment          = var.environment
+  lambda_function_name = module.mfa.lambda_function_name
+  lambda_version       = module.mfa.lambda_version
+  lambda_alias_name    = module.mfa.lambda_alias_name
+  lambda_alias_version = module.mfa.lambda_alias_version
+}

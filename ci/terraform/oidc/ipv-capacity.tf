@@ -69,3 +69,13 @@ module "ipv-capacity" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_ipv_capacity" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "ipv-capacity"
+  environment          = var.environment
+  lambda_function_name = module.ipv-capacity.lambda_function_name
+  lambda_version       = module.ipv-capacity.lambda_version
+  lambda_alias_name    = module.ipv-capacity.lambda_alias_name
+  lambda_alias_version = module.ipv-capacity.lambda_alias_version
+}

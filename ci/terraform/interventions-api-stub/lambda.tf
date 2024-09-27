@@ -44,3 +44,13 @@ module "account_interventions_stub_lambda" {
   slack_event_topic_arn                  = data.aws_sns_topic.slack_events.arn
   dynatrace_secret                       = local.dynatrace_secret
 }
+
+module "codedeploy_account_interventions_stub_lambda" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "account-interventions-stub"
+  environment          = var.environment
+  lambda_function_name = module.account_interventions_stub_lambda.lambda_function_name
+  lambda_version       = module.account_interventions_stub_lambda.lambda_version
+  lambda_alias_name    = module.account_interventions_stub_lambda.lambda_alias_name
+  lambda_alias_version = module.account_interventions_stub_lambda.lambda_alias_version
+}

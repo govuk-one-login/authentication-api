@@ -70,3 +70,13 @@ module "auth_userinfo" {
     aws_api_gateway_rest_api.di_auth_ext_api,
   ]
 }
+
+module "codedeploy_auth_userinfo" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "auth-userinfo"
+  environment          = var.environment
+  lambda_function_name = module.auth_userinfo.lambda_function_name
+  lambda_version       = module.auth_userinfo.lambda_version
+  lambda_alias_name    = module.auth_userinfo.lambda_alias_name
+  lambda_alias_version = module.auth_userinfo.lambda_alias_version
+}

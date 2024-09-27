@@ -89,3 +89,13 @@ module "authentication_callback" {
     aws_api_gateway_rest_api.di_authentication_api
   ]
 }
+
+module "codedeploy_authentication_callback" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "orchestration-redirect"
+  environment          = var.environment
+  lambda_function_name = module.authentication_callback.lambda_function_name
+  lambda_version       = module.authentication_callback.lambda_version
+  lambda_alias_name    = module.authentication_callback.lambda_alias_name
+  lambda_alias_version = module.authentication_callback.lambda_alias_version
+}

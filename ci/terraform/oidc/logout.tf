@@ -73,3 +73,13 @@ module "logout" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_logout" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "logout"
+  environment          = var.environment
+  lambda_function_name = module.logout.lambda_function_name
+  lambda_version       = module.logout.lambda_version
+  lambda_alias_name    = module.logout.lambda_alias_name
+  lambda_alias_version = module.logout.lambda_alias_version
+}

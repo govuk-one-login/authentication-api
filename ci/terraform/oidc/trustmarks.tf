@@ -51,3 +51,13 @@ module "trustmarks" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+module "codedeploy_trustmarks" {
+  source               = "../modules/codedeploy"
+  endpoint_name        = "trustmarks"
+  environment          = var.environment
+  lambda_function_name = module.trustmarks.lambda_function_name
+  lambda_version       = module.trustmarks.lambda_version
+  lambda_alias_name    = module.trustmarks.lambda_alias_name
+  lambda_alias_version = module.trustmarks.lambda_alias_version
+}
