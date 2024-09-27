@@ -60,7 +60,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -104,13 +103,7 @@ class StartServiceTest {
 
     @BeforeEach
     void setup() {
-        startService =
-                new StartService(
-                        dynamoClientService,
-                        dynamoService,
-                        sessionService,
-                        authenticationAttemptsService,
-                        configurationService);
+        startService = new StartService(dynamoClientService, dynamoService, sessionService);
     }
 
     @Test
@@ -222,7 +215,7 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, cookieConsent, gaTrackingId, true, false, Optional.empty());
+                        userContext, cookieConsent, gaTrackingId, true, false, false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -268,7 +261,7 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         identityEnabled,
                         false,
-                        Optional.empty());
+                        false);
 
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
     }
@@ -291,48 +284,9 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         false,
-                        Optional.of(SUBJECT_ID));
+                        isBlockedForReauth);
 
         assertThat(userStartInfo.isBlockedForReauth(), equalTo(isBlockedForReauth));
-    }
-
-    @Test
-    void shouldDefaultReauthBlockedValueToFalseWhenNoSubjectId() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_EMAIL, 100));
-        Optional<String> subjectId = Optional.empty();
-
-        var userStartInfo =
-                startService.buildUserStartInfo(
-                        basicUserContext,
-                        "some-cookie-consent",
-                        "some-ga-tracking-id",
-                        true,
-                        false,
-                        subjectId);
-
-        assertFalse(userStartInfo.isBlockedForReauth());
-    }
-
-    @Test
-    void shouldDefaultReauthBlockedValueToFalseWhenFeatureFlagIsOff() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
-        // This should not be called. Setup here is to ensure that the feature flag is determining
-        // this test's behaviour
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
-
-        var userStartInfo =
-                startService.buildUserStartInfo(
-                        basicUserContext,
-                        "some-cookie-consent",
-                        "some-ga-tracking-id",
-                        true,
-                        false,
-                        Optional.of(SUBJECT_ID));
-
-        assertFalse(userStartInfo.isBlockedForReauth());
     }
 
     private static Stream<Boolean> userStartDocAppInfo() {
@@ -362,7 +316,7 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         false,
-                        Optional.empty());
+                        false);
 
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
     }
@@ -500,7 +454,7 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         true,
-                        Optional.empty());
+                        false);
 
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
     }
@@ -537,7 +491,7 @@ class StartServiceTest {
                         "some-ga-tracking-id",
                         true,
                         false,
-                        Optional.empty());
+                        false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
     }

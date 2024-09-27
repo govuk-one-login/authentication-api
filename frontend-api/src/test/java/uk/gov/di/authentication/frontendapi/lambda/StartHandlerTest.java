@@ -25,18 +25,23 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -63,6 +68,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -73,6 +79,10 @@ import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.E
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_AUTH_APP_CODE;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_SMS_CODE;
 import static uk.gov.di.authentication.shared.lambda.BaseFrontendHandler.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -82,6 +92,9 @@ class StartHandlerTest {
 
     public static final String TEST_CLIENT_ID = "test_client_id";
     public static final String TEST_CLIENT_NAME = "test_client_name";
+    private static final String TEST_RP_PAIRWISE_ID = "test_rp_pairwise_id";
+    private static final String TEST_PREVIOUS_SIGN_IN_JOURNEY_ID = "test_journey_id";
+    private static final int MAX_ALLOWED_RETRIES = 6;
     private static final String SESSION_ID = "some-session-id";
     public static final State STATE = new State();
     public static final URI REDIRECT_URL = URI.create("https://localhost/redirect");
@@ -98,6 +111,9 @@ class StartHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final StartService startService = mock(StartService.class);
+    private final AuthenticationAttemptsService authenticationAttemptsService =
+            mock(AuthenticationAttemptsService.class);
+    private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
@@ -133,7 +149,8 @@ class StartHandlerTest {
                         auditService,
                         startService,
                         authSessionService,
-                        configurationService);
+                        configurationService,
+                        authenticationAttemptsService);
     }
 
     private static Stream<Arguments> cookieConsentGaTrackingIdValues() {
@@ -221,16 +238,13 @@ class StartHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        var rpPairwiseIdForReauth = "some-pairwise-id-for-reauth";
-        var previousSigninJourneyId = "some-signin-journey-id";
-
         var body =
                 format(
                         """
                { "rp-pairwise-id-for-reauth": %s,
                "previous-govuk-signin-journey-id": %s }
                 """,
-                        rpPairwiseIdForReauth, previousSigninJourneyId);
+                        TEST_RP_PAIRWISE_ID, TEST_PREVIOUS_SIGN_IN_JOURNEY_ID);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -249,8 +263,57 @@ class StartHandlerTest {
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_REQUESTED,
                         AUDIT_CONTEXT,
-                        pair("previous_govuk_signin_journey_id", previousSigninJourneyId),
-                        pair("rpPairwiseId", rpPairwiseIdForReauth));
+                        pair("previous_govuk_signin_journey_id", TEST_PREVIOUS_SIGN_IN_JOURNEY_ID),
+                        pair("rpPairwiseId", TEST_RP_PAIRWISE_ID));
+    }
+
+    @Test
+    void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff() throws ParseException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+
+        // This should not be called. Setup here is to ensure that the feature flag is determining
+        // this test's behaviour
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
+
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s }
+                """,
+                        TEST_RP_PAIRWISE_ID);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        handler.handleRequest(event, context);
+
+        verifyNoInteractions(authenticationAttemptsService);
+    }
+
+    @Test
+    void shouldNotCallAuthenticationAttemptsServiceWhenThereIsNoSubjectId() throws ParseException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
+        when(userProfile.getSubjectID()).thenReturn(null);
+
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s }
+                """,
+                        TEST_RP_PAIRWISE_ID);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+        handler.handleRequest(event, context);
+
+        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -299,6 +362,80 @@ class StartHandlerTest {
                         eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
                         any(),
                         any(AuditService.MetadataPair[].class));
+    }
+
+    private static Stream<Arguments> reauthCountTypesAndExpectedMetadata() {
+        return Stream.of(
+                Arguments.arguments(
+                        ENTER_EMAIL,
+                        MAX_ALLOWED_RETRIES,
+                        0,
+                        0,
+                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
+                Arguments.arguments(
+                        ENTER_PASSWORD,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        0,
+                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
+                Arguments.arguments(
+                        ENTER_SMS_CODE,
+                        0,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()),
+                Arguments.arguments(
+                        ENTER_AUTH_APP_CODE,
+                        0,
+                        0,
+                        MAX_ALLOWED_RETRIES,
+                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("reauthCountTypesAndExpectedMetadata")
+    void shouldReturn200AndEmitReauthFailedEventWhenUserBlockedForReauthJourney(
+            CountType countType,
+            int expectedEmailAttemptCount,
+            int expectedPasswordAttemptCount,
+            int expectedOtpAttemptCount,
+            String expectedFailureReason)
+            throws ParseException {
+        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
+        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(userProfile.getSubjectID()).thenReturn("testSubjectId");
+        when(authenticationAttemptsService.getCountsByJourney(
+                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+                .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
+
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingValidSession();
+        usingValidClientSession();
+
+        var body =
+                format(
+                        """
+               { "rp-pairwise-id-for-reauth": %s }
+                """,
+                        TEST_RP_PAIRWISE_ID);
+        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(auditService, times(1))
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        AUDIT_CONTEXT,
+                        AuditService.MetadataPair.pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        AuditService.MetadataPair.pair(
+                                "incorrect_email_attempt_count", expectedEmailAttemptCount),
+                        AuditService.MetadataPair.pair(
+                                "incorrect_password_attempt_count", expectedPasswordAttemptCount),
+                        AuditService.MetadataPair.pair(
+                                "incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
+                        AuditService.MetadataPair.pair("failure-reason", expectedFailureReason));
     }
 
     @Test
@@ -451,7 +588,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(
-                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), any()))
+                        eq(userContext), any(), any(), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(userStartInfo);
     }
 
