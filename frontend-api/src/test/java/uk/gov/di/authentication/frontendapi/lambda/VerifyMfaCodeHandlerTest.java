@@ -30,6 +30,7 @@ import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -124,6 +125,7 @@ class VerifyMfaCodeHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
 
@@ -184,8 +186,8 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
-        when(authSessionService.getSessionIdFromRequestHeaders(any()))
-                .thenReturn(Optional.of(SESSION_ID));
+        when(authSessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(authSession));
 
         handler =
                 new VerifyMfaCodeHandler(
