@@ -166,6 +166,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var journeyType = codeRequest.getJourneyType();
         Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
+        var maybeRpPairwiseId =
+                getInternalCommonSubjectIdentifier(userProfile, userContext.getClient());
 
         var auditContext =
                 auditContextFromUserContext(
@@ -185,7 +187,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
-                journeyType, userProfile, auditContext, userContext))
+                journeyType, userProfile, auditContext, userContext, maybeRpPairwiseId))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
         try {
@@ -219,7 +221,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             UserProfile userProfile,
             AuditContext auditContext,
-            UserContext userContext) {
+            UserContext userContext,
+            Optional<String> maybeRpPairwiseId) {
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
@@ -232,11 +235,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
             ClientRegistry client = userContext.getClient().orElse(null);
             if (!countTypesWhereLimitExceeded.isEmpty() && client != null) {
-                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
-                        ReauthMetadataBuilder.builder(rpPairwiseId)
+                        ReauthMetadataBuilder.builder(
+                                        maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
                                 .withAllIncorrectAttemptCounts(counts)
                                 .withFailureReason(countTypesWhereLimitExceeded)
                                 .build());
@@ -512,19 +515,20 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .toArray(AuditService.MetadataPair[]::new);
     }
 
-    private String getInternalCommonSubjectIdentifier(
-            UserProfile userProfile, ClientRegistry client) {
+    private Optional<String> getInternalCommonSubjectIdentifier(
+            UserProfile userProfile, Optional<ClientRegistry> maybeClient) {
         try {
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            client,
-                            authenticationService,
-                            configurationService.getInternalSectorUri());
-            return internalCommonSubjectIdentifier.getValue();
+            return maybeClient.map(
+                    client ->
+                            ClientSubjectHelper.getSubject(
+                                            userProfile,
+                                            client,
+                                            authenticationService,
+                                            configurationService.getInternalSectorUri())
+                                    .getValue());
         } catch (RuntimeException e) {
-            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
-            return AuditService.UNKNOWN;
+            LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
+            return Optional.empty();
         }
     }
 }

@@ -866,11 +866,8 @@ class VerifyMfaCodeHandlerTest {
                         MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
         makeCallWithCode(codeRequest);
 
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        TEST_SUBJECT_ID,
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_AUTH_APP_CODE);
+        verify(authenticationAttemptsService, times(CountType.values().length))
+                .deleteCount(eq(TEST_SUBJECT_ID), eq(JourneyType.REAUTHENTICATION), any());
 
         verify(sessionService, atLeastOnce())
                 .storeOrUpdateSession(

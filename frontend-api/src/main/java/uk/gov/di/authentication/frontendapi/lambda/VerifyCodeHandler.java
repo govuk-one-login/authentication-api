@@ -174,6 +174,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);
+            Optional<String> maybeRpPairwiseId =
+                    getInternalCommonSubjectIdentifier(userProfile, client);
 
             String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
 
@@ -183,7 +185,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                    journeyType, subjectId, auditContext, userProfile, client))
+                    journeyType, subjectId, auditContext, maybeRpPairwiseId))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
@@ -279,8 +281,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             String subjectId,
             AuditContext auditContext,
-            UserProfile userProfile,
-            ClientRegistry client) {
+            Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
@@ -292,11 +293,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             countsByJourney, configurationService);
 
             if (!countTypesWhereBlocked.isEmpty()) {
-                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
-                        ReauthMetadataBuilder.builder(rpPairwiseId)
+                        ReauthMetadataBuilder.builder(
+                                        maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
                                 .withAllIncorrectAttemptCounts(countsByJourney)
                                 .withFailureReason(countTypesWhereBlocked)
                                 .build());
@@ -513,7 +514,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return journeyType;
     }
 
-    private String getInternalCommonSubjectIdentifier(
+    private Optional<String> getInternalCommonSubjectIdentifier(
             UserProfile userProfile, ClientRegistry client) {
         try {
             var internalCommonSubjectIdentifier =
@@ -522,10 +523,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             client,
                             authenticationService,
                             configurationService.getInternalSectorUri());
-            return internalCommonSubjectIdentifier.getValue();
+            return Optional.of(internalCommonSubjectIdentifier.getValue());
         } catch (RuntimeException e) {
-            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
-            return AuditService.UNKNOWN;
+            LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
+            return Optional.empty();
         }
     }
 }
