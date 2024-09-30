@@ -79,6 +79,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private Boolean identityVerificationSupported;
 
+    @SerializedName("channel")
+    @Expose
+    private String channel;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -151,6 +155,10 @@ public class UpdateClientConfigRequest {
 
     public Boolean getidentityVerificationSupported() {
         return identityVerificationSupported;
+    }
+
+    public String getChannel() {
+        return channel;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -241,6 +249,11 @@ public class UpdateClientConfigRequest {
     public UpdateClientConfigRequest setIdentityVerificationSupported(
             Boolean identityVerificationSupported) {
         this.identityVerificationSupported = identityVerificationSupported;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setChannel(String channel) {
+        this.channel = channel;
         return this;
     }
 }

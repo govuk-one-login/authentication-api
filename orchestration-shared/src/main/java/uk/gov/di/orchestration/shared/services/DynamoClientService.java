@@ -78,7 +78,8 @@ public class DynamoClientService implements ClientService {
             String clientSecret,
             String tokenAuthMethod,
             String idTokenSigningAlgorithm,
-            List<String> clientLoCs) {
+            List<String> clientLoCs,
+            String channel) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -100,7 +101,8 @@ public class DynamoClientService implements ClientService {
                         .withIdentityVerificationSupported(identityVerificationSupported)
                         .withIdTokenSigningAlgorithm(idTokenSigningAlgorithm)
                         .withTokenAuthMethod(tokenAuthMethod)
-                        .withActive(true);
+                        .withActive(true)
+                        .withChannel(channel);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
         }
@@ -143,6 +145,7 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withIdTokenSigningAlgorithm);
         Optional.ofNullable(updateRequest.getidentityVerificationSupported())
                 .ifPresent(clientRegistry::withIdentityVerificationSupported);
+        Optional.ofNullable(updateRequest.getChannel()).ifPresent(clientRegistry::withChannel);
         dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }

@@ -92,6 +92,10 @@ public class ClientRegistrationRequest {
     @Expose
     private String idTokenSigningAlgorithm = ES256.getName();
 
+    @SerializedName("channel")
+    @Expose
+    private String channel;
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
@@ -110,7 +114,8 @@ public class ClientRegistrationRequest {
             boolean identityVerificationSupported,
             List<String> claims,
             String clientType,
-            String idTokenSigningAlgorithm) {
+            String idTokenSigningAlgorithm,
+            String channel) {
         this(
                 clientName,
                 redirectUris,
@@ -128,7 +133,8 @@ public class ClientRegistrationRequest {
                 claims,
                 clientType,
                 idTokenSigningAlgorithm,
-                null);
+                null,
+                channel);
     }
 
     public ClientRegistrationRequest(
@@ -148,7 +154,8 @@ public class ClientRegistrationRequest {
             List<String> claims,
             String clientType,
             String idTokenSigningAlgorithm,
-            List<String> clientLoCs) {
+            List<String> clientLoCs,
+            String channel) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -178,6 +185,7 @@ public class ClientRegistrationRequest {
         if (Objects.nonNull(clientLoCs)) {
             this.clientLoCs = clientLoCs;
         }
+        this.channel = channel;
     }
 
     public String getClientName() {
@@ -250,5 +258,9 @@ public class ClientRegistrationRequest {
 
     public String getIdTokenSigningAlgorithm() {
         return idTokenSigningAlgorithm;
+    }
+
+    public String getChannel() {
+        return channel;
     }
 }

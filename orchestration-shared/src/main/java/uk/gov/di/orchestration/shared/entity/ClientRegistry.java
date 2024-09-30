@@ -43,6 +43,7 @@ public class ClientRegistry {
     private String idTokenSigningAlgorithm = "ES256";
     private boolean smokeTest = false;
     private List<String> clientLoCs = new ArrayList<>();
+    private String channel;
 
     private static final Set<String> RS256_MAPPINGS =
             Set.of(JWSAlgorithm.RS256.getName(), "RSA256");
@@ -469,6 +470,20 @@ public class ClientRegistry {
 
     public ClientRegistry withPermitMissingNonce(boolean permitMissingNonce) {
         this.permitMissingNonce = permitMissingNonce;
+        return this;
+    }
+
+    @DynamoDbAttribute("Channel")
+    public String getChannel() {
+        return Optional.ofNullable(channel).orElseGet(Channel.WEB::getValue);
+    }
+
+    public void setChannel(String channel) {
+        this.channel = channel;
+    }
+
+    public ClientRegistry withChannel(String channel) {
+        this.channel = channel;
         return this;
     }
 }

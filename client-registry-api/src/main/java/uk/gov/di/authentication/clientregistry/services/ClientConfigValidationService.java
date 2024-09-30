@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
@@ -57,6 +58,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Accepted Levels of Confidence");
     public static final ErrorObject INVALID_ID_TOKEN_SIGNING_ALGORITHM =
             new ErrorObject("invalid_client_metadata", "Invalid ID Token Signing Algorithm");
+    public static final ErrorObject INVALID_CHANNEL =
+            new ErrorObject("invalid_client_metadata", "Invalid Channel");
 
     private static final Set<String> VALID_ID_TOKEN_SIGNING_ALGORITHMS =
             Stream.of(ES256.getName(), RS256.getName()).collect(Collectors.toSet());
@@ -128,6 +131,11 @@ public class ClientConfigValidationService {
                 .map(this::isValidIdTokenSigningAlgorithm)
                 .orElse(true)) {
             return Optional.of(INVALID_ID_TOKEN_SIGNING_ALGORITHM);
+        }
+        if (!Optional.ofNullable(registrationRequest.getChannel())
+                .map(this::isValidChannel)
+                .orElse(true)) {
+            return Optional.of(INVALID_CHANNEL);
         }
         return Optional.empty();
     }
@@ -279,5 +287,11 @@ public class ClientConfigValidationService {
 
     private boolean isValidIdTokenSigningAlgorithm(String idTokenSigningAlgorithm) {
         return VALID_ID_TOKEN_SIGNING_ALGORITHMS.contains(idTokenSigningAlgorithm);
+    }
+
+    private boolean isValidChannel(String channel) {
+        return Arrays.stream(Channel.values())
+                .map(Channel::getValue)
+                .anyMatch(pks -> pks.equals(channel));
     }
 }

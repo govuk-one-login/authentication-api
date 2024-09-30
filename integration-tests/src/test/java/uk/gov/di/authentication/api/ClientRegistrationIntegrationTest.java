@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
@@ -87,7 +88,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
                         false,
                         claims,
                         ClientType.WEB.getValue(),
-                        JWSAlgorithm.ES256.getName());
+                        JWSAlgorithm.ES256.getName(),
+                        Channel.WEB.getValue());
 
         var response = makeRequest(Optional.of(clientRequest), Map.of(), Map.of());
 

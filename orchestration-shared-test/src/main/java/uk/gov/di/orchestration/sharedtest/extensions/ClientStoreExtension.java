@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
@@ -159,7 +160,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                 null,
-                emptyList());
+                emptyList(),
+                Channel.WEB.getValue());
     }
 
     public void registerClient(
@@ -199,7 +201,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                 null,
-                clientLoCs);
+                clientLoCs,
+                Channel.WEB.getValue());
     }
 
     public void registerClient(
@@ -240,7 +243,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientSecret,
                 clientAuthMethod,
                 isTokenSigningAlgorithm,
-                emptyList());
+                emptyList(),
+                Channel.WEB.getValue());
     }
 
     public void registerClient(
@@ -279,7 +283,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 null,
                 ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                 isTokenSigningAlgorithm,
-                emptyList());
+                emptyList(),
+                Channel.WEB.getValue());
     }
 
     public boolean clientExists(String clientID) {

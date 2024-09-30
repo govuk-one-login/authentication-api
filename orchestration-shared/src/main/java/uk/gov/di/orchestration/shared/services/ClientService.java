@@ -32,7 +32,8 @@ public interface ClientService {
             String clientSecret,
             String tokenAuthMethod,
             String idTokenSigningAlgorithm,
-            List<String> clientLoCs);
+            List<String> clientLoCs,
+            String channel);
 
     Optional<ClientRegistry> getClient(String clientId);
 

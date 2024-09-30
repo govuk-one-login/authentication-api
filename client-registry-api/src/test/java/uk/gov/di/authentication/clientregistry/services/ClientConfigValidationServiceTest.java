@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
+import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.PublicKeySource;
@@ -57,7 +58,8 @@ class ClientConfigValidationServiceTest {
                         emptyList(),
                         null,
                         null,
-                        null),
+                        null,
+                        Channel.WEB.getValue()),
                 Arguments.of(
                         null,
                         null,
@@ -68,7 +70,8 @@ class ClientConfigValidationServiceTest {
                         null,
                         null,
                         null,
-                        null),
+                        null,
+                        Channel.STRATEGIC_APP.getValue()),
                 Arguments.of(
                         singletonList("http://localhost/post-redirect-logout"),
                         "http://back-channel.com",
@@ -78,7 +81,8 @@ class ClientConfigValidationServiceTest {
                         List.of(ValidClaims.ADDRESS.getValue()),
                         String.valueOf(MANDATORY),
                         ClientType.WEB.getValue(),
-                        ES256.getName()),
+                        ES256.getName(),
+                        null),
                 Arguments.of(
                         List.of(
                                 "http://localhost/post-redirect-logout",
@@ -93,7 +97,8 @@ class ClientConfigValidationServiceTest {
                                 ValidClaims.PASSPORT.getValue()),
                         String.valueOf(OPTIONAL),
                         ClientType.APP.getValue(),
-                        RS256.getName()));
+                        RS256.getName(),
+                        Channel.WEB.getValue()));
     }
 
     @ParameterizedTest
@@ -107,7 +112,8 @@ class ClientConfigValidationServiceTest {
             List<String> claims,
             String serviceType,
             String clientType,
-            String idTokenSigningAlgorithm) {
+            String idTokenSigningAlgorithm,
+            String channel) {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
@@ -123,7 +129,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 claims,
                                 clientType,
-                                idTokenSigningAlgorithm));
+                                idTokenSigningAlgorithm,
+                                channel));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -144,7 +151,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -165,7 +173,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -186,7 +195,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -207,7 +217,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -228,7 +239,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_JWKS_URI)));
     }
 
@@ -249,7 +261,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -270,7 +283,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -291,7 +305,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 List.of("name", "email"),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLAIM)));
     }
 
@@ -312,7 +327,8 @@ class ClientConfigValidationServiceTest {
                                 "public",
                                 emptyList(),
                                 "Mobile",
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 
@@ -336,7 +352,8 @@ class ClientConfigValidationServiceTest {
                         emptyList(),
                         ClientType.WEB.getValue(),
                         ES256.getName(),
-                        List.of("Unsupported_LoC"));
+                        List.of("Unsupported_LoC"),
+                        Channel.WEB.getValue());
 
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(regReq);
@@ -365,7 +382,8 @@ class ClientConfigValidationServiceTest {
                         emptyList(),
                         ClientType.WEB.getValue(),
                         invalidIdTokenSource,
-                        List.of("Unsupported_LoC"));
+                        List.of("Unsupported_LoC"),
+                        Channel.WEB.getValue());
 
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientRegistrationConfig(regReq);
@@ -391,7 +409,8 @@ class ClientConfigValidationServiceTest {
                                 subjectType,
                                 emptyList(),
                                 ClientType.WEB.getValue(),
-                                ES256.getName()));
+                                ES256.getName(),
+                                Channel.WEB.getValue()));
         assertThat(errorResponse, equalTo(expectedResult));
     }
 
@@ -648,7 +667,8 @@ class ClientConfigValidationServiceTest {
             String subjectType,
             List<String> claims,
             String clientType,
-            String idTokenSigningAlgorithm) {
+            String idTokenSigningAlgorithm,
+            String channel) {
         return new ClientRegistrationRequest(
                 "The test client",
                 redirectUri,
@@ -665,7 +685,8 @@ class ClientConfigValidationServiceTest {
                 false,
                 claims,
                 clientType,
-                idTokenSigningAlgorithm);
+                idTokenSigningAlgorithm,
+                channel);
     }
 
     private UpdateClientConfigRequest generateClientUpdateRequest(
