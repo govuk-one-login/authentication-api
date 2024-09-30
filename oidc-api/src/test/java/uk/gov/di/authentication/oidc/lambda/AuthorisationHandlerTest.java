@@ -1791,6 +1791,12 @@ class AuthorisationHandlerTest {
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                 BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                         browserSessionIdCookieFromResponse(response));
+                inOrder.verify(auditService)
+                        .submitAuditEvent(
+                                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                                CLIENT_ID.getValue(),
+                                BASE_AUDIT_USER,
+                                pair("new_authentication_required", true));
             }
 
             @Test
@@ -1851,6 +1857,12 @@ class AuthorisationHandlerTest {
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                 BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                         browserSessionIdCookieFromResponse(response));
+                inOrder.verify(auditService)
+                        .submitAuditEvent(
+                                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                                CLIENT_ID.getValue(),
+                                BASE_AUDIT_USER,
+                                pair("new_authentication_required", true));
             }
 
             private APIGatewayProxyResponseEvent setupExistingSessionAndCookieInHeader(
