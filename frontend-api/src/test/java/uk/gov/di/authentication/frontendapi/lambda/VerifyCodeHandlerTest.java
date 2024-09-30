@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -130,6 +131,7 @@ class VerifyCodeHandlerTest {
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Session testSession =
             new Session("test-client-session-id").setEmailAddress(TEST_CLIENT_EMAIL);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -222,8 +224,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
-        when(authSessionService.getSessionIdFromRequestHeaders(any()))
-                .thenReturn(Optional.of(SESSION_ID));
+        when(authSessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(authSession));
     }
 
     @Test
@@ -607,6 +609,24 @@ class VerifyCodeHandlerTest {
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+    }
+
+    @Test
+    void shouldUpdateAuthSessionMfaTypeFotValidRequest() {
+        when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
+                .thenReturn(MAX_RETRIES - 1);
+        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
+                .thenReturn(false);
+        withReauthTurnedOn();
+        session.setNewAccount(Session.AccountState.EXISTING);
+
+        var result = makeCallWithCode(CODE, MFA_SMS.toString());
+
+        assertThat(result, hasStatus(204));
+        assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS.getValue()));
+        verify(authSessionService)
+                .updateSession(authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
     }
 
     @Test

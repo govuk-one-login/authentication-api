@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -149,13 +150,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             LOG.info("Processing request");
 
             var session = userContext.getSession();
-            Optional<String> authSessionId =
-                    authSessionService.getSessionIdFromRequestHeaders(input.getHeaders());
-            if (authSessionId.isEmpty()) {
-                LOG.warn("Auth session ID cannot be found");
+            Optional<AuthSessionItem> authSession =
+                    authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+            if (authSession.isEmpty()) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             } else {
-                attachAuthSessionIdToLogs(authSessionId.get());
+                attachAuthSessionIdToLogs(authSession.get());
             }
             var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
@@ -235,7 +235,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             processSuccessfulCodeRequest(
-                    authSessionId.get(),
+                    authSession.get(),
                     codeRequest,
                     userContext,
                     subjectId,
@@ -338,7 +338,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     private void processSuccessfulCodeRequest(
-            String authSessionId,
+            AuthSessionItem authSession,
             VerifyCodeRequest codeRequest,
             UserContext userContext,
             String subjectId,
@@ -363,7 +363,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     false);
             sessionService.storeOrUpdateSession(
                     session.setVerifiedMfaMethodType(MFAMethodType.SMS));
-            authSessionService.setVerifiedMfaMethodType(authSessionId, MFAMethodType.SMS);
+            authSessionService.updateSession(
+                    authSession.withVerifiedMfaMethodType(MFAMethodType.SMS.getValue()));
             clearAccountRecoveryBlockIfPresent(session, auditContext);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
