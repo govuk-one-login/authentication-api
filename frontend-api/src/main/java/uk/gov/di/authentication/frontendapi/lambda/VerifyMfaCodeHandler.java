@@ -233,8 +233,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && JourneyType.REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
             var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+                    maybeRpPairwiseId.isEmpty()
+                            ? authenticationAttemptsService.getCountsByJourney(
+                                    userProfile.getSubjectID(), JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            userProfile.getSubjectID(),
+                                            maybeRpPairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION);
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);

@@ -286,8 +286,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
+                    maybeRpPairwiseId.isEmpty()
+                            ? authenticationAttemptsService.getCountsByJourney(
+                                    subjectId, JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            subjectId,
+                                            maybeRpPairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
