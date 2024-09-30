@@ -323,7 +323,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (!userMfaDetail.isMfaRequired()) {
             cloudwatchMetricsService.incrementAuthenticationSuccess(
-                    EXISTING,
+                    AuthSessionItem.AccountState.EXISTING,
                     userContext.getClientId(),
                     userContext.getClientName(),
                     "P0",
