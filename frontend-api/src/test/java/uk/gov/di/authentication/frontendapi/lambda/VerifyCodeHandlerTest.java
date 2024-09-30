@@ -543,7 +543,7 @@ class VerifyCodeHandlerTest {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
-        session.setNewAccount(Session.AccountState.EXISTING);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
@@ -575,7 +575,12 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -587,7 +592,7 @@ class VerifyCodeHandlerTest {
         when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
                 .thenReturn(false);
         withReauthTurnedOn();
-        session.setNewAccount(Session.AccountState.EXISTING);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
 
@@ -608,7 +613,12 @@ class VerifyCodeHandlerTest {
                         pair("MFACodeEntered", "123456"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @Test
