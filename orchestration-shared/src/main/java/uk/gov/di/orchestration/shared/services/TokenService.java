@@ -159,7 +159,7 @@ public class TokenService {
                         internalPairwiseSubject,
                         null,
                         signingAlgorithm,
-                        null);
+                        "refreshToken");
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
                         clientID,
