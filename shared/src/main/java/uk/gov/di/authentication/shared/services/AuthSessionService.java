@@ -41,6 +41,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         this.configurationService = configurationService;
     }
 
+    @Deprecated
     public Optional<String> getSessionIdFromRequestHeaders(Map<String, String> headers) {
         Optional<String> sessionId =
                 getOptionalHeaderValueFromHeaders(
