@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.Session;
 
 import java.util.Map;
@@ -91,6 +92,54 @@ public class CloudwatchMetricsService {
                             clientName));
         }
         if (EXISTING.equals(accountState) && !isTestJourney) {
+            incrementCounter(
+                    AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            CLIENT.getValue(),
+                            clientId,
+                            CLIENT_NAME.getValue(),
+                            clientName));
+        }
+    }
+
+    public void incrementAuthenticationSuccess(
+            AuthSessionItem.AccountState accountState,
+            String clientId,
+            String clientName,
+            String requestedLevelOfConfidence,
+            boolean isTestJourney,
+            boolean mfaRequired) {
+        incrementCounter(
+                AUTHENTICATION_SUCCESS.getValue(),
+                Map.of(
+                        ACCOUNT.getValue(),
+                        accountState.name(),
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        CLIENT.getValue(),
+                        clientId,
+                        IS_TEST.getValue(),
+                        Boolean.toString(isTestJourney),
+                        REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
+                        requestedLevelOfConfidence,
+                        MFA_REQUIRED.getValue(),
+                        Boolean.toString(mfaRequired),
+                        CLIENT_NAME.getValue(),
+                        clientName));
+        if (AuthSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
+            incrementCounter(
+                    AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            CLIENT.getValue(),
+                            clientId,
+                            CLIENT_NAME.getValue(),
+                            clientName));
+        }
+        if (AuthSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
