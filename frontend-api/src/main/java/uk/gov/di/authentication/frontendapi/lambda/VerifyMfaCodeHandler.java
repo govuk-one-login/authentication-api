@@ -193,7 +193,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, journeyType, subjectID, authSession.get());
+                    input,
+                    codeRequest,
+                    userContext,
+                    journeyType,
+                    subjectID,
+                    authSession.get(),
+                    maybeRpPairwiseId);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -259,7 +265,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             JourneyType journeyType,
             String subjectId,
-            AuthSessionItem authSession) {
+            AuthSessionItem authSession,
+            Optional<String> maybeRpPairwiseId) {
 
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
@@ -296,7 +303,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 userContext,
                 subjectId,
                 codeRequest,
-                mfaCodeProcessor);
+                mfaCodeProcessor,
+                maybeRpPairwiseId);
 
         sessionService.storeOrUpdateSession(session);
 
@@ -307,11 +315,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             var clientSession = userContext.getClientSession();
                             var levelOfConfidence =
                                     clientSession
-                                                    .getEffectiveVectorOfTrust()
-                                                    .containsLevelOfConfidence()
+                                            .getEffectiveVectorOfTrust()
+                                            .containsLevelOfConfidence()
                                             ? clientSession
-                                                    .getEffectiveVectorOfTrust()
-                                                    .getLevelOfConfidence()
+                                            .getEffectiveVectorOfTrust()
+                                            .getLevelOfConfidence()
                                             : NONE;
 
                             LOG.info(
@@ -355,7 +363,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             VerifyMfaCodeRequest codeRequest,
-            MfaCodeProcessor mfaCodeProcessor) {
+            MfaCodeProcessor mfaCodeProcessor,
+            Optional<String> maybeRpPairwiseId) {
         var emailAddress = session.getEmailAddress();
 
         var auditableEvent =
@@ -383,6 +392,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 preserveReauthCountsForAuditIfJourneyIsReauth(
                         codeRequest.getJourneyType(), subjectId, session);
                 clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
+                maybeRpPairwiseId.ifPresentOrElse(
+                        this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
+                        () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
@@ -424,12 +436,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
     }
 
-    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
+    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String uniqueIdentifier) {
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
                                 authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
+                                        uniqueIdentifier, JourneyType.REAUTHENTICATION, countType));
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
@@ -500,9 +512,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         var failureCount =
                                 methodType.equals(MFAMethodType.AUTH_APP)
                                         ? codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                                                email, MFAMethodType.AUTH_APP)
+                                        email, MFAMethodType.AUTH_APP)
                                         : codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                                                email);
+                                        email);
                         yield List.of(
                                 pair("loginFailureCount", failureCount),
                                 pair("MFACodeEntered", codeRequest.getCode()));

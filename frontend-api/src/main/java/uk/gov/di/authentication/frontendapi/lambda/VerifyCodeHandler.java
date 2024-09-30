@@ -243,7 +243,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     subjectId,
                     journeyType,
                     auditContext,
-                    client);
+                    client,
+                    maybeRpPairwiseId);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -345,7 +346,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             JourneyType journeyType,
             AuditContext auditContext,
-            ClientRegistry client) {
+            ClientRegistry client,
+            Optional<String> maybePairwiseId) {
         var session = userContext.getSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -379,6 +381,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(journeyType, subjectId, session);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
+            maybePairwiseId.ifPresentOrElse(
+                    this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
+                    () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
 
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
@@ -402,12 +407,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
     }
 
-    void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
+    void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String identifier) {
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
                                 authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
+                                        identifier, JourneyType.REAUTHENTICATION, countType));
     }
 
     private AuditService.MetadataPair[] metadataPairs(

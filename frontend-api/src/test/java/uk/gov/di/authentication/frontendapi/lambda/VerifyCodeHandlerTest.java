@@ -149,7 +149,8 @@ class VerifyCodeHandlerTest {
             new ClientRegistry()
                     .withTestClient(false)
                     .withClientID(CLIENT_ID)
-                    .withClientName(CLIENT_NAME);
+                    .withClientName(CLIENT_NAME)
+                    .withSectorIdentifierUri("https://" + SECTOR_HOST);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -764,11 +765,20 @@ class VerifyCodeHandlerTest {
         var existingCounts = Map.of(ENTER_EMAIL, 5, ENTER_PASSWORD, 1);
         when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
                 .thenReturn(existingCounts);
-
+        when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(TEST_SUBJECT_ID, REAUTHENTICATION, ENTER_SMS_CODE);
+        List.of(TEST_SUBJECT_ID, expectedCommonSubject)
+                .forEach(
+                        identifier ->
+                                verify(
+                                                authenticationAttemptsService,
+                                                times(CountType.values().length))
+                                        .deleteCount(
+                                                eq(identifier),
+                                                eq(JourneyType.REAUTHENTICATION),
+                                                any()));
 
         if (journeyType == REAUTHENTICATION) {
             verify(sessionService, atLeastOnce())
