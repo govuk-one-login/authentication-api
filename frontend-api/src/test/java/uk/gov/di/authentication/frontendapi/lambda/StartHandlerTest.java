@@ -404,8 +404,8 @@ class StartHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn("testSubjectId");
-        when(authenticationAttemptsService.getCountsByJourney(
-                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
         var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);

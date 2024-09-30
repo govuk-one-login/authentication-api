@@ -278,8 +278,11 @@ public class StartHandler
                 maybeInternalSubjectId
                         .map(
                                 subjectId ->
-                                        authenticationAttemptsService.getCountsByJourney(
-                                                subjectId, JourneyType.REAUTHENTICATION))
+                                        authenticationAttemptsService
+                                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                                        subjectId,
+                                                        startRequest.rpPairwiseIdForReauth(),
+                                                        JourneyType.REAUTHENTICATION))
                         .orElse(Map.of());
         var blockedCountTypes =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
