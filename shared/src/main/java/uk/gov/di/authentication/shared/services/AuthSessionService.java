@@ -153,6 +153,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
+    @Deprecated
     public void setVerifiedMfaMethodType(String sessionId, MFAMethodType mfaMethodType) {
         try {
             Optional<AuthSessionItem> item = getSession(sessionId);
