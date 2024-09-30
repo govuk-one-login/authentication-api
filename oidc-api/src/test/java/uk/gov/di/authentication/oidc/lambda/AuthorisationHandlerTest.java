@@ -64,13 +64,7 @@ import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.ErrorResponse;
-import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.ClientRedirectUriValidationException;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
@@ -409,6 +403,23 @@ class AuthorisationHandlerTest {
                     ClaimsSetRequest.parse(captor.getValue().getStringClaim("claim"));
             assertEquals(
                     expectedClaimSetRequest.toJSONObject(), actualClaimSetRequest.toJSONObject());
+        }
+
+        @Test
+        void shouldPassTheChannelClaimToAuth() {
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var actualChannelClaim = captor.getValue().getClaim("channel");
+            assertEquals(Channel.WEB.getValue(), actualChannelClaim);
         }
 
         @ParameterizedTest
