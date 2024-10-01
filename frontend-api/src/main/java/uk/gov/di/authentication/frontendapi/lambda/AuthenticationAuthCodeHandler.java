@@ -145,6 +145,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 }
                 auditService.submitAuditEvent(
                         AUTH_REAUTH_SUCCESS, auditContext, metadataBuilder.build());
+                LOG.info("reauthentication successful");
                 sessionService.storeOrUpdateSession(
                         userContext.getSession().setPreservedReauthCountsForAudit(null));
             }
