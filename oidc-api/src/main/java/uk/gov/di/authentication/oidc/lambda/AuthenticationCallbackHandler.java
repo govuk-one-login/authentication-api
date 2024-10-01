@@ -542,6 +542,7 @@ public class AuthenticationCallbackHandler
 
         var mfaMethodClaim = userInfo.getClaim("verified_mfa_method_type");
         if (Objects.nonNull(mfaMethodClaim)) {
+            LOG.info("mfaMethod.toString(): {}", mfaMethodClaim);
             dimensions.put("MfaMethod", mfaMethodClaim.toString());
         } else {
             LOG.info(
