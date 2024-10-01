@@ -423,6 +423,45 @@ class AuthorisationHandlerTest {
         }
 
         @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldPassAuthenticatedClaimToAuthFromSession(boolean isAuthenticated) {
+            withExistingSessionAuthenticatedValue(isAuthenticated);
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var actualChannelClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(isAuthenticated, actualChannelClaim);
+        }
+
+        @Test
+        void authenticatedClaimIsFalseIfNewSession() {
+            withNoSession();
+
+            var requestParams =
+                    buildRequestParams(
+                            Map.of("scope", "openid profile phone", "vtr", "[\"Cl.Cm.P2\"]"));
+            var event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
+            var actualChannelClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(false, actualChannelClaim);
+        }
+
+        @ParameterizedTest
         @ValueSource(
                 strings = {
                     "",
@@ -2338,6 +2377,17 @@ class AuthorisationHandlerTest {
 
     private void withExistingSession(Session session) {
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
+    }
+
+    private void withExistingSessionAuthenticatedValue(Boolean isAuthenticated) {
+        when(sessionService.getSessionFromSessionCookie(any()))
+                .thenReturn(
+                        Optional.of(
+                                new Session("a-new-session-id").setAuthenticated(isAuthenticated)));
+    }
+
+    private void withNoSession() {
+        when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
     }
 
     private ClientRegistry generateClientRegistry() {
