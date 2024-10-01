@@ -46,6 +46,11 @@ public class BaseDynamoService<T> {
         }
     }
 
+    public BaseDynamoService(DynamoDbTable<T> dynamoTable, DynamoDbClient client) {
+        this.dynamoTable = dynamoTable;
+        this.client = client;
+    }
+
     public void update(T item) {
         dynamoTable.updateItem(item);
     }
