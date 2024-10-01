@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.helpers.ReauthAuthenticationAttemptsHelpe
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -78,6 +80,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CommonPasswordsService commonPasswordsService;
     private final AuthenticationAttemptsService authenticationAttemptsService;
+    private final AuthSessionService authSessionService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -90,7 +93,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             CommonPasswordsService commonPasswordsService,
-            AuthenticationAttemptsService authenticationAttemptsService) {
+            AuthenticationAttemptsService authenticationAttemptsService,
+            AuthSessionService authSessionService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -105,6 +109,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.commonPasswordsService = commonPasswordsService;
         this.authenticationAttemptsService = authenticationAttemptsService;
+        this.authSessionService = authSessionService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -118,6 +123,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -131,6 +137,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public LoginHandler() {
@@ -149,6 +156,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             Context context,
             LoginRequest request,
             UserContext userContext) {
+
+        var optionalAuthSession =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+
+        if (optionalAuthSession.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+
+        AuthSessionItem authSession = optionalAuthSession.get();
 
         AuditContext auditContext =
                 auditContextFromUserContext(
@@ -243,7 +259,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 internalCommonSubjectIdentifier,
                 userCredentials,
                 userProfile,
-                auditContext);
+                auditContext,
+                authSession);
     }
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
@@ -268,12 +285,16 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             String internalCommonSubjectIdentifier,
             UserCredentials userCredentials,
             UserProfile userProfile,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            AuthSessionItem authSessionItem) {
         sessionService.storeOrUpdateSession(
                 userContext
                         .getSession()
                         .setNewAccount(EXISTING)
                         .setInternalCommonSubjectIdentifier(internalCommonSubjectIdentifier));
+
+        authSessionService.updateSession(
+                authSessionItem.withAccountState(AuthSessionItem.AccountState.EXISTING));
 
         var userMfaDetail =
                 getUserMFADetail(

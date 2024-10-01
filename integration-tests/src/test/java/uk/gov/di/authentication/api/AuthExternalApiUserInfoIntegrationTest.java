@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.util.List;
 import java.util.Map;
@@ -53,6 +55,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     protected static final AccessTokenStoreExtension accessTokenStoreExtension =
             new AccessTokenStoreExtension(180);
 
+    private static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
+
     @BeforeEach
     void setup() {
         var configurationService =
@@ -67,6 +71,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         return txmaAuditQueue.getQueueUrl();
                     }
                 };
+        txmaAuditQueue.clear();
         handler = new UserInfoHandler(configurationService);
     }
 
@@ -83,6 +88,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         List.of(OIDCScopeValue.EMAIL.getValue()),
                         isNewAccount);
         withNewAccountSession();
+        withAuthSessionNewAccount();
 
         var response =
                 makeRequest(
@@ -130,6 +136,30 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
+    void shouldUpdateAuthSessionWithAccountStateExisting() throws Json.JsonException {
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+        addTokenToDynamoAndCreateAssociatedUser(
+                accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), true);
+        withNewAccountSession();
+        withAuthSessionNewAccount();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(TXMA_AUDIT_ENCODED_HEADER, ENCODED_DEVICE_DETAILS),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(
+                authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
+                equalTo(AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
     void shouldReturn400AndNoSessionMessageWhenSessionHeaderNotPresent() {
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
@@ -163,8 +193,27 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
+    void shouldReturn400WheNoAuthSessionPresent() throws Json.JsonException {
+        withNewAccountSession();
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
+    }
+
+    @Test
     void shouldReturn401ForAccessTokenThatDoesNotExistInDatabase() throws Json.JsonException {
         withNewAccountSession();
+        withAuthSessionNewAccount();
         var accessToken =
                 new BearerAccessToken("any-as-we-will-not-be-seeding-this-into-the-test-db");
 
@@ -192,6 +241,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     @Test
     void shouldReturn401ForAccessTokenThatIsAlreadyUsed() throws Json.JsonException {
         withNewAccountSession();
+        withAuthSessionNewAccount();
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
@@ -229,6 +279,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     @Test
     void shouldReturn401ForAccessTokenThatIsPastItsTtl() throws Json.JsonException {
         withNewAccountSession();
+        withAuthSessionNewAccount();
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
@@ -275,5 +326,14 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     private void withNewAccountSession() throws Json.JsonException {
         redis.createSession(TEST_SESSION_ID);
         redis.setIsNewAccount(TEST_SESSION_ID, Session.AccountState.NEW);
+    }
+
+    private void withAuthSessionNewAccount() {
+        authSessionExtension.addSession(Optional.empty(), TEST_SESSION_ID);
+        authSessionExtension.updateSession(
+                authSessionExtension
+                        .getSession(TEST_SESSION_ID)
+                        .get()
+                        .withAccountState(AuthSessionItem.AccountState.NEW));
     }
 }

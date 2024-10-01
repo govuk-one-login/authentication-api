@@ -13,12 +13,14 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -32,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -46,6 +50,7 @@ class UserInfoHandlerTest {
     private AccessTokenService accessTokenService;
     private UserInfoHandler userInfoHandler;
     private SessionService sessionService;
+    private AuthSessionService authSessionService;
     private static final AccessTokenStore accessTokenStore = mock(AccessTokenStore.class);
     private static final Subject TEST_SUBJECT = new Subject();
     private static final UserInfo TEST_SUBJECT_USER_INFO = new UserInfo(TEST_SUBJECT);
@@ -64,6 +69,7 @@ class UserInfoHandlerTest {
         userInfoService = mock(UserInfoService.class);
         accessTokenService = mock(AccessTokenService.class);
         sessionService = mock(SessionService.class);
+        authSessionService = mock(AuthSessionService.class);
         when(accessTokenService.getAccessTokenStore(any()))
                 .thenReturn(Optional.of(accessTokenStore));
         userInfoHandler =
@@ -72,7 +78,8 @@ class UserInfoHandlerTest {
                         userInfoService,
                         accessTokenService,
                         auditService,
-                        sessionService);
+                        sessionService,
+                        authSessionService);
 
         TEST_SUBJECT_USER_INFO.setEmailAddress("test@test.com");
         TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");
@@ -82,6 +89,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturn200WithUserInfoForValidRequestAndSetTokenStoreUsed()
             throws ParseException, AccessTokenException {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
@@ -118,6 +126,7 @@ class UserInfoHandlerTest {
     @Test
     void updateAUsersSessionWithTheAccountStateExistingForSuccessfulUserInfoRequest()
             throws ParseException, AccessTokenException {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
@@ -154,7 +163,35 @@ class UserInfoHandlerTest {
     }
 
     @Test
+    void shouldUpdateAuthSessionWithAccountStateExisting()
+            throws ParseException, AccessTokenException {
+        withAuthSession();
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        String validTokenHeader = "Bearer valid-token";
+        AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
+        request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
+        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+                .thenReturn(validToken);
+        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(sessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(testSession));
+
+        APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
+
+        assertEquals(200, response.getStatusCode());
+        assertTrue(
+                response.getBody()
+                        .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
+
+        verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
+        verify(authSessionService)
+                .updateSession(
+                        argThat(t -> t.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
     void shouldReturnMissingTokenErrorWhenAuthHeaderNotFound() {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -208,8 +245,33 @@ class UserInfoHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenNoAuthSessionPresent() throws ParseException, AccessTokenException {
+        withNoAuthSession();
+        String validTokenHeader = "Bearer valid-token";
+        AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
+
+        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
+                .thenReturn(validToken);
+        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(sessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(testSession));
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+
+        request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
+
+        APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
+
+        assertEquals(400, response.getStatusCode());
+        assertEquals(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000), response.getBody());
+        verify(sessionService).getSessionFromRequestHeaders(request.getHeaders());
+        verifyNoInteractions(accessTokenService, userInfoService, auditService);
+        verify(sessionService, never()).storeOrUpdateSession(any());
+    }
+
+    @Test
     void shouldReturnInvalidTokenErrorWhenBearerTokenCannotBeParsed()
             throws ParseException, AccessTokenException {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String invalidToken = "Bearer this-is-not-a-valid-token";
         request.setHeaders(Map.of("Authorization", invalidToken, SESSION_ID_HEADER, sessionId));
@@ -234,6 +296,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenTokenNotFoundInDatabase()
             throws ParseException, AccessTokenException {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String invalidToken = "Bearer this-is-not-a-valid-token";
         request.setHeaders(Map.of("Authorization", invalidToken, SESSION_ID_HEADER, sessionId));
@@ -259,6 +322,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenAccessTokenHasAlreadyBeenUsed()
             throws ParseException, AccessTokenException {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validToken = "Bearer valid-token";
         request.setHeaders(Map.of("Authorization", validToken, SESSION_ID_HEADER, sessionId));
@@ -288,6 +352,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenAccessTokenIsTooOld()
             throws ParseException, AccessTokenException {
+        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validToken = "Bearer valid-token";
         request.setHeaders(Map.of("Authorization", validToken, SESSION_ID_HEADER, sessionId));
@@ -309,5 +374,19 @@ class UserInfoHandlerTest {
 
         verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
         verify(sessionService, never()).storeOrUpdateSession(any());
+    }
+
+    private void withAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(sessionId)
+                                        .withAccountState(AuthSessionItem.AccountState.NEW)));
+    }
+
+    private void withNoAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.empty());
     }
 }

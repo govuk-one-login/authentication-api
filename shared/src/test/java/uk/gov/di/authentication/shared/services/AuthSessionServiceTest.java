@@ -26,6 +26,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
 class AuthSessionServiceTest {
     private static final String SESSION_ID = "test-session-id";
@@ -174,6 +175,30 @@ class AuthSessionServiceTest {
                 () -> authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS));
     }
 
+    @Test
+    void getSessionFromRequestHeadersReturnsEmptyWhenNoSessionId() {
+        var session = authSessionService.getSessionFromRequestHeaders(Map.of());
+        assertThat(session.isEmpty(), equalTo(true));
+    }
+
+    @Test
+    void shouldGetSessionFromRequestHeaders() {
+        var expectedSession = withValidSession();
+        var headerMap = Map.of(SESSION_ID_HEADER, SESSION_ID);
+        var session = authSessionService.getSessionFromRequestHeaders(headerMap);
+        assertThat(session.isPresent(), equalTo(true));
+        assertThat(session.get(), equalTo(expectedSession));
+    }
+
+    @Test
+    void throwsAuthExceptionWhenGetFromRequestHeadersFails() {
+        withFailedGet();
+        var headerMap = Map.of(SESSION_ID_HEADER, SESSION_ID);
+        assertThrows(
+                AuthSessionException.class,
+                () -> authSessionService.getSessionFromRequestHeaders(headerMap));
+    }
+
     private AuthSessionItem withValidSession() {
         AuthSessionItem existingSession =
                 new AuthSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
@@ -197,5 +222,11 @@ class AuthSessionServiceTest {
         doThrow(DynamoDbException.builder().message("Failed to update table").build())
                 .when(table)
                 .updateItem(any(AuthSessionItem.class));
+    }
+
+    private void withFailedGet() {
+        doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
+                .when(table)
+                .getItem(SESSION_ID_PARTITION_KEY);
     }
 }

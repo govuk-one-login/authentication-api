@@ -14,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.services.UserInfoService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -46,18 +48,21 @@ public class UserInfoHandler
     private final AccessTokenService accessTokenService;
     private final AuditService auditService;
     private final SessionService sessionService;
+    private final AuthSessionService authSessionService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
             AuditService auditService,
-            SessionService sessionService) {
+            SessionService sessionService,
+            AuthSessionService authSessionService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
         this.sessionService = sessionService;
+        this.authSessionService = authSessionService;
     }
 
     public UserInfoHandler() {
@@ -73,6 +78,7 @@ public class UserInfoHandler
                         configurationService, new CloudwatchMetricsService(configurationService));
         this.auditService = new AuditService(configurationService);
         this.sessionService = new SessionService(configurationService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -124,6 +130,16 @@ public class UserInfoHandler
             LOG.error("Error retrieving session from redis: {}", e.getMessage());
             throw new RuntimeException(e);
         }
+
+        AuthSessionItem authSession;
+
+        Optional<AuthSessionItem> optionalAuthSession =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+
+        if (optionalAuthSession.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+        authSession = optionalAuthSession.get();
 
         attachSessionIdToLogs(userSession);
 
@@ -188,6 +204,8 @@ public class UserInfoHandler
 
         sessionService.storeOrUpdateSession(
                 userSession.setNewAccount(Session.AccountState.EXISTING));
+        authSessionService.updateSession(
+                authSession.withAccountState(AuthSessionItem.AccountState.EXISTING));
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 

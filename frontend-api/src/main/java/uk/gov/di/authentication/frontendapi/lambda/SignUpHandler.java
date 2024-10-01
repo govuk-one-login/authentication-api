@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -16,6 +17,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -46,6 +48,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
+    private final AuthSessionService authSessionService;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -55,7 +58,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             AuthenticationService authenticationService,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
-            PasswordValidator passwordValidator) {
+            PasswordValidator passwordValidator,
+            AuthSessionService authSessionService) {
         super(
                 SignupRequest.class,
                 configurationService,
@@ -66,6 +70,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
+        this.authSessionService = authSessionService;
     }
 
     public SignUpHandler() {
@@ -77,6 +82,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     public SignUpHandler(ConfigurationService configurationService, RedisConnectionService redis) {
@@ -84,6 +90,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.authSessionService = new AuthSessionService(configurationService);
     }
 
     @Override
@@ -100,6 +107,13 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+
+        var optionalAuthSessionItem =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (optionalAuthSessionItem.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+        AuthSessionItem authSessionItem = optionalAuthSessionItem.get();
 
         LOG.info("Received request");
 
@@ -171,6 +185,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             .setInternalCommonSubjectIdentifier(
                                     internalCommonSubjectIdentifier.getValue()));
 
+            authSessionService.updateSession(
+                    authSessionItem.withAccountState(AuthSessionItem.AccountState.NEW));
             LOG.info("Successfully processed request");
             return generateApiGatewayProxyResponse(200, "");
         } else {

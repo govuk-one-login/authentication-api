@@ -21,6 +21,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -118,6 +120,7 @@ class LoginHandlerReauthenticationRedisTest {
             mock(CloudwatchMetricsService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
+    private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -177,7 +180,8 @@ class LoginHandlerReauthenticationRedisTest {
                         auditService,
                         cloudwatchMetricsService,
                         commonPasswordsService,
-                        null);
+                        null,
+                        authSessionService);
     }
 
     @ParameterizedTest
@@ -197,6 +201,7 @@ class LoginHandlerReauthenticationRedisTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
         usingValidSession();
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
 
@@ -237,6 +242,7 @@ class LoginHandlerReauthenticationRedisTest {
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(isReauthEnabled);
 
         usingValidSession();
+        usingValidAuthSession();
         usingDefaultVectorOfTrust();
 
         var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
@@ -276,6 +282,15 @@ class LoginHandlerReauthenticationRedisTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private void usingValidAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)));
     }
 
     private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {

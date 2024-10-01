@@ -5,10 +5,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
 class AuthSessionServiceIntegrationTest {
     private static final String SESSION_ID = "test-session-id";
@@ -19,7 +21,7 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldAddNewSessionWithExpectedDefaultValuesWhenNoPreviousSessionIdProvided() {
-        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+        withSession();
 
         Optional<AuthSessionItem> retrievedSession = authSessionExtension.getSession(SESSION_ID);
 
@@ -32,8 +34,8 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldReplaceSessionWhenPreviousSessionIdGivenAndExists() {
-        authSessionExtension.addSession(Optional.empty(), PREVIOUS_SESSION_ID);
-        authSessionExtension.addSession(Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+        withPreviousSession();
+        withUpdatedPreviousSession();
 
         Optional<AuthSessionItem> retrievedPreviousSession =
                 authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -46,7 +48,7 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldAddSessionWhenPreviousSessionIdGivenAndDoesNotExist() {
-        authSessionExtension.addSession(Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+        withUpdatedPreviousSession();
 
         Optional<AuthSessionItem> retrievedPreviousSession =
                 authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -62,7 +64,8 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldStoreAnUpdatedSession() {
-        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+        withSession();
+
         var session = authSessionExtension.getSession(SESSION_ID).get();
         session.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         authSessionExtension.updateSession(session);
@@ -73,11 +76,12 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldRetainAPreviousSessionsValuesWhenSessionIdIsUpdated() {
-        authSessionExtension.addSession(Optional.empty(), PREVIOUS_SESSION_ID);
+        withPreviousSession();
+
         var previousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID).get();
         previousSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         authSessionExtension.updateSession(previousSession);
-        authSessionExtension.addSession(Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+        withUpdatedPreviousSession();
 
         Optional<AuthSessionItem> retrievedPreviousSession =
                 authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -89,5 +93,28 @@ class AuthSessionServiceIntegrationTest {
         assertThat(
                 retrievedSession.get().getIsNewAccount(),
                 equalTo(AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
+    void shouldGetSessionFromRequestHeaders() {
+        withSession();
+
+        var headersWithSessionId = Map.of(SESSION_ID_HEADER, SESSION_ID);
+        Optional<AuthSessionItem> retrievedSession =
+                authSessionExtension.getSessionFromRequestHeaders(headersWithSessionId);
+        assertThat(retrievedSession.isPresent(), equalTo(true));
+        assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
+    }
+
+    private void withSession() {
+        authSessionExtension.addSession(Optional.empty(), SESSION_ID);
+    }
+
+    private void withPreviousSession() {
+        authSessionExtension.addSession(Optional.empty(), PREVIOUS_SESSION_ID);
+    }
+
+    private void withUpdatedPreviousSession() {
+        authSessionExtension.addSession(Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
     }
 }
