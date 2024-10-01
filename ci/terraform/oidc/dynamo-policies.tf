@@ -566,27 +566,13 @@ data "aws_iam_policy_document" "check_email_fraud_block_read_dynamo_read_access_
   }
 }
 
-data "aws_iam_policy_document" "dynamo_authentication_attempt_delete_policy_document" {
+data "aws_iam_policy_document" "dynamo_authentication_attempt_write_delete_policy_document" {
   statement {
-    sid    = "AllowDelete"
+    sid    = "AllowWriteAndDelete"
     effect = "Allow"
 
     actions = [
       "dynamodb:DeleteItem",
-    ]
-    resources = [
-      data.aws_dynamodb_table.authentication_attempt_table.arn,
-      "${data.aws_dynamodb_table.authentication_attempt_table.arn}/index/*",
-    ]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_authentication_attempt_write_policy_document" {
-  statement {
-    sid    = "AllowWrite"
-    effect = "Allow"
-
-    actions = [
       "dynamodb:BatchWriteItem",
       "dynamodb:UpdateItem",
       "dynamodb:PutItem",
@@ -900,12 +886,12 @@ resource "aws_iam_policy" "check_email_fraud_block_read_dynamo_read_access_polic
   policy = data.aws_iam_policy_document.check_email_fraud_block_read_dynamo_read_access_policy.json
 }
 
-resource "aws_iam_policy" "dynamo_authentication_attempt_write_policy" {
+resource "aws_iam_policy" "dynamo_authentication_attempt_write_delete_policy" {
   name_prefix = "dynamo-authentication-attempt-write-policy"
   path        = "/${var.environment}/oidc-shared/"
   description = "IAM policy for managing write permissions to the authentication attempts table"
 
-  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_write_policy_document.json
+  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_write_delete_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_authentication_attempt_read_policy" {
@@ -914,14 +900,6 @@ resource "aws_iam_policy" "dynamo_authentication_attempt_read_policy" {
   description = "IAM policy for managing read permissions to the authentication attempts table"
 
   policy = data.aws_iam_policy_document.dynamo_authentication_attempt_read_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_authentication_attempt_delete_policy" {
-  name_prefix = "dynamo-authentication-attempt-delete-policy"
-  path        = "/${var.environment}/oidc-shared/"
-  description = "IAM policy for managing delete permissions to the authentication attempts table"
-
-  policy = data.aws_iam_policy_document.dynamo_authentication_attempt_delete_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_auth_session_write_policy" {
