@@ -14,6 +14,7 @@ import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -128,6 +129,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getPhoneNumber());
         assertNull(userInfoResponse.getPhoneNumberVerified());
         assertNull(userInfoResponse.getClaim("salt"));
+        assertThat(
+                userInfoResponse.getClaim("verified_mfa_method_type"),
+                equalTo(MFAMethodType.AUTH_APP.getValue()));
 
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
         assertTxmaAuditEventsSubmittedWithMatchingNames(
@@ -334,6 +338,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 authSessionExtension
                         .getSession(TEST_SESSION_ID)
                         .get()
-                        .withAccountState(AuthSessionItem.AccountState.NEW));
+                        .withAccountState(AuthSessionItem.AccountState.NEW)
+                        .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP.getValue()));
     }
 }

@@ -15,6 +15,7 @@ import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
@@ -36,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -57,6 +59,7 @@ class UserInfoHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final String sessionId = "a-session-id";
     private final Session testSession = new Session(sessionId);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(sessionId);
     private final SerializationService objectMapper = SerializationService.getInstance();
 
     @BeforeEach
@@ -83,6 +86,8 @@ class UserInfoHandlerTest {
 
         TEST_SUBJECT_USER_INFO.setEmailAddress("test@test.com");
         TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");
+        TEST_SUBJECT_USER_INFO.setClaim(
+                "verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
         when(accessTokenStore.getSubjectID()).thenReturn("testSubjectId");
     }
 
@@ -96,7 +101,8 @@ class UserInfoHandlerTest {
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(eq(accessTokenStore), any()))
+                .thenReturn(TEST_SUBJECT_USER_INFO);
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(testSession));
 
@@ -133,7 +139,8 @@ class UserInfoHandlerTest {
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(eq(accessTokenStore), any()))
+                .thenReturn(TEST_SUBJECT_USER_INFO);
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(testSession));
 
@@ -172,7 +179,7 @@ class UserInfoHandlerTest {
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(any(), any())).thenReturn(TEST_SUBJECT_USER_INFO);
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(testSession));
 
@@ -213,7 +220,8 @@ class UserInfoHandlerTest {
         request.setHeaders(Map.of("Authorization", validTokenHeader));
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(accessTokenStore, authSession))
+                .thenReturn(TEST_SUBJECT_USER_INFO);
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -232,7 +240,8 @@ class UserInfoHandlerTest {
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(accessTokenStore, authSession))
+                .thenReturn(TEST_SUBJECT_USER_INFO);
         when(sessionService.getSessionFromRequestHeaders(any())).thenReturn(Optional.empty());
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -252,7 +261,8 @@ class UserInfoHandlerTest {
 
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
+        when(userInfoService.populateUserInfo(accessTokenStore, authSession))
+                .thenReturn(TEST_SUBJECT_USER_INFO);
         when(sessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(testSession));
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();

@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -28,7 +29,8 @@ public class UserInfoService {
         this.configurationService = configurationService;
     }
 
-    public UserInfo populateUserInfo(AccessTokenStore accessTokenInfo) {
+    public UserInfo populateUserInfo(
+            AccessTokenStore accessTokenInfo, AuthSessionItem authSession) {
         LOG.info("Populating Authentication UserInfo");
         String internalSubjectId = accessTokenInfo.getSubjectID();
         var userProfile = authenticationService.getUserProfileFromSubject(internalSubjectId);
@@ -41,6 +43,7 @@ public class UserInfoService {
 
         var userInfo = new UserInfo(internalPairwiseId);
         addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
+        addClaimsFromSession(authSession, userInfo);
         return userInfo;
     }
 
@@ -84,6 +87,10 @@ public class UserInfoService {
             String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
             userInfo.setClaim("salt", base64StringFromSalt);
         }
+    }
+
+    private void addClaimsFromSession(AuthSessionItem authSession, UserInfo userInfo) {
+        userInfo.setClaim("verified_mfa_method_type", authSession.getVerifiedMfaMethodType());
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {

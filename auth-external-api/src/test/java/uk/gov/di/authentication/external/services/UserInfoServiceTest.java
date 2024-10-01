@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -60,6 +61,7 @@ public class UserInfoServiceTest {
                     .withPhoneNumber(TEST_PHONE)
                     .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
                     .withSalt(TEST_SALT);
+    private static final AuthSessionItem authSession = new AuthSessionItem();
 
     @BeforeEach
     public void setUp() {
@@ -85,7 +87,7 @@ public class UserInfoServiceTest {
             String expectedPhoneNumber,
             Boolean expectedPhoneNumberVerified,
             String expectedSalt) {
-        UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore);
+        UserInfo actual = userInfoService.populateUserInfo(mockAccessTokenStore, authSession);
 
         assertEquals(TEST_INTERNAL_PAIRWISE_ID, actual.getSubject().getValue());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
