@@ -8,7 +8,6 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 
 import java.time.Instant;
@@ -18,7 +17,6 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,25 +43,6 @@ class AuthSessionServiceTest {
     void setup() {
         when(configurationService.getSessionExpiry()).thenReturn(86400L);
         authSessionService = new AuthSessionService(dynamoDbClient, table, configurationService);
-    }
-
-    @Test
-    void shouldRetrieveSessionIdUsingRequestHeaders() {
-        var sessionId =
-                authSessionService.getSessionIdFromRequestHeaders(Map.of("Session-Id", SESSION_ID));
-
-        sessionId.ifPresentOrElse(
-                session -> assertThat(sessionId.get(), is(SESSION_ID)),
-                () -> fail("Could not retrieve result"));
-    }
-
-    @Test
-    void shouldReturnEmptyIfSessionIdNotInRequestHeaders() {
-        var sessionId =
-                authSessionService.getSessionIdFromRequestHeaders(
-                        Map.of("A-Header", "example-header"));
-
-        assertTrue(sessionId.isEmpty());
     }
 
     @Test
@@ -143,39 +122,6 @@ class AuthSessionServiceTest {
     }
 
     @Test
-    void shouldSetVerifiedMfaMethodTypeSuccessfully() {
-        withValidSession();
-
-        authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS);
-
-        ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
-        verify(table).updateItem(captor.capture());
-        AuthSessionItem updatedItem = captor.getValue();
-
-        assertThat(updatedItem.getVerifiedMfaMethodType(), is(MFAMethodType.SMS.getValue()));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenSessionNotFoundWhenSettingMfa() {
-        withNoSession();
-
-        assertThrows(
-                AuthSessionException.class,
-                () -> authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenDynamoDbFailsDuringMfaUpdate() {
-        AuthSessionItem sessionItem =
-                new AuthSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
-        doThrow(DynamoDbException.class).when(table).putItem(sessionItem);
-
-        assertThrows(
-                AuthSessionException.class,
-                () -> authSessionService.setVerifiedMfaMethodType(SESSION_ID, MFAMethodType.SMS));
-    }
-
-    @Test
     void getSessionFromRequestHeadersReturnsEmptyWhenNoSessionId() {
         var session = authSessionService.getSessionFromRequestHeaders(Map.of());
         assertThat(session.isEmpty(), equalTo(true));
@@ -188,6 +134,22 @@ class AuthSessionServiceTest {
         var session = authSessionService.getSessionFromRequestHeaders(headerMap);
         assertThat(session.isPresent(), equalTo(true));
         assertThat(session.get(), equalTo(expectedSession));
+    }
+
+    @Test
+    void shouldReturnEmptyOptionalWhenNoSessionIdHeader() {
+        withValidSession();
+        var session = authSessionService.getSessionFromRequestHeaders(Map.of());
+        assertThat(session.isEmpty(), equalTo(true));
+    }
+
+    @Test
+    void shouldReturnEmptyWhenNoSessionExistsForHeader() {
+        withNoSession();
+        var session =
+                authSessionService.getSessionFromRequestHeaders(
+                        Map.of(SESSION_ID_HEADER, SESSION_ID));
+        assertThat(session.isEmpty(), equalTo(true));
     }
 
     @Test
