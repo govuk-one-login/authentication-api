@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -39,7 +40,15 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
+        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
+        return userInfo;
+    }
 
+    private void addClaimsFromToken(
+            AccessTokenStore accessTokenInfo,
+            String internalSubjectId,
+            UserProfile userProfile,
+            UserInfo userInfo) {
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         internalSubjectId,
@@ -75,7 +84,6 @@ public class UserInfoService {
             String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
             userInfo.setClaim("salt", base64StringFromSalt);
         }
-        return userInfo;
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {
