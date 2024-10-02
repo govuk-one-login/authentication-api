@@ -174,8 +174,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);
-            Optional<String> maybeRpPairwiseId =
-                    getInternalCommonSubjectIdentifier(userProfile, client);
+            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client);
 
             String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
 
@@ -535,16 +534,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return journeyType;
     }
 
-    private Optional<String> getInternalCommonSubjectIdentifier(
-            UserProfile userProfile, ClientRegistry client) {
+    private Optional<String> getRpPairwiseId(UserProfile userProfile, ClientRegistry client) {
         try {
-            var internalCommonSubjectIdentifier =
+            var rpPairwiseId =
                     ClientSubjectHelper.getSubject(
                             userProfile,
                             client,
                             authenticationService,
                             configurationService.getInternalSectorUri());
-            return Optional.of(internalCommonSubjectIdentifier.getValue());
+            return Optional.of(rpPairwiseId.getValue());
         } catch (RuntimeException e) {
             LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
             return Optional.empty();

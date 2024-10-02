@@ -166,8 +166,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var journeyType = codeRequest.getJourneyType();
         Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
-        var maybeRpPairwiseId =
-                getInternalCommonSubjectIdentifier(userProfile, userContext.getClient());
+        var maybeRpPairwiseId = getRpPairwiseId(userProfile, userContext.getClient());
 
         var auditContext =
                 auditContextFromUserContext(
@@ -542,7 +541,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .toArray(AuditService.MetadataPair[]::new);
     }
 
-    private Optional<String> getInternalCommonSubjectIdentifier(
+    private Optional<String> getRpPairwiseId(
             UserProfile userProfile, Optional<ClientRegistry> maybeClient) {
         try {
             return maybeClient.map(
