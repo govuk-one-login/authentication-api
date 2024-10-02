@@ -274,7 +274,8 @@ class StartHandlerTest {
 
         // This should not be called. Setup here is to ensure that the feature flag is determining
         // this test's behaviour
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), any()))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -295,8 +296,6 @@ class StartHandlerTest {
     @Test
     void shouldNotCallAuthenticationAttemptsServiceWhenThereIsNoSubjectId() throws ParseException {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
         when(userProfile.getSubjectID()).thenReturn(null);
 
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
