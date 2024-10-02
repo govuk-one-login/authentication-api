@@ -69,3 +69,5 @@ orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-
 authorize_protected_subnet_enabled = true
 
 oidc_origin_domain_enabled = true
+
+code_deploy_notification = false

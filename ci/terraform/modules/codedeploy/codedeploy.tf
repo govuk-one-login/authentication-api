@@ -12,7 +12,7 @@ resource "aws_codedeploy_deployment_group" "auth" {
   deployment_group_name = "authDeploymentGroup"
   service_role_arn      = aws_iam_role.codedeploy_deployment_group_auth.arn
 
-  deployment_config_name = "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
+  deployment_config_name = var.disable_canary ? "CodeDeployDefault.LambdaLinear10PercentEvery1Minute" : "CodeDeployDefault.LambdaAllAtOnce"
   deployment_style {
     deployment_option = "WITH_TRAFFIC_CONTROL"
     deployment_type   = "BLUE_GREEN"
@@ -81,9 +81,12 @@ EOT
 # ----------------------------------------------------------
 
 data "aws_cloudformation_export" "notifications" {
-  name = "${var.environment}-notifications-BuildNotificationTopicArn"
+  count = var.code_deploy_notification ? 0 : 1
+  name  = "${var.environment}-notifications-BuildNotificationTopicArn"
 }
+
 resource "aws_codestarnotifications_notification_rule" "auth" {
+  count          = var.code_deploy_notification ? 0 : 1
   detail_type    = "BASIC"
   event_type_ids = ["codedeploy-application-deployment-failed"]
 
@@ -91,6 +94,6 @@ resource "aws_codestarnotifications_notification_rule" "auth" {
   resource = aws_codedeploy_app.auth.arn
 
   target {
-    address = data.aws_cloudformation_export.notifications.value
+    address = data.aws_cloudformation_export.notifications[0].value
   }
 }

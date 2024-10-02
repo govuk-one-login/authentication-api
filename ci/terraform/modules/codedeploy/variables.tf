@@ -57,3 +57,15 @@ variable "auto_rollback_events" {
   type        = list(string)
   default     = ["DEPLOYMENT_FAILURE"]
 }
+
+variable "code_deploy_notification" {
+  description = "Enable Notication for Code deployment failure"
+  type        = bool
+  default     = true
+}
+
+variable "disable_canary" {
+  description = "Flag to disable cannary via git commit  msg "
+  type        = bool
+  default     = true
+}
