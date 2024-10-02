@@ -183,7 +183,6 @@ public class StartHandler
             StartRequest startRequest = objectMapper.readValue(input.getBody(), StartRequest.class);
             Optional<String> previousSessionId =
                     Optional.ofNullable(startRequest.previousSessionId());
-            LOG.info("previousSessionId: {}", previousSessionId);
             authSessionService.addOrUpdateSessionId(previousSessionId, session.getSessionId());
 
             var clientSessionId =
