@@ -83,6 +83,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String CLIENT_ID = "test-client";
+    private static final String BROWSER_SESSION_ID = "some-browser-session-id";
     private static final URI RP_REDIRECT_URI = URI.create("https://rp-uri/redirect");
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -249,9 +250,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 redirectUri,
                 startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
         assertThat(
-                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(2));
+                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(3));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid")
                         .isPresent(),
                 equalTo(true));
         var persistentCookie =
@@ -291,9 +296,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 redirectUri,
                 startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
         assertThat(
-                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(3));
+                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(4));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid")
                         .isPresent(),
                 equalTo(true));
         var persistentCookie =
@@ -373,12 +382,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldRedirectToLoginUriWhenBadCookieIsPresent() {
+    void shouldRedirectToLoginUriWhenBadSessionIdCookieIsPresent() {
         setupForAuthJourney();
+
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(Optional.of(new HttpCookie("gs", "this is bad"))),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    new HttpCookie("gs", "this is bad"),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", null),
                         Optional.of("GET"));
 
@@ -396,6 +410,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 response.getMultiValueHeaders(), "di-persistent-session-id")
                         .isPresent(),
                 equalTo(true));
+
+        Optional<HttpCookie> browserSessionIdCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
+        assertThat(browserSessionIdCookie.isPresent(), equalTo(true));
+        assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -412,7 +431,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", null),
                         Optional.of("GET"));
 
@@ -431,6 +453,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .isPresent(),
                 equalTo(true));
 
+        Optional<HttpCookie> browserSessionIdCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
+        assertThat(browserSessionIdCookie.isPresent(), equalTo(true));
+        assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
+
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
@@ -444,14 +471,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", null),
                         Optional.of("GET"));
 
@@ -460,15 +490,21 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 redirectUri,
                 startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        var cookie =
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(
                                 response.getMultiValueHeaders(), "di-persistent-session-id")
                         .isPresent(),
                 equalTo(true));
-        assertThat(cookie.isPresent(), equalTo(true));
-        assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
+
+        Optional<HttpCookie> sessionIdCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertThat(sessionIdCookie.isPresent(), equalTo(true));
+        assertThat(sessionIdCookie.get().getValue(), not(startsWith(sessionId)));
+
+        Optional<HttpCookie> browserSessionIdCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
+        assertThat(browserSessionIdCookie.isPresent(), equalTo(true));
+        assertThat(browserSessionIdCookie.get().getValue(), equalTo(BROWSER_SESSION_ID));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -483,14 +519,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
                         Optional.of("GET"));
 
@@ -506,6 +545,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
+        Optional<HttpCookie> browserSessionIdCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
+        assertThat(browserSessionIdCookie.isPresent(), equalTo(true));
+        assertThat(browserSessionIdCookie.get().getValue(), equalTo(BROWSER_SESSION_ID));
+
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
@@ -520,14 +564,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(
                                 CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]"),
                         Optional.of("GET"));
@@ -570,14 +617,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(
                                 CLIENT_ID, NONE.toString(), OPENID.getValue(), null),
                         Optional.of("GET"));
@@ -610,14 +660,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(
                                 CLIENT_ID, LOGIN.toString(), OPENID.getValue(), null),
                         Optional.of("GET"));
@@ -652,14 +705,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setupForAuthJourney();
         String sessionId = givenAnExistingSession(LOW_LEVEL);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        redis.addBrowserSesssionIdToSession(sessionId, BROWSER_SESSION_ID);
         registerUser();
 
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
-                                Optional.of(
-                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                                new HttpCookie[] {
+                                    buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", BROWSER_SESSION_ID)
+                                }),
                         constructQueryStringParameters(
                                 CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
                         Optional.of("GET"));
