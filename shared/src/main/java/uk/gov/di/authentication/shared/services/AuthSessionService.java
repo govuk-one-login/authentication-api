@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
@@ -73,23 +72,27 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 put(newItem);
                 LOG.info("New item added to Auth session table. sessionId: {}", newSessionId);
             }
-        } catch (DynamoDbException e) {
-            LOG.error("Failed to update or add sessionId: {}", e.getMessage());
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to add or update session ID of Auth session item", newSessionId, e);
         }
     }
 
     public Optional<AuthSessionItem> getSession(String sessionId) {
-        Optional<AuthSessionItem> authSession = get(sessionId);
-
+        Optional<AuthSessionItem> authSession = Optional.empty();
+        try {
+            authSession = get(sessionId);
+        } catch (Exception e) {
+            logAndThrowAuthSessionException("Failed to get Auth session item", sessionId, e);
+        }
         if (authSession.isEmpty()) {
-            LOG.info("No Auth session item found with sessionId {}", sessionId);
+            LOG.info("No Auth session item found with session ID: {}", sessionId);
             return authSession;
         }
 
         Optional<AuthSessionItem> validAuthSession =
                 authSession.filter(
                         s -> s.getTimeToLive() > NowHelper.now().toInstant().getEpochSecond());
-
         if (validAuthSession.isEmpty()) {
             LOG.info("Auth session item with expired TTL found. Session ID: {}", sessionId);
         }
@@ -114,27 +117,26 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                             try {
                                 return getSession(id);
                             } catch (Exception e) {
-                                LOG.error(
-                                        "Failed to retrieve session for id: {}, error: {}",
+                                logAndThrowAuthSessionException(
+                                        "Failed to get Auth session item from request headers",
                                         id,
-                                        e.getMessage());
-                                throw new AuthSessionException(
-                                        String.format(
-                                                "Failed to get session from session store: %s",
-                                                e.getMessage()));
+                                        e);
                             }
+                            return Optional.empty();
                         });
     }
 
     public void updateSession(AuthSessionItem sessionItem) {
         try {
             update(sessionItem);
-        } catch (DynamoDbException e) {
-            LOG.error(
-                    "Error updating Auth session item with id {}, Error: {}",
-                    sessionItem.getSessionId(),
-                    e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to update Auth session item", sessionItem.getSessionId(), e);
         }
+    }
+
+    private void logAndThrowAuthSessionException(String message, String sessionId, Exception e) {
+        LOG.error("{}. Session ID: {}. Error message: {}", message, sessionId, e.getMessage());
+        throw new AuthSessionException(message);
     }
 }
