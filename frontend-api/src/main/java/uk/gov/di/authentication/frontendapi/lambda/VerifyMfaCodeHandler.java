@@ -321,11 +321,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             var clientSession = userContext.getClientSession();
                             var levelOfConfidence =
                                     clientSession
-                                            .getEffectiveVectorOfTrust()
-                                            .containsLevelOfConfidence()
+                                                    .getEffectiveVectorOfTrust()
+                                                    .containsLevelOfConfidence()
                                             ? clientSession
-                                            .getEffectiveVectorOfTrust()
-                                            .getLevelOfConfidence()
+                                                    .getEffectiveVectorOfTrust()
+                                                    .getLevelOfConfidence()
                                             : NONE;
 
                             LOG.info(
@@ -396,7 +396,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                     && subjectId != null) {
                 preserveReauthCountsForAuditIfJourneyIsReauth(
-                        codeRequest.getJourneyType(), subjectId, session);
+                        codeRequest.getJourneyType(), subjectId, session, maybeRpPairwiseId);
                 clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
                 maybeRpPairwiseId.ifPresentOrElse(
                         this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -451,13 +451,22 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType, String subjectId, Session session) {
+            JourneyType journeyType,
+            String subjectId,
+            Session session,
+            Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
+                    maybeRpPairwiseId.isPresent()
+                            ? authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            subjectId,
+                                            maybeRpPairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService.getCountsByJourney(
+                                    subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
             sessionService.storeOrUpdateSession(updatedSession);
         }
@@ -518,9 +527,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         var failureCount =
                                 methodType.equals(MFAMethodType.AUTH_APP)
                                         ? codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                                        email, MFAMethodType.AUTH_APP)
+                                                email, MFAMethodType.AUTH_APP)
                                         : codeStorageService.getIncorrectMfaCodeAttemptsCount(
-                                        email);
+                                                email);
                         yield List.of(
                                 pair("loginFailureCount", failureCount),
                                 pair("MFACodeEntered", codeRequest.getCode()));

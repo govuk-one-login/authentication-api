@@ -763,7 +763,8 @@ class VerifyCodeHandlerTest {
         when(codeStorageService.getOtpCode(EMAIL, MFA_SMS)).thenReturn(Optional.of(CODE));
         withReauthTurnedOn();
         var existingCounts = Map.of(ENTER_EMAIL, 5, ENTER_PASSWORD, 1);
-        when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), eq(REAUTHENTICATION)))
                 .thenReturn(existingCounts);
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);

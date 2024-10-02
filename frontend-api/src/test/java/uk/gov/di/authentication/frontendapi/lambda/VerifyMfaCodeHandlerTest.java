@@ -858,8 +858,8 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
         when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
@@ -895,8 +895,8 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
 
         var codeRequest =

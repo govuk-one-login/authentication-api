@@ -385,7 +385,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
-            preserveReauthCountsForAuditIfJourneyIsReauth(journeyType, subjectId, session);
+            preserveReauthCountsForAuditIfJourneyIsReauth(
+                    journeyType, subjectId, session, maybePairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
             maybePairwiseId.ifPresentOrElse(
                     this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
@@ -401,13 +402,22 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType, String subjectId, Session session) {
+            JourneyType journeyType,
+            String subjectId,
+            Session session,
+            Optional<String> maybePairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
+                    maybePairwiseId.isPresent()
+                            ? authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            subjectId,
+                                            maybePairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService.getCountsByJourney(
+                                    subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
             sessionService.storeOrUpdateSession(updatedSession);
         }
