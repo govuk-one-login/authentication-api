@@ -19,6 +19,7 @@ import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -217,6 +218,15 @@ public class IntegrationTest {
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
         cookie.ifPresent(c -> headers.put("Cookie", c.toString()));
+        headers.put("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE);
+        return headers;
+    }
+
+    protected Map<String, String> constructHeaders(HttpCookie[] cookies) {
+        final Map<String, String> headers = new HashMap<>();
+        String cookiesString =
+                String.join("; ", Arrays.stream(cookies).map(HttpCookie::toString).toList());
+        headers.put("Cookie", cookiesString);
         headers.put("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE);
         return headers;
     }
