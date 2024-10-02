@@ -27,6 +27,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.oidc.exceptions.InvalidJWEException;
@@ -43,6 +44,8 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.List;
@@ -130,14 +133,26 @@ public class OrchestrationAuthorizationService {
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(jwtClaimsSet.toString());
         var message = encodedHeader + "." + encodedClaims;
-        var signRequest =
+
+        var signRequestBuilder =
                 SignRequest.builder()
-                        .message(SdkBytes.fromByteArray(message.getBytes(StandardCharsets.UTF_8)))
                         .keyId(
                                 configurationService
                                         .getOrchestrationToAuthenticationTokenSigningKeyAlias())
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256);
+
+        SignRequest signRequest =
+                isMessageHashSignRequired(message)
+                        ? signRequestBuilder
+                                .message(SdkBytes.fromByteArray(getMessageHashDigest(message)))
+                                .messageType(MessageType.DIGEST)
+                                .build()
+                        : signRequestBuilder
+                                .message(
+                                        SdkBytes.fromByteArray(
+                                                message.getBytes(StandardCharsets.UTF_8)))
+                                .messageType(MessageType.RAW)
+                                .build();
         try {
             LOG.info("Signing request JWT");
             var signResult = kmsConnectionService.sign(signRequest);
@@ -235,5 +250,21 @@ public class OrchestrationAuthorizationService {
     public boolean isJarValidationRequired(ClientRegistry client) {
         return client.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())
                 || client.isJarValidationRequired();
+    }
+
+    private boolean isMessageHashSignRequired(String jwtMessage) {
+        return jwtMessage.getBytes(StandardCharsets.UTF_8).length >= 4096;
+    }
+
+    private byte[] getMessageHashDigest(String jwtMessage) {
+        byte[] signingInputHash;
+        try {
+            signingInputHash =
+                    MessageDigest.getInstance("SHA-256")
+                            .digest(jwtMessage.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+        return signingInputHash;
     }
 }
