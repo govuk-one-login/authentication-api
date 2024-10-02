@@ -6,6 +6,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -27,7 +29,8 @@ public class UserInfoService {
         this.configurationService = configurationService;
     }
 
-    public UserInfo populateUserInfo(AccessTokenStore accessTokenInfo) {
+    public UserInfo populateUserInfo(
+            AccessTokenStore accessTokenInfo, AuthSessionItem authSession) {
         LOG.info("Populating Authentication UserInfo");
         String internalSubjectId = accessTokenInfo.getSubjectID();
         var userProfile = authenticationService.getUserProfileFromSubject(internalSubjectId);
@@ -39,7 +42,16 @@ public class UserInfoService {
                         authenticationService);
 
         var userInfo = new UserInfo(internalPairwiseId);
+        addClaimsFromToken(accessTokenInfo, internalSubjectId, userProfile, userInfo);
+        addClaimsFromSession(authSession, userInfo);
+        return userInfo;
+    }
 
+    private void addClaimsFromToken(
+            AccessTokenStore accessTokenInfo,
+            String internalSubjectId,
+            UserProfile userProfile,
+            UserInfo userInfo) {
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         internalSubjectId,
@@ -75,7 +87,12 @@ public class UserInfoService {
             String base64StringFromSalt = bytesToBase64(userProfile.getSalt());
             userInfo.setClaim("salt", base64StringFromSalt);
         }
-        return userInfo;
+    }
+
+    private void addClaimsFromSession(AuthSessionItem authSession, UserInfo userInfo) {
+        userInfo.setClaim(
+                AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                authSession.getVerifiedMfaMethodType());
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {

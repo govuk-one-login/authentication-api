@@ -165,7 +165,7 @@ public class UserInfoHandler
                 throw new AccessTokenException(
                         "Invalid bearer token", BearerTokenError.INVALID_TOKEN);
             }
-            userInfo = userInfoService.populateUserInfo(accessTokenStore);
+            userInfo = userInfoService.populateUserInfo(accessTokenStore, authSession);
         } catch (AccessTokenException e) {
             LOG.warn(
                     "AccessTokenException: {}. Sending back UserInfoErrorResponse", e.getMessage());
