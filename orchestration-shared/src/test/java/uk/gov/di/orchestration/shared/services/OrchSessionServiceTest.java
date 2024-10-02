@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
+import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 
 import java.time.Instant;
 
@@ -51,11 +52,11 @@ class OrchSessionServiceTest {
     }
 
     @Test
-    void updateSessionThrowsAnyDynamoExceptions() {
+    void updateSessionThrowsOrchSessionExceptionWhenUpdateFails() {
         withFailedUpdate();
         var sessionToBeUpdated = new OrchSessionItem().withSessionId(SESSION_ID);
         assertThrows(
-                DynamoDbException.class,
+                OrchSessionException.class,
                 () -> orchSessionService.updateSession(sessionToBeUpdated));
     }
 

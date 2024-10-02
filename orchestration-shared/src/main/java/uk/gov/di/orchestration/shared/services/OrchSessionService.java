@@ -4,8 +4,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
+import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
@@ -38,13 +38,20 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
                                 NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
-
-        put(item);
+        try {
+            put(item);
+        } catch (Exception e) {
+            logAndThrowOrchSessionException("Failed to add Orch session item", sessionId, e);
+        }
     }
 
     public Optional<OrchSessionItem> getSession(String sessionId) {
-        Optional<OrchSessionItem> orchSession = get(sessionId);
-
+        Optional<OrchSessionItem> orchSession = Optional.empty();
+        try {
+            orchSession = get(sessionId);
+        } catch (Exception e) {
+            logAndThrowOrchSessionException("Failed to get Orch session item", sessionId, e);
+        }
         if (orchSession.isEmpty()) {
             LOG.info("No Orch session item found with sessionId {}", sessionId);
             return orchSession;
@@ -53,7 +60,6 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         Optional<OrchSessionItem> validOrchSession =
                 orchSession.filter(
                         s -> s.getTimeToLive() > NowHelper.now().toInstant().getEpochSecond());
-
         if (validOrchSession.isEmpty()) {
             LOG.info("Orch session item with expired TTL found. Session ID: {}", sessionId);
         }
@@ -63,12 +69,14 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
     public void updateSession(OrchSessionItem sessionItem) {
         try {
             update(sessionItem);
-        } catch (DynamoDbException e) {
-            LOG.error(
-                    "Error updating Orch session item with id {}, Error: {}",
-                    sessionItem.getSessionId(),
-                    e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            logAndThrowOrchSessionException(
+                    "Error updating Orch session item", sessionItem.getSessionId(), e);
         }
+    }
+
+    private void logAndThrowOrchSessionException(String message, String sessionId, Exception e) {
+        LOG.error("{}. Session ID: {}. Error message: {}", message, sessionId, e.getMessage());
+        throw new OrchSessionException(message);
     }
 }
