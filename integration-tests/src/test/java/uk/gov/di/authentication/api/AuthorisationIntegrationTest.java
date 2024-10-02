@@ -469,6 +469,56 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldRedirectToLoginUriWhenUserHasPreviousSessionButNoBsidCookie() throws Exception {
+        setupForAuthJourney();
+        String previousSessionId = givenAnExistingSession(LOW_LEVEL);
+        redis.addBrowserSesssionIdToSession(previousSessionId, BROWSER_SESSION_ID);
+        registerUser();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                new HttpCookie[] {
+                                    buildSessionCookie(previousSessionId, DUMMY_CLIENT_SESSION_ID),
+                                    new HttpCookie("bsid", "some-other-browser-session-id")
+                                }),
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(302));
+
+        String redirectUri = getLocationResponseHeader(response);
+        assertThat(
+                redirectUri,
+                startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
+
+        System.out.println(response.getMultiValueHeaders());
+
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(
+                                response.getMultiValueHeaders(), "di-persistent-session-id")
+                        .isPresent(),
+                equalTo(true));
+
+        var sessionCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
+        assertOnSessionCookie(sessionCookie, previousSessionId);
+
+        Optional<HttpCookie> browserSessionIdCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "bsid");
+        assertTrue(browserSessionIdCookie.isPresent());
+        assertThat(browserSessionIdCookie.get().getValue(), not(equalTo(BROWSER_SESSION_ID)));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
+    }
+
+    @Test
     void shouldRedirectToLoginUriWhenUserHasPreviousSession() throws Exception {
         setupForAuthJourney();
         String previousSessionId = givenAnExistingSession(MEDIUM_LEVEL);
