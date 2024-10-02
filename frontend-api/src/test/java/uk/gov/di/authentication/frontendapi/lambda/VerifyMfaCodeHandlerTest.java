@@ -30,6 +30,7 @@ import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -124,6 +125,7 @@ class VerifyMfaCodeHandlerTest {
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
+    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
 
@@ -184,8 +186,8 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
-        when(authSessionService.getSessionIdFromRequestHeaders(any()))
-                .thenReturn(Optional.of(SESSION_ID));
+        when(authSessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(authSession));
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -226,8 +228,8 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-        session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -253,7 +255,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.NEW,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -263,7 +270,6 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-        session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
 
         var mfaCodeRequest =
@@ -302,9 +308,10 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-        session.setNewAccount(Session.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         session.setInternalCommonSubjectIdentifier(null);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
@@ -330,7 +337,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -340,7 +352,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
-        session.setNewAccount(Session.AccountState.NEW);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
@@ -367,7 +379,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.NEW,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -377,7 +394,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-        session.setNewAccount(Session.AccountState.EXISTING);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
@@ -404,7 +421,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -414,7 +436,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-        session.setNewAccount(Session.AccountState.EXISTING);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
@@ -441,7 +463,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
@@ -455,7 +482,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
-        session.setNewAccount(Session.AccountState.EXISTING);
+        authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType);
         var result = makeCallWithCode(codeRequest);
 
@@ -472,7 +499,12 @@ class VerifyMfaCodeHandlerTest {
                 pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+                        AuthSessionItem.AccountState.EXISTING,
+                        CLIENT_ID,
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        true);
     }
 
     @ParameterizedTest
@@ -766,7 +798,6 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1041));
-        session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         if (!CodeRequestType.isValidCodeRequestType(MFAMethodType.AUTH_APP, journeyType)) {
             return;

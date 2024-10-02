@@ -246,7 +246,7 @@ class LoginHandlerTest {
 
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING,
+                        AuthSessionItem.AccountState.EXISTING,
                         CLIENT_ID.getValue(),
                         CLIENT_NAME,
                         "P0",

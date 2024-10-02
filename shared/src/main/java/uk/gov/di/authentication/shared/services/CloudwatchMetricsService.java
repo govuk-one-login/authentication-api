@@ -3,7 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 
 import java.util.Map;
 
@@ -19,8 +19,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTIC
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.EMAIL_CHECK_DURATION;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.MFA_RESET_HANDOFF;
-import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
@@ -56,7 +54,7 @@ public class CloudwatchMetricsService {
     }
 
     public void incrementAuthenticationSuccess(
-            Session.AccountState accountState,
+            AuthSessionItem.AccountState accountState,
             String clientId,
             String clientName,
             String requestedLevelOfConfidence,
@@ -79,7 +77,7 @@ public class CloudwatchMetricsService {
                         Boolean.toString(mfaRequired),
                         CLIENT_NAME.getValue(),
                         clientName));
-        if (NEW.equals(accountState) && !isTestJourney) {
+        if (AuthSessionItem.AccountState.NEW.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
@@ -90,7 +88,7 @@ public class CloudwatchMetricsService {
                             CLIENT_NAME.getValue(),
                             clientName));
         }
-        if (EXISTING.equals(accountState) && !isTestJourney) {
+        if (AuthSessionItem.AccountState.EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(

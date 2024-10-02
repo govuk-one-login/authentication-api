@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -154,13 +155,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
-        Optional<String> authSessionId =
-                authSessionService.getSessionIdFromRequestHeaders(input.getHeaders());
-        if (authSessionId.isEmpty()) {
-            LOG.warn("Auth session ID cannot be found");
+        Optional<AuthSessionItem> authSession =
+                authSessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (authSession.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
-            attachAuthSessionIdToLogs(authSessionId.get());
+            attachAuthSessionIdToLogs(authSession.get());
         }
 
         var journeyType = codeRequest.getJourneyType();
@@ -191,7 +191,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, journeyType, subjectID, authSessionId.get());
+                    input, codeRequest, userContext, journeyType, subjectID, authSession.get());
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -256,7 +256,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             JourneyType journeyType,
             String subjectId,
-            String authSessionId) {
+            AuthSessionItem authSession) {
 
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
@@ -322,8 +322,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                             .setVerifiedMfaMethodType(
                                                     codeRequest.getMfaMethodType()));
 
-                            authSessionService.setVerifiedMfaMethodType(
-                                    authSessionId, codeRequest.getMfaMethodType());
+                            authSessionService.updateSession(
+                                    authSession.withVerifiedMfaMethodType(
+                                            codeRequest.getMfaMethodType().getValue()));
 
                             var clientId =
                                     userContext.getClient().isPresent()
@@ -331,7 +332,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                             : null;
 
                             cloudwatchMetricsService.incrementAuthenticationSuccess(
-                                    session.isNewAccount(),
+                                    authSession.getIsNewAccount(),
                                     clientId,
                                     userContext.getClientName(),
                                     levelOfConfidence.getValue(),
