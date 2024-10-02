@@ -67,7 +67,7 @@ class AuthSessionServiceTest {
                         .withSessionId(SESSION_ID)
                         .withAccountState(AuthSessionItem.AccountState.EXISTING);
         assertThrows(
-                DynamoDbException.class,
+                AuthSessionException.class,
                 () -> authSessionService.updateSession(sessionToBeUpdated));
     }
 
