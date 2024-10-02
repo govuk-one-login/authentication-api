@@ -90,7 +90,9 @@ public class UserInfoService {
     }
 
     private void addClaimsFromSession(AuthSessionItem authSession, UserInfo userInfo) {
-        userInfo.setClaim("verified_mfa_method_type", authSession.getVerifiedMfaMethodType());
+        userInfo.setClaim(
+                AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                authSession.getVerifiedMfaMethodType());
     }
 
     private static String bytesToBase64(ByteBuffer byteBuffer) {
