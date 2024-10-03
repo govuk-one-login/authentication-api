@@ -549,6 +549,9 @@ public class AuthorisationHandler
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session);
+        orchSessionOptional.ifPresentOrElse(
+                s -> orchSessionService.updateSession(orchSession),
+                () -> orchSessionService.addSession(orchSession));
         LOG.info("Session saved successfully");
 
         var state = new State();
@@ -652,6 +655,9 @@ public class AuthorisationHandler
                 pair("client-name", client.getClientName()));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
+        orchSessionOptional.ifPresentOrElse(
+                s -> orchSessionService.updateSession(orchSession),
+                () -> orchSessionService.addSession(orchSession));
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
