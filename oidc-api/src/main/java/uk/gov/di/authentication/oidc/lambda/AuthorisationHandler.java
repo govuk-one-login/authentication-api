@@ -398,7 +398,7 @@ public class AuthorisationHandler
                 pair("reauthRequested", reauthRequested));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
-        Optional<OrchSessionItem> orchSession =
+        Optional<OrchSessionItem> orchSessionOptional =
                 orchSessionService.getSessionFromSessionCookie(input.getHeaders());
 
         var vtrList = getVtrList(reauthRequested, authRequest);
@@ -413,6 +413,7 @@ public class AuthorisationHandler
                 authRequest.toParameters(), Optional.of(client))) {
             return handleDocAppJourney(
                     session,
+                    orchSessionOptional,
                     clientSession,
                     authRequest,
                     client,
@@ -446,6 +447,7 @@ public class AuthorisationHandler
 
         return handleAuthJourney(
                 sessionWithValidBrowserSessionId,
+                orchSessionOptional,
                 clientSession,
                 authRequest,
                 persistentSessionId,
@@ -493,6 +495,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
             Optional<Session> existingSession,
+            Optional<OrchSessionItem> orchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
@@ -572,6 +575,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<Session> existingSession,
+            Optional<OrchSessionItem> orchSession,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
