@@ -72,6 +72,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -117,8 +118,9 @@ public class AuthorisationHandler
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
     public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
 
-    private final SessionService sessionService;
     private final ConfigurationService configurationService;
+    private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final ClientSessionService clientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
@@ -135,6 +137,7 @@ public class AuthorisationHandler
     public AuthorisationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
@@ -149,6 +152,7 @@ public class AuthorisationHandler
             AuthorisationService authorisationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.clientSessionService = clientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
@@ -166,6 +170,7 @@ public class AuthorisationHandler
     public AuthorisationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -195,6 +200,7 @@ public class AuthorisationHandler
             ConfigurationService configurationService, RedisConnectionService redis) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService, redis);
