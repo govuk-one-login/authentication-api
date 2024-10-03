@@ -7,8 +7,10 @@ import uk.gov.di.orchestration.shared.entity.Session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.ORCH_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
 
@@ -55,6 +57,14 @@ class LogLineHelperTest {
         assertTrue(ThreadContext.containsKey(SESSION_ID.getLogFieldName()));
         assertEquals(1, ThreadContext.getContext().size());
         assertEquals(newIdentifier, ThreadContext.get(SESSION_ID.getLogFieldName()));
+    }
+
+    @Test
+    void shouldAttachOrchSessionIdToThreadContextUsingString() {
+        attachOrchSessionIdToLogs(identifier);
+
+        assertTrue(ThreadContext.containsKey(ORCH_SESSION_ID.getLogFieldName()));
+        assertEquals(identifier, ThreadContext.get(ORCH_SESSION_ID.getLogFieldName()));
     }
 
     @Test
