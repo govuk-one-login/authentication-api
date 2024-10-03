@@ -12,7 +12,7 @@ resource "aws_codedeploy_deployment_group" "auth" {
   deployment_group_name = "authDeploymentGroup"
   service_role_arn      = aws_iam_role.codedeploy_deployment_group_auth.arn
 
-  deployment_config_name = var.disable_canary ? "CodeDeployDefault.LambdaLinear10PercentEvery1Minute" : "CodeDeployDefault.LambdaAllAtOnce"
+  deployment_config_name = var.skip_canary ? "CodeDeployDefault.LambdaAllAtOnce" : "CodeDeployDefault.LambdaLinear10PercentEvery1Minute"
   deployment_style {
     deployment_option = "WITH_TRAFFIC_CONTROL"
     deployment_type   = "BLUE_GREEN"

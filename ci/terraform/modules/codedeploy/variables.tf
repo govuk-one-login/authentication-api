@@ -64,8 +64,8 @@ variable "code_deploy_notification" {
   default     = true
 }
 
-variable "disable_canary" {
-  description = "Flag to disable cannary via git commit  msg "
+variable "skip_canary" {
+  description = "Flag to skip cannary if [skip canary] or [canary skip], or [no canary] string is included in git merge commit message"
   type        = bool
-  default     = true
+  default     = false
 }
