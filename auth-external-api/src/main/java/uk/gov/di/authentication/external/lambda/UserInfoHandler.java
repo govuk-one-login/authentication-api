@@ -36,7 +36,7 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATIO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachAuthSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 
 public class UserInfoHandler
@@ -115,8 +115,10 @@ public class UserInfoHandler
                             .getHeaderMap());
         }
 
-        Session userSession;
         try {
+
+            // ATO-982: We should remove this once auth is fully moved from
+            // using the shared session store
             Optional<Session> optionalSession =
                     sessionService.getSessionFromRequestHeaders(input.getHeaders());
 
@@ -125,7 +127,6 @@ public class UserInfoHandler
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
 
-            userSession = optionalSession.get();
         } catch (Exception e) {
             LOG.error("Error retrieving session from redis: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -141,7 +142,7 @@ public class UserInfoHandler
         }
         authSession = optionalAuthSession.get();
 
-        attachSessionIdToLogs(userSession);
+        attachAuthSessionIdToLogs(authSession);
 
         UserInfo userInfo;
         AccessToken accessToken;
@@ -202,8 +203,6 @@ public class UserInfoHandler
                     accessToken.getValue());
         }
 
-        sessionService.storeOrUpdateSession(
-                userSession.setNewAccount(Session.AccountState.EXISTING));
         authSessionService.updateSession(
                 authSession.withAccountState(AuthSessionItem.AccountState.EXISTING));
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
