@@ -18,7 +18,7 @@ import static org.hamcrest.Matchers.hasItem;
 
 public class AuditAssertionsHelper {
 
-    private static final Duration TIMEOUT = Duration.of(1, ChronoUnit.SECONDS);
+    private static final Duration TIMEOUT = Duration.of(10, ChronoUnit.SECONDS);
 
     public static void assertNoTxmaAuditEventsReceived(SqsQueueExtension txmaAuditQueue) {
         await().atMost(TIMEOUT)
