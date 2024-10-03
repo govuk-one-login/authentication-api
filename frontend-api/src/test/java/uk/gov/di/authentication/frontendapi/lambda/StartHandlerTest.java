@@ -294,7 +294,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldNotCallAuthenticationAttemptsServiceWhenThereIsNoSubjectId() throws ParseException {
+    void shouldUseCountsAgainstTheRpPairwiseIdWHhenThereIsNoSubjectId() throws ParseException {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userProfile.getSubjectID()).thenReturn(null);
 
@@ -312,7 +312,8 @@ class StartHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
-        verifyNoInteractions(authenticationAttemptsService);
+        verify(authenticationAttemptsService)
+                .getCountsByJourney(TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION);
     }
 
     @Test
