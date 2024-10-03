@@ -191,8 +191,9 @@ class SignUpHandlerTest {
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("rpPairwiseId", expectedRpPairwiseId));
 
-        verify(sessionService)
-                .storeOrUpdateSession(argThat(s -> s.isNewAccount() == Session.AccountState.NEW));
+        verify(authSessionService)
+                .updateSession(
+                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.NEW));
         verify(sessionService, atLeastOnce())
                 .storeOrUpdateSession(
                         argThat(

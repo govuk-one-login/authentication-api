@@ -34,7 +34,6 @@ import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS;
-import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -181,7 +180,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     userContext
                             .getSession()
                             .setEmailAddress(request.getEmail())
-                            .setNewAccount(NEW)
                             .setInternalCommonSubjectIdentifier(
                                     internalCommonSubjectIdentifier.getValue()));
 
