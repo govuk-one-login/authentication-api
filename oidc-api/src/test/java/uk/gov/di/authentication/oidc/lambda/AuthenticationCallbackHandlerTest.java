@@ -196,11 +196,14 @@ class AuthenticationCallbackHandlerTest {
         assertThat(
                 redirectLocation,
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
-        var savedSession = ArgumentCaptor.forClass(Session.class);
         verifyUserInfoRequest();
-        verify(sessionService).storeOrUpdateSession(savedSession.capture());
-        assertTrue(savedSession.getValue().isAuthenticated());
-        assertEquals(savedSession.getValue().isNewAccount(), Session.AccountState.EXISTING);
+
+        var sessionSaveCaptor = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(2)).storeOrUpdateSession(sessionSaveCaptor.capture());
+        assertThat(
+                Session.AccountState.NEW,
+                equalTo(sessionSaveCaptor.getAllValues().get(0).isNewAccount()));
+        assertTrue(sessionSaveCaptor.getAllValues().get(1).isAuthenticated());
 
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
         verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
