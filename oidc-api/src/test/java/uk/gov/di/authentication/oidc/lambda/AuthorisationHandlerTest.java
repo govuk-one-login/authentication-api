@@ -217,6 +217,7 @@ class AuthorisationHandlerTest {
     }
 
     private Session session;
+    private OrchSessionItem orchSession;
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
@@ -288,7 +289,8 @@ class AuthorisationHandlerTest {
                         tokenValidationService,
                         authFrontend,
                         authorisationService);
-        session = new Session("a-session-id");
+        session = new Session(SESSION_ID);
+        orchSession = new OrchSessionItem().withSessionId(SESSION_ID);
         when(sessionService.generateSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
@@ -325,6 +327,7 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).storeOrUpdateSession(eq(session));
+            verify(orchSessionService).addSession(any());
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
@@ -558,6 +561,10 @@ class AuthorisationHandlerTest {
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).storeOrUpdateSession(eq(session));
+            verify(orchSessionService)
+                    .addOrUpdateSessionId(
+                            Optional.of(orchSession.getSessionId()), session.getSessionId());
+            verify(orchSessionService).updateSession(orchSession);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
@@ -627,6 +634,10 @@ class AuthorisationHandlerTest {
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).storeOrUpdateSession(eq(session));
+            verify(orchSessionService)
+                    .addOrUpdateSessionId(
+                            Optional.of(orchSession.getSessionId()), session.getSessionId());
+            verify(orchSessionService).updateSession(orchSession);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
@@ -668,6 +679,10 @@ class AuthorisationHandlerTest {
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).storeOrUpdateSession(eq(session));
+            verify(orchSessionService)
+                    .addOrUpdateSessionId(
+                            Optional.of(orchSession.getSessionId()), session.getSessionId());
+            verify(orchSessionService).updateSession(orchSession);
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
             inOrder.verify(auditService)
@@ -1112,6 +1127,7 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).storeOrUpdateSession(session);
+            verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
 
@@ -1159,6 +1175,7 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).storeOrUpdateSession(session);
+            verify(orchSessionService).addSession(any());
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -1310,6 +1327,7 @@ class AuthorisationHandlerTest {
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
             assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).storeOrUpdateSession(session);
+            verify(orchSessionService).addSession(any());
 
             verify(requestObjectAuthorizeValidator).validate(any());
 
@@ -2001,9 +2019,22 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldUpdateOrchSessionWhenThereIsAnExistingSession() throws JOSEException {
+            withExistingSession(session);
+
+            makeDocAppHandlerRequest();
+
+            verify(orchSessionService)
+                    .addOrUpdateSessionId(
+                            Optional.of(orchSession.getSessionId()), session.getSessionId());
+            verify(orchSessionService).updateSession(orchSession);
+        }
+
+        @Test
         void shouldSetTheRelevantCookiesInTheHeader() throws JOSEException {
             var response = makeDocAppHandlerRequest();
 
+            verify(orchSessionService).addSession(any());
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
@@ -2022,6 +2053,7 @@ class AuthorisationHandlerTest {
             var response = makeDocAppHandlerRequest();
 
             verify(clientSessionService).storeClientSession(anyString(), any());
+            verify(orchSessionService).addSession(any());
 
             assertThat(response, hasStatus(302));
             assertThat(
@@ -2380,6 +2412,9 @@ class AuthorisationHandlerTest {
 
     private void withExistingSession(Session session) {
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
+        when(orchSessionService.getSessionFromSessionCookie(any()))
+                .thenReturn(Optional.of(orchSession));
+        when(orchSessionService.addOrUpdateSessionId(any(), any())).thenReturn(orchSession);
     }
 
     private void withExistingSessionAuthenticatedValue(Boolean isAuthenticated) {
@@ -2391,6 +2426,7 @@ class AuthorisationHandlerTest {
 
     private void withNoSession() {
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
+        when(orchSessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.empty());
     }
 
     private ClientRegistry generateClientRegistry() {
