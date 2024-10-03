@@ -418,10 +418,10 @@ Resources:
     Properties:
       TableName: !Sub ${Environment}-OrchSession
       AttributeDefinitions:
-        - AttributeName: sessionId
+        - AttributeName: SessionId
           AttributeType: S
       KeySchema:
-        - AttributeName: sessionId
+        - AttributeName: SessionId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
       SSESpecification:
