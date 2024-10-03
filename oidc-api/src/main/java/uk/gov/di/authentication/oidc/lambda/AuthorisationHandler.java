@@ -107,6 +107,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
@@ -516,6 +517,23 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
+        OrchSessionItem orchSession;
+        String newSessionId = IdGenerator.generate();
+        if (orchSessionOptional.isEmpty()) {
+            orchSession = new OrchSessionItem().withSessionId(newSessionId);
+            LOG.info("Created new Orch session");
+        } else {
+            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
+            orchSession =
+                    orchSessionService.addOrUpdateSessionId(
+                            Optional.of(previousOrchSessionId), newSessionId);
+            LOG.info(
+                    "Updated Orch session ID from {} to {}",
+                    previousOrchSessionId,
+                    orchSession.getSessionId());
+        }
+        attachOrchSessionIdToLogs(orchSession.getSessionId());
+
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
                         authenticationRequest.toParameters(),
@@ -575,7 +593,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<Session> existingSession,
-            Optional<OrchSessionItem> orchSession,
+            Optional<OrchSessionItem> orchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -607,6 +625,23 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
+
+        OrchSessionItem orchSession;
+        String newSessionId = IdGenerator.generate();
+        if (orchSessionOptional.isEmpty()) {
+            orchSession = new OrchSessionItem().withSessionId(newSessionId);
+            LOG.info("Created new Orch session");
+        } else {
+            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
+            orchSession =
+                    orchSessionService.addOrUpdateSessionId(
+                            Optional.of(previousOrchSessionId), newSessionId);
+            LOG.info(
+                    "Updated Orch session ID from {} to {}",
+                    previousOrchSessionId,
+                    orchSession.getSessionId());
+        }
+        attachOrchSessionIdToLogs(orchSession.getSessionId());
 
         user = user.withSessionId(session.getSessionId());
 

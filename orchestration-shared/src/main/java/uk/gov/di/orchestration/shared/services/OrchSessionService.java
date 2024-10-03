@@ -50,6 +50,47 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         }
     }
 
+    public OrchSessionItem addOrUpdateSessionId(
+            Optional<String> previousSessionId, String newSessionId) {
+        OrchSessionItem newItem = null;
+        try {
+            Optional<OrchSessionItem> oldItem = Optional.empty();
+            if (previousSessionId.isPresent()) {
+                LOG.info("previousSessionId is present");
+                oldItem = getSession(previousSessionId.get());
+            }
+            if (oldItem.isPresent()) {
+                newItem =
+                        oldItem.get()
+                                .withSessionId(newSessionId)
+                                .withTimeToLive(
+                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                                .toInstant()
+                                                .getEpochSecond());
+                put(newItem);
+                delete(previousSessionId.get());
+                LOG.info(
+                        "Session ID updated in Orch session table. previousSessionId: {}, sessionId: {}",
+                        previousSessionId,
+                        newSessionId);
+            } else {
+                newItem =
+                        new OrchSessionItem()
+                                .withSessionId(newSessionId)
+                                .withTimeToLive(
+                                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                                .toInstant()
+                                                .getEpochSecond());
+                put(newItem);
+                LOG.info("New item added to Orch session table. sessionId: {}", newSessionId);
+            }
+        } catch (Exception e) {
+            logAndThrowOrchSessionException(
+                    "Failed to add or update session ID of Orch session item", newSessionId, e);
+        }
+        return newItem;
+    }
+
     public Optional<OrchSessionItem> getSession(String sessionId) {
         Optional<OrchSessionItem> orchSession = Optional.empty();
         try {
