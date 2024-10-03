@@ -15,6 +15,7 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 
 public class AuditAssertionsHelper {
 
@@ -36,12 +37,13 @@ public class AuditAssertionsHelper {
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
 
-        await().atMost(TIMEOUT)
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                        queue.getApproximateMessageCount(),
-                                        equalTo(txmaEvents.size())));
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertThat(queue.getApproximateMessageCount(), is(equalTo(txmaEvents.size())));
 
         var receivedEvents =
                 queue.getRawMessages().stream()
