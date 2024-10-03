@@ -79,6 +79,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -156,6 +157,7 @@ class AuthorisationHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthFrontend authFrontend = mock(AuthFrontend.class);
     private final AuthorisationService authorisationService = mock(AuthorisationService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     protected final Json objectMapper = SerializationService.getInstance();
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
@@ -273,6 +275,7 @@ class AuthorisationHandlerTest {
                 new AuthorisationHandler(
                         configService,
                         sessionService,
+                        orchSessionService,
                         clientSessionService,
                         orchestrationAuthorizationService,
                         auditService,

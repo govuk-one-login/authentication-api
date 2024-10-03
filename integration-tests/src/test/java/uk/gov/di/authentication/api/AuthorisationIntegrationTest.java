@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.RpPublicKeyCacheExtension;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
@@ -102,6 +103,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @RegisterExtension
     public static final RpPublicKeyCacheExtension rpPublicKeyCacheExtension =
             new RpPublicKeyCacheExtension(180);
+
+    @RegisterExtension
+    public static final OrchSessionExtension orchSessionExtension = new OrchSessionExtension();
 
     public static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
