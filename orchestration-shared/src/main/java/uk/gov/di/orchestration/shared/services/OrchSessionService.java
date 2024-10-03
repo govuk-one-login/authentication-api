@@ -6,20 +6,25 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.Optional;
 
 public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
 
     private static final Logger LOG = LogManager.getLogger(OrchSessionService.class);
 
+    private final CookieHelper cookieHelper;
+
     private final long timeToLive;
 
     public OrchSessionService(ConfigurationService configurationService) {
         super(OrchSessionItem.class, "OrchSession", configurationService);
         this.timeToLive = configurationService.getSessionExpiry();
+        this.cookieHelper = new CookieHelper();
     }
 
     public OrchSessionService(
@@ -28,6 +33,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
             ConfigurationService configurationService) {
         super(dynamoDbTable, dynamoDbClient);
         this.timeToLive = configurationService.getSessionExpiry();
+        this.cookieHelper = new CookieHelper();
     }
 
     public void addSession(String sessionId) {
@@ -64,6 +70,17 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
             LOG.info("Orch session item with expired TTL found. Session ID: {}", sessionId);
         }
         return validOrchSession;
+    }
+
+    public Optional<OrchSessionItem> getSessionFromSessionCookie(Map<String, String> headers) {
+        try {
+            Optional<CookieHelper.SessionCookieIds> ids = cookieHelper.parseSessionCookie(headers);
+            return ids.flatMap(s -> getSession(s.getSessionId()));
+        } catch (Exception e) {
+            logAndThrowOrchSessionException(
+                    "Error getting Orch session item from session cookie", null, e);
+        }
+        return Optional.empty();
     }
 
     public void updateSession(OrchSessionItem sessionItem) {

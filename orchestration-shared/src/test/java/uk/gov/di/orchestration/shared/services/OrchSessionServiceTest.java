@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -8,12 +9,17 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.OrchSessionException;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 
 import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -58,6 +64,45 @@ class OrchSessionServiceTest {
         assertThrows(
                 OrchSessionException.class,
                 () -> orchSessionService.updateSession(sessionToBeUpdated));
+    }
+
+    @Test
+    void shouldReturnSessionFromSessionCookie() {
+        withValidSession();
+
+        Optional<OrchSessionItem> sessionFromSessionCookie =
+                orchSessionService.getSessionFromSessionCookie(
+                        Map.ofEntries(
+                                Map.entry(
+                                        CookieHelper.REQUEST_COOKIE_HEADER,
+                                        String.format("gs=%s.456;", SESSION_ID))));
+
+        assertTrue(sessionFromSessionCookie.isPresent());
+        Assertions.assertEquals(SESSION_ID, sessionFromSessionCookie.get().getSessionId());
+    }
+
+    @Test
+    void shouldReturnEmptyFromSessionCookieWhenHeaderIsIncorrect() {
+        withValidSession();
+
+        Optional<OrchSessionItem> session =
+                orchSessionService.getSessionFromSessionCookie(
+                        Map.ofEntries(
+                                Map.entry(CookieHelper.REQUEST_COOKIE_HEADER, "gs=bad-value")));
+
+        assertFalse(session.isPresent());
+    }
+
+    @Test
+    void shouldReturnEmptyFromSessionCookieWhenSessionDoesNotExist() {
+        Optional<OrchSessionItem> session =
+                orchSessionService.getSessionFromSessionCookie(
+                        Map.ofEntries(
+                                Map.entry(
+                                        CookieHelper.REQUEST_COOKIE_HEADER,
+                                        String.format("gs=%s.456;", SESSION_ID))));
+
+        assertFalse(session.isPresent());
     }
 
     private OrchSessionItem withValidSession() {
