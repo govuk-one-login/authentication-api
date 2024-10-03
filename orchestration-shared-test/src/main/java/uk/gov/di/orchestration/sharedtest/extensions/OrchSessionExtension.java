@@ -67,8 +67,8 @@ public class OrchSessionExtension extends DynamoExtension implements AfterEachCa
         dynamoDB.createTable(request);
     }
 
-    public void addSession(String sessionId) {
-        orchSessionService.addSession(sessionId);
+    public void addSession(OrchSessionItem orchSession) {
+        orchSessionService.addSession(orchSession);
     }
 
     public Optional<OrchSessionItem> getSession(String sessionId) {

@@ -36,18 +36,17 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
         this.cookieHelper = new CookieHelper();
     }
 
-    public void addSession(String sessionId) {
+    public void addSession(OrchSessionItem orchSession) {
         var item =
-                new OrchSessionItem()
-                        .withSessionId(sessionId)
-                        .withTimeToLive(
-                                NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
+                orchSession.withTimeToLive(
+                        NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
+                                .toInstant()
+                                .getEpochSecond());
         try {
             put(item);
         } catch (Exception e) {
-            logAndThrowOrchSessionException("Failed to add Orch session item", sessionId, e);
+            logAndThrowOrchSessionException(
+                    "Failed to add Orch session item", orchSession.getSessionId(), e);
         }
     }
 
