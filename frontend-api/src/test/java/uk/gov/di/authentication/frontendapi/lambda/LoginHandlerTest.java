@@ -903,9 +903,7 @@ class LoginHandlerTest {
                         argThat(
                                 t ->
                                         t.getInternalCommonSubjectIdentifier()
-                                                        .equals(expectedCommonSubject)
-                                                && t.isNewAccount()
-                                                        == Session.AccountState.EXISTING));
+                                                .equals(expectedCommonSubject)));
     }
 
     private void verifyAuthSessionIsSaved() {
