@@ -78,4 +78,7 @@ module "codedeploy_ipv_capacity" {
   lambda_version       = module.ipv-capacity.lambda_version
   lambda_alias_name    = module.ipv-capacity.lambda_alias_name
   lambda_alias_version = module.ipv-capacity.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

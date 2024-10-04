@@ -241,4 +241,7 @@ module "codedeploy_email_sqs_lambda" {
   lambda_version       = aws_lambda_function.email_sqs_lambda.version
   lambda_alias_name    = aws_lambda_alias.sqs_lambda_active.name
   lambda_alias_version = aws_lambda_alias.sqs_lambda_active.function_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

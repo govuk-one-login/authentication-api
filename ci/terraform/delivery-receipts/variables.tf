@@ -106,3 +106,15 @@ variable "notify_template_map" {
     REPORT_SUSPICIOUS_ACTIVITY_EMAIL_TEMPLATE_ID           = "2b3170b5-159e-457f-a282-f30f6006dc32"
   }
 }
+
+variable "code_deploy_notification" {
+  description = "Enable Notification for Code deployment failure"
+  type        = bool
+  default     = true
+}
+
+variable "skip_canary" {
+  description = "Flag to skip canary if [skip canary] or [canary skip], or [no canary] string is included in git merge commit message"
+  type        = bool
+  default     = false
+}

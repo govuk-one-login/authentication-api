@@ -87,4 +87,7 @@ module "codedeploy_doc_app_callback" {
   lambda_version       = module.doc-app-callback.lambda_version
   lambda_alias_name    = module.doc-app-callback.lambda_alias_name
   lambda_alias_version = module.doc-app-callback.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

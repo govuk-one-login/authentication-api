@@ -53,4 +53,7 @@ module "codedeploy_ticf_cri_stub_" {
   lambda_version       = module.ticf_cri_stub_lambda.lambda_version
   lambda_alias_name    = module.ticf_cri_stub_lambda.lambda_alias_name
   lambda_alias_version = module.ticf_cri_stub_lambda.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

@@ -86,4 +86,7 @@ module "codedeploy_orch_auth_code" {
   lambda_version       = module.orch_auth_code.lambda_version
   lambda_alias_name    = module.orch_auth_code.lambda_alias_name
   lambda_alias_version = module.orch_auth_code.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

@@ -61,4 +61,7 @@ module "codedeploy_openid_configuration_discovery" {
   lambda_version       = module.openid_configuration_discovery.lambda_version
   lambda_alias_name    = module.openid_configuration_discovery.lambda_alias_name
   lambda_alias_version = module.openid_configuration_discovery.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

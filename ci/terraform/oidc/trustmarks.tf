@@ -60,4 +60,7 @@ module "codedeploy_trustmarks" {
   lambda_version       = module.trustmarks.lambda_version
   lambda_alias_name    = module.trustmarks.lambda_alias_name
   lambda_alias_version = module.trustmarks.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

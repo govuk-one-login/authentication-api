@@ -244,3 +244,15 @@ variable "openapi_spec_filename" {
   default     = "openapi.yaml"
   description = "The name of the OpenAPI spec file, located within this module."
 }
+
+variable "code_deploy_notification" {
+  description = "Enable Notification for Code deployment failure"
+  type        = bool
+  default     = true
+}
+
+variable "skip_canary" {
+  description = "Flag to skip canary if [skip canary] or [canary skip], or [no canary] string is included in git merge commit message"
+  type        = bool
+  default     = false
+}

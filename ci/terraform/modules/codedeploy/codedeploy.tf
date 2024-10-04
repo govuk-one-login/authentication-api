@@ -81,12 +81,12 @@ EOT
 # ----------------------------------------------------------
 
 data "aws_cloudformation_export" "notifications" {
-  count = var.code_deploy_notification ? 0 : 1
+  count = var.code_deploy_notification ? 1 : 0
   name  = "${var.environment}-notifications-BuildNotificationTopicArn"
 }
 
 resource "aws_codestarnotifications_notification_rule" "auth" {
-  count          = var.code_deploy_notification ? 0 : 1
+  count          = var.code_deploy_notification ? 1 : 0
   detail_type    = "BASIC"
   event_type_ids = ["codedeploy-application-deployment-failed"]
 

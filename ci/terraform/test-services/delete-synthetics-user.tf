@@ -66,4 +66,7 @@ module "codedeploy_synthetics_user" {
   lambda_version       = module.delete-synthetics-user.lambda_version
   lambda_alias_name    = module.delete-synthetics-user.lambda_alias_name
   lambda_alias_version = module.delete-synthetics-user.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

@@ -63,4 +63,7 @@ module "codedeploy_storage_token_jwk" {
   lambda_version       = module.storage_token_jwk.lambda_version
   lambda_alias_name    = module.storage_token_jwk.lambda_alias_name
   lambda_alias_version = module.storage_token_jwk.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

@@ -75,4 +75,7 @@ module "codedeploy_update_password" {
   lambda_version       = module.update_password.lambda_version
   lambda_alias_name    = module.update_password.lambda_alias_name
   lambda_alias_version = module.update_password.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

@@ -82,4 +82,7 @@ module "codedeploy_logout" {
   lambda_version       = module.logout.lambda_version
   lambda_alias_name    = module.logout.lambda_alias_name
   lambda_alias_version = module.logout.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

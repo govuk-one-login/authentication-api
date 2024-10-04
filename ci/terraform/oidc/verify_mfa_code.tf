@@ -99,4 +99,7 @@ module "codedeploy_verify_mfa_code" {
   lambda_version       = module.verify_mfa_code.lambda_version
   lambda_alias_name    = module.verify_mfa_code.lambda_alias_name
   lambda_alias_version = module.verify_mfa_code.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

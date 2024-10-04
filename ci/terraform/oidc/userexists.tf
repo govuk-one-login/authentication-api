@@ -82,4 +82,7 @@ module "codedeploy_userexists" {
   lambda_version       = module.userexists.lambda_version
   lambda_alias_name    = module.userexists.lambda_alias_name
   lambda_alias_version = module.userexists.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

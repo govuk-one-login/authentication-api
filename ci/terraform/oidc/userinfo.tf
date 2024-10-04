@@ -84,4 +84,7 @@ module "codedeploy_userinfo" {
   lambda_version       = module.userinfo.lambda_version
   lambda_alias_name    = module.userinfo.lambda_alias_name
   lambda_alias_version = module.userinfo.lambda_alias_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }

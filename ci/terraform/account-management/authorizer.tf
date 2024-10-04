@@ -194,4 +194,7 @@ module "codedeploy_authorizer" {
   lambda_version       = aws_lambda_function.authorizer.version
   lambda_alias_name    = aws_lambda_alias.authorizer_alias.name
   lambda_alias_version = aws_lambda_alias.authorizer_alias.function_version
+
+  skip_canary              = var.skip_canary
+  code_deploy_notification = var.code_deploy_notification
 }
