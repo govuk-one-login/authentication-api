@@ -131,40 +131,34 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     || !userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
+
+            var userIsAlreadyLockedOutOfPasswordReset =
+                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
+
+            if (userIsAlreadyLockedOutOfPasswordReset.isPresent()) {
+                return generateApiGatewayProxyErrorResponse(
+                        400, userIsAlreadyLockedOutOfPasswordReset.get());
+            }
+
             var isTestClient =
                     TestClientHelper.isTestClientWithAllowedEmail(
                             userContext, configurationService);
-            int passwordResetCounter = userContext.getSession().getPasswordResetCount();
-            var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
-            var passwordResetTypePair =
-                    request.isWithinForcedPasswordResetJourney()
-                            ? pair(
-                                    "passwordResetType",
-                                    PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET)
-                            : pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
 
-            LOG.info("passwordResetType: {}", passwordResetTypePair);
+            emitPasswordResetRequestedAuditEvent(input, request, userContext, isTestClient);
 
-            var auditContext =
-                    auditContextFromUserContext(
-                            userContext,
-                            userContext.getSession().getInternalCommonSubjectIdentifier(),
-                            request.getEmail(),
-                            IpAddressHelper.extractIpAddress(input),
-                            authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-            var eventName =
-                    isTestClient
-                            ? AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
-                            : AUTH_PASSWORD_RESET_REQUESTED;
+            sessionService.storeOrUpdateSession(
+                    userContext.getSession().incrementPasswordResetCount());
 
-            auditService.submitAuditEvent(
-                    eventName, auditContext, passwordResetCounterPair, passwordResetTypePair);
+            var userIsNewlyLockedOutOfPasswordReset =
+                    hasUserExceededMaxAllowedRequests(request.getEmail(), userContext);
 
-            return validatePasswordResetCount(request.getEmail(), userContext)
-                    .map(t -> generateApiGatewayProxyErrorResponse(400, t))
-                    .orElseGet(
-                            () -> processPasswordResetRequest(request, userContext, isTestClient));
+            if (userIsNewlyLockedOutOfPasswordReset.isPresent()) {
+                lockUserOutOfPasswordReset(userContext);
+                return generateApiGatewayProxyErrorResponse(
+                        400, userIsNewlyLockedOutOfPasswordReset.get());
+            }
+
+            return processPasswordResetRequest(request, userContext, isTestClient);
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
@@ -172,6 +166,52 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+    }
+
+    private void lockUserOutOfPasswordReset(UserContext userContext) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        LOG.info("Setting block for email as user has requested too many OTPs");
+        codeStorageService.saveBlockedForEmail(
+                userContext.getSession().getEmailAddress(),
+                codeRequestBlockedKeyPrefix,
+                configurationService.getLockoutDuration());
+        sessionService.storeOrUpdateSession(userContext.getSession().resetPasswordResetCount());
+    }
+
+    private void emitPasswordResetRequestedAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            ResetPasswordRequest request,
+            UserContext userContext,
+            boolean isTestClient) {
+        int passwordResetCounter = userContext.getSession().getPasswordResetCount();
+        var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
+        var passwordResetTypePair =
+                request.isWithinForcedPasswordResetJourney()
+                        ? pair(
+                                "passwordResetType",
+                                PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET)
+                        : pair("passwordResetType", PasswordResetType.USER_FORGOTTEN_PASSWORD);
+
+        LOG.info("passwordResetType: {}", passwordResetTypePair);
+
+        var auditContext =
+                auditContextFromUserContext(
+                        userContext,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        request.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        var eventName =
+                isTestClient
+                        ? AUTH_PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
+                        : AUTH_PASSWORD_RESET_REQUESTED;
+
+        auditService.submitAuditEvent(
+                eventName, auditContext, passwordResetCounterPair, passwordResetTypePair);
     }
 
     private APIGatewayProxyResponseEvent processPasswordResetRequest(
@@ -191,7 +231,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                             RESET_PASSWORD_WITH_CODE);
                                     return newCode;
                                 });
-        sessionService.storeOrUpdateSession(userContext.getSession().incrementPasswordResetCount());
 
         if (isTestClient) {
             LOG.info("User is a TestClient so will NOT place message on queue");
@@ -205,6 +244,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             userContext.getUserLanguage());
             sqsClient.send(serialiseNotifyRequest(notifyRequest));
         }
+
         LOG.info("Successfully processed request");
         var maybeResponse = generateResponseWithMfaDetail(resetPasswordRequest, userContext);
         if (maybeResponse.isPresent()) {
@@ -239,7 +279,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                         });
     }
 
-    private Optional<ErrorResponse> validatePasswordResetCount(
+    private Optional<ErrorResponse> hasUserExceededMaxAllowedRequests(
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
         var codeRequestType =
@@ -249,12 +289,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
-            LOG.info("Setting block for email as user has requested too many OTPs");
-            codeStorageService.saveBlockedForEmail(
-                    userContext.getSession().getEmailAddress(),
-                    codeRequestBlockedKeyPrefix,
-                    configurationService.getLockoutDuration());
-            sessionService.storeOrUpdateSession(userContext.getSession().resetPasswordResetCount());
             return Optional.of(ErrorResponse.ERROR_1022);
         }
         if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {

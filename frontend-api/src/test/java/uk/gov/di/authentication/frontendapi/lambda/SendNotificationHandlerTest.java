@@ -193,7 +193,7 @@ class SendNotificationHandlerTest {
                 .thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(6);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));

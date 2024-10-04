@@ -195,7 +195,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     input,
                     codeRequest,
                     userContext,
-                    journeyType,
                     subjectID,
                     authSession.get(),
                     auditContext,
@@ -269,7 +268,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             APIGatewayProxyRequestEvent input,
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext,
-            JourneyType journeyType,
             String subjectId,
             AuthSessionItem authSession,
             AuditContext auditContext,
@@ -294,7 +292,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         var session = userContext.getSession();
 
-        if (JourneyType.PASSWORD_RESET_MFA.equals(journeyType)) {
+        if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
             SessionHelper.updateSessionWithSubject(
                     userContext,
                     authenticationService,
@@ -316,7 +314,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         sessionService.storeOrUpdateSession(session);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
-                journeyType,
+                codeRequest.getJourneyType(),
                 userContext.getUserProfile().orElse(null),
                 auditContext,
                 userContext,
@@ -331,7 +329,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 handleSuccess(
                                         codeRequest,
                                         userContext,
-                                        journeyType,
+                                        codeRequest.getJourneyType(),
                                         authSession,
                                         session));
     }

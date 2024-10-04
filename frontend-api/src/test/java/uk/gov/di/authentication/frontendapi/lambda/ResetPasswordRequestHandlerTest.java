@@ -179,13 +179,13 @@ class ResetPasswordRequestHandlerTest {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.twentyByteEncodedRandomCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(6);
     }
 
     @Nested
     class WhenTheRequestIsValid {
 
-        static final String validRequestBody =
+        static final String VALID_REQUEST_BODY =
                 format("{ \"email\": \"%s\"}", CommonTestVariables.EMAIL);
         static NotifyRequest notifyRequest =
                 new NotifyRequest(
@@ -202,7 +202,7 @@ class ResetPasswordRequestHandlerTest {
 
         @BeforeEach
         void setup() {
-            validEvent = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validRequestBody);
+            validEvent = apiRequestEventWithHeadersAndBody(VALID_HEADERS, VALID_REQUEST_BODY);
             Subject subject = new Subject("subject_1");
             when(authenticationService.getSubjectFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(subject);
@@ -211,10 +211,7 @@ class ResetPasswordRequestHandlerTest {
             when(authenticationService.getPhoneNumber(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(CommonTestVariables.UK_MOBILE_NUMBER));
             when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
-                    .thenReturn(
-                            Optional.of(
-                                    userProfileWithPhoneNumber(
-                                            CommonTestVariables.UK_MOBILE_NUMBER)));
+                    .thenReturn(Optional.of(userProfileWithPhoneNumber()));
             when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                     .thenReturn(Optional.of(getClientSession()));
             var disabledMfaMethod =
@@ -391,7 +388,7 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
-        public void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
+        void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePasswordResets() {
             usingSessionWithPasswordResetCount(0);
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
@@ -409,7 +406,7 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
-        public void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
+        void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
             usingSessionWithPasswordResetCount(0);
             var codeRequestType =
                     CodeRequestType.getCodeRequestType(
@@ -427,7 +424,25 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
-        public void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
+        void shouldReturn400IfUserIsNewlyBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
+            usingSessionWithPasswordResetCount(5);
+            var codeRequestType =
+                    CodeRequestType.getCodeRequestType(
+                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+            var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+            when(codeStorageService.isBlockedForEmail(
+                            CommonTestVariables.EMAIL, codeRequestBlockedKeyPrefix))
+                    .thenReturn(false);
+
+            var result = handler.handleRequest(validEvent, context);
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
             Mockito.doThrow(SdkClientException.class)
                     .when(awsSqsClient)
                     .send(eq(objectMapper.writeValueAsString(notifyRequest)));
@@ -440,24 +455,14 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
-        public void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
+        void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
             when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-            var session = usingSessionWithPasswordResetCount(5);
+            usingSessionWithPasswordResetCount(6);
 
             APIGatewayProxyResponseEvent result = handler.handleRequest(validEvent, context);
-            var codeRequestType =
-                    CodeRequestType.getCodeRequestType(
-                            RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-            var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
             assertEquals(400, result.getStatusCode());
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
-            verify(codeStorageService)
-                    .saveBlockedForEmail(
-                            CommonTestVariables.EMAIL,
-                            codeRequestBlockedKeyPrefix,
-                            LOCKOUT_DURATION);
-            verify(session).resetPasswordResetCount();
             verifyNoInteractions(awsSqsClient);
         }
 
@@ -495,7 +500,7 @@ class ResetPasswordRequestHandlerTest {
         }
 
         @Test
-        public void shouldReturn400IfRequestIsMissingEmail() {
+        void shouldReturn400IfRequestIsMissingEmail() {
             usingValidSession();
             var body = "{ }";
             APIGatewayProxyRequestEvent event =
@@ -504,6 +509,19 @@ class ResetPasswordRequestHandlerTest {
 
             assertEquals(400, result.getStatusCode());
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+            verifyNoInteractions(awsSqsClient);
+        }
+
+        @Test
+        void shouldReturn400IfRequestIsForDifferentEmail() {
+            usingValidSession();
+            var body = format("{ \"email\": \"%s\" }", "different-email@gov.uk");
+            APIGatewayProxyRequestEvent event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertEquals(400, result.getStatusCode());
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
             verifyNoInteractions(awsSqsClient);
         }
     }
@@ -528,19 +546,23 @@ class ResetPasswordRequestHandlerTest {
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
-    private Session usingSessionWithPasswordResetCount(int passwordResetCount) {
-        Session session = mock(Session.class);
-        when(session.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
-        when(session.getSessionId()).thenReturn(SESSION_ID);
-        when(session.validateSession(CommonTestVariables.EMAIL)).thenReturn(true);
-        when(session.getPasswordResetCount()).thenReturn(passwordResetCount);
+    private void usingSessionWithPasswordResetCount(int passwordResetCount) {
+        Session sessionWithPasswordResetCount = mock(Session.class);
+        when(sessionWithPasswordResetCount.getEmailAddress()).thenReturn(CommonTestVariables.EMAIL);
+        when(sessionWithPasswordResetCount.getSessionId()).thenReturn(SESSION_ID);
+        when(sessionWithPasswordResetCount.validateSession(CommonTestVariables.EMAIL))
+                .thenReturn(true);
+        when(sessionWithPasswordResetCount.getPasswordResetCount())
+                .thenReturn(passwordResetCount)
+                .thenReturn(passwordResetCount + 1);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.of(session));
-        return session;
+                .thenReturn(Optional.of(sessionWithPasswordResetCount));
     }
 
-    private UserProfile userProfileWithPhoneNumber(String phoneNumber) {
-        return new UserProfile().withEmail(CommonTestVariables.EMAIL).withPhoneNumber(phoneNumber);
+    private UserProfile userProfileWithPhoneNumber() {
+        return new UserProfile()
+                .withEmail(CommonTestVariables.EMAIL)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
     }
 
     private ClientSession getClientSession() {
