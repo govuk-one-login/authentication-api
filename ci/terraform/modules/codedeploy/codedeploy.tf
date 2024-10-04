@@ -77,7 +77,7 @@ EOT
 }
 
 # ----------------------------------------------------------
-# notify deployment Failure
+# Notify codedeploy deployment Failure
 # ----------------------------------------------------------
 
 data "aws_cloudformation_export" "notifications" {
