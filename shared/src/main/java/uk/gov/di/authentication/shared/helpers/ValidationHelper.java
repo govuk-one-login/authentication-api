@@ -176,7 +176,7 @@ public class ValidationHelper {
             }
 
             if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress)
-                    > configurationService.getCodeMaxRetries()) {
+                    >= configurationService.getCodeMaxRetries()) {
                 switch (notificationType) {
                     case MFA_SMS:
                         return Optional.of(ErrorResponse.ERROR_1027);

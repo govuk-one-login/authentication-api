@@ -108,7 +108,7 @@ class MfaHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
-    private static final int MAX_CODE_RETRIES = 5;
+    private static final int MAX_CODE_RETRIES = 6;
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final AuditContext AUDIT_CONTEXT =

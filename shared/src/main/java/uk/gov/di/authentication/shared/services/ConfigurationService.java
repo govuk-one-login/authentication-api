@@ -186,7 +186,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getCodeMaxRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
+        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "6"));
     }
 
     public int getIncreasedCodeMaxRetries() {

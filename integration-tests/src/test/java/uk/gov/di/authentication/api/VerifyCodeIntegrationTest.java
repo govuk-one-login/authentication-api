@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
@@ -186,7 +187,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedButNotSetBlockWhenVerifyEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         setUpTestWithoutSignUp(sessionId, withScope());
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < ConfigurationService.getInstance().getCodeMaxRetries(); i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
@@ -239,7 +240,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         setUpTestWithoutSignUp(sessionId, withScope());
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
@@ -266,7 +267,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSetBlockWhenPasswordResetEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         setUpTestWithSignUp(sessionId, withScope());
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(RESET_PASSWORD_WITH_CODE, "123456");
@@ -301,7 +302,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxReachedAndSetBlockWhenSignInSmsCodeAttemptsExceedMaxRetryCount(
             JourneyType journeyType) throws Json.JsonException {
         setUpTestWithoutSignUp(sessionId, withScope());
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
         }
         var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456", journeyType);

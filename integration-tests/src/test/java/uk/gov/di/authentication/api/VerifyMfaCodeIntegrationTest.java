@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationAttemptsStoreExtension;
@@ -586,11 +587,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         VerifyMfaCodeRequest codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, journeyType);
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < ConfigurationService.getInstance().getCodeMaxRetries(); i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         }
 
-        assertEquals(5, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
+        assertEquals(
+                ConfigurationService.getInstance().getCodeMaxRetries(),
+                redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
 
         var response =
                 makeRequest(
@@ -910,7 +913,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, "123456", journeyType, ALTERNATIVE_PHONE_NUMBER);
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 6; i++) {
             makeRequest(
                     Optional.of(codeRequest),
                     constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
@@ -926,6 +929,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
+                        AUTH_INVALID_CODE_SENT,
                         AUTH_INVALID_CODE_SENT,
                         AUTH_INVALID_CODE_SENT,
                         AUTH_INVALID_CODE_SENT,
