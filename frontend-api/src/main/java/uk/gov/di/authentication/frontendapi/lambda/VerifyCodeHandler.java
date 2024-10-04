@@ -174,6 +174,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
             UserProfile userProfile = userProfileMaybe.orElse(null);
+            Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, client);
 
             String subjectId = userProfile != null ? userProfile.getSubjectID() : null;
 
@@ -183,7 +184,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             if (checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                    journeyType, subjectId, auditContext, userProfile, client))
+                    journeyType, subjectId, auditContext, maybeRpPairwiseId))
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
             if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
@@ -241,7 +242,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     subjectId,
                     journeyType,
                     auditContext,
-                    client);
+                    client,
+                    maybeRpPairwiseId);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -279,24 +281,29 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             String subjectId,
             AuditContext auditContext,
-            UserProfile userProfile,
-            ClientRegistry client) {
+            Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var countsByJourney =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
+                    maybeRpPairwiseId.isEmpty()
+                            ? authenticationAttemptsService.getCountsByJourney(
+                                    subjectId, JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            subjectId,
+                                            maybeRpPairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION);
 
             var countTypesWhereBlocked =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             countsByJourney, configurationService);
 
             if (!countTypesWhereBlocked.isEmpty()) {
-                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
-                        ReauthMetadataBuilder.builder(rpPairwiseId)
+                        ReauthMetadataBuilder.builder(
+                                        maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
                                 .withAllIncorrectAttemptCounts(countsByJourney)
                                 .withFailureReason(countTypesWhereBlocked)
                                 .build());
@@ -344,7 +351,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             JourneyType journeyType,
             AuditContext auditContext,
-            ClientRegistry client) {
+            ClientRegistry client,
+            Optional<String> maybePairwiseId) {
         var session = userContext.getSession();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
@@ -376,8 +384,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
 
         if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
-            preserveReauthCountsForAuditIfJourneyIsReauth(journeyType, subjectId, session);
+            preserveReauthCountsForAuditIfJourneyIsReauth(
+                    journeyType, subjectId, session, maybePairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
+            maybePairwiseId.ifPresentOrElse(
+                    this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
+                    () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
         }
 
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
@@ -389,24 +401,33 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType, String subjectId, Session session) {
+            JourneyType journeyType,
+            String subjectId,
+            Session session,
+            Optional<String> maybePairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
+                    maybePairwiseId.isPresent()
+                            ? authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            subjectId,
+                                            maybePairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService.getCountsByJourney(
+                                    subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
             sessionService.storeOrUpdateSession(updatedSession);
         }
     }
 
-    void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
+    void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String identifier) {
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
                                 authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
+                                        identifier, JourneyType.REAUTHENTICATION, countType));
     }
 
     private AuditService.MetadataPair[] metadataPairs(
@@ -513,19 +534,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return journeyType;
     }
 
-    private String getInternalCommonSubjectIdentifier(
-            UserProfile userProfile, ClientRegistry client) {
+    private Optional<String> getRpPairwiseId(UserProfile userProfile, ClientRegistry client) {
         try {
-            var internalCommonSubjectIdentifier =
+            var rpPairwiseId =
                     ClientSubjectHelper.getSubject(
                             userProfile,
                             client,
                             authenticationService,
                             configurationService.getInternalSectorUri());
-            return internalCommonSubjectIdentifier.getValue();
+            return Optional.of(rpPairwiseId.getValue());
         } catch (RuntimeException e) {
-            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
-            return AuditService.UNKNOWN;
+            LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
+            return Optional.empty();
         }
     }
 }

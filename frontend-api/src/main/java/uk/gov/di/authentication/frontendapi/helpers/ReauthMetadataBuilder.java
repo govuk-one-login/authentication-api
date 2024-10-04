@@ -16,6 +16,8 @@ public class ReauthMetadataBuilder {
     private AuditService.MetadataPair incorrectPasswordAttemptCount;
     private AuditService.MetadataPair incorrectOtpAttemptCount;
     private AuditService.MetadataPair failureReason;
+    private AuditService.MetadataPair restrictedUserSuppliedEmailPair;
+    private AuditService.MetadataPair restrictedUserIdForUserSuppliedEmailPair;
 
     private ReauthMetadataBuilder(String rpPairwiseId) {
         this.rpPairwiseIdPair = pair("rpPairwiseId", rpPairwiseId);
@@ -27,10 +29,7 @@ public class ReauthMetadataBuilder {
 
     public ReauthMetadataBuilder withAllIncorrectAttemptCounts(
             Map<CountType, Integer> countsByJourney) {
-        this.incorrectEmailAttemptCountPair =
-                pair(
-                        "incorrect_email_attempt_count",
-                        countsByJourney.getOrDefault(CountType.ENTER_EMAIL, 0));
+        withIncorrectEmailCount(countsByJourney.getOrDefault(CountType.ENTER_EMAIL, 0));
         this.incorrectPasswordAttemptCount =
                 pair(
                         "incorrect_password_attempt_count",
@@ -40,6 +39,23 @@ public class ReauthMetadataBuilder {
                         "incorrect_otp_code_attempt_count",
                         (countsByJourney.getOrDefault(CountType.ENTER_SMS_CODE, 0))
                                 + (countsByJourney.getOrDefault(CountType.ENTER_AUTH_APP_CODE, 0)));
+        return this;
+    }
+
+    public ReauthMetadataBuilder withIncorrectEmailCount(Integer count) {
+        this.incorrectEmailAttemptCountPair = pair("incorrect_email_attempt_count", count);
+        return this;
+    }
+
+    public ReauthMetadataBuilder withRestrictedUserSuppliedEmailPair(String userSuppliedEmail) {
+        this.restrictedUserSuppliedEmailPair = pair("user_supplied_email", userSuppliedEmail, true);
+        return this;
+    }
+
+    public ReauthMetadataBuilder withRestrictedUserIdForUserSuppliedEmailPair(
+            String userSuppliedEmail) {
+        this.restrictedUserIdForUserSuppliedEmailPair =
+                pair("user_id_for_user_supplied_email", userSuppliedEmail, true);
         return this;
     }
 
@@ -77,6 +93,12 @@ public class ReauthMetadataBuilder {
         }
         if (failureReason != null) {
             metadataPairs.add(failureReason);
+        }
+        if (restrictedUserSuppliedEmailPair != null) {
+            metadataPairs.add(restrictedUserSuppliedEmailPair);
+        }
+        if (restrictedUserIdForUserSuppliedEmailPair != null) {
+            metadataPairs.add(restrictedUserIdForUserSuppliedEmailPair);
         }
         return metadataPairs.toArray(AuditService.MetadataPair[]::new);
     }

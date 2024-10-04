@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
@@ -127,33 +126,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 var updatedAuditContext =
                                         auditContext.withUserId(userProfile.getSubjectID());
 
-                                var countTypesToCounts =
-                                        authenticationAttemptsService.getCountsByJourney(
-                                                userProfile.getSubjectID(),
-                                                JourneyType.REAUTHENTICATION);
-
-                                var exceededCountTypes =
-                                        ReauthAuthenticationAttemptsHelper
-                                                .countTypesWhereUserIsBlockedForReauth(
-                                                        countTypesToCounts, configurationService);
-
-                                if (!exceededCountTypes.isEmpty()) {
-                                    LOG.info(
-                                            "Account is locked due to exceeded counts on count types {}",
-                                            exceededCountTypes);
-                                    auditService.submitAuditEvent(
-                                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                                            updatedAuditContext,
-                                            ReauthMetadataBuilder.builder(request.rpPairwiseId())
-                                                    .withAllIncorrectAttemptCounts(
-                                                            countTypesToCounts)
-                                                    .withFailureReason(exceededCountTypes)
-                                                    .build());
-
-                                    throw new AccountLockedException(
-                                            "Account is locked due to too many failed attempts.",
-                                            ErrorResponse.ERROR_1057);
-                                }
+                                throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
+                                        userProfile, updatedAuditContext, request.rpPairwiseId());
 
                                 return verifyReAuthentication(
                                         userProfile,
@@ -173,18 +147,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             request.email(),
                                             maybeUserProfileOfUserSuppliedEmail));
         } catch (AccountLockedException e) {
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                    auditContext,
-                    e.getErrorResponse() == ErrorResponse.ERROR_1045
-                            ? pair(
-                                    "number_of_attempts_user_allowed_to_login",
-                                    configurationService.getMaxPasswordRetries())
-                            : pair(
-                                    "number_of_attempts_user_allowed_to_login",
-                                    configurationService.getMaxEmailReAuthRetries()));
-
-            LOG.error("Account is locked due to too many failed attempts.");
+            LOG.error("Account is unable to reauth due to too many failed attempts.");
             return generateApiGatewayProxyErrorResponse(400, e.getErrorResponse());
         }
     }
@@ -245,9 +208,11 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             Optional<UserProfile> userProfileOfSuppliedEmail) {
 
         String uniqueUserIdentifier;
+        Optional<String> additionalIdentifier = Optional.empty();
         if (emailUserIsSignedInWith != null) {
             var userProfile = authenticationService.getUserProfileByEmail(emailUserIsSignedInWith);
             uniqueUserIdentifier = userProfile.getSubjectID();
+            additionalIdentifier = Optional.of(rpPairwiseId);
         } else {
             uniqueUserIdentifier = rpPairwiseId;
         }
@@ -264,34 +229,47 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         var updatedCount =
                 authenticationAttemptsService.getCount(
-                        uniqueUserIdentifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL);
+                                uniqueUserIdentifier,
+                                JourneyType.REAUTHENTICATION,
+                                CountType.ENTER_EMAIL)
+                        + additionalIdentifier
+                                .map(
+                                        identifier ->
+                                                authenticationAttemptsService.getCount(
+                                                        identifier,
+                                                        JourneyType.REAUTHENTICATION,
+                                                        CountType.ENTER_EMAIL))
+                                .orElse(0);
 
-        var metadataPairsForIncorrectEmail = new ArrayList<AuditService.MetadataPair>();
-        metadataPairsForIncorrectEmail.add(pairwiseIdMetadataPair);
-        metadataPairsForIncorrectEmail.add(pair("incorrect_email_attempt_count", updatedCount));
-        metadataPairsForIncorrectEmail.add(pair("user_supplied_email", userSuppliedEmail, true));
+        var pairBuilder =
+                ReauthMetadataBuilder.builder(rpPairwiseId)
+                        .withIncorrectEmailCount(updatedCount)
+                        .withRestrictedUserSuppliedEmailPair(userSuppliedEmail);
 
-        if (userProfileOfSuppliedEmail.isPresent()) {
-            metadataPairsForIncorrectEmail.add(
-                    pair(
-                            "user_id_for_user_supplied_email",
-                            userProfileOfSuppliedEmail.get().getSubjectID(),
-                            true));
-        }
+        userProfileOfSuppliedEmail.ifPresent(
+                userProfile ->
+                        pairBuilder.withRestrictedUserIdForUserSuppliedEmailPair(
+                                userProfile.getSubjectID()));
 
         auditService.submitAuditEvent(
-                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                auditContext,
-                metadataPairsForIncorrectEmail.toArray(new AuditService.MetadataPair[0]));
+                AUTH_REAUTH_INCORRECT_EMAIL_ENTERED, auditContext, pairBuilder.build());
 
         if (hasEnteredIncorrectEmailTooManyTimes(updatedCount)) {
+            var incorrectCounts =
+                    additionalIdentifier.isPresent()
+                            ? authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            uniqueUserIdentifier,
+                                            additionalIdentifier.get(),
+                                            JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService.getCountsByJourney(
+                                    uniqueUserIdentifier, JourneyType.REAUTHENTICATION);
+
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                     auditContext,
                     ReauthMetadataBuilder.builder(rpPairwiseId)
-                            .withAllIncorrectAttemptCounts(
-                                    authenticationAttemptsService.getCountsByJourney(
-                                            uniqueUserIdentifier, JourneyType.REAUTHENTICATION))
+                            .withAllIncorrectAttemptCounts(incorrectCounts)
                             .withFailureReason(ReauthFailureReasons.INCORRECT_EMAIL)
                             .build());
 
@@ -312,5 +290,33 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         var maxRetries = configurationService.getMaxEmailReAuthRetries();
 
         return count >= maxRetries;
+    }
+
+    private void throwLockedExceptionAndEmitAuditEventIfExistentUserIsLocked(
+            UserProfile userProfile, AuditContext auditContext, String pairwiseId)
+            throws AccountLockedException {
+        var countTypesToCounts =
+                authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        userProfile.getSubjectID(), pairwiseId, JourneyType.REAUTHENTICATION);
+
+        var exceededCountTypes =
+                ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
+                        countTypesToCounts, configurationService);
+
+        if (!exceededCountTypes.isEmpty()) {
+            LOG.info(
+                    "Account is locked due to exceeded counts on count types {}",
+                    exceededCountTypes);
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext,
+                    ReauthMetadataBuilder.builder(pairwiseId)
+                            .withAllIncorrectAttemptCounts(countTypesToCounts)
+                            .withFailureReason(exceededCountTypes)
+                            .build());
+
+            throw new AccountLockedException(
+                    "Account is locked due to too many failed attempts.", ErrorResponse.ERROR_1057);
+        }
     }
 }

@@ -42,7 +42,6 @@ import java.util.stream.IntStream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_FAILED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_ENTERED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
@@ -199,8 +198,55 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
                 List.of(
                         AUTH_REAUTH_FAILED,
                         AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
-                        AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED,
-                        AUTH_ACCOUNT_TEMPORARILY_LOCKED));
+                        AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED));
+    }
+
+    @Test
+    void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimesAcrossRpPairwiseIdAndSubjectId() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://randomSectorIDuRI.COM");
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var expectedPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+
+        var subjectIdCount = 3;
+        var rpPairwiseIdCount = 2;
+        for (int i = 0; i < subjectIdCount; i++) {
+            authenticationService.createOrIncrementCount(
+                    SUBJECT.getValue(),
+                    NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond(),
+                    JourneyType.REAUTHENTICATION,
+                    CountType.ENTER_EMAIL);
+        }
+        for (int i = 0; i < rpPairwiseIdCount; i++) {
+            authenticationService.createOrIncrementCount(
+                    expectedPairwiseId,
+                    NowHelper.nowPlus(10, ChronoUnit.MINUTES).toInstant().getEpochSecond(),
+                    JourneyType.REAUTHENTICATION,
+                    CountType.ENTER_EMAIL);
+        }
+
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        requestHeaders,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", expectedPairwiseId));
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                authCodeExtension.getAuthenticationAttempt(
+                        SUBJECT.getValue(), JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL),
+                equalTo(subjectIdCount + 1));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        AUTH_REAUTH_FAILED,
+                        AUTH_REAUTH_INCORRECT_EMAIL_ENTERED,
+                        AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED));
     }
 
     @Test
@@ -222,6 +268,44 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        requestHeaders,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", expectedPairwiseId));
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1057));
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasExceededMaxEmailRetriesAcrossSubjectIdAndPairwiseId() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://randomSectorIDuRI.COM");
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var expectedPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAL_SECTOR_HOST, salt);
+
+        var ttl = Instant.now().getEpochSecond() + 60L;
+        IntStream.range(0, 3)
+                .forEach(
+                        i -> {
+                            authCodeExtension.createOrIncrementCount(
+                                    SUBJECT.getValue(),
+                                    ttl,
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_EMAIL);
+                            authCodeExtension.createOrIncrementCount(
+                                    expectedPairwiseId,
+                                    ttl,
+                                    JourneyType.REAUTHENTICATION,
+                                    CountType.ENTER_EMAIL);
+                        });
+
         var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
         var response =
                 makeRequest(

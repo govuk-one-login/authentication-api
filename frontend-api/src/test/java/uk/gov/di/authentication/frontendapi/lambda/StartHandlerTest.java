@@ -274,7 +274,8 @@ class StartHandlerTest {
 
         // This should not be called. Setup here is to ensure that the feature flag is determining
         // this test's behaviour
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), any()))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
@@ -293,10 +294,8 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldNotCallAuthenticationAttemptsServiceWhenThereIsNoSubjectId() throws ParseException {
+    void shouldUseCountsAgainstTheRpPairwiseIdWHhenThereIsNoSubjectId() throws ParseException {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(authenticationAttemptsService.getCountsByJourney(any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
         when(userProfile.getSubjectID()).thenReturn(null);
 
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
@@ -313,7 +312,8 @@ class StartHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
-        verifyNoInteractions(authenticationAttemptsService);
+        verify(authenticationAttemptsService)
+                .getCountsByJourney(TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION);
     }
 
     @Test
@@ -404,8 +404,8 @@ class StartHandlerTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn("testSubjectId");
-        when(authenticationAttemptsService.getCountsByJourney(
-                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
         var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);

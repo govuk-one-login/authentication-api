@@ -166,6 +166,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         var journeyType = codeRequest.getJourneyType();
         Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
+        var maybeRpPairwiseId = getRpPairwiseId(userProfile, userContext.getClient());
 
         var auditContext =
                 auditContextFromUserContext(
@@ -185,13 +186,19 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
-                journeyType, userProfile, auditContext, userContext))
+                journeyType, userProfile, auditContext, userContext, maybeRpPairwiseId))
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
 
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
-                    input, codeRequest, userContext, journeyType, subjectID, authSession.get());
+                    input,
+                    codeRequest,
+                    userContext,
+                    journeyType,
+                    subjectID,
+                    authSession.get(),
+                    maybeRpPairwiseId);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -219,24 +226,31 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             UserProfile userProfile,
             AuditContext auditContext,
-            UserContext userContext) {
+            UserContext userContext,
+            Optional<String> maybeRpPairwiseId) {
         if (configurationService.isAuthenticationAttemptsServiceEnabled()
                 && JourneyType.REAUTHENTICATION.equals(journeyType)
                 && userProfile != null) {
             var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            userProfile.getSubjectID(), JourneyType.REAUTHENTICATION);
+                    maybeRpPairwiseId.isEmpty()
+                            ? authenticationAttemptsService.getCountsByJourney(
+                                    userProfile.getSubjectID(), JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            userProfile.getSubjectID(),
+                                            maybeRpPairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION);
             var countTypesWhereLimitExceeded =
                     ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                             counts, configurationService);
 
             ClientRegistry client = userContext.getClient().orElse(null);
             if (!countTypesWhereLimitExceeded.isEmpty() && client != null) {
-                String rpPairwiseId = getInternalCommonSubjectIdentifier(userProfile, client);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_REAUTH_FAILED,
                         auditContext,
-                        ReauthMetadataBuilder.builder(rpPairwiseId)
+                        ReauthMetadataBuilder.builder(
+                                        maybeRpPairwiseId.orElse(AuditService.UNKNOWN))
                                 .withAllIncorrectAttemptCounts(counts)
                                 .withFailureReason(countTypesWhereLimitExceeded)
                                 .build());
@@ -256,7 +270,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             JourneyType journeyType,
             String subjectId,
-            AuthSessionItem authSession) {
+            AuthSessionItem authSession,
+            Optional<String> maybeRpPairwiseId) {
 
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory
@@ -293,7 +308,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 userContext,
                 subjectId,
                 codeRequest,
-                mfaCodeProcessor);
+                mfaCodeProcessor,
+                maybeRpPairwiseId);
 
         sessionService.storeOrUpdateSession(session);
 
@@ -352,7 +368,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             String subjectId,
             VerifyMfaCodeRequest codeRequest,
-            MfaCodeProcessor mfaCodeProcessor) {
+            MfaCodeProcessor mfaCodeProcessor,
+            Optional<String> maybeRpPairwiseId) {
         var emailAddress = session.getEmailAddress();
 
         var auditableEvent =
@@ -378,8 +395,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
                     && subjectId != null) {
                 preserveReauthCountsForAuditIfJourneyIsReauth(
-                        codeRequest.getJourneyType(), subjectId, session);
+                        codeRequest.getJourneyType(), subjectId, session, maybeRpPairwiseId);
                 clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
+                maybeRpPairwiseId.ifPresentOrElse(
+                        this::clearReauthErrorCountsForSuccessfullyAuthenticatedUser,
+                        () -> LOG.warn("Unable to clear rp pairwise id reauth counts"));
             }
             mfaCodeProcessor.processSuccessfulCodeRequest(
                     IpAddressHelper.extractIpAddress(input),
@@ -421,22 +441,31 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return map.getOrDefault(errorResponse, FrontendAuditableEvent.AUTH_INVALID_CODE_SENT);
     }
 
-    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String subjectId) {
+    private void clearReauthErrorCountsForSuccessfullyAuthenticatedUser(String uniqueIdentifier) {
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
                                 authenticationAttemptsService.deleteCount(
-                                        subjectId, JourneyType.REAUTHENTICATION, countType));
+                                        uniqueIdentifier, JourneyType.REAUTHENTICATION, countType));
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(
-            JourneyType journeyType, String subjectId, Session session) {
+            JourneyType journeyType,
+            String subjectId,
+            Session session,
+            Optional<String> maybeRpPairwiseId) {
         if (journeyType == JourneyType.REAUTHENTICATION
                 && configurationService.supportReauthSignoutEnabled()
                 && configurationService.isAuthenticationAttemptsServiceEnabled()) {
             var counts =
-                    authenticationAttemptsService.getCountsByJourney(
-                            subjectId, JourneyType.REAUTHENTICATION);
+                    maybeRpPairwiseId.isPresent()
+                            ? authenticationAttemptsService
+                                    .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                            subjectId,
+                                            maybeRpPairwiseId.get(),
+                                            JourneyType.REAUTHENTICATION)
+                            : authenticationAttemptsService.getCountsByJourney(
+                                    subjectId, JourneyType.REAUTHENTICATION);
             var updatedSession = session.setPreservedReauthCountsForAudit(counts);
             sessionService.storeOrUpdateSession(updatedSession);
         }
@@ -512,19 +541,20 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .toArray(AuditService.MetadataPair[]::new);
     }
 
-    private String getInternalCommonSubjectIdentifier(
-            UserProfile userProfile, ClientRegistry client) {
+    private Optional<String> getRpPairwiseId(
+            UserProfile userProfile, Optional<ClientRegistry> maybeClient) {
         try {
-            var internalCommonSubjectIdentifier =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            client,
-                            authenticationService,
-                            configurationService.getInternalSectorUri());
-            return internalCommonSubjectIdentifier.getValue();
+            return maybeClient.map(
+                    client ->
+                            ClientSubjectHelper.getSubject(
+                                            userProfile,
+                                            client,
+                                            authenticationService,
+                                            configurationService.getInternalSectorUri())
+                                    .getValue());
         } catch (RuntimeException e) {
-            LOG.info("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
-            return AuditService.UNKNOWN;
+            LOG.warn("Failed to derive Internal Common Subject Identifier. Defaulting to UNKNOWN.");
+            return Optional.empty();
         }
     }
 }

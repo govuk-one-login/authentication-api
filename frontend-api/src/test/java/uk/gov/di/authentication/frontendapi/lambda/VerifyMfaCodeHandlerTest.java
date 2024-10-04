@@ -174,6 +174,7 @@ class VerifyMfaCodeHandlerTest {
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
         when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
+        when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
         when(clientSession.getAuthRequestParams())
                 .thenReturn(withAuthenticationRequest().toParameters());
@@ -857,20 +858,27 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
+        when(clientRegistry.getSectorIdentifierUri()).thenReturn("http://" + SECTOR_HOST);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
 
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, JourneyType.REAUTHENTICATION, null);
         makeCallWithCode(codeRequest);
 
-        verify(authenticationAttemptsService, times(1))
-                .deleteCount(
-                        TEST_SUBJECT_ID,
-                        JourneyType.REAUTHENTICATION,
-                        CountType.ENTER_AUTH_APP_CODE);
+        List.of(TEST_SUBJECT_ID, expectedCommonSubject)
+                .forEach(
+                        identifier ->
+                                verify(
+                                                authenticationAttemptsService,
+                                                times(CountType.values().length))
+                                        .deleteCount(
+                                                eq(identifier),
+                                                eq(JourneyType.REAUTHENTICATION),
+                                                any()));
 
         verify(sessionService, atLeastOnce())
                 .storeOrUpdateSession(
@@ -887,8 +895,8 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, CountType.ENTER_AUTH_APP_CODE, 4);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        eq(SUBJECT_ID), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(existingCounts);
 
         var codeRequest =
@@ -950,7 +958,8 @@ class VerifyMfaCodeHandlerTest {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-            when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            any(), any(), eq(REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_RETRIES));
             when(configurationService.getInternalSectorUri())
                     .thenReturn("https://test.account.gov.uk");

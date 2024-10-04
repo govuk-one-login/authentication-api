@@ -187,6 +187,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         handler =
                 new LoginHandler(
                         configurationService,
@@ -293,7 +294,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
@@ -317,7 +317,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
@@ -353,7 +352,6 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
 
@@ -381,7 +379,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
@@ -574,7 +571,6 @@ class LoginHandlerTest {
 
         when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -589,7 +585,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
         usingValidSession();
@@ -713,7 +708,6 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfUserDoesNotHaveAnAccount() {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidAuthSession();
         usingDefaultVectorOfTrust();
@@ -740,7 +734,6 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingDefaultVectorOfTrust();
@@ -900,7 +893,8 @@ class LoginHandlerTest {
                         Optional.of(
                                 new ClientRegistry()
                                         .withSmokeTest(true)
-                                        .withClientID(CLIENT_ID.getValue())));
+                                        .withClientID(CLIENT_ID.getValue())
+                                        .withSectorIdentifierUri("https://test.com")));
     }
 
     private void verifySessionIsSaved() {

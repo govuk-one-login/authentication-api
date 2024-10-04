@@ -167,6 +167,7 @@ class LoginHandlerReauthenticationRedisTest {
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         handler =
                 new LoginHandler(
@@ -192,7 +193,6 @@ class LoginHandlerReauthenticationRedisTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
 
         when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL))

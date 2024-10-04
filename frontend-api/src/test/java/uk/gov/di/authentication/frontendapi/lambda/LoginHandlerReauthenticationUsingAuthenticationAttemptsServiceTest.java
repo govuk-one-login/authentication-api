@@ -180,6 +180,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_ALLOWED_RETRIES);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -227,10 +228,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(authenticationAttemptsService.getCount(
                             any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
                     .thenReturn(MAX_ALLOWED_RETRIES - 1);
-            when(authenticationAttemptsService.getCountsByJourney(
-                            any(String.class), eq(JourneyType.REAUTHENTICATION)))
-                    .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1))
-                    .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            any(String.class), any(String.class), eq(JourneyType.REAUTHENTICATION)))
+                    .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -255,7 +255,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                     Optional.of(ENCODED_DEVICE_DETAILS)),
                             pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
                             pair("incorrect_email_attempt_count", 0),
-                            pair("incorrect_password_attempt_count", 6),
+                            pair("incorrect_password_attempt_count", 5),
                             pair("incorrect_otp_code_attempt_count", 0),
                             pair("failure-reason", "incorrect_password"));
 
@@ -324,13 +324,11 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-            when(authenticationAttemptsService.getCountsByJourney(
-                            any(String.class), eq(JourneyType.REAUTHENTICATION)))
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            any(), any(), eq(JourneyType.REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
             setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
-            when(authenticationAttemptsService.getCountsByJourney(any(), eq(REAUTHENTICATION)))
-                    .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
             when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);
 
@@ -369,12 +367,11 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         when(authenticationAttemptsService.getCount(
                         any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
                 .thenReturn(MAX_ALLOWED_RETRIES - 1);
-        when(authenticationAttemptsService.getCountsByJourney(
-                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1))
                 .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
 
@@ -413,9 +410,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
-        when(authenticationAttemptsService.getCountsByJourney(
-                        any(String.class), eq(JourneyType.REAUTHENTICATION)))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
 
         setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
@@ -492,7 +488,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
         when(configurationService.supportReauthSignoutEnabled()).thenReturn(true);

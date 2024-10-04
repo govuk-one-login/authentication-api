@@ -25,10 +25,8 @@ import uk.gov.di.authentication.frontendapi.helpers.CommonTestVariables;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -37,7 +35,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -50,7 +47,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -79,8 +75,6 @@ class StartServiceTest {
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
-    private static final String SUBJECT_ID = new Subject().getValue();
-
     private final UserContext basicUserContext =
             buildUserContext(
                     jsonArrayOf("P2.Cl.Cm"),
@@ -97,8 +91,6 @@ class StartServiceTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private StartService startService;
 
     @BeforeEach
@@ -276,10 +268,6 @@ class StartServiceTest {
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var maxRetries = 6;
         when(configurationService.getMaxPasswordRetries()).thenReturn(maxRetries);
-        var enterPasswordCount = isBlockedForReauth ? maxRetries : maxRetries - 1;
-        when(authenticationAttemptsService.getCountsByJourney(
-                        SUBJECT_ID, JourneyType.REAUTHENTICATION))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, enterPasswordCount));
 
         var userStartInfo =
                 startService.buildUserStartInfo(

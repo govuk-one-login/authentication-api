@@ -35,7 +35,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -277,9 +276,15 @@ public class StartHandler
                 maybeInternalSubjectId
                         .map(
                                 subjectId ->
-                                        authenticationAttemptsService.getCountsByJourney(
-                                                subjectId, JourneyType.REAUTHENTICATION))
-                        .orElse(Map.of());
+                                        authenticationAttemptsService
+                                                .getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                                                        subjectId,
+                                                        startRequest.rpPairwiseIdForReauth(),
+                                                        JourneyType.REAUTHENTICATION))
+                        .orElse(
+                                authenticationAttemptsService.getCountsByJourney(
+                                        startRequest.rpPairwiseIdForReauth(),
+                                        JourneyType.REAUTHENTICATION));
         var blockedCountTypes =
                 ReauthAuthenticationAttemptsHelper.countTypesWhereUserIsBlockedForReauth(
                         reauthCountTypesToCounts, configurationService);

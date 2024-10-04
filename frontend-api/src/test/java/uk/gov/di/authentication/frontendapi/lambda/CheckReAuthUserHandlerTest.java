@@ -156,7 +156,8 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldReturn200ForSuccessfulReAuthRequest() {
         var existingCountOfIncorrectEmails = 1;
-        setupExistingEnterEmailAttemptsCount(existingCountOfIncorrectEmails);
+        setupExistingEnterEmailAttemptsCountForIdentifier(
+                existingCountOfIncorrectEmails, TEST_SUBJECT_ID);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -183,7 +184,7 @@ class CheckReAuthUserHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_USED_TO_SIGN_IN))
                 .thenReturn(Optional.empty());
 
-        setupExistingEnterEmailAttemptsCount(1);
+        setupExistingEnterEmailAttemptsCountForIdentifier(1, TEST_RP_PAIRWISE_ID);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -206,7 +207,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
-        setupExistingEnterEmailAttemptsCount(MAX_RETRIES);
+        setupExistingEnterEmailAttemptsCountForSubjectIdAndPairwiseId(MAX_RETRIES, 0);
         var result =
                 handler.handleRequestWithUserContext(
                         API_REQUEST_EVENT_WITH_VALID_HEADERS,
@@ -217,11 +218,36 @@ class CheckReAuthUserHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
-        verify(auditService)
+        // In the case where a user is already locked out, we do not emit this event
+        // The case where the event is emitted is tested in integration tests
+        verify(auditService, never())
                 .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        testAuditContextWithAuditEncoded.withSubjectId(AuditService.UNKNOWN),
-                        pair("number_of_attempts_user_allowed_to_login", MAX_RETRIES));
+                        eq(FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED),
+                        any(),
+                        any(AuditService.MetadataPair[].class));
+        verify(auditService, times(1))
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        testAuditContextWithAuditEncoded,
+                        AuditService.MetadataPair.pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        AuditService.MetadataPair.pair("incorrect_email_attempt_count", 6),
+                        AuditService.MetadataPair.pair("incorrect_password_attempt_count", 0),
+                        AuditService.MetadataPair.pair("incorrect_otp_code_attempt_count", 0),
+                        AuditService.MetadataPair.pair("failure-reason", "incorrect_email"));
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasEnteredEmailTooManyTimesAcrossRpPairwiseIdAndSubjectId() {
+        setupExistingEnterEmailAttemptsCountForSubjectIdAndPairwiseId(MAX_RETRIES - 1, 1);
+        var result =
+                handler.handleRequestWithUserContext(
+                        API_REQUEST_EVENT_WITH_VALID_HEADERS,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_USED_TO_SIGN_IN, TEST_RP_PAIRWISE_ID),
+                        userContext);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
 
         // In the case where a user is already locked out, we do not emit this event
         // The case where the event is emitted is tested in integration tests
@@ -243,8 +269,8 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForPasswordRetries() {
-        when(authenticationAttemptsService.getCountsByJourney(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_RETRIES));
 
         var result =
@@ -260,8 +286,8 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasBeenBlockedForMfaAttempts() {
-        when(authenticationAttemptsService.getCountsByJourney(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        TEST_SUBJECT_ID, expectedRpPairwiseSub, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_SMS_CODE, MAX_RETRIES));
 
         var result =
@@ -277,7 +303,7 @@ class CheckReAuthUserHandlerTest {
 
     @Test
     void shouldReturn404ForWhenUserDoesNotMatch() {
-        setupExistingEnterEmailAttemptsCount(3);
+        setupExistingEnterEmailAttemptsCountForIdentifier(3, TEST_RP_PAIRWISE_ID);
 
         var result =
                 handler.handleRequestWithUserContext(
@@ -302,7 +328,7 @@ class CheckReAuthUserHandlerTest {
     @Test
     void shouldIncludeTheUserSubjectIdForWhenUserDoesNotMatchButHasAccount() {
         var differentSubjectId = "ANOTHER_SUBJECT_ID";
-        setupExistingEnterEmailAttemptsCount(3);
+        setupExistingEnterEmailAttemptsCountForIdentifier(3, TEST_RP_PAIRWISE_ID);
         when(authenticationService.getUserProfileByEmailMaybe(
                         DIFFERENT_EMAIL_USED_TO_REAUTHENTICATE))
                 .thenReturn(Optional.of(new UserProfile().withSubjectID(differentSubjectId)));
@@ -328,12 +354,25 @@ class CheckReAuthUserHandlerTest {
                         pair("user_id_for_user_supplied_email", differentSubjectId, true));
     }
 
-    private void setupExistingEnterEmailAttemptsCount(int count) {
+    private void setupExistingEnterEmailAttemptsCountForIdentifier(int count, String identifier) {
         when(authenticationAttemptsService.getCount(
-                        any(), eq(JourneyType.REAUTHENTICATION), eq(CountType.ENTER_EMAIL)))
+                        identifier, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
                 .thenReturn(count);
         when(authenticationAttemptsService.getCountsByJourney(
-                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION))
+                        identifier, JourneyType.REAUTHENTICATION))
                 .thenReturn(Map.of(CountType.ENTER_EMAIL, count));
+    }
+
+    private void setupExistingEnterEmailAttemptsCountForSubjectIdAndPairwiseId(
+            int subjectIdCount, int pairwiseIdCount) {
+        when(authenticationAttemptsService.getCount(
+                        TEST_SUBJECT_ID, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
+                .thenReturn(subjectIdCount);
+        when(authenticationAttemptsService.getCount(
+                        expectedRpPairwiseSub, JourneyType.REAUTHENTICATION, CountType.ENTER_EMAIL))
+                .thenReturn(pairwiseIdCount);
+        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                        TEST_SUBJECT_ID, TEST_RP_PAIRWISE_ID, JourneyType.REAUTHENTICATION))
+                .thenReturn(Map.of(CountType.ENTER_EMAIL, subjectIdCount + pairwiseIdCount));
     }
 }
