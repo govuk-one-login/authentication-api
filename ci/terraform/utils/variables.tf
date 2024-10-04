@@ -190,3 +190,9 @@ variable "support_email_check_enabled" {
   type        = bool
   description = "Feature flag which toggles the Experian email check on and off"
 }
+
+variable "skip_canary" {
+  description = "Flag to skip canary if [skip canary] or [canary skip], or [no canary] string is included in git merge commit message"
+  type        = bool
+  default     = false
+}
