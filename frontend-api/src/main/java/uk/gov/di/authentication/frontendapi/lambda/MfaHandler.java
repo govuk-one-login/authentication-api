@@ -164,14 +164,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
             }
 
-            Optional<ErrorResponse> codeRequestValid =
+            Optional<ErrorResponse> userHasRequestedTooManyOTPs =
                     validateCodeRequestAttempts(email, journeyType, userContext);
 
-            if (codeRequestValid.isPresent()) {
+            if (userHasRequestedTooManyOTPs.isPresent()) {
                 auditService.submitAuditEvent(
                         AUTH_MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
 
-                return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
+                return generateApiGatewayProxyErrorResponse(400, userHasRequestedTooManyOTPs.get());
             }
 
             if (!userContext.getSession().validateSession(email)) {
@@ -181,6 +181,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
+
             String phoneNumber = authenticationService.getPhoneNumber(email).orElse(null);
 
             if (phoneNumber == null) {
@@ -189,6 +190,23 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             } else {
                 auditContext = auditContext.withPhoneNumber(phoneNumber);
+            }
+
+            LOG.info("Incrementing code request count for {}", journeyType);
+            sessionService.storeOrUpdateSession(
+                    userContext
+                            .getSession()
+                            .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType));
+
+            Optional<ErrorResponse> thisRequestExceedsMaximumAllowedRequests =
+                    validateCodeRequestAttempts(email, journeyType, userContext);
+
+            if (thisRequestExceedsMaximumAllowedRequests.isPresent()) {
+                auditService.submitAuditEvent(
+                        AUTH_MFA_INVALID_CODE_REQUEST, auditContext, metadataPairs);
+
+                return generateApiGatewayProxyErrorResponse(
+                        400, thisRequestExceedsMaximumAllowedRequests.get());
             }
 
             var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
@@ -208,11 +226,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                         return newCode;
                                     });
 
-            LOG.info("Incrementing code request count");
-            sessionService.storeOrUpdateSession(
-                    userContext
-                            .getSession()
-                            .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType));
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 LOG.info(
@@ -249,7 +262,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
-        if (codeRequestCount == configurationService.getCodeMaxRetries()) {
+        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             LOG.warn("User has requested too many OTP codes.");
 
             blockReauthenticatingUserWhenReauthenticationLogOffNotSupported(
