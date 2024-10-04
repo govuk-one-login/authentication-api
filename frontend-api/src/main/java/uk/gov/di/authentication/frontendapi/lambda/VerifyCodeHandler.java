@@ -221,7 +221,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         auditContext);
 
                 if (userHasExceededAllowedAttemptsForReauthenticationJourney(
-                        journeyType, subjectId, auditContext, userProfile, client)) {
+                        journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
                 }
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
@@ -256,11 +256,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             JourneyType journeyType,
             String subjectId,
             AuditContext auditContext,
-            UserProfile userProfile,
-            ClientRegistry client) {
+            Optional<String> maybeRpPairwiseId) {
         return journeyType == JourneyType.REAUTHENTICATION
                 && checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
-                        journeyType, subjectId, auditContext, userProfile, client);
+                        journeyType, subjectId, auditContext, maybeRpPairwiseId);
     }
 
     private Optional<String> getCode(

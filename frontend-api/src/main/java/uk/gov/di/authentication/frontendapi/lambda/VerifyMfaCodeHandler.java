@@ -198,6 +198,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     journeyType,
                     subjectID,
                     authSession.get(),
+                    auditContext,
                     maybeRpPairwiseId);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown");
@@ -271,6 +272,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             JourneyType journeyType,
             String subjectId,
             AuthSessionItem authSession,
+            AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
 
         var mfaCodeProcessor =
@@ -313,52 +315,62 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         sessionService.storeOrUpdateSession(session);
 
+        if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
+                journeyType,
+                userContext.getUserProfile().orElse(null),
+                auditContext,
+                userContext,
+                maybeRpPairwiseId)) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+        }
+
         return errorResponseMaybe
                 .map(response -> generateApiGatewayProxyErrorResponse(400, response))
                 .orElseGet(
-                        () -> {
-                            var clientSession = userContext.getClientSession();
-                            var levelOfConfidence =
-                                    clientSession
-                                                    .getEffectiveVectorOfTrust()
-                                                    .containsLevelOfConfidence()
-                                            ? clientSession
-                                                    .getEffectiveVectorOfTrust()
-                                                    .getLevelOfConfidence()
-                                            : NONE;
+                        () ->
+                                handleSuccess(
+                                        codeRequest,
+                                        userContext,
+                                        journeyType,
+                                        authSession,
+                                        session));
+    }
 
-                            LOG.info(
-                                    "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
-                                    codeRequest.getMfaMethodType().getValue(),
-                                    journeyType);
+    private APIGatewayProxyResponseEvent handleSuccess(
+            VerifyMfaCodeRequest codeRequest,
+            UserContext userContext,
+            JourneyType journeyType,
+            AuthSessionItem authSession,
+            Session session) {
+        var clientSession = userContext.getClientSession();
+        var levelOfConfidence =
+                clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
+                        ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
+                        : NONE;
 
-                            sessionService.storeOrUpdateSession(
-                                    session.setCurrentCredentialStrength(
-                                                    CredentialTrustLevel.MEDIUM_LEVEL)
-                                            .setVerifiedMfaMethodType(
-                                                    codeRequest.getMfaMethodType()));
+        LOG.info(
+                "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
+                codeRequest.getMfaMethodType().getValue(),
+                journeyType);
 
-                            authSessionService.updateSession(
-                                    authSession.withVerifiedMfaMethodType(
-                                            codeRequest.getMfaMethodType().getValue()));
+        sessionService.storeOrUpdateSession(
+                session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
+                        .setVerifiedMfaMethodType(codeRequest.getMfaMethodType()));
 
-                            var clientId =
-                                    userContext.getClient().isPresent()
-                                            ? userContext.getClient().get().getClientID()
-                                            : null;
+        authSessionService.updateSession(
+                authSession.withVerifiedMfaMethodType(codeRequest.getMfaMethodType().getValue()));
 
-                            cloudwatchMetricsService.incrementAuthenticationSuccess(
-                                    authSession.getIsNewAccount(),
-                                    clientId,
-                                    userContext.getClientName(),
-                                    levelOfConfidence.getValue(),
-                                    clientService.isTestJourney(
-                                            clientId, session.getEmailAddress()),
-                                    true);
+        var clientId = userContext.getClientId();
 
-                            return ApiGatewayResponseHelper
-                                    .generateEmptySuccessApiGatewayResponse();
-                        });
+        cloudwatchMetricsService.incrementAuthenticationSuccess(
+                authSession.getIsNewAccount(),
+                clientId,
+                userContext.getClientName(),
+                levelOfConfidence.getValue(),
+                clientService.isTestJourney(clientId, session.getEmailAddress()),
+                true);
+
+        return ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse();
     }
 
     private void processCodeSession(
