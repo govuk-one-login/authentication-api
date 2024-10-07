@@ -482,7 +482,7 @@ public class AuthenticationCallbackHandler
                 var metadataPairs = new ArrayList<AuditService.MetadataPair>();
                 metadataPairs.add(pair("internalSubjectId", UNKNOWN));
                 metadataPairs.add(pair("isNewAccount", newAccount));
-                metadataPairs.add(pair("rpPairwiseId", userInfo.getClaim("rp_client_id")));
+                metadataPairs.add(pair("rpPairwiseId", userInfo.getClaim("rp_pairwise_id")));
                 metadataPairs.add(pair("authCode", authCode.getValue()));
                 if (authenticationRequest.getNonce() != null) {
                     metadataPairs.add(pair("nonce", authenticationRequest.getNonce().getValue()));

@@ -136,7 +136,7 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(USER_INFO.getSubject()).thenReturn(PAIRWISE_SUBJECT_ID);
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
-        when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
+        when(USER_INFO.getClaim("rp_pairwise_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
     }
 
