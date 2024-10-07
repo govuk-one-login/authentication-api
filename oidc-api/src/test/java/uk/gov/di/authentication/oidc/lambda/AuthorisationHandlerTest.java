@@ -438,8 +438,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(isAuthenticated, actualChannelClaim);
+            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(isAuthenticated, actualAuthenticatedClaim);
         }
 
         @Test
@@ -457,8 +457,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(false, actualChannelClaim);
+            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(false, actualAuthenticatedClaim);
         }
 
         @Test
@@ -477,7 +477,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualCurrentCredentialStrengthClaim = captor.getValue().getClaim("currentCredentialStrength");
+            var actualCurrentCredentialStrengthClaim =
+                    captor.getValue().getClaim("currentCredentialStrength");
             assertEquals(currentCredentialStrength, actualCurrentCredentialStrengthClaim);
         }
 
@@ -496,7 +497,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualCurrentCredentialStrengthClaim = captor.getValue().getClaim("currentCredentialStrength");
+            var actualCurrentCredentialStrengthClaim =
+                    captor.getValue().getClaim("currentCredentialStrength");
             assertEquals(null, actualCurrentCredentialStrengthClaim);
         }
 
@@ -2426,11 +2428,13 @@ class AuthorisationHandlerTest {
                                 new Session("a-new-session-id").setAuthenticated(isAuthenticated)));
     }
 
-    private void withExistingSessionCurrentCredentialStrengthValue(CredentialTrustLevel credentialStrength) {
+    private void withExistingSessionCurrentCredentialStrengthValue(
+            CredentialTrustLevel credentialStrength) {
         when(sessionService.getSessionFromSessionCookie(any()))
                 .thenReturn(
                         Optional.of(
-                                new Session("a-new-session-id").setCurrentCredentialStrength(credentialStrength)));
+                                new Session("a-new-session-id")
+                                        .setCurrentCredentialStrength(credentialStrength)));
     }
 
 =======
