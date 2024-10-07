@@ -10,6 +10,7 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
 
     private String sessionId;
+    private String email;
     private long timeToLive;
 
     public OrchSessionItem() {}
@@ -26,6 +27,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withSessionId(String sessionId) {
         this.sessionId = sessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute("email")
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public OrchSessionItem withEmail(String email) {
+        this.email = email;
         return this;
     }
 
