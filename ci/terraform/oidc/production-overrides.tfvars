@@ -38,6 +38,8 @@ internal_sector_uri                         = "https://identity.account.gov.uk"
 ipv_authorisation_client_id                 = "authOrchestrator"
 account_intervention_service_call_enabled   = true
 account_intervention_service_action_enabled = true
+support_reauth_signout_enabled              = true
+authentication_attempts_service_enabled     = true
 ipv_auth_public_encryption_key              = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4K/6GH//FQSD6Yk/5nKY
