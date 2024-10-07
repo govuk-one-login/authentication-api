@@ -445,8 +445,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(isAuthenticated, actualChannelClaim);
+            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(isAuthenticated, actualAuthenticatedClaim);
         }
 
         @Test
@@ -464,8 +464,8 @@ class AuthorisationHandlerTest {
 
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(captor.capture());
-            var actualChannelClaim = captor.getValue().getClaim("authenticated");
-            assertEquals(false, actualChannelClaim);
+            var actualAuthenticatedClaim = captor.getValue().getClaim("authenticated");
+            assertEquals(false, actualAuthenticatedClaim);
         }
 
         @Test
