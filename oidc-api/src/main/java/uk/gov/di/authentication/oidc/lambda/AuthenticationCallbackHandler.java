@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
@@ -58,6 +59,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -101,6 +103,7 @@ public class AuthenticationCallbackHandler
     private final AuthenticationAuthorizationService authorisationService;
     private final AuthenticationTokenService tokenService;
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
@@ -126,6 +129,7 @@ public class AuthenticationCallbackHandler
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
@@ -165,6 +169,7 @@ public class AuthenticationCallbackHandler
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redisConnectionService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.auditService = new AuditService(configurationService);
@@ -204,6 +209,7 @@ public class AuthenticationCallbackHandler
             AuthenticationAuthorizationService responseService,
             AuthenticationTokenService tokenService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
@@ -219,6 +225,7 @@ public class AuthenticationCallbackHandler
         this.authorisationService = responseService;
         this.tokenService = tokenService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
@@ -248,6 +255,14 @@ public class AuthenticationCallbackHandler
 
             Session userSession =
                     sessionService
+                            .getSession(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () ->
+                                            new AuthenticationCallbackException(
+                                                    "Orchestration user session not found"));
+
+            OrchSessionItem orchUserSession =
+                    orchSessionService
                             .getSession(sessionCookiesIds.getSessionId())
                             .orElseThrow(
                                     () ->
@@ -350,6 +365,7 @@ public class AuthenticationCallbackHandler
                 if (nonNull(userInfo.getEmailAddress())) {
                     isTestJourney =
                             clientService.isTestJourney(clientId, userInfo.getEmailAddress());
+                    orchUserSession.setEmail(userInfo.getEmailAddress());
                 }
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");

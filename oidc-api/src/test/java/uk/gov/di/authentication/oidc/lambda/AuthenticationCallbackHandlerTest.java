@@ -61,6 +61,7 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthenticationAuthorizationService.class);
     private final AuthenticationTokenService tokenService = mock(AuthenticationTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationUserInfoStorageService userInfoStorageService =
@@ -162,6 +163,7 @@ class AuthenticationCallbackHandlerTest {
                         authorizationService,
                         tokenService,
                         sessionService,
+                        orchSessionService,
                         clientSessionService,
                         auditService,
                         userInfoStorageService,
