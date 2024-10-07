@@ -303,8 +303,8 @@ class UpdateEmailHandlerTest {
                         "Bloggs.Joe@digital.cabinet-office.gov.uk",
                         OTP);
 
-        assertEquals(updateEmailRequest.getExistingEmailAddress(), EXISTING_EMAIL_ADDRESS);
-        assertEquals(updateEmailRequest.getReplacementEmailAddress(), NEW_EMAIL_ADDRESS);
+        assertEquals(updateEmailRequest.existingEmailAddress(), EXISTING_EMAIL_ADDRESS);
+        assertEquals(updateEmailRequest.replacementEmailAddress(), NEW_EMAIL_ADDRESS);
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent(

@@ -122,8 +122,8 @@ public class UpdateEmailHandler
 
             boolean isValidOtpCode =
                     codeStorageService.isValidOtpCode(
-                            updateInfoRequest.getReplacementEmailAddress(),
-                            updateInfoRequest.getOtp(),
+                            updateInfoRequest.replacementEmailAddress(),
+                            updateInfoRequest.otp(),
                             NotificationType.VERIFY_EMAIL);
             if (!isValidOtpCode) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
@@ -131,19 +131,19 @@ public class UpdateEmailHandler
 
             Optional<ErrorResponse> emailValidationErrors =
                     ValidationHelper.validateEmailAddressUpdate(
-                            updateInfoRequest.getExistingEmailAddress(),
-                            updateInfoRequest.getReplacementEmailAddress());
+                            updateInfoRequest.existingEmailAddress(),
+                            updateInfoRequest.replacementEmailAddress());
             if (emailValidationErrors.isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, emailValidationErrors.get());
             }
 
-            if (dynamoService.userExists(updateInfoRequest.getReplacementEmailAddress())) {
+            if (dynamoService.userExists(updateInfoRequest.replacementEmailAddress())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
 
             var userProfile =
                     dynamoService
-                            .getUserProfileByEmailMaybe(updateInfoRequest.getExistingEmailAddress())
+                            .getUserProfileByEmailMaybe(updateInfoRequest.existingEmailAddress())
                             .orElseThrow(
                                     () ->
                                             new UserNotFoundException(
@@ -152,7 +152,7 @@ public class UpdateEmailHandler
             AtomicReference<EmailCheckResultStatus> resultStatus =
                     new AtomicReference<>(EmailCheckResultStatus.PENDING);
             dynamoEmailCheckResultService
-                    .getEmailCheckStore(updateInfoRequest.getReplacementEmailAddress())
+                    .getEmailCheckStore(updateInfoRequest.replacementEmailAddress())
                     .ifPresent(result -> resultStatus.set(result.getStatus()));
             LOG.info(
                     "UpdateEmailHandler: Experian email verification status: {}",
@@ -167,7 +167,7 @@ public class UpdateEmailHandler
                             ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                             sessionId,
                             AuditService.UNKNOWN,
-                            updateInfoRequest.getReplacementEmailAddress(),
+                            updateInfoRequest.replacementEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             userProfile.getPhoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
@@ -194,14 +194,14 @@ public class UpdateEmailHandler
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
             dynamoService.updateEmail(
-                    updateInfoRequest.getExistingEmailAddress(),
-                    updateInfoRequest.getReplacementEmailAddress());
+                    updateInfoRequest.existingEmailAddress(),
+                    updateInfoRequest.replacementEmailAddress());
             LOG.info(
                     "Email has successfully been updated. Adding message to SQS queue (x2 - notification will be sent to current and previous email addresses)");
 
             String[] emailUpdateNotificationDestinations = {
-                updateInfoRequest.getExistingEmailAddress(),
-                updateInfoRequest.getReplacementEmailAddress()
+                updateInfoRequest.existingEmailAddress(),
+                updateInfoRequest.replacementEmailAddress()
             };
             for (String emailAddress : emailUpdateNotificationDestinations) {
                 NotifyRequest notifyEmailAddressUpdateRequest =
@@ -221,7 +221,7 @@ public class UpdateEmailHandler
                     AccountManagementAuditableEvent.AUTH_UPDATE_EMAIL,
                     auditContext.withSubjectId(internalCommonSubjectIdentifier.getValue()),
                     AuditService.MetadataPair.pair(
-                            "replacedEmail", updateInfoRequest.getExistingEmailAddress(), true));
+                            "replacedEmail", updateInfoRequest.existingEmailAddress(), true));
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();
