@@ -518,7 +518,7 @@ public class AuthorisationHandler
         }
 
         OrchSessionItem orchSession;
-        String newSessionId = IdGenerator.generate();
+        String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
             orchSession = new OrchSessionItem().withSessionId(newSessionId);
             LOG.info("Created new Orch session");
@@ -630,7 +630,7 @@ public class AuthorisationHandler
         }
 
         OrchSessionItem orchSession;
-        String newSessionId = IdGenerator.generate();
+        String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
             orchSession = new OrchSessionItem().withSessionId(newSessionId);
             LOG.info("Created new Orch session");
