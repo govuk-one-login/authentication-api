@@ -32,7 +32,6 @@ import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.*;
-import uk.gov.di.orchestration.shared.services.LogoutService;
 
 import java.net.URI;
 import java.util.*;
@@ -47,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.eq;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
@@ -401,7 +399,8 @@ class AuthenticationCallbackHandlerTest {
         verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
         assertThat(
                 MFAMethodType.AUTH_APP.getValue(),
-                equalTo(orchSessionCaptor.getAllValues().get(0).getVerifiedMfaMethodType()));
+                equalTo(orchSessionCaptor.getValue().getVerifiedMfaMethodType()));
+        assertEquals(TEST_EMAIL_ADDRESS, orchSessionCaptor.getValue().getEmailAddress());
     }
 
     @Nested
