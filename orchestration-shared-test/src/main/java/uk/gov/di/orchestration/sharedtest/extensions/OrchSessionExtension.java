@@ -17,7 +17,7 @@ import java.util.Optional;
 
 public class OrchSessionExtension extends DynamoExtension implements AfterEachCallback {
 
-    public static final String TABLE_NAME = "local-Orch-Session";
+    public static final String TABLE_NAME = "local-OrchSession";
     public static final String SESSION_ID_FIELD = "SessionId";
     private OrchSessionService orchSessionService;
     private final ConfigurationService configurationService;

@@ -416,7 +416,7 @@ Resources:
   OrchSessionTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${Environment}-Orch-Session
+      TableName: !Sub ${Environment}-OrchSession
       AttributeDefinitions:
         - AttributeName: SessionId
           AttributeType: S
