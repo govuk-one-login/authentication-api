@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -101,6 +102,7 @@ public class AuthenticationCallbackHandler
     private final AuthenticationAuthorizationService authorisationService;
     private final AuthenticationTokenService tokenService;
     private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
@@ -126,6 +128,7 @@ public class AuthenticationCallbackHandler
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.userInfoStorageService =
@@ -165,6 +168,7 @@ public class AuthenticationCallbackHandler
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService, redisConnectionService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.auditService = new AuditService(configurationService);
@@ -204,6 +208,7 @@ public class AuthenticationCallbackHandler
             AuthenticationAuthorizationService responseService,
             AuthenticationTokenService tokenService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
             AuditService auditService,
             AuthenticationUserInfoStorageService dynamoAuthUserInfoService,
@@ -219,6 +224,7 @@ public class AuthenticationCallbackHandler
         this.authorisationService = responseService;
         this.tokenService = tokenService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.userInfoStorageService = dynamoAuthUserInfoService;
