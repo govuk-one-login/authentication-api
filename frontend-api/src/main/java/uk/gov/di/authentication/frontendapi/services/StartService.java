@@ -64,9 +64,7 @@ public class StartService {
         if (session.isAuthenticated() && userProfile.isEmpty()) {
             LOG.info(
                     "Session is authenticated but user profile is empty. Creating new session with existing sessionID");
-            session =
-                    new Session(session.getSessionId())
-                            .withBrowserSessionId(session.getBrowserSessionId());
+            session = new Session(session.getSessionId());
             session.addClientSession(clientSessionId);
             sessionService.storeOrUpdateSession(session);
         }

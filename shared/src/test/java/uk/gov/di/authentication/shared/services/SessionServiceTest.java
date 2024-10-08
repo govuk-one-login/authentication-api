@@ -16,8 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -130,17 +128,6 @@ class SessionServiceTest {
                                         CookieHelper.REQUEST_COOKIE_HEADER, "gs=session-id.456;")));
 
         assertFalse(session.isPresent());
-    }
-
-    @Test
-    void shouldUpdateSessionIdInRedisAndDeleteOldKey() {
-        var session = new Session("session-id").addClientSession("client-session-id");
-
-        sessionService.storeOrUpdateSession(session);
-        sessionService.updateWithNewSessionId(session);
-
-        verify(redis, times(2)).saveWithExpiry(anyString(), anyString(), anyLong());
-        verify(redis).deleteValue("session-id");
     }
 
     @Test

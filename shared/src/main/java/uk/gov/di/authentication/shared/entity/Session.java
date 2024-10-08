@@ -22,8 +22,6 @@ public class Session {
 
     @Expose private String sessionId;
 
-    @Expose private String browserSessionId;
-
     @Expose private List<String> clientSessions;
 
     @Expose private String emailAddress;
@@ -42,8 +40,6 @@ public class Session {
 
     @Expose private boolean authenticated;
 
-    @Expose private int processingIdentityAttempts;
-
     @Expose private MFAMethodType verifiedMfaMethodType;
 
     @Expose private String internalCommonSubjectIdentifier;
@@ -52,26 +48,12 @@ public class Session {
         this.sessionId = sessionId;
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
-        this.processingIdentityAttempts = 0;
         this.codeRequestCountMap = new HashMap<>();
         initializeCodeRequestMap();
     }
 
     public String getSessionId() {
         return sessionId;
-    }
-
-    public String getBrowserSessionId() {
-        return browserSessionId;
-    }
-
-    public void setBrowserSessionId(String browserSessionId) {
-        this.browserSessionId = browserSessionId;
-    }
-
-    public Session withBrowserSessionId(String browserSessionId) {
-        this.browserSessionId = browserSessionId;
-        return this;
     }
 
     public Session setSessionId(String sessionId) {
@@ -183,19 +165,6 @@ public class Session {
     public Session setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
         return this;
-    }
-
-    public int getProcessingIdentityAttempts() {
-        return processingIdentityAttempts;
-    }
-
-    public void resetProcessingIdentityAttempts() {
-        this.processingIdentityAttempts = 0;
-    }
-
-    public int incrementProcessingIdentityAttempts() {
-        this.processingIdentityAttempts += 1;
-        return processingIdentityAttempts;
     }
 
     public MFAMethodType getVerifiedMfaMethodType() {
