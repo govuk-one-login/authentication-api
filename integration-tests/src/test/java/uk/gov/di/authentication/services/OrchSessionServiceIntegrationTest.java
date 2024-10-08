@@ -2,6 +2,7 @@ package uk.gov.di.authentication.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.sharedtest.extensions.OrchSessionExtension;
 
 import java.util.Optional;
@@ -35,6 +36,6 @@ class OrchSessionServiceIntegrationTest {
     }
 
     private void withSession() {
-        orchSessionExtension.addSession(SESSION_ID);
+        orchSessionExtension.addSession(new OrchSessionItem().withSessionId(SESSION_ID));
     }
 }

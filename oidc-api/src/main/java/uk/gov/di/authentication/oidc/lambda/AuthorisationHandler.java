@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -72,6 +73,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -105,6 +107,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachOrchSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
@@ -117,8 +120,9 @@ public class AuthorisationHandler
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
     public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
 
-    private final SessionService sessionService;
     private final ConfigurationService configurationService;
+    private final SessionService sessionService;
+    private final OrchSessionService orchSessionService;
     private final ClientSessionService clientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
@@ -135,6 +139,7 @@ public class AuthorisationHandler
     public AuthorisationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
+            OrchSessionService orchSessionService,
             ClientSessionService clientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
@@ -149,6 +154,7 @@ public class AuthorisationHandler
             AuthorisationService authorisationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
+        this.orchSessionService = orchSessionService;
         this.clientSessionService = clientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
@@ -166,6 +172,7 @@ public class AuthorisationHandler
     public AuthorisationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
@@ -195,6 +202,7 @@ public class AuthorisationHandler
             ConfigurationService configurationService, RedisConnectionService redis) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService, redis);
+        this.orchSessionService = new OrchSessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService, redis);
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService, redis);
@@ -391,6 +399,8 @@ public class AuthorisationHandler
                 pair("reauthRequested", reauthRequested));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
+        Optional<OrchSessionItem> orchSessionOptional =
+                orchSessionService.getSessionFromSessionCookie(input.getHeaders());
 
         var vtrList = getVtrList(reauthRequested, authRequest);
         ClientSession clientSession =
@@ -404,6 +414,7 @@ public class AuthorisationHandler
                 authRequest.toParameters(), Optional.of(client))) {
             return handleDocAppJourney(
                     session,
+                    orchSessionOptional,
                     clientSession,
                     authRequest,
                     client,
@@ -437,6 +448,7 @@ public class AuthorisationHandler
 
         return handleAuthJourney(
                 sessionWithValidBrowserSessionId,
+                orchSessionOptional,
                 clientSession,
                 authRequest,
                 persistentSessionId,
@@ -484,6 +496,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
             Optional<Session> existingSession,
+            Optional<OrchSessionItem> orchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             ClientRegistry client,
@@ -504,6 +517,23 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
+        OrchSessionItem orchSession;
+        String newSessionId = session.getSessionId();
+        if (orchSessionOptional.isEmpty()) {
+            orchSession = new OrchSessionItem().withSessionId(newSessionId);
+            LOG.info("Created new Orch session");
+        } else {
+            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
+            orchSession =
+                    orchSessionService.addOrUpdateSessionId(
+                            Optional.of(previousOrchSessionId), newSessionId);
+            LOG.info(
+                    "Updated Orch session ID from {} to {}",
+                    previousOrchSessionId,
+                    orchSession.getSessionId());
+        }
+        attachOrchSessionIdToLogs(orchSession.getSessionId());
+
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
                         authenticationRequest.toParameters(),
@@ -519,6 +549,9 @@ public class AuthorisationHandler
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.storeOrUpdateSession(session);
+        orchSessionOptional.ifPresentOrElse(
+                s -> orchSessionService.updateSession(orchSession),
+                () -> orchSessionService.addSession(orchSession));
         LOG.info("Session saved successfully");
 
         var state = new State();
@@ -563,6 +596,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<Session> existingSession,
+            Optional<OrchSessionItem> orchSessionOptional,
             ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
@@ -595,6 +629,23 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", previousSessionId);
         }
 
+        OrchSessionItem orchSession;
+        String newSessionId = session.getSessionId();
+        if (orchSessionOptional.isEmpty()) {
+            orchSession = new OrchSessionItem().withSessionId(newSessionId);
+            LOG.info("Created new Orch session");
+        } else {
+            String previousOrchSessionId = orchSessionOptional.get().getSessionId();
+            orchSession =
+                    orchSessionService.addOrUpdateSessionId(
+                            Optional.of(previousOrchSessionId), newSessionId);
+            LOG.info(
+                    "Updated Orch session ID from {} to {}",
+                    previousOrchSessionId,
+                    orchSession.getSessionId());
+        }
+        attachOrchSessionIdToLogs(orchSession.getSessionId());
+
         user = user.withSessionId(session.getSessionId());
 
         auditService.submitAuditEvent(
@@ -604,6 +655,9 @@ public class AuthorisationHandler
                 pair("client-name", client.getClientName()));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
+        orchSessionOptional.ifPresentOrElse(
+                s -> orchSessionService.updateSession(orchSession),
+                () -> orchSessionService.addSession(orchSession));
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);

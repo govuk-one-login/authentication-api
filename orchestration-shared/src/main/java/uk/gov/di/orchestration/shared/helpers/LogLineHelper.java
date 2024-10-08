@@ -4,6 +4,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.orchestration.shared.entity.Session;
 
 import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.ORCH_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
 
 public class LogLineHelper {
@@ -12,6 +13,7 @@ public class LogLineHelper {
 
     public enum LogFieldName {
         SESSION_ID("sessionId", true),
+        ORCH_SESSION_ID("orchSessionId", true),
         CLIENT_SESSION_ID("clientSessionId", true),
         GOVUK_SIGNIN_JOURNEY_ID("govukSigninJourneyId", true),
         PERSISTENT_SESSION_ID("persistentSessionId", true),
@@ -60,5 +62,9 @@ public class LogLineHelper {
             ThreadContext.remove(SESSION_ID.getLogFieldName());
         }
         attachSessionIdToLogs(sessionId);
+    }
+
+    public static void attachOrchSessionIdToLogs(String orchSessionId) {
+        attachLogFieldToLogs(ORCH_SESSION_ID, orchSessionId);
     }
 }
