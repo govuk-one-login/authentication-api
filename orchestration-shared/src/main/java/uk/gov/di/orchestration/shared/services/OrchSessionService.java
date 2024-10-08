@@ -22,7 +22,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
     private final long timeToLive;
 
     public OrchSessionService(ConfigurationService configurationService) {
-        super(OrchSessionItem.class, "OrchSession", configurationService, true);
+        super(OrchSessionItem.class, "Orch-Session", configurationService, true);
         this.timeToLive = configurationService.getSessionExpiry();
         this.cookieHelper = new CookieHelper();
     }
