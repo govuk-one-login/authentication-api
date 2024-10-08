@@ -80,7 +80,6 @@ import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.A
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
@@ -354,6 +353,8 @@ public class AuthenticationCallbackHandler
 
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
                 AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+
+                sessionService.storeOrUpdateSession(userSession.setNewAccount(accountState));
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
                         buildDimensions(
@@ -470,8 +471,7 @@ public class AuthenticationCallbackHandler
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
-                sessionService.storeOrUpdateSession(
-                        userSession.setAuthenticated(true).setNewAccount(EXISTING));
+                sessionService.storeOrUpdateSession(userSession.setAuthenticated(true));
 
                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
                 cloudwatchMetricsService.incrementSignInByClient(
