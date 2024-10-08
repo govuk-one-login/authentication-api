@@ -9,6 +9,7 @@ public class AuthSessionItem {
 
     public static final String ATTRIBUTE_SESSION_ID = "SessionId";
     public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "isNewAccount";
+    public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
 
     public enum AccountState {
         NEW,
@@ -16,8 +17,6 @@ public class AuthSessionItem {
         EXISTING_DOC_APP_JOURNEY,
         UNKNOWN
     }
-
-    public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
 
     private String sessionId;
     private String verifiedMfaMethodType;
