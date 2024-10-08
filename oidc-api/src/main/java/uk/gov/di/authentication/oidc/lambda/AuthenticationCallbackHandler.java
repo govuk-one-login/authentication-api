@@ -23,6 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
@@ -38,6 +39,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
@@ -343,6 +345,15 @@ public class AuthenticationCallbackHandler
                 userInfoStorageService.addAuthenticationUserInfoData(
                         userInfo.getSubject().getValue(), userInfo);
 
+                OrchSessionItem orchSession =
+                        orchSessionService
+                                .getSession(sessionCookiesIds.getSessionId())
+                                .orElseThrow(
+                                        () ->
+                                                new AuthenticationCallbackException(
+                                                        "Orchestration user session not found"));
+                addClaimsToOrchSession(orchSession, userInfo);
+
                 ClientRegistry client = clientService.getClient(clientId).orElseThrow();
 
                 boolean identityRequired =
@@ -640,5 +651,15 @@ public class AuthenticationCallbackHandler
         var stateDigest =
                 new SHA256.Digest().digest(state.toString().getBytes(StandardCharsets.UTF_8));
         return new String(Hex.encode(stateDigest), StandardCharsets.UTF_8);
+    }
+
+    private void addClaimsToOrchSession(OrchSessionItem orchSession, UserInfo userInfo) {
+        String verifiedMfaMethodType =
+                userInfo.getClaim(
+                        AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class);
+        OrchSessionItem updatedOrchSession =
+                orchSession.withVerifiedMfaMethodType(verifiedMfaMethodType);
+        LOG.info("Updating Orch session with claims from userinfo response");
+        orchSessionService.updateSession(updatedOrchSession);
     }
 }

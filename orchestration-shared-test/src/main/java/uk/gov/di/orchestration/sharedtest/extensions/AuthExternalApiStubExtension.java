@@ -31,7 +31,11 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
 
         String userInfoContent =
                 String.format(
-                        "{" + "\"sub\": \"%s\"," + "\"new_account\": true" + "}",
+                        "{"
+                                + "\"sub\": \"%s\","
+                                + "\"new_account\": true,"
+                                + "\"verified_mfa_method_type\": \"AUTH_APP\""
+                                + "}",
                         subjectId.getValue());
 
         register("/userinfo", 200, "application/json", userInfoContent);
@@ -56,6 +60,7 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
                         "{"
                                 + "\"sub\": \"%s\","
                                 + "\"new_account\": true,"
+                                + "\"verified_mfa_method_type\": \"AUTH_APP\","
                                 + "\"password_reset_time\": %s"
                                 + "}",
                         subjectId.getValue(), passwordResetTime.toString());

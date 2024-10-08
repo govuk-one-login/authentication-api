@@ -19,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
+import uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackValidationException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
@@ -139,6 +140,9 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
         when(USER_INFO.getPhoneNumber()).thenReturn("1234");
+        when(USER_INFO.getClaim(
+                        AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(), String.class))
+                .thenReturn(MFAMethodType.AUTH_APP.getValue());
     }
 
     @BeforeEach
@@ -378,6 +382,26 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
         verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+    }
+
+    @Test
+    void shouldUpdateOrchSessionUsingClaimsFromUserInfoResponse()
+            throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        var event = new APIGatewayProxyRequestEvent();
+        setValidHeadersAndQueryParameters(event);
+        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+
+        handler.handleRequest(event, null);
+
+        var orchSessionCaptor = ArgumentCaptor.forClass(OrchSessionItem.class);
+        verify(orchSessionService, times(1)).updateSession(orchSessionCaptor.capture());
+        assertThat(
+                MFAMethodType.AUTH_APP.getValue(),
+                equalTo(orchSessionCaptor.getAllValues().get(0).getVerifiedMfaMethodType()));
     }
 
     @Nested
@@ -665,6 +689,8 @@ class AuthenticationCallbackHandlerTest {
 
     private void usingValidSession() {
         when(sessionService.getSession(SESSION_ID)).thenReturn(Optional.of(session));
+        when(orchSessionService.getSession(SESSION_ID))
+                .thenReturn(Optional.of(new OrchSessionItem().withSessionId(SESSION_ID)));
     }
 
     private void usingValidClientSession() {
