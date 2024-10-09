@@ -115,7 +115,7 @@ public class UpdatePasswordHandler
                     objectMapper.readValue(input.getBody(), UpdatePasswordRequest.class);
 
             Optional<ErrorResponse> passwordValidationError =
-                    passwordValidator.validate(updatePasswordRequest.getNewPassword());
+                    passwordValidator.validate(updatePasswordRequest.newPassword());
 
             if (passwordValidationError.isPresent()) {
                 LOG.info("Error message: {}", passwordValidationError.get().getMessage());
@@ -123,7 +123,7 @@ public class UpdatePasswordHandler
             }
             var userProfile =
                     dynamoService
-                            .getUserProfileByEmailMaybe(updatePasswordRequest.getEmail())
+                            .getUserProfileByEmailMaybe(updatePasswordRequest.email())
                             .orElseThrow(
                                     () ->
                                             new UserNotFoundException(
@@ -141,22 +141,22 @@ public class UpdatePasswordHandler
 
             String currentPassword =
                     dynamoService
-                            .getUserCredentialsFromEmail(updatePasswordRequest.getEmail())
+                            .getUserCredentialsFromEmail(updatePasswordRequest.email())
                             .getPassword();
 
             if (isNewPasswordSameAsCurrentPassword(
-                    currentPassword, updatePasswordRequest.getNewPassword())) {
+                    currentPassword, updatePasswordRequest.newPassword())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
             }
 
             dynamoService.updatePassword(
-                    updatePasswordRequest.getEmail(), updatePasswordRequest.getNewPassword());
+                    updatePasswordRequest.email(), updatePasswordRequest.newPassword());
 
             LOG.info(
                     "User Password has successfully been updated.  Adding confirmation message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(
-                            updatePasswordRequest.getEmail(),
+                            updatePasswordRequest.email(),
                             NotificationType.PASSWORD_UPDATED,
                             userLanguage);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
