@@ -108,15 +108,15 @@ public class UpdatePhoneNumberHandler
                     objectMapper.readValue(input.getBody(), UpdatePhoneNumberRequest.class);
             boolean isValidOtpCode =
                     codeStorageService.isValidOtpCode(
-                            updatePhoneNumberRequest.getEmail(),
-                            updatePhoneNumberRequest.getOtp(),
+                            updatePhoneNumberRequest.email(),
+                            updatePhoneNumberRequest.otp(),
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
             var userProfile =
                     dynamoService
-                            .getUserProfileByEmailMaybe(updatePhoneNumberRequest.getEmail())
+                            .getUserProfileByEmailMaybe(updatePhoneNumberRequest.email())
                             .orElseThrow(
                                     () ->
                                             new UserNotFoundException(
@@ -131,11 +131,11 @@ public class UpdatePhoneNumberHandler
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
             dynamoService.updatePhoneNumber(
-                    updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
+                    updatePhoneNumberRequest.email(), updatePhoneNumberRequest.phoneNumber());
             LOG.info("Phone Number has successfully been updated. Adding message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(
-                            updatePhoneNumberRequest.getEmail(),
+                            updatePhoneNumberRequest.email(),
                             NotificationType.PHONE_NUMBER_UPDATED,
                             userLanguage);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
@@ -158,7 +158,7 @@ public class UpdatePhoneNumberHandler
                             internalCommonSubjectIdentifier.getValue(),
                             userProfile.getEmail(),
                             IpAddressHelper.extractIpAddress(input),
-                            updatePhoneNumberRequest.getPhoneNumber(),
+                            updatePhoneNumberRequest.phoneNumber(),
                             PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                             AuditHelper.getTxmaAuditEncoded(input.getHeaders()));
 
