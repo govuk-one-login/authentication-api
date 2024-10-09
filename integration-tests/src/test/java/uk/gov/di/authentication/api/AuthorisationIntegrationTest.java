@@ -346,10 +346,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 redirectUri,
                 startsWith(TEST_CONFIGURATION_SERVICE.getAuthFrontendBaseURL().toString()));
-        assertThat(
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
-                        .isPresent(),
-                equalTo(true));
         var sessionCookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
         assertOnSessionCookie(sessionCookie);
@@ -842,10 +838,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of("GET"));
         assertThat(response, hasStatus(302));
         assertThat(getLocationResponseHeader(response), startsWith(AUTHORIZE_URI.toString()));
-        assertThat(
-                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
-                        .isPresent(),
-                equalTo(true));
         var sessionCookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs");
         assertOnSessionCookie(sessionCookie);
