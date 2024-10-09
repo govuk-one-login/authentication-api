@@ -50,7 +50,7 @@ public abstract class MfaCodeProcessor {
     boolean hasExceededRetryLimit(MFAMethodType mfaMethodType) {
         LOG.info("Max retries: {}", maxRetries);
         return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType)
-                > maxRetries;
+                >= maxRetries;
     }
 
     void incrementRetryCount(MFAMethodType mfaMethodType) {

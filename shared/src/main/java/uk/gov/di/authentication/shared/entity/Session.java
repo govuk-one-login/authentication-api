@@ -107,7 +107,7 @@ public class Session {
         if (requestType == null) {
             throw new IllegalArgumentException("CodeRequestType cannot be null");
         }
-        LOG.info("CodeRequest count: {}", codeRequestCountMap);
+        LOG.info("CodeRequest count map: {}", codeRequestCountMap);
         return codeRequestCountMap.getOrDefault(requestType, 0);
     }
 
@@ -116,8 +116,9 @@ public class Session {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
         int currentCount = getCodeRequestCount(requestType);
+        LOG.info("CodeRequest count: {} is: {}", requestType, currentCount);
         codeRequestCountMap.put(requestType, currentCount + 1);
-        LOG.info("CodeRequest count incremented: {}", codeRequestCountMap);
+        LOG.info("CodeRequest count: {} incremented to: {}", requestType, currentCount + 1);
         return this;
     }
 

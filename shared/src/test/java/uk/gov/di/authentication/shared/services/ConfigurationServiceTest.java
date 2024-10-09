@@ -162,7 +162,7 @@ class ConfigurationServiceTest {
 
     @Test
     void getCodeMaxRetriesShouldDefault() {
-        assertEquals(5, configurationService.getCodeMaxRetries());
+        assertEquals(6, configurationService.getCodeMaxRetries());
     }
 
     @Test

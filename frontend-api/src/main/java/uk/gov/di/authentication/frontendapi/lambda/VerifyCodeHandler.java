@@ -154,9 +154,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     authSessionService.getSessionFromRequestHeaders(input.getHeaders());
             if (authSession.isEmpty()) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
-            } else {
-                attachAuthSessionIdToLogs(authSession.get());
             }
+
+            attachAuthSessionIdToLogs(authSession.get());
             var notificationType = codeRequest.notificationType();
             var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
@@ -192,12 +192,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
-            var isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
-            var code =
-                    isTestClient
-                            ? getOtpCodeForTestClient(notificationType)
-                            : codeStorageService.getOtpCode(
-                                    session.getEmailAddress(), notificationType);
+            var code = getCode(notificationType, session, userContext);
+
             var errorResponse =
                     ValidationHelper.validateVerificationCode(
                             notificationType,
@@ -223,6 +219,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         errorResponse.get(),
                         session,
                         auditContext);
+
+                if (userHasExceededAllowedAttemptsForReauthenticationJourney(
+                        journeyType, subjectId, auditContext, maybeRpPairwiseId)) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+                }
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
@@ -249,6 +250,25 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+    }
+
+    private boolean userHasExceededAllowedAttemptsForReauthenticationJourney(
+            JourneyType journeyType,
+            String subjectId,
+            AuditContext auditContext,
+            Optional<String> maybeRpPairwiseId) {
+        return journeyType == JourneyType.REAUTHENTICATION
+                && checkReauthErrorCountsAndEmitReauthFailedAuditEvent(
+                        journeyType, subjectId, auditContext, maybeRpPairwiseId);
+    }
+
+    private Optional<String> getCode(
+            NotificationType notificationType, Session session, UserContext userContext)
+            throws ClientNotFoundException {
+        boolean isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
+        return isTestClient
+                ? getOtpCodeForTestClient(notificationType)
+                : codeStorageService.getOtpCode(session.getEmailAddress(), notificationType);
     }
 
     private void handleInvalidVerificationCode(

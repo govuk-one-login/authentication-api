@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.util.List;
@@ -121,19 +122,11 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn4O0WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
+    void shouldReturn400WhenRequestingACodeForReauthenticationWhichBreachesTheMaxThreshold()
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
-        redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
-        redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
-        redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
-        redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
-        redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
+
+        aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(authenticatedSessionId);
 
         var response =
                 makeRequest(
@@ -143,10 +136,19 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1025));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_MFA_INVALID_CODE_REQUEST));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(0));
+    }
+
+    private static void aUserHasEnteredAnOTPIncorrectlyTheMaximumAllowedTimes(
+            String authenticatedSessionId) throws Json.JsonException {
+        for (int i = 0; i < ConfigurationService.getInstance().getCodeMaxRetries(); i++) {
+            redis.incrementSessionCodeRequestCount(
+                    authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
+        }
     }
 
     @Test

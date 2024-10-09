@@ -196,22 +196,41 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 }
                 return generateEmptySuccessApiGatewayResponse();
             }
-            Optional<ErrorResponse> codeRequestValid =
+
+            Optional<ErrorResponse> userHasExceededMaximumAllowedCodeRequests =
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
                             request.getNotificationType(),
                             request.getJourneyType());
-            if (codeRequestValid.isPresent()) {
 
+            if (userHasExceededMaximumAllowedCodeRequests.isPresent()) {
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
                         auditContext);
-                return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
+                return generateApiGatewayProxyErrorResponse(
+                        400, userHasExceededMaximumAllowedCodeRequests.get());
             }
+
+            incrementCountOfNotificationsSent(request, userContext.getSession());
+
+            Optional<ErrorResponse> thisRequestExceedsMaxAllowed =
+                    isCodeRequestAttemptValid(
+                            request.getEmail(),
+                            userContext.getSession(),
+                            request.getNotificationType(),
+                            request.getJourneyType());
+
+            if (thisRequestExceedsMaxAllowed.isPresent()) {
+                auditService.submitAuditEvent(
+                        getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
+                        auditContext);
+                return generateApiGatewayProxyErrorResponse(
+                        400, thisRequestExceedsMaxAllowed.get());
+            }
+
             switch (request.getNotificationType()) {
-                case VERIFY_EMAIL:
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                case VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                     return handleNotificationRequest(
                             request.getEmail(),
                             request.getNotificationType(),
@@ -243,8 +262,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request,
                             input,
                             auditContext);
+                default:
+                    return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
             }
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue");
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
@@ -253,6 +273,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
+    }
+
+    private void incrementCountOfNotificationsSent(
+            SendNotificationRequest request, Session session) {
+        LOG.info("Incrementing code request count");
+        sessionService.storeOrUpdateSession(
+                session.incrementCodeRequestCount(
+                        request.getNotificationType(), request.getJourneyType()));
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
@@ -276,11 +304,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                                 generateAndSaveNewCode(
                                                         session.getEmailAddress(),
                                                         notificationType));
-
-        LOG.info("Incrementing code request count");
-        sessionService.storeOrUpdateSession(
-                session.incrementCodeRequestCount(
-                        request.getNotificationType(), request.getJourneyType()));
 
         incrementUserSubmittedCredentialIfNotificationSetupJourney(
                 METRICS,
@@ -379,7 +402,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
-        if (codeRequestCount == configurationService.getCodeMaxRetries()) {
+        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     newCodeRequestBlockPrefix);
