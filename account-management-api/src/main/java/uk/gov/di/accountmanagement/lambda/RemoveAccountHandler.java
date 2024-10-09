@@ -106,7 +106,7 @@ public class RemoveAccountHandler
             RemoveAccountRequest removeAccountRequest =
                     objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
 
-            String email = removeAccountRequest.getEmail();
+            String email = removeAccountRequest.email();
             var userProfile =
                     authenticationService
                             .getUserProfileByEmailMaybe(email)
