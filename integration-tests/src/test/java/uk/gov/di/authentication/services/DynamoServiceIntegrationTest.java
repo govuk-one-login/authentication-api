@@ -28,6 +28,7 @@ import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DynamoServiceIntegrationTest {
 
@@ -445,6 +446,21 @@ class DynamoServiceIntegrationTest {
         assertThat(
                 dynamoService.getOptionalUserProfileFromSubject("5555").get().getEmail(),
                 equalTo("email5"));
+    }
+
+    @Test
+    void shouldRetrieveUserProfileFromSubject() {
+        userStore.signUp("email1", "password-1", new Subject("1111"));
+
+        assertThat(dynamoService.getUserProfileFromSubject("1111").getEmail(), equalTo("email1"));
+    }
+
+    @Test
+    void shouldThrowErrorIfNoUserProfileExists() {
+        assertThrows(
+                RuntimeException.class,
+                () -> dynamoService.getUserProfileFromSubject("NonExistentUser"),
+                "No userCredentials found with query search");
     }
 
     @Test
