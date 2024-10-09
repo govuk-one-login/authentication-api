@@ -85,16 +85,15 @@ public class AuthenticateHandler
         try {
             AuthenticateRequest loginRequest =
                     objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
-            auditContext = auditContext.withEmail(loginRequest.getEmail());
-            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+            auditContext = auditContext.withEmail(loginRequest.email());
+            boolean userHasAccount = authenticationService.userExists(loginRequest.email());
             if (!userHasAccount) {
                 auditService.submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
             boolean hasValidCredentials =
-                    authenticationService.login(
-                            loginRequest.getEmail(), loginRequest.getPassword());
+                    authenticationService.login(loginRequest.email(), loginRequest.password());
             if (!hasValidCredentials) {
                 auditService.submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
