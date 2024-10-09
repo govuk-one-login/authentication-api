@@ -145,6 +145,10 @@ subprojects {
                 add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
                     because 'CVE-2024-7254 is fixed in 3.25.5 and above'
                 }
+
+                add(conf.name, 'commons-io:commons-io:[2.14.0,)') {
+                    because 'CVE-2024-47554 is fixed in 2.14.0 and above'
+                }
             }
         }
 
