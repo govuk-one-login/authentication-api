@@ -255,6 +255,8 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
         when(configService.isIdentityEnabled()).thenReturn(true);
+        when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
+        when(configService.isSignOutOnBrowserCloseEnabled()).thenReturn(true);
         when(authFrontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(authFrontend.authorizeURI(Optional.empty(), Optional.empty()))
@@ -335,7 +337,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(session.getSessionId()),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -529,7 +532,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(session.getSessionId()),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -572,7 +576,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(session.getSessionId()),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @ParameterizedTest
@@ -645,7 +650,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(session.getSessionId()),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -690,7 +696,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(session.getSessionId()),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -1136,7 +1143,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(SESSION_ID),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -1182,7 +1190,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(SESSION_ID),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -1336,7 +1345,8 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
                             CLIENT_ID.getValue(),
                             BASE_AUDIT_USER.withSessionId(SESSION_ID),
-                            pair("client-name", RP_CLIENT_NAME));
+                            pair("client-name", RP_CLIENT_NAME),
+                            pair("new_authentication_required", false));
         }
 
         @Test
@@ -1670,7 +1680,6 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldSetTheRelevantCookiesInTheHeader() {
-            when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
             Session sessionWithBrowserSessionId =
                     new Session(SESSION_ID).withBrowserSessionId(BROWSER_SESSION_ID);
             when(sessionService.generateSession()).thenReturn(sessionWithBrowserSessionId);
@@ -1826,6 +1835,13 @@ class AuthorisationHandlerTest {
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                 BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                         browserSessionIdCookieFromResponse(response));
+                inOrder.verify(auditService)
+                        .submitAuditEvent(
+                                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                                CLIENT_ID.getValue(),
+                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                                pair("client-name", RP_CLIENT_NAME),
+                                pair("new_authentication_required", false));
             }
 
             @Test
@@ -1843,6 +1859,13 @@ class AuthorisationHandlerTest {
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                 BROWSER_SESSION_ID_COOKIE_NAME, NEW_BROWSER_SESSION_ID),
                         browserSessionIdCookieFromResponse(response));
+                inOrder.verify(auditService)
+                        .submitAuditEvent(
+                                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                                CLIENT_ID.getValue(),
+                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                                pair("client-name", RP_CLIENT_NAME),
+                                pair("new_authentication_required", false));
             }
 
             @Test
@@ -1866,7 +1889,8 @@ class AuthorisationHandlerTest {
                         .submitAuditEvent(
                                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                                 CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER,
+                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                                pair("client-name", RP_CLIENT_NAME),
                                 pair("new_authentication_required", true));
             }
 
@@ -1891,6 +1915,13 @@ class AuthorisationHandlerTest {
                                                         format(
                                                                 "%s=",
                                                                 BROWSER_SESSION_ID_COOKIE_NAME))));
+                inOrder.verify(auditService)
+                        .submitAuditEvent(
+                                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                                CLIENT_ID.getValue(),
+                                BASE_AUDIT_USER.withSessionId(SESSION_ID),
+                                pair("client-name", RP_CLIENT_NAME),
+                                pair("new_authentication_required", false));
             }
 
             @Test
@@ -1909,6 +1940,13 @@ class AuthorisationHandlerTest {
                                 "%s=%s; Domain=oidc.auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
                                 BROWSER_SESSION_ID_COOKIE_NAME, BROWSER_SESSION_ID),
                         browserSessionIdCookieFromResponse(response));
+                inOrder.verify(auditService)
+                        .submitAuditEvent(
+                                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                                CLIENT_ID.getValue(),
+                                BASE_AUDIT_USER.withSessionId(SESSION_ID),
+                                pair("client-name", RP_CLIENT_NAME),
+                                pair("new_authentication_required", false));
             }
 
             @Test
@@ -1932,14 +1970,13 @@ class AuthorisationHandlerTest {
                         .submitAuditEvent(
                                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                                 CLIENT_ID.getValue(),
-                                BASE_AUDIT_USER,
+                                BASE_AUDIT_USER.withSessionId(NEW_SESSION_ID),
+                                pair("client-name", RP_CLIENT_NAME),
                                 pair("new_authentication_required", true));
             }
 
             private APIGatewayProxyResponseEvent setupExistingSessionAndCookieInHeader(
                     Session existingSession, String browserSessionIdFromCookie) {
-                when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
-                when(configService.isSignOutOnBrowserCloseEnabled()).thenReturn(true);
                 when(sessionService.getSessionFromSessionCookie(any()))
                         .thenReturn(Optional.ofNullable(existingSession));
                 when(sessionService.generateSession())

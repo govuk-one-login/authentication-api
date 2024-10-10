@@ -434,16 +434,13 @@ public class AuthorisationHandler
         //
 
         Optional<Session> sessionWithValidBrowserSessionId = session;
+        boolean newAuthenticationRequired = false;
         if (configurationService.isBrowserSessionCookieEnabled()
                 && configurationService.isSignOutOnBrowserCloseEnabled()
                 && browserSessionIdFromSession.isPresent()
                 && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
             sessionWithValidBrowserSessionId = Optional.empty();
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTHORISATION_INITIATED,
-                    authRequest.getClientID().getValue(),
-                    user,
-                    pair("new_authentication_required", true));
+            newAuthenticationRequired = true;
         }
 
         return handleAuthJourney(
@@ -455,6 +452,7 @@ public class AuthorisationHandler
                 client,
                 clientSessionId,
                 reauthRequested,
+                newAuthenticationRequired,
                 vtrList,
                 user);
     }
@@ -603,6 +601,7 @@ public class AuthorisationHandler
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
+            boolean newAuthenticationRequired,
             List<VectorOfTrust> vtrList,
             TxmaAuditUser user) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
@@ -647,12 +646,21 @@ public class AuthorisationHandler
         attachOrchSessionIdToLogs(orchSession.getSessionId());
 
         user = user.withSessionId(session.getSessionId());
-
-        auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                authenticationRequest.getClientID().getValue(),
-                user,
-                pair("client-name", client.getClientName()));
+        if (configurationService.isBrowserSessionCookieEnabled()
+                && configurationService.isSignOutOnBrowserCloseEnabled()) {
+            auditService.submitAuditEvent(
+                    OidcAuditableEvent.AUTHORISATION_INITIATED,
+                    authenticationRequest.getClientID().getValue(),
+                    user,
+                    pair("client-name", client.getClientName()),
+                    pair("new_authentication_required", newAuthenticationRequired));
+        } else {
+            auditService.submitAuditEvent(
+                    OidcAuditableEvent.AUTHORISATION_INITIATED,
+                    authenticationRequest.getClientID().getValue(),
+                    user,
+                    pair("client-name", client.getClientName()));
+        }
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchSessionOptional.ifPresentOrElse(
