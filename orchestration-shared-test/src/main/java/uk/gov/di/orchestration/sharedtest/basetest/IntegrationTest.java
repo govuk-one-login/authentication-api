@@ -19,6 +19,7 @@ import java.net.HttpCookie;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -221,6 +222,15 @@ public class IntegrationTest {
         return headers;
     }
 
+    protected Map<String, String> constructHeaders(HttpCookie[] cookies) {
+        final Map<String, String> headers = new HashMap<>();
+        String cookiesString =
+                String.join("; ", Arrays.stream(cookies).map(HttpCookie::toString).toList());
+        headers.put("Cookie", cookiesString);
+        headers.put("txma-audit-encoded", TXMA_ENCODED_HEADER_VALUE);
+        return headers;
+    }
+
     protected Map<String, String> constructFrontendHeaders(String sessionId) {
         return constructFrontendHeaders(sessionId, Optional.empty(), Optional.empty());
     }
@@ -325,6 +335,16 @@ public class IntegrationTest {
         @Override
         public Optional<String> getIPVCapacity() {
             return Optional.of("1");
+        }
+
+        @Override
+        public boolean isBrowserSessionCookieEnabled() {
+            return true;
+        }
+
+        @Override
+        public boolean isSignOutOnBrowserCloseEnabled() {
+            return true;
         }
     }
 }

@@ -146,6 +146,14 @@ public class RedisExtension
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
 
+    public void addBrowserSesssionIdToSession(String sessionId, String browserSessionId)
+            throws Json.JsonException {
+        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
+        session.setBrowserSessionId(browserSessionId);
+        redis.saveWithExpiry(
+                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+    }
+
     public void setSessionCredentialTrustLevel(
             String sessionId, CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
