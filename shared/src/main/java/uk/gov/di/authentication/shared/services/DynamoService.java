@@ -522,16 +522,7 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public UserProfile getUserProfileFromSubject(String subject) {
-        QueryConditional q =
-                QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
-        DynamoDbIndex<UserProfile> subjectIDIndex = dynamoUserProfileTable.index("SubjectIDIndex");
-        QueryEnhancedRequest queryEnhancedRequest =
-                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
-        Optional<UserProfile> userProfile =
-                subjectIDIndex.query(queryEnhancedRequest).stream()
-                        .limit(1)
-                        .map(t -> t.items().get(0))
-                        .findFirst();
+        Optional<UserProfile> userProfile = getOptionalUserProfileFromSubject(subject);
         if (userProfile.isEmpty()) {
             throw new RuntimeException("No userCredentials found with query search");
         }
@@ -558,9 +549,8 @@ public class DynamoService implements AuthenticationService {
                 QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
         Optional<UserProfile> userProfile =
                 subjectIDIndex.query(queryEnhancedRequest).stream()
-                        .limit(1)
-                        .map(t -> t.items().get(0))
-                        .findFirst();
+                        .findFirst()
+                        .flatMap(page -> page.items().stream().findFirst());
         if (userProfile.isEmpty()) {
             throw new RuntimeException("No userCredentials found with query search");
         }
