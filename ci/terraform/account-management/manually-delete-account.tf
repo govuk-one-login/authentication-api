@@ -40,7 +40,7 @@ resource "aws_lambda_function" "manually_delete_account_lambda" {
 
   environment {
     variables = {
-      JAVA_TOOL_OPTIONS                 = var.environment == "production" ? "-XX:+TieredCompilation -XX:TieredStopAtLevel=1" : "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
+      JAVA_TOOL_OPTIONS                 = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 '--add-reads=jdk.jfr=ALL-UNNAMED'"
       ENVIRONMENT                       = var.environment
       EMAIL_QUEUE_URL                   = aws_sqs_queue.email_queue.id
       TXMA_AUDIT_QUEUE_URL              = module.account_management_txma_audit.queue_url
