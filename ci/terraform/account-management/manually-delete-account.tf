@@ -122,5 +122,6 @@ resource "aws_sns_topic" "mock_account_deletion_topic" {
 }
 
 locals {
-  account_deletion_topic_arn = coalesce(var.legacy_account_deletion_topic_arn, aws_sns_topic.mock_account_deletion_topic[0].arn)
+  mock_topic_arn             = try(aws_sns_topic.mock_account_deletion_topic[0].arn, "")
+  account_deletion_topic_arn = coalesce(var.legacy_account_deletion_topic_arn, local.mock_topic_arn)
 }
