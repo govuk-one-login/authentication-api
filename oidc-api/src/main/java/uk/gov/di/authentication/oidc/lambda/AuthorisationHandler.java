@@ -427,12 +427,6 @@ public class AuthorisationHandler
         Optional<String> browserSessionIdFromCookie =
                 CookieHelper.parseBrowserSessionCookie(input.getHeaders());
 
-        // TODO: ATO-989: delete these logs once feature metrics are complete
-        if (configurationService.isBrowserSessionCookieEnabled() && session.isPresent()) {
-            logBrowserSessionIdMetrics(browserSessionIdFromSession, browserSessionIdFromCookie);
-        }
-        //
-
         Optional<Session> sessionWithValidBrowserSessionId = session;
         boolean newAuthenticationRequired = false;
         if (configurationService.isBrowserSessionCookieEnabled()
@@ -1021,26 +1015,5 @@ public class AuthorisationHandler
             throw new RuntimeException("Invalid id_token_hint for client");
         }
         return idToken;
-    }
-
-    private void logBrowserSessionIdMetrics(
-            Optional<String> browserSessionIdFromSession,
-            Optional<String> browserSessionIdFromCookie) {
-        if (browserSessionIdFromSession.isEmpty()) {
-            LOG.info("browser session id: session has no browser session id");
-            return;
-        }
-
-        if (Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
-            LOG.info(
-                    "browser session id: cookie matches session. session={}, cookie={}",
-                    browserSessionIdFromSession,
-                    browserSessionIdFromCookie);
-        } else {
-            LOG.info(
-                    "browser session id: cookie does not match session. session={}, cookie={}",
-                    browserSessionIdFromSession,
-                    browserSessionIdFromCookie);
-        }
     }
 }
