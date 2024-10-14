@@ -39,7 +39,7 @@ jobs:
           skip_check: CKV_OPENAPI_20,CKV_OPENAPI_4
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.25.12v3
+        uses: github/codeql-action/upload-sarif@c36620d31ac7c881962c3d9dd939c40ec9434f2b # v3.25.12v3
         with:
           sarif_file: results.sarif
           category: ${{ matrix.module }}
@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload SARIF file
         if: always()
-        uses: github/codeql-action/upload-sarif@294a9d92911152fe08befb9ec03e240add280cb3 # v3.25.12v3
+        uses: github/codeql-action/upload-sarif@c36620d31ac7c881962c3d9dd939c40ec9434f2b # v3.25.12v3
         with:
           sarif_file: results.sarif
           category: orch-sam
