@@ -15,6 +15,13 @@ resource "random_string" "stub_relying_party_client_id" {
   length  = 32
 }
 
+locals {
+  acceptance_test_rp_client_emails = {
+    pattern = "test-user+${var.environment}-$${instantiationMillis}-$${counter}@test.null.local" # '$${' = literal '${' (escaped)
+    regex   = "^test-user\\+${var.environment}-\\d+-\\d+@test\\.null\\.local$"
+  }
+}
+
 resource "aws_dynamodb_table_item" "stub_relying_party_client" {
   for_each = { for client in var.stub_rp_clients : client.client_name => client }
 
@@ -101,7 +108,7 @@ resource "aws_dynamodb_table_item" "stub_relying_party_client" {
       N = each.value.test_client
     }
     TestClientEmailAllowlist = {
-      L = [for email in split(",", var.test_client_email_allowlist) : {
+      L = [for email in concat(split(",", var.test_client_email_allowlist), [local.acceptance_test_rp_client_emails.regex]) : {
         S = email
       }]
     }
