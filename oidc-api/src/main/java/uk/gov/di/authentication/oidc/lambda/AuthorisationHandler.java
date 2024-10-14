@@ -429,8 +429,7 @@ public class AuthorisationHandler
 
         Optional<Session> sessionWithValidBrowserSessionId = session;
         boolean newAuthenticationRequired = false;
-        if (configurationService.isBrowserSessionCookieEnabled()
-                && browserSessionIdFromSession.isPresent()
+        if (browserSessionIdFromSession.isPresent()
                 && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
             sessionWithValidBrowserSessionId = Optional.empty();
             newAuthenticationRequired = true;
@@ -639,20 +638,12 @@ public class AuthorisationHandler
         attachOrchSessionIdToLogs(orchSession.getSessionId());
 
         user = user.withSessionId(session.getSessionId());
-        if (configurationService.isBrowserSessionCookieEnabled()) {
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTHORISATION_INITIATED,
-                    authenticationRequest.getClientID().getValue(),
-                    user,
-                    pair("client-name", client.getClientName()),
-                    pair("new_authentication_required", newAuthenticationRequired));
-        } else {
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTHORISATION_INITIATED,
-                    authenticationRequest.getClientID().getValue(),
-                    user,
-                    pair("client-name", client.getClientName()));
-        }
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                authenticationRequest.getClientID().getValue(),
+                user,
+                pair("client-name", client.getClientName()),
+                pair("new_authentication_required", newAuthenticationRequired));
 
         clientSessionService.storeClientSession(clientSessionId, clientSession);
         orchSessionOptional.ifPresentOrElse(
@@ -949,8 +940,7 @@ public class AuthorisationHandler
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
 
-        if (configurationService.isBrowserSessionCookieEnabled()
-                && session.getBrowserSessionId() != null) {
+        if (session.getBrowserSessionId() != null) {
             cookies.add(
                     CookieHelper.buildCookieString(
                             CookieHelper.BROWSER_SESSION_COOKIE_NAME,

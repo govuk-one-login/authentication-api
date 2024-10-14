@@ -37,7 +37,6 @@ class SessionServiceTest {
     @Test
     void shouldCreateSessionWithNewSessionIdAndBrowserSessionId() {
         try (MockedStatic<IdGenerator> idGenerator = mockStatic(IdGenerator.class)) {
-            when(configuration.isBrowserSessionCookieEnabled()).thenReturn(true);
             idGenerator.when(IdGenerator::generate).thenReturn("id-1", "id-2");
             Session session = sessionService.generateSession();
 
