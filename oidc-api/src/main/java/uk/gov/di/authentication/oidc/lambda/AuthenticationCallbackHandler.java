@@ -259,7 +259,14 @@ public class AuthenticationCallbackHandler
                             .orElseThrow(
                                     () ->
                                             new AuthenticationCallbackException(
-                                                    "Orchestration user session not found"));
+                                                    "Shared session not found in Redis"));
+            OrchSessionItem orchSession =
+                    orchSessionService
+                            .getSession(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () ->
+                                            new AuthenticationCallbackException(
+                                                    "Orchestration session not found in DynamoDB"));
 
             attachSessionIdToLogs(userSession);
             var clientSessionId = sessionCookiesIds.getClientSessionId();
@@ -344,14 +351,6 @@ public class AuthenticationCallbackHandler
                 LOG.info("Adding Authentication userinfo to dynamo");
                 userInfoStorageService.addAuthenticationUserInfoData(
                         userInfo.getSubject().getValue(), userInfo);
-
-                OrchSessionItem orchSession =
-                        orchSessionService
-                                .getSession(sessionCookiesIds.getSessionId())
-                                .orElseThrow(
-                                        () ->
-                                                new AuthenticationCallbackException(
-                                                        "Orchestration user session not found"));
                 addClaimsToOrchSession(orchSession, userInfo);
 
                 ClientRegistry client = clientService.getClient(clientId).orElseThrow();
