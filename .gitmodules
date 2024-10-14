@@ -1,0 +1,3 @@
+[submodule "ci/stack-orchestration/.devplatform-deploy"]
+	path = ci/stack-orchestration/.devplatform-deploy
+	url = git@github.com:govuk-one-login/devplatform-deploy
