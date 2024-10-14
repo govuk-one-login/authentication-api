@@ -3,14 +3,20 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.helpers.AuditHelper;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Map;
 import java.util.Optional;
@@ -32,56 +38,63 @@ class AuthenticateHandlerTest {
     private static final String PASSWORD = "joe.bloggs@test.com";
     private static final String PHONE_NUMBER = "01234567890";
     private static final String IP_ADDRESS = "123.123.123.123";
-    private static final String persistentIdValue = "some-persistent-session-id";
+    private static final String PERSISTENT_SESSION_ID = "some-persistent-session-id";
+    private static final String SESSION_ID = "some-session-id";
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
     private static final Map<String, String> headers =
             Map.of(
                     PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                    persistentIdValue,
+                    PERSISTENT_SESSION_ID,
                     AuditHelper.TXMA_ENCODED_HEADER_NAME,
-                    TXMA_ENCODED_HEADER_VALUE);
+                    TXMA_ENCODED_HEADER_VALUE,
+                    ClientSessionIdHelper.SESSION_ID_HEADER_NAME,
+                    SESSION_ID);
+    public static final UserProfile USER_PROFILE =
+            new UserProfile().withSubjectID(new Subject().getValue());
     private APIGatewayProxyRequestEvent event;
     private AuthenticateHandler handler;
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditContext auditContext =
             new AuditContext(
                     AuditService.UNKNOWN,
-                    AuditService.UNKNOWN,
+                    SESSION_ID,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     EMAIL,
                     IP_ADDRESS,
                     AuditService.UNKNOWN,
-                    persistentIdValue,
+                    PERSISTENT_SESSION_ID,
                     Optional.of(TXMA_ENCODED_HEADER_VALUE));
+    private String clientSubjectId;
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthenticateHandler(authenticationService, auditService);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(authenticationService.getOrGenerateSalt(USER_PROFILE))
+                .thenReturn(SaltHelper.generateNewSalt());
+
+        handler =
+                new AuthenticateHandler(authenticationService, auditService, configurationService);
         event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+
+        clientSubjectId =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                USER_PROFILE,
+                                configurationService.getInternalSectorUri(),
+                                authenticationService)
+                        .getValue();
     }
 
     @Test
     public void shouldReturn204IfLoginIsSuccessful() {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
-        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
-        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-
-        verify(auditService).submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE, auditContext);
-    }
-
-    @Test
-    public void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
         when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -91,12 +104,34 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        auditContext.withTxmaAuditEncoded(Optional.empty()));
+                        auditContext.withSubjectId(clientSubjectId));
+    }
+
+    @Test
+    public void shouldNotSendEncodedAuditDataIfHeaderNotPresent() {
+        event.setHeaders(
+                Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID));
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
+        when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(true);
+        when(authenticationService.getPhoneNumber(EMAIL)).thenReturn(Optional.of(PHONE_NUMBER));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                        auditContext
+                                .withClientSessionId("unknown")
+                                .withSubjectId(clientSubjectId)
+                                .withTxmaAuditEncoded(Optional.empty()));
     }
 
     @Test
     public void shouldReturn401IfUserHasInvalidCredentials() {
-        when(authenticationService.userExists(EMAIL)).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(USER_PROFILE));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -105,7 +140,9 @@ class AuthenticateHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
 
         verify(auditService)
-                .submitAuditEvent(AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE, auditContext);
+                .submitAuditEvent(
+                        AUTH_ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        auditContext.withSubjectId(clientSubjectId));
     }
 
     @Test
@@ -125,7 +162,7 @@ class AuthenticateHandlerTest {
 
     @Test
     public void shouldReturn400IfUserDoesNotHaveAnAccount() {
-        when(authenticationService.userExists(EMAIL)).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
