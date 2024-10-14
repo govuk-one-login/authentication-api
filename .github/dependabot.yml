@@ -12,20 +12,28 @@ updates:
 
   - package-ecosystem: github-actions
     directory: "/"
-    open-pull-requests-limit: 100
-    target-branch: main
     schedule:
       interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      gha-all-dependencies:
+        patterns:
+          - "*"
+    target-branch: main
     commit-message:
       prefix: BAU
 
   - package-ecosystem: pip
     directory: "/"
+    schedule:
+      interval: monthly
     open-pull-requests-limit: 5
+    groups:
+      pip-all-dependencies:
+        patterns:
+          - "*"
     target-branch: main
     commit-message:
       prefix: BAU
     labels:
       - dependabot
-    schedule:
-      interval: monthly
