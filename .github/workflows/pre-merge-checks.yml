@@ -130,7 +130,7 @@ jobs:
             !delivery-receipts-integration-tests/build/jacoco/
             !delivery-receipts-integration-tests/build/reports/
       - name: Upload Unit Test Reports
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: failure()
         with:
           name: unit-test-reports
@@ -211,7 +211,7 @@ jobs:
             integration-tests/build/jacoco/
             integration-tests/build/reports/
       - name: Upload Integration Test Reports
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: failure()
         with:
           name: integration-test-reports
@@ -282,7 +282,7 @@ jobs:
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: failure()
         with:
           name: account-management-integration-test-reports
@@ -303,7 +303,7 @@ jobs:
             delivery-receipts-integration-tests/build/reports/
 
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         if: failure()
         with:
           name: delivery-receipts-integration-test-reports
