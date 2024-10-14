@@ -130,46 +130,6 @@ class UserInfoHandlerTest {
     }
 
     @Test
-    void updateAUsersSessionWithTheAccountStateExistingForSuccessfulUserInfoRequest()
-            throws ParseException, AccessTokenException {
-        withAuthSession();
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String validTokenHeader = "Bearer valid-token";
-        AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
-        request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
-        when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
-                .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(eq(accessTokenStore), any()))
-                .thenReturn(TEST_SUBJECT_USER_INFO);
-        when(sessionService.getSessionFromRequestHeaders(any()))
-                .thenReturn(Optional.of(testSession));
-
-        APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
-
-        assertEquals(200, response.getStatusCode());
-        assertTrue(
-                response.getBody()
-                        .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
-
-        verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
-        verify(sessionService)
-                .storeOrUpdateSession(testSession.setNewAccount(Session.AccountState.EXISTING));
-        verify(auditService)
-                .submitAuditEvent(
-                        AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION,
-                        new AuditContext(
-                                "",
-                                "",
-                                "",
-                                TEST_SUBJECT.getValue(),
-                                "test@test.com",
-                                "",
-                                "0123456789",
-                                "",
-                                Optional.empty()));
-    }
-
-    @Test
     void shouldUpdateAuthSessionWithAccountStateExisting()
             throws ParseException, AccessTokenException {
         withAuthSession();
@@ -194,6 +154,20 @@ class UserInfoHandlerTest {
         verify(authSessionService)
                 .updateSession(
                         argThat(t -> t.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION,
+                        new AuditContext(
+                                "",
+                                "",
+                                "",
+                                TEST_SUBJECT.getValue(),
+                                "test@test.com",
+                                "",
+                                "0123456789",
+                                "",
+                                Optional.empty()));
     }
 
     @Test

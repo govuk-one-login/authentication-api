@@ -255,14 +255,6 @@ public class RedisExtension
         codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email);
     }
 
-    public void setIsNewAccount(String sessionId, Session.AccountState accountState)
-            throws Json.JsonException {
-        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
-        session.setNewAccount(accountState);
-        redis.saveWithExpiry(
-                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
-    }
-
     public void addToRedis(String key, String value, Long expiry) {
         redis.saveWithExpiry(key, value, expiry);
     }
