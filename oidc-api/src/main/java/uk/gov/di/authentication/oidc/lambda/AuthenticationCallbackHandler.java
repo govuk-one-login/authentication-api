@@ -352,6 +352,12 @@ public class AuthenticationCallbackHandler
                             clientService.isTestJourney(clientId, userInfo.getEmailAddress());
                 }
 
+                // TODO-922: temporary logs for deploying to dev
+                LOG.info(
+                        "is email attached to auth-external-api userinfo response: {}",
+                        userInfo.getEmailAddress() != null);
+                //
+
                 Boolean newAccount = userInfo.getBooleanClaim("new_account");
                 AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
                 var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
