@@ -512,7 +512,7 @@ public class AuthorisationHandler
         OrchSessionItem orchSession;
         String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem().withSessionId(newSessionId);
+            orchSession = new OrchSessionItem(newSessionId);
             LOG.info("Created new Orch session");
         } else {
             String previousOrchSessionId = orchSessionOptional.get().getSessionId();
@@ -625,7 +625,7 @@ public class AuthorisationHandler
         OrchSessionItem orchSession;
         String newSessionId = session.getSessionId();
         if (orchSessionOptional.isEmpty()) {
-            orchSession = new OrchSessionItem().withSessionId(newSessionId);
+            orchSession = new OrchSessionItem(newSessionId);
             LOG.info("Created new Orch session");
         } else {
             String previousOrchSessionId = orchSessionOptional.get().getSessionId();

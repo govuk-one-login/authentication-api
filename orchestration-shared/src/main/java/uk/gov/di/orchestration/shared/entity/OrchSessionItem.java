@@ -14,6 +14,10 @@ public class OrchSessionItem {
 
     public OrchSessionItem() {}
 
+    public OrchSessionItem(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_SESSION_ID)
     public String getSessionId() {

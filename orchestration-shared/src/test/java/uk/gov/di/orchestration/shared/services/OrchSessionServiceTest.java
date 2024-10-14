@@ -60,7 +60,7 @@ class OrchSessionServiceTest {
     @Test
     void updateSessionThrowsOrchSessionExceptionWhenUpdateFails() {
         withFailedUpdate();
-        var sessionToBeUpdated = new OrchSessionItem().withSessionId(SESSION_ID);
+        var sessionToBeUpdated = new OrchSessionItem(SESSION_ID);
         assertThrows(
                 OrchSessionException.class,
                 () -> orchSessionService.updateSession(sessionToBeUpdated));
@@ -106,18 +106,14 @@ class OrchSessionServiceTest {
     }
 
     private OrchSessionItem withValidSession() {
-        OrchSessionItem existingSession =
-                new OrchSessionItem().withSessionId(SESSION_ID).withTimeToLive(VALID_TTL);
+        OrchSessionItem existingSession = new OrchSessionItem(SESSION_ID).withTimeToLive(VALID_TTL);
         when(table.getItem(SESSION_ID_PARTITION_KEY)).thenReturn(existingSession);
         return existingSession;
     }
 
     private void withExpiredSession() {
         when(table.getItem(SESSION_ID_PARTITION_KEY))
-                .thenReturn(
-                        new OrchSessionItem()
-                                .withSessionId(SESSION_ID)
-                                .withTimeToLive(EXPIRED_TTL));
+                .thenReturn(new OrchSessionItem(SESSION_ID).withTimeToLive(EXPIRED_TTL));
     }
 
     private void withFailedUpdate() {

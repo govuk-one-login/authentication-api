@@ -36,6 +36,6 @@ class OrchSessionServiceIntegrationTest {
     }
 
     private void withSession() {
-        orchSessionExtension.addSession(new OrchSessionItem().withSessionId(SESSION_ID));
+        orchSessionExtension.addSession(new OrchSessionItem(SESSION_ID));
     }
 }
