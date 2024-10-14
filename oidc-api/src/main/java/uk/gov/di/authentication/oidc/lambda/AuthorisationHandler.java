@@ -430,7 +430,6 @@ public class AuthorisationHandler
         Optional<Session> sessionWithValidBrowserSessionId = session;
         boolean newAuthenticationRequired = false;
         if (configurationService.isBrowserSessionCookieEnabled()
-                && configurationService.isSignOutOnBrowserCloseEnabled()
                 && browserSessionIdFromSession.isPresent()
                 && !Objects.equals(browserSessionIdFromSession, browserSessionIdFromCookie)) {
             sessionWithValidBrowserSessionId = Optional.empty();
@@ -640,8 +639,7 @@ public class AuthorisationHandler
         attachOrchSessionIdToLogs(orchSession.getSessionId());
 
         user = user.withSessionId(session.getSessionId());
-        if (configurationService.isBrowserSessionCookieEnabled()
-                && configurationService.isSignOutOnBrowserCloseEnabled()) {
+        if (configurationService.isBrowserSessionCookieEnabled()) {
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTHORISATION_INITIATED,
                     authenticationRequest.getClientID().getValue(),

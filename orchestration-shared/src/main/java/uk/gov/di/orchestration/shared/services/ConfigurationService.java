@@ -208,10 +208,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("IS_BROWSER_SESSION_COOKIE_ENABLED");
     }
 
-    public boolean isSignOutOnBrowserCloseEnabled() {
-        return getFlagOrFalse("IS_SIGN_OUT_ON_BROWSER_CLOSE_ENABLED");
-    }
-
     public String getSpotQueueURI() {
         return System.getenv("SPOT_QUEUE_URL");
     }

@@ -74,14 +74,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  EnableSignOutOnBrowserClose:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
 Mappings:
   EnvironmentConfiguration:
@@ -2228,10 +2220,6 @@ Resources:
             - false
           IS_BROWSER_SESSION_COOKIE_ENABLED: !If
             - EnableBrowserSessionCookie
-            - true
-            - false
-          IS_SIGN_OUT_ON_BROWSER_CLOSE_ENABLED: !If
-            - EnableSignOutOnBrowserClose
             - true
             - false
 

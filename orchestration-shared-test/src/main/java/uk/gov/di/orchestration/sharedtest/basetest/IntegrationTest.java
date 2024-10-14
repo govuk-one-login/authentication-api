@@ -341,10 +341,5 @@ public class IntegrationTest {
         public boolean isBrowserSessionCookieEnabled() {
             return true;
         }
-
-        @Override
-        public boolean isSignOutOnBrowserCloseEnabled() {
-            return true;
-        }
     }
 }

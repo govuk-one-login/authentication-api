@@ -256,7 +256,6 @@ class AuthorisationHandlerTest {
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.isBrowserSessionCookieEnabled()).thenReturn(true);
-        when(configService.isSignOutOnBrowserCloseEnabled()).thenReturn(true);
         when(authFrontend.baseURI()).thenReturn(FRONT_END_BASE_URI);
         when(authFrontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(authFrontend.authorizeURI(Optional.empty(), Optional.empty()))
