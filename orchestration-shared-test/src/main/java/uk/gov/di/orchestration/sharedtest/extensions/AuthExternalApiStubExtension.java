@@ -1,6 +1,8 @@
 package uk.gov.di.orchestration.sharedtest.extensions;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
 import static java.lang.String.format;
@@ -29,16 +31,10 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
                                 + "}",
                         getHttpPort()));
 
-        String userInfoContent =
-                String.format(
-                        "{"
-                                + "\"sub\": \"%s\","
-                                + "\"new_account\": true,"
-                                + "\"verified_mfa_method_type\": \"AUTH_APP\""
-                                + "}",
-                        subjectId.getValue());
-
-        register("/userinfo", 200, "application/json", userInfoContent);
+        UserInfo userInfo = new UserInfo(subjectId);
+        userInfo.setClaim("new_account", true);
+        userInfo.setClaim("verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
+        register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }
 
     public void init(Subject subjectId, Long passwordResetTime) {
@@ -55,16 +51,10 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
                                 + "}",
                         getHttpPort()));
 
-        String userInfoContent =
-                String.format(
-                        "{"
-                                + "\"sub\": \"%s\","
-                                + "\"new_account\": true,"
-                                + "\"verified_mfa_method_type\": \"AUTH_APP\","
-                                + "\"password_reset_time\": %s"
-                                + "}",
-                        subjectId.getValue(), passwordResetTime.toString());
-
-        register("/userinfo", 200, "application/json", userInfoContent);
+        UserInfo userInfo = new UserInfo(subjectId);
+        userInfo.setClaim("new_account", true);
+        userInfo.setClaim("verified_mfa_method_type", MFAMethodType.AUTH_APP.getValue());
+        userInfo.setClaim("password_reset_time", passwordResetTime);
+        register("/userinfo", 200, "application/json", userInfo.toJSONString());
     }
 }
