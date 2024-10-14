@@ -77,6 +77,7 @@ public class OrchSessionService extends BaseDynamoService<OrchSessionItem> {
                 newItem =
                         new OrchSessionItem()
                                 .withSessionId(newSessionId)
+                                .withAccountState(OrchSessionItem.AccountState.UNKNOWN)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
