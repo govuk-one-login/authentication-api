@@ -11,12 +11,21 @@ public class OrchSessionItem {
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
     public static final String ATTRIBUTE_RP_PAIRWISE_ID = "RpPairwiseId";
+    public static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
+
+    public enum AccountState {
+        NEW,
+        EXISTING,
+        EXISTING_DOC_APP_JOURNEY,
+        UNKNOWN
+    }
 
     private String sessionId;
     private long timeToLive;
     private String email;
     private String verifiedMfaMethodType;
     private String rpPairwiseId;
+    private AccountState isNewAccount;
 
     public OrchSessionItem() {}
 
@@ -92,6 +101,20 @@ public class OrchSessionItem {
 
     public OrchSessionItem withRpPairwiseId(String rpPairwiseId) {
         this.rpPairwiseId = rpPairwiseId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_NEW_ACCOUNT)
+    public AccountState getIsNewAccount() {
+        return this.isNewAccount;
+    }
+
+    public void setIsNewAccount(AccountState accountState) {
+        this.isNewAccount = accountState;
+    }
+
+    public OrchSessionItem withAccountState(AccountState accountState) {
+        this.isNewAccount = accountState;
         return this;
     }
 }
