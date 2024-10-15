@@ -170,11 +170,12 @@ class StartHandlerTest {
     @MethodSource("cookieConsentGaTrackingIdValues")
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
             throws ParseException, Json.JsonException {
+        var isAuthenticated = false;
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         usingValidClientSession();
-        usingValidSession();
+        usingValidSession(isAuthenticated);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -196,9 +197,11 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
             throws ParseException, Json.JsonException {
+        var isAuthenticated = false;
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null, false);
+        var userStartInfo =
+                new UserStartInfo(false, false, isAuthenticated, null, null, true, null, false);
         var clientStartInfo =
                 new ClientStartInfo(
                         TEST_CLIENT_NAME,
@@ -210,7 +213,7 @@ class StartHandlerTest {
                         false);
         usingStartServiceThatReturns(userContext, clientStartInfo, userStartInfo);
         usingValidDocAppClientSession();
-        usingValidSession();
+        usingValidSession(isAuthenticated);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         var result = handler.handleRequest(event, context);
@@ -234,18 +237,20 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
             throws ParseException, Json.JsonException {
+        var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        usingValidSession(false);
         usingValidClientSession();
 
         var body =
                 format(
                         """
                { "rp-pairwise-id-for-reauth": %s,
-               "previous-govuk-signin-journey-id": %s }
+               "previous-govuk-signin-journey-id": %s,
+                "authenticated": %s}
                 """,
-                        TEST_RP_PAIRWISE_ID, TEST_PREVIOUS_SIGN_IN_JOURNEY_ID);
+                        TEST_RP_PAIRWISE_ID, TEST_PREVIOUS_SIGN_IN_JOURNEY_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         var result = handler.handleRequest(event, context);
 
@@ -270,8 +275,10 @@ class StartHandlerTest {
 
     @Test
     void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff() throws ParseException {
+        var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo =
+                new UserStartInfo(false, false, isAuthenticated, null, null, false, null, false);
 
         // This should not be called. Setup here is to ensure that the feature flag is determining
         // this test's behaviour
@@ -280,14 +287,14 @@ class StartHandlerTest {
                 .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        usingValidSession(isAuthenticated);
         usingValidClientSession();
         var body =
                 format(
                         """
-               { "rp-pairwise-id-for-reauth": %s }
+               { "rp-pairwise-id-for-reauth": %s, "authenticated": %s }
                 """,
-                        TEST_RP_PAIRWISE_ID);
+                        TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
@@ -296,20 +303,22 @@ class StartHandlerTest {
 
     @Test
     void shouldUseCountsAgainstTheRpPairwiseIdWhenThereIsNoSubjectId() throws ParseException {
+        var isAuthenticated = false;
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userProfile.getSubjectID()).thenReturn(null);
 
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
+        var userStartInfo =
+                new UserStartInfo(false, false, isAuthenticated, null, null, false, null, false);
 
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        usingValidSession(isAuthenticated);
         usingValidClientSession();
         var body =
                 format(
                         """
-               { "rp-pairwise-id-for-reauth": %s }
+               { "rp-pairwise-id-for-reauth": %s, "authenticated": %s }
                 """,
-                        TEST_RP_PAIRWISE_ID);
+                        TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
         handler.handleRequest(event, context);
 
@@ -319,14 +328,17 @@ class StartHandlerTest {
 
     @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws ParseException {
+        var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        usingValidSession(isAuthenticated);
         usingValidClientSession();
 
         var headers = headersWithReauthenticate("true");
         headers.remove(TXMA_AUDIT_ENCODED_HEADER);
-        var event = apiRequestEventWithHeadersAndBody(headers, "{}");
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        headers, String.format("{ \"authenticated\": %s}", isAuthenticated));
 
         var result = handler.handleRequest(event, context);
 
@@ -345,12 +357,17 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
             throws ParseException, Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, false);
+        var isAuthenticated = true;
+        var userStartInfo =
+                new UserStartInfo(false, false, isAuthenticated, null, null, false, null, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        usingValidSession(isAuthenticated);
         usingValidClientSession();
 
-        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("false"), "{}");
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        headersWithReauthenticate("false"),
+                        String.format("{ \"authenticated\": %s}", isAuthenticated));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -409,17 +426,19 @@ class StartHandlerTest {
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
                 .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
-        var userStartInfo = new UserStartInfo(false, false, true, null, null, false, null, true);
+        var isAuthenticated = true;
+        var userStartInfo =
+                new UserStartInfo(false, false, isAuthenticated, null, null, false, null, true);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        usingValidSession();
+        usingValidSession(isAuthenticated);
         usingValidClientSession();
 
         var body =
                 format(
                         """
-               { "rp-pairwise-id-for-reauth": %s }
+               { "rp-pairwise-id-for-reauth": %s, "authenticated": %s }
                 """,
-                        TEST_RP_PAIRWISE_ID);
+                        TEST_RP_PAIRWISE_ID, isAuthenticated);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
 
         var result = handler.handleRequest(event, context);
@@ -441,8 +460,11 @@ class StartHandlerTest {
 
     @Test
     void shouldReturn400WhenClientSessionIsNotFound() throws Json.JsonException {
+        var isAuthenticated = false;
         usingInvalidClientSession();
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, String.format("{ \"authenticated\": %s}", isAuthenticated));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -475,7 +497,7 @@ class StartHandlerTest {
         when(startService.buildClientStartInfo(userContext))
                 .thenThrow(new ParseException("Unable to parse authentication request"));
         usingValidClientSession();
-        usingValidSession();
+        usingValidSession(false);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -492,7 +514,7 @@ class StartHandlerTest {
     void shouldThrowRuntimeExceptionWhenUnableToSerializeStartResponse() {
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         usingValidClientSession();
-        usingValidSession();
+        usingValidSession(false);
         withFailureToSerializeStartResponse();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}");
@@ -514,10 +536,11 @@ class StartHandlerTest {
                 .thenReturn(Optional.empty());
     }
 
-    private void usingValidSession() {
+    private void usingValidSession(boolean authenticated) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
-        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
+        when(startService.validateSession(session, CLIENT_SESSION_ID, authenticated))
+                .thenReturn(session);
     }
 
     private void usingInvalidSession() {

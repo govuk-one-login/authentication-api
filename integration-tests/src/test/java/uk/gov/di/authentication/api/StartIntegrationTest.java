@@ -72,7 +72,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
     public static final String PREVIOUS_SESSION_ID = "4waJ14KA9IyxKzY7bIGIA3hUDos";
     public static final String REQUEST_BODY =
-            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\"}";
+            "{\"previous-session-id\":\"4waJ14KA9IyxKzY7bIGIA3hUDos\", \"authenticated\": %s}";
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -98,7 +98,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean identityRequired,
             boolean isAuthenticated)
             throws Json.JsonException {
-        String sessionId = redis.createSession(isAuthenticated);
+        String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
         redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
@@ -118,7 +118,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(String.format(REQUEST_BODY, isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -165,7 +165,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200AndStartResponseWithAuthenticatedFalseWhenReauthenticationIsRequested()
             throws Json.JsonException {
-        String sessionId = redis.createSession(true);
+        String sessionId = redis.createSession();
         userStore.signUp(EMAIL, "password");
         redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
@@ -185,7 +185,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var headers = standardHeadersWithSessionId(sessionId);
         headers.put("Reauthenticate", "true");
 
-        var response = makeRequest(Optional.of(REQUEST_BODY), headers, Map.of());
+        var response =
+                makeRequest(Optional.of(String.format(REQUEST_BODY, true)), headers, Map.of());
         assertThat(response, hasStatus(200));
 
         StartResponse startResponse =
@@ -206,7 +207,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200WithCorrectMfaMethodTypeWhenTheseIsAnExistingSession(
             MFAMethodType mfaMethodType) throws Json.JsonException {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession(true);
+        var isAuthenticated = true;
+        var sessionId = redis.createSession(isAuthenticated);
         redis.addEmailToSession(sessionId, userEmail);
 
         userStore.signUp(userEmail, "rubbbishPassword");
@@ -234,7 +236,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(String.format(REQUEST_BODY, isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -285,7 +287,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(String.format(REQUEST_BODY, isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
         assertThat(response, hasStatus(200));
@@ -310,6 +312,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void userShouldNotComeBackAsAuthenticatedWhenSessionIsAuthenticatedButNoUserProfileExists()
             throws Json.JsonException {
         var scope = new Scope(OIDCScopeValue.OPENID);
+        var isAuthenticated = true;
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
@@ -319,14 +322,14 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        var sessionId = redis.createSession(true);
+        var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, userEmail);
         redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
         var response =
                 makeRequest(
-                        Optional.of(REQUEST_BODY),
+                        Optional.of(String.format(REQUEST_BODY, isAuthenticated)),
                         standardHeadersWithSessionId(sessionId),
                         Map.of());
 

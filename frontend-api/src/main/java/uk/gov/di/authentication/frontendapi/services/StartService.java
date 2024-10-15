@@ -56,12 +56,12 @@ public class StartService {
         this.sessionService = sessionService;
     }
 
-    public Session validateSession(Session session, String clientSessionId) {
+    public Session validateSession(Session session, String clientSessionId, boolean authenticated) {
         LOG.info("Validating session");
         Optional<UserProfile> userProfile =
                 Optional.ofNullable(session.getEmailAddress())
                         .flatMap(dynamoService::getUserProfileByEmailMaybe);
-        if (session.isAuthenticated() && userProfile.isEmpty()) {
+        if (authenticated && userProfile.isEmpty()) {
             LOG.info(
                     "Session is authenticated but user profile is empty. Creating new session with existing sessionID");
             session = new Session(session.getSessionId());

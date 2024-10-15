@@ -155,7 +155,8 @@ public class StartHandler
                             getHeaderValueFromHeaders(
                                     input.getHeaders(),
                                     CLIENT_SESSION_ID_HEADER,
-                                    configurationService.getHeadersCaseInsensitive()));
+                                    configurationService.getHeadersCaseInsensitive()),
+                            startRequest.authenticated());
             var userContext = startService.buildUserContext(session, clientSession.get());
 
             attachLogFieldToLogs(

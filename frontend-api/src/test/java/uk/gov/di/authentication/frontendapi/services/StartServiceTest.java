@@ -102,12 +102,12 @@ class StartServiceTest {
     void shouldReturnUnauthenticatedSessionIfUserIsAuthenticatedButNoUserProfileIsFound() {
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         var currentClientSessionId = "some-client-session-id";
-        SESSION.setAuthenticated(true);
+        var authenticated = true;
         SESSION.addClientSession("previous-session-client-session-id");
         SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        var session = startService.validateSession(SESSION, currentClientSessionId);
+        var session = startService.validateSession(SESSION, currentClientSessionId, authenticated);
 
         assertFalse(session.isAuthenticated());
         assertThat(session.getCurrentCredentialStrength(), equalTo(null));
@@ -127,15 +127,14 @@ class StartServiceTest {
                                         .withEmail(EMAIL)
                                         .withSubjectID(new Subject().getValue())));
         var currentClientSessionId = "some-client-session-id";
-        SESSION.setAuthenticated(true);
+        var authenticated = true;
         SESSION.addClientSession(currentClientSessionId);
         SESSION.addClientSession("previous-session-client-session-id");
         SESSION.setNewAccount(Session.AccountState.EXISTING);
         SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
         SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
-        var session = startService.validateSession(SESSION, currentClientSessionId);
+        var session = startService.validateSession(SESSION, currentClientSessionId, authenticated);
 
-        assertTrue(session.isAuthenticated());
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(session.isNewAccount(), equalTo(Session.AccountState.EXISTING));
