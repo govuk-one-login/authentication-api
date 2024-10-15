@@ -10,6 +10,7 @@ public enum CloudwatchMetrics {
     LOGOUT_SUCCESS("LogoutSuccess"),
     EMAIL_CHECK_DURATION("EmailCheckDuration"),
     REAUTH_REQUESTED("ReauthRequested"),
+    REAUTH_SUCCESS("ReauthSuccess"),
     MFA_RESET_HANDOFF("MfaResetHandoff"),
     ACCESS_TOKEN_SERVICE_INITIAL_QUERY_ATTEMPT("AccessTokenServiceInitialQueryAttempt"),
     ACCESS_TOKEN_SERVICE_INITIAL_QUERY_SUCCESS("AccessTokenServiceInitialQuerySuccess"),
